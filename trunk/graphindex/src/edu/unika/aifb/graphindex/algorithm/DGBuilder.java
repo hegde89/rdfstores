@@ -34,7 +34,6 @@ public class DGBuilder {
 	
 	private void makeDataGuide(Set<Vertex> t1, Vertex d1) {
 		Map<String,Set<Vertex>> p = new HashMap<String,Set<Vertex>>();
-//		Map<String,Set<ExtEntry>> exts = new HashMap<String,Set<ExtEntry>>();
 		Map<String,Set<String[]>> exts = new HashMap<String,Set<String[]>>();
 		for (Vertex v : t1) {
 			Set<Edge> out = v.outgoingEdges();
@@ -46,19 +45,11 @@ public class DGBuilder {
 				}
 				targets.add(e.getTarget());
 				
-//				Set<ExtEntry> ext = exts.get(e.getLabel());
-//				if (ext == null) {
-//					ext = new HashSet<ExtEntry>();
-//					exts.put(e.getLabel(), ext);
-//				}
 				Set<String[]> entries = exts.get(e.getLabel());
 				if (entries == null) {
 					entries = new HashSet<String[]>();
 					exts.put(e.getLabel(), entries);
 				}
-//				ExtEntry ee = new ExtEntry(e.getTarget().getLabel());
-//				ee.addParent(v.getLabel());
-//				ext.add(ee);
 				entries.add(new String [] { e.getTarget().getLabel(), e.getLabel(), v.getLabel() });
 			}
 		}
@@ -68,7 +59,6 @@ public class DGBuilder {
 			Vertex d2 = m_targetHash.get(t2);
 			if (d2 != null) {
 				d1.getGraph().addEdge(new Edge(d1, d2, l));
-//				m_em.getExtension(d2.getLabel()).addAll(l, exts.get(l));
 				Extension ext = m_em.getExtension(d2.getLabel());
 				for (String[] t : exts.get(l))
 					ext.add(t[0], t[1], t[2]);
@@ -77,7 +67,6 @@ public class DGBuilder {
 				d2 = new Vertex("dgO" + ++m_nidx);
 				
 				m_targetHash.put(t2, d2);
-//				m_em.getExtension(d2.getLabel()).addAll(l, exts.get(l));
 				Extension ext = m_em.getExtension(d2.getLabel());
 				for (String[] t : exts.get(l))
 					ext.add(t[0], t[1], t[2]);
@@ -94,7 +83,6 @@ public class DGBuilder {
 		Graph dataGuide = GraphFactory.graph();
 		
 		Vertex dgRoot = new Vertex("dgR" + ++m_nidx);
-//		m_em.getExtension(dgRoot.getLabel()).add("", new ExtEntry(sourceGraph.getRoot().getLabel()));
 		m_em.getExtension(dgRoot.getLabel()).add(sourceGraph.getRoot().getLabel(), "", null);
 		
 		dataGuide.addVertex(dgRoot);

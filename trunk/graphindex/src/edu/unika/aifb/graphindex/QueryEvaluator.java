@@ -56,6 +56,14 @@ public class QueryEvaluator {
 		m_sm = sm;
 	}
 	
+	/**
+	 * Recursively builds the result set, using the specified mapping of query graph nodes to dataguide nodes.
+	 * 
+	 * @param currentVertex
+	 * @param results
+	 * @param mapping
+	 * @return
+	 */
 	private Set<Map<String,String>> validateMapping(QueryVertex startVertex, Map<String,String> graphMapping) {
 
 		Set<Map<String,String>> mappings = new HashSet<Map<String,String>>();
@@ -180,130 +188,6 @@ public class QueryEvaluator {
 		return mappings;
 	}
 	
-	/**
-	 * Recursively builds the result set, using the specified mapping of query graph nodes to dataguide nodes.
-	 * 
-	 * @param currentVertex
-	 * @param results
-	 * @param mapping
-	 * @return
-	 */
-	private List<Result> validateMapping(QueryVertex currentVertex, List<Map<String,String>> results, Set<String> verified, Set<String> mapped, Map<String,String> mapping) {
-		Term currentTerm = currentVertex.getTerm();
-		String extUri = mapping.get(currentVertex.getLabel());
-		
-		// verify all result mappings, mapped uris need to be in the current extension
-		Extension ext = m_em.getExtension(extUri);
-//		log.debug("extUri: " + extUri);
-//		log.debug(ext);
-		if (mapped.contains(currentVertex.getLabel()) && results.size() > 0) {
-			int discarded = 0;
-//			for (int i = 0; i < results.size(); i++) {
-			for (Iterator<Map<String,String>> i = results.iterator(); i.hasNext(); ) {
-//			for (Iterator<Map<String,String>> i = results.iterator(); i.hasNext(); ) {
-				Map<String,String> resultMap = i.next();
-				String mappedUri = resultMap.get(currentTerm.toString());
-				
-				boolean valid = false;
-				if (currentTerm instanceof Variable) {
-					if (ext.containsUri(mappedUri))
-						valid = true;
-				}
-				else if (currentTerm instanceof Individual) {
-					if (currentTerm.toString().equals(mappedUri))
-						valid = true;
-				}
-				else if (currentTerm instanceof Constant) {
-					
-				}
-				else {
-					log.error("unknown term type");
-				}
-				
-				// invalid mappings are discarded
-				if (!valid) {
-//					log.debug("discard invalid result: " + resultMap);
-//					results.remove(i);
-					discarded++;
-//					i--;
-					i.remove();
-				}
-			}
-//			log.debug("results discarded: " + discarded + ", left: " + results.size());
-			verified.add(extUri);
-		}
-		
-		// add preliminary mappings for all next vertices
-		for (Edge e : currentVertex.incomingEdges()) {
-			if (currentTerm instanceof Variable) {
-				if (!mapped.contains(currentVertex.getLabel())) {
-					// this is the first vertex
-					// for each entry uri/parent uri combination add a result mapping
-					if (results.size() == 0)
-						results.add(new HashMap<String,String>());
-					
-					List<Map<String,String>> newResults = new ArrayList<Map<String,String>>();
-					for (ExtEntry entry : ext.getEntries(e.getLabel())) {
-						for (Map<String,String> map : results) {
-							Map<String,String> newMap = new HashMap<String,String>(map);
-							newMap.put(currentTerm.toString(), entry.getUri());
-							newResults.add(newMap);
-						}
-					}
-					results.clear();
-					results.addAll(newResults);
-					mapped.add(currentVertex.getLabel());
-				}
-			}
-			else if (currentTerm instanceof Individual) {
-				if (!mapped.contains(currentVertex.getLabel())) {
-					// this is the first vertex
-					// initialize result set with the uri of the individual and add 
-					// preliminary mapping for next vertices
-					if (results.size() == 0)
-						results.add(new HashMap<String,String>());
-					for (Map<String,String> map : results) 
-						map.put(currentTerm.toString(), currentTerm.toString());
-					
-					mapped.add(currentVertex.getLabel());
-				}
-			}
-			else if (currentTerm instanceof Constant) {
-				
-			}
-			else {
-				log.error("unknown term type");
-				return null;
-			}
-
-			List<Map<String,String>> newResults = new ArrayList<Map<String,String>>();
-			for (Iterator<Map<String,String>> i = results.iterator(); i.hasNext(); ) {
-				Map<String,String> map = i.next();
-				String mappedUri = map.get(currentTerm.toString());
-
-				// extend valid results to next vertices
-				// if there is more than one parent, duplicate the result mapping accordingly
-				List<String> parents = ext.getParents(mappedUri, e.getLabel());
-//				log.debug("parents for " + mappedUri + ": " + parents);
-				if (parents.size() > 1) {
-					for (int j = 1; j < parents.size(); j++) {
-						Map<String,String> newMap = new HashMap<String,String>();
-						newMap.putAll(map);
-						newMap.put(e.getSource().getLabel(), parents.get(j));
-						newResults.add(newMap);
-					}
-				}
-				map.put(e.getSource().getLabel(), parents.get(0));
-			}
-			mapped.add(e.getSource().getLabel());
-			results.addAll(newResults);
-
-			validateMapping((QueryVertex)e.getSource(), results, verified, mapped, mapping);
-		}
-		
-		return null;
-	}
-	
 	private ResultSet toResultSet(Set<Map<String,String>> mappings, String[] vars) {
 		ResultSet rs = new ResultSet(vars);
 		
@@ -339,16 +223,16 @@ public class QueryEvaluator {
 				int totalResults = 0;
 				boolean foundValidMapping = false;
 				for (Map<String,String> mapping : m.getMappings()) {
-					boolean groundedTermsFound = true;
-					for (QueryVertex v : ((QueryGraph)qg).getGroundedTerms()) {
+					boolean groundTermsFound = true;
+					for (QueryVertex v : ((QueryGraph)qg).getGroundTerms()) {
 						Extension ext = m_em.getExtension(mapping.get(v.getLabel()));
 						if (!ext.containsUri(v.getLabel())) {
-							groundedTermsFound = false;
+							groundTermsFound = false;
 							break;
 						}
 					}
 					
-					if (!groundedTermsFound) {
+					if (!groundTermsFound) {
 						continue;
 					}
 					
@@ -367,25 +251,7 @@ public class QueryEvaluator {
 			}
 		}
 		log.debug(m_em.stats());
-//		m_em.unloadAllExtensions();
 		
-////			log.debug(uniquePaths.size() + " " + uniquePaths);
-//			String[] vars = p.getVariables().toArray(new String[]{});
-//			ResultSet rs = new ResultSet(vars);
-//			for (ResultPath rp : uniquePaths) {
-//				rs.addResult(rp.toResult(vars));
-//			}
-//			resultSets.add(rs);
-//			Join.printSet(rs);
-//			log.info(rs.size());
-//		}
-//		
-//		long end = 0;
-//		if (resultSets.size() == 2) {
-//			ResultSet res = Join.hashJoin(new String[] {"?y"}, resultSets.get(0), resultSets.get(1));
-////			Join.printSet(res);
-//			log.info(res.size());
-//		}
 		long end = System.currentTimeMillis();
 		log.info((end - start) / 1000.0);
 	}

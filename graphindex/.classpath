@@ -8,11 +8,11 @@
 	<classpathentry kind="lib" path="libs/openrdf-rio-rdfxml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/jgrapht-jdk1.5.jar"/>
 	<classpathentry kind="lib" path="libs/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="libs/kaon2.plain.jar"/>
 	<classpathentry kind="lib" path="libs/mysql-connector-java-5.1.6-bin.jar"/>
 	<classpathentry kind="lib" path="libs/log4jdbc3-1.1alpha2.jar"/>
 	<classpathentry kind="lib" path="libs/slf4j-api-1.5.0.jar"/>
 	<classpathentry kind="lib" path="libs/slf4j-log4j12-1.5.0.jar"/>
+	<classpathentry kind="lib" path="libs/kaon2.plain.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>

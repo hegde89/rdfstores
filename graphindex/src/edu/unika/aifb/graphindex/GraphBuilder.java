@@ -20,14 +20,6 @@ public class GraphBuilder {
 	public GraphBuilder(boolean transpose) {
 		m_graph = new Graph("graph");
 		m_transpose = transpose;
-		
-//		m_graph.addVertex("A");
-//		m_graph.addVertex("B");
-//		
-//		m_graph.addEdge("A", "B", new PropertyEdge<String>("A", "B", "a"));
-//		m_graph.addEdge("A", "B", new PropertyEdge<String>("A", "B", "f"));
-//		
-//		log.debug(m_graph);
 	}
 	
 	public void addTriple(String source, String label, String target) {

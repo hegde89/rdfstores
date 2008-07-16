@@ -32,7 +32,7 @@ public class QueryGraph extends Graph {
 		addEdge(e);
 	}
 	
-	public Set<QueryVertex> getGroundedTerms() {
+	public Set<QueryVertex> getGroundTerms() {
 		Set<QueryVertex> grounded = new HashSet<QueryVertex>();
 		for (Vertex vertex : vertices()) {
 			QueryVertex v = (QueryVertex)vertex;

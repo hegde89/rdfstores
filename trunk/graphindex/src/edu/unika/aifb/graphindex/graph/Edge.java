@@ -71,4 +71,8 @@ public class Edge extends AbstractGraphElement implements Serializable {
 			return false;
 		return true;
 	}
+	
+	public void acceptVisitor(GraphVisitor visitor) {
+		visitor.visit(this);
+	}
 }

@@ -94,4 +94,22 @@ public class Util {
 		Runtime r = Runtime.getRuntime();
 		return (r.freeMemory() + (r.maxMemory() - r.totalMemory())) / 1000;
 	}
+
+	public static Object[] permute(int k, Object[] os) {
+		for (int j = 2; j <= os.length; j++) {
+			k = k / (j - 1);
+			Object tmp = os[j - 1];
+			os[j - 1] = os[(k % j)];
+			os[(k % j)] = tmp;
+		}
+		return os;
+	}
+
+	public static int factorial(int n)
+	{
+	    if( n <= 1 )
+	        return 1;
+	    else
+	        return n * factorial( n - 1 );
+	}
 }

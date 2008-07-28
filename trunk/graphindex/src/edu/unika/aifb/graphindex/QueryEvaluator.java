@@ -221,7 +221,6 @@ public class QueryEvaluator {
 				
 				Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 				int totalResults = 0;
-				boolean foundValidMapping = false;
 				for (Map<String,String> mapping : m.getMappings()) {
 					boolean groundTermsFound = true;
 					for (QueryVertex v : ((QueryGraph)qg).getGroundTerms()) {

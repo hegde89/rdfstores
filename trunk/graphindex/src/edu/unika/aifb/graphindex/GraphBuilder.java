@@ -24,6 +24,10 @@ public class GraphBuilder {
 	
 	public void addTriple(String source, String label, String target) {
 //		log.debug(source + " " + label + " " + target);
+		if (target.length() > 255) {
+//			log.debug(target);
+			target = target.substring(0, 254);
+		}
 		if (m_transpose)
 			m_graph.addEdge(target, label, source);
 		else

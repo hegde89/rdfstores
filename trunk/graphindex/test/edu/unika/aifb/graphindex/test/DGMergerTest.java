@@ -89,7 +89,7 @@ public class DGMergerTest {
 		list.add(g1);
 		list.add(g2);
 		
-		DGMerger dgm = new DGMerger(null, list);
+		DGMerger dgm = new DGMerger(list);
 		
 		System.out.println(dgm.subsumes(g1, g2));
 		dgm.merge();

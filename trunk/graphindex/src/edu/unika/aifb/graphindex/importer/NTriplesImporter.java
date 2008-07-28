@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import org.apache.log4j.Logger;
+import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFParser.DatatypeHandling;
@@ -32,12 +33,26 @@ public class NTriplesImporter extends Importer {
 			m_triplesTotal++;
 			
 			if (!(st.getSubject() instanceof org.openrdf.model.URI)) {
-				log.warn("subject is not an URI, ignored " + st.getSubject().getClass());
-				return;
+			}
+			
+			if (st.getSubject() instanceof BNode) {
+				
 			}
 
 			String label = st.getPredicate().toString();
-			String source = ((org.openrdf.model.URI)st.getSubject()).toString();
+			String source = null; 
+			
+			if (st.getSubject() instanceof org.openrdf.model.URI) {
+				source = ((org.openrdf.model.URI)st.getSubject()).toString();
+			}
+			else if (st.getSubject() instanceof BNode) {
+				BNode bn = (BNode)st.getSubject();
+				source = "BLANKNODE";
+			}
+			else {
+				log.warn("subject is not an URI or a blank node, ignoring " + st.getSubject().getClass());
+				return;
+			}
 			
 			String target = null;
 			if (st.getObject() instanceof org.openrdf.model.URI) {
@@ -46,17 +61,25 @@ public class NTriplesImporter extends Importer {
 			else if (st.getObject() instanceof Literal) {
 				Literal l = (Literal)st.getObject();
 //				log.debug("datatype: " + l.getDatatype());
-				if (l.getDatatype() != null)
-					target = l.getDatatype().toString();
+//				if (l.getDatatype() != null)
+//					target = l.getDatatype().toString();
+				target = l.stringValue();
+			}
+			else if (st.getObject() instanceof BNode) {
+				BNode bn = (BNode)st.getObject();
+				target = "BLANKNODE";
 			}
 			else {
-				log.warn("ignoring data properties " + st);
+				log.warn("object is not an URI, a literal or a blank node, ignoring " + st);
 				return;
 			}
 			
 			if (source != null && target != null && label != null) {
 				m_gb.addTriple(source, label, target);
 				m_triplesAdded++;
+			}
+			else {
+				log.debug(source + " " + label + " " + target);
 			}
 		}
 

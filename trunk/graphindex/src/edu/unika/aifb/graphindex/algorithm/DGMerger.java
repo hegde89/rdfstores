@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex.algorithm;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +15,11 @@ import org.jgrapht.DirectedGraph;
 
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.extensions.ExtensionManager;
+import edu.unika.aifb.graphindex.graph.DFSCoding;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphElement;
+import edu.unika.aifb.graphindex.graph.GraphIsomorphism;
 import edu.unika.aifb.graphindex.graph.Vertex;
 
 public class DGMerger {
@@ -31,11 +34,13 @@ public class DGMerger {
 	private ExtensionManager m_em = ExtensionManager.getInstance();
 	private List<Graph> m_guides;
 	private Set<Vertex> m_visitedVertices;
+	private GraphIsomorphism m_gi;
 	
 	private static final Logger log = Logger.getLogger(DGMerger.class);
 
-	public DGMerger(Graph sourceGraph, List<Graph> guides) {
+	public DGMerger(List<Graph> guides) {
 		m_guides = guides;
+		m_gi = new GraphIsomorphism(true);
 	}
 	
 	public List<Graph> getMerged() {
@@ -52,18 +57,6 @@ public class DGMerger {
 		m_guides = new ArrayList<Graph>(Arrays.asList(list));
 	}
 	
-	private void annotateWithPaths(Vertex v, String currentPath, List<String> fullPath) {
-		v.addPath(currentPath);
-		fullPath.add(v.getLabel());
-		for (Edge e : v.outgoingEdges()) {
-			if (!Util.pathContains(fullPath, v.getLabel(), e.getLabel(), e.getTarget().getLabel())) {
-				List<String> newPath = new ArrayList<String>(fullPath);
-				newPath.add(e.getLabel());
-				annotateWithPaths(e.getTarget(), currentPath + e.getLabel(), newPath);
-			}
-		}
-	}
-	
 	public boolean subsumes(Graph g1, Graph g2) {
 		HashSet<Vertex> visitedVertices = new HashSet<Vertex>();
 		
@@ -76,12 +69,10 @@ public class DGMerger {
 			
 			visitedVertices.add(cur.v2);
 			
-			Set<String> v1_inc_labels = cur.v1.incomingEdgeLabels();
-			Set<String> v2_inc_labels = cur.v2.incomingEdgeLabels();
 			Map<String,List<Vertex>> v1_out = cur.v1.outgoingEdgeMap();
 			Map<String,List<Vertex>> v2_out = cur.v2.outgoingEdgeMap();
 			
-			if (!cur.v1.getPaths().equals(cur.v2.getPaths()))
+			if (!m_gi.isIsomorph(cur.v1, cur.v2))
 				return false;
 			
 			for (String l : v2_out.keySet()) {
@@ -138,18 +129,6 @@ public class DGMerger {
 		}
 	}
 	
-	public void combine(Graph g1, Graph g2) {
-		for (Edge e : g2.edges()) {
-			if (e.getSource().equals(g2.getRoot())) {
-				e = new Edge(g1.getRoot(), e.getTarget(), e.getLabel());
-			}
-			g1.addVertex(e.getSource());
-			g1.addVertex(e.getTarget());
-			g1.addEdge(e.getSource().getLabel(), e.getLabel(), e.getTarget().getLabel());
-		}
-		m_em.mergeExtension(g1.getRoot().getLabel(), g2.getRoot().getLabel());
-	}
-	
 	public void merge() {
 		log.info("number of guides before merging: " + m_guides.size());
 		
@@ -157,17 +136,19 @@ public class DGMerger {
 		sort(); // sort guides by number of vertices, descending
 		log.debug(m_guides.get(0).numberOfVertices() + " " + m_guides.get(m_guides.size() - 1).numberOfVertices());
 		
+		int edges = 0, vertices = 0;
+		
 		List<Graph> merged = new ArrayList<Graph>();
 		for (int i = 0; i < m_guides.size(); i++) {
 			Graph g1 = m_guides.get(i);
 			g1.load();
-			annotateWithPaths(g1.getRoot(), "", new ArrayList<String>());
 
 			for (int j = i + 1; j < m_guides.size(); j++) {
 				Graph g2 = m_guides.get(j);
 				g2.load();
-				annotateWithPaths(g2.getRoot(), "", new ArrayList<String>());
+
 				if (subsumes(g1, g2)) {
+//					log.debug("merging " + g2.getName() + " into " + g1.getName());
 					m_guides.remove(j);
 					j--;
 					m_visitedVertices = new HashSet<Vertex>();
@@ -177,51 +158,31 @@ public class DGMerger {
 				else
 					g2.unload(false);
 			}
+
+			edges += g1.numberOfEdges();
+			vertices += g1.numberOfVertices();
+			
 			merged.add(g1);
-			g1.unload(true);
-			if (Util.freeMemory() < 150000) {
+			g1.unload(false);
+//			Util.printDOT("merged_" + g1.getName() + ".dot", g1);
+			
+			log.info(m_guides + " dgs left");
+			
+			if (Util.freeMemory() < 300000) {
 				m_em.unloadAllExtensions();
+				log.debug(m_gi.cacheHits + "/" + m_gi.cacheMisses);
 				log.debug(Util.freeMemory() / 1000 + ", " + m_guides.size());
 			}
 		}
 		m_guides = merged;
+		
+		int avgVertices = vertices / m_guides.size();
+		int avgEdges = edges / m_guides.size();
+		
+		log.debug(m_gi.cacheHits + "/" + m_gi.cacheMisses);
 		log.info("number of guides after merging: " + m_guides.size());
+		log.info("avg edges: + " + avgEdges + ", avg vertices: " + avgVertices);
 		
-//		merged = new ArrayList<Graph>();
-//		Graph combined = null;
-//		for (Graph g : m_guides) {
-//			g.load();
-//			if (g.inDegreeOf(g.getRoot()) > 0) {
-//				merged.add(g);
-//				continue;
-//			}
-//			else {
-//				if (combined == null) {
-//					combined = g;
-//					continue;
-//				}
-//				combine(combined, g);
-//				g.remove();
-//			}
-//		}
-//		merged.add(combined);
 		m_em.unloadAllExtensions();
-//		Util.printDOT("combined.dot", combined);
-		
-//		int vertices = 0, edges = 0;
-//		int min = Integer.MAX_VALUE, max = 0; 
-//		double avg = 0;
-//		int i = 0;
-//		for (Graph g : merged) {
-//			vertices += g.vertices().size();
-//			edges += g.edges().size();
-//			g.store();
-//			i++;
-//		}
-//		avg /= vertices;
-		log.info("number of guides after combining: " + merged.size());
-//		log.info("structure index graph: " + vertices + " vertices, " + edges + " edges");
-//		log.info("extensions min: " + min + ", max: " + max + ", avg: " + avg);
-		m_guides = merged;
 	}
 }

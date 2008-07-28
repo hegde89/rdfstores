@@ -203,10 +203,10 @@ public class Graph implements Serializable, Storable {
 	}
 	
 	public int numberOfVertices() {
-		if (m_vertices != null)
-			return m_vertices.size();
-		else if (isStubbed())
+		if (isStubbed())
 			return m_verticesSize;
+		else if (m_vertices != null)
+			return m_vertices.size();
 		else
 			return -1;
 	}

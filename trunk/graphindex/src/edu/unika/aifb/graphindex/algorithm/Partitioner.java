@@ -123,47 +123,4 @@ public class Partitioner {
 		
 		return m_cur;
 	}
-	
-//	public Set<Graph> partition(Graph g) {
-//		m_partitions = new HashSet<Graph>();
-//		m_unmarkedVertices = new HashSet<Vertex>(g.vertices());
-//
-//		log.debug("total vertices: " + g.numberOfVertices());
-//		Vertex start;
-//		int partCount = 0;
-//		
-//		int min = Integer.MAX_VALUE, max = 0;
-//		double avg = 0;
-//		
-//		while ((start = selectStartNode(g)) != null) {
-////			log.debug(start + " " + m_unmarkedVertices.size());
-//			m_cur = getNewGraph();
-//			m_cur.setName("partition_" + partCount);
-//			m_cur.addVertex((Vertex)start.clone());
-//			m_cur.setRoot(start.getLabel());
-//			m_dfsMarks = new HashSet<Edge>();
-//			
-//			mark(start);
-//			
-//			m_partitions.add(m_cur);
-//			m_cur.setId(partCount);
-//			partCount++;
-//			
-//			if (m_cur.numberOfVertices() < min)
-//				min = m_cur.numberOfVertices();
-//			if (m_cur.numberOfVertices() > max)
-//				max = m_cur.numberOfVertices();
-//			avg += m_cur.numberOfVertices();
-//			
-//			if (partCount % 5000 == 0) {
-//				log.debug("partitions created: " + partCount + ", unmarked left: " + m_unmarkedVertices.size());
-//				log.debug(Runtime.getRuntime().maxMemory() / 1000 + " " + Runtime.getRuntime().totalMemory() / 1000 + " " + Runtime.getRuntime().freeMemory() / 1000);
-//			}
-////			Util.printDOT("part" + partCount + ".dot", m_cur);
-//		}
-//		avg /= m_partitions.size();
-//		log.info("partition size: min: " + min + ", max: " + max + ", avg: " + avg);
-//		
-//		return m_partitions;
-//	}
 }

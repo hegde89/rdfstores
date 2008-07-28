@@ -2,7 +2,7 @@ package edu.unika.aifb.graphindex.graph;
 
 import java.io.Serializable;
 
-public abstract class AbstractGraphElement implements GraphElement, Serializable {
+public abstract class AbstractGraphElement implements GraphElement, GraphVisitable, Serializable {
 	private static final long serialVersionUID = 4330418451784362205L;
 	protected Graph m_graph;
 	protected String m_label;

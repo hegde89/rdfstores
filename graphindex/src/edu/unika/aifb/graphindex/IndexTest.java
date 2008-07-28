@@ -37,10 +37,9 @@ public class IndexTest {
 		GraphStorageEngine gmstorage = new MySQLGraphStorage(true);
 		GraphManager.getInstance().setStorageEngine(gmstorage);
 		
-		GraphBuilder gb = new GraphBuilder(false);
 		Importer importer = null;
 		
-		int test = 2;
+		int test = 0;
 		
 		if (test == 0) {
 			emstorage.setPrefix("simple");
@@ -73,7 +72,9 @@ public class IndexTest {
 			importer = new OntologyImporter();
 			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swrc/swrc_updated_v0.7.1.owl");
 		}
-		
+
+		GraphBuilder gb = new GraphBuilder(false);
+
 		emstorage.init();
 		gmstorage.init();
 		
@@ -81,6 +82,6 @@ public class IndexTest {
 		importer.doImport();
 		
 		IndexBuilder ib = new IndexBuilder(gb.getGraph());
-		ib.buildIndex();
+		ib.buildIndex(0);
 	}
 }

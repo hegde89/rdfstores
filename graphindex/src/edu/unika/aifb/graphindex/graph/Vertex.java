@@ -16,6 +16,7 @@ public class Vertex extends AbstractGraphElement implements Cloneable, Serializa
 	private int m_uniqueId;
 	private static int m_currentId = 0;
 	private Set<String> m_paths;
+	private String m_canonicalLabel;
 	
 	public Vertex(String label) {
 		super(label);
@@ -39,6 +40,16 @@ public class Vertex extends AbstractGraphElement implements Cloneable, Serializa
 	
 	public Set<Edge> incomingEdges() {
 		return m_graph.incomingEdges(this);
+	}
+	
+	public Set<Edge> incomingEdges(String label) {
+		Set<Edge> edges = new HashSet<Edge>();
+		for (Edge out : incomingEdges()) {
+			if (out.getLabel().equals(label)) {
+				edges.add(out);
+			}
+		}
+		return edges;
 	}
 	
 	public Set<String> outgoingEdgeLabels() {
@@ -106,5 +117,17 @@ public class Vertex extends AbstractGraphElement implements Cloneable, Serializa
 	
 	public Set<String> getPaths() {
 		return m_paths;
+	}
+	
+	public void acceptVisitor(GraphVisitor visitor) {
+		visitor.visit(this);
+	}
+
+	public void setCanonicalLabel(String m_canonicalLabel) {
+		this.m_canonicalLabel = m_canonicalLabel;
+	}
+
+	public String getCanonicalLabel() {
+		return m_canonicalLabel;
 	}
 }

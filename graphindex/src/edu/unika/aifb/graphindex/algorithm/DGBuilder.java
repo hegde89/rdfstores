@@ -1,22 +1,17 @@
 package edu.unika.aifb.graphindex.algorithm;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.extensions.ExtEntry;
 import edu.unika.aifb.graphindex.extensions.Extension;
 import edu.unika.aifb.graphindex.extensions.ExtensionManager;
+import edu.unika.aifb.graphindex.graph.DFSCoding;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
-import edu.unika.aifb.graphindex.graph.GraphElement;
 import edu.unika.aifb.graphindex.graph.GraphFactory;
 import edu.unika.aifb.graphindex.graph.Vertex;
 
@@ -95,6 +90,11 @@ public class DGBuilder {
 		m_targetHash.put(startVertices, dgRoot);
 		
 		makeDataGuide(startVertices, dgRoot);
+		
+//		DFSCoding dfsc = new DFSCoding();
+//		for (Vertex v : dataGuide.vertices()) {
+//			v.setCanonicalLabel(dfsc.getCanonicalLabel(v, true));
+//		}
 		
 		return dataGuide;
 	}

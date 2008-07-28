@@ -43,6 +43,7 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 	public void lock() {
 		try {
 			Statement st = m_conn.createStatement();
+//			st.execute("LOCK TABLES " + m_prefix + "graphs WRITE, " + m_prefix + "graphdata WRITE, " + m_prefix + "vertexlabels WRITE");
 			st.execute("LOCK TABLES " + m_prefix + "graphs WRITE, " + m_prefix + "graphdata WRITE");
 			st.close();
 		}
@@ -67,9 +68,12 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 			if (init) {
 				st.execute("DROP TABLE IF EXISTS " + m_prefix + "graphs");
 				st.execute("DROP TABLE IF EXISTS " + m_prefix + "graphdata");
+//				st.execute("DROP TABLE IF EXISTS " + m_prefix + "vertexlabels");
 				st.execute("CREATE TABLE " + m_prefix + "graphs (name char(50) not null, id int not null, vertices int not null, root varchar(255), type varchar(255), PRIMARY KEY (name))");
 				st.execute("CREATE TABLE " + m_prefix + "graphdata (name char(50) not null, source varchar(255) not null, edge varchar(255) not null, target varchar(255) not null, type varchar(255))");
+//				st.execute("CREATE TABLE " + m_prefix + "vertexlabels (vertex varchar(255) not null, label text, graph char(50) not null, PRIMARY KEY (vertex))");
 				st.execute("CREATE INDEX " + m_prefix + "graphdata_index ON " + m_prefix + "graphdata (name)");
+//				st.execute("CREATE INDEX " + m_prefix + "vertexlabels_graph ON " + m_prefix + "vertexlabels (graph)");
 			}
 			else {
 				
@@ -121,6 +125,7 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 		try {
 			PreparedStatement pst = m_conn.prepareStatement("SELECT name, id, vertices, root FROM " + m_prefix + "graphs WHERE name = ?");
 			pst.setString(1, g.getName());
+			pst.execute();
 			do {
 				java.sql.ResultSet rst = pst.getResultSet();
 				if (rst != null && rst.next()) {
@@ -143,8 +148,6 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 	
 	public void readGraph(Graph g) {
 		try {
-			String tableName = getTableName(g.getName());
-			
 			PreparedStatement pst = m_conn.prepareStatement("SELECT source, edge, target FROM " + m_prefix + "graphdata WHERE name = ?");
 			pst.setString(1, g.getName());
 			pst.execute();
@@ -155,8 +158,21 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 				}
 			}
 			while (pst.getMoreResults());
-
 			pst.close();
+			
+//			pst = m_conn.prepareStatement("SELECT vertex, label FROM " + m_prefix + "vertexlabels WHERE graph = ?");
+//			pst.setString(1, g.getName());
+//			pst.execute();
+//			do {
+//				java.sql.ResultSet rst = pst.getResultSet();
+//				while (rst.next()) {
+//					String vertex = rst.getString(1);
+//					String label = rst.getString(2);
+//					g.getVertex(vertex).setCanonicalLabel(label);
+//				}
+//			}
+//			while (pst.getMoreResults());
+//			pst.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -164,14 +180,15 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 
 	public void writeGraph(Graph g) {
 		try {
-			String tableName = getTableName(g.getName());
+			lock();
 			Statement st = m_conn.createStatement();
-			st.execute("LOCK TABLES " + m_prefix + "graphs WRITE, " + m_prefix + "graphdata WRITE");
 //			st.execute("DROP TABLE IF EXISTS " + tableName);
 			st.execute("REPLACE INTO " + m_prefix + "graphs (name, id, vertices, root) VALUES('" + g.getName() + "', '" + g.getId() + "', '" + g.numberOfVertices() + "', '" + g.getRoot().getLabel() + "')");
 //			st.execute("CREATE TABLE " + tableName + " (source varchar(255) not null, edge varchar(255) not null, target varchar(255) not null, type varchar(255))");
-			if (m_existing.contains(g.getName()))
+			if (m_existing.contains(g.getName())) {
 				st.execute("DELETE FROM " + m_prefix + "graphdata WHERE name = '" + g.getName() + "'");
+//				st.execute("DELETE FROM " + m_prefix + "vertexlabels WHERE graph = '" + g.getName() + "'");
+			}
 			st.close();
 			
 			PreparedStatement pst = m_conn.prepareStatement("INSERT INTO " + m_prefix + "graphdata (name, source, edge, target) VALUES (?, ?, ?, ?)");
@@ -186,6 +203,16 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 			pst.executeBatch();
 			pst.close();
 
+//			pst = m_conn.prepareStatement("INSERT INTO " + m_prefix + "vertexlabels (vertex, label, graph) VALUES (?, ?, ?)");
+//			for (Vertex v : g.vertices()) {
+//				pst.setString(1, v.getLabel());
+//				pst.setString(2, v.getCanonicalLabel());
+//				pst.setString(3, g.getName());
+//				pst.addBatch();
+//			}
+//			pst.executeBatch();
+//			pst.close();
+			
 			st = m_conn.createStatement();
 			st.execute("UNLOCK TABLES");
 			st.close();
@@ -198,11 +225,11 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 	
 	public void removeGraph(Graph g) {
 		try {
-			String tableName = getTableName(g.getName());
 			lock();
 			Statement st = m_conn.createStatement();
 			st.execute("DELETE FROM " + m_prefix + "graphdata WHERE name = '" + g.getName() + "'");
 			st.execute("DELETE FROM " + m_prefix + "graphs WHERE name = '" + g.getName() + "'");
+//			st.execute("DELETE FROM " + m_prefix + "vertexlabels WHERE graph = '" + g.getName() + "'");
 			st.close();
 			unlock();
 			m_existing.remove(g.getName());

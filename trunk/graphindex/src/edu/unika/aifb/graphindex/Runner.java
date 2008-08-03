@@ -31,9 +31,9 @@ public class Runner {
 					importer.addImport(f.getAbsolutePath());
 				}
 			}
-//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
-//				if (f.getName().startsWith("University"))
-//					importer.addImport(f.getAbsolutePath());
+			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+				if (f.getName().startsWith("University"))
+					importer.addImport(f.getAbsolutePath());
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();

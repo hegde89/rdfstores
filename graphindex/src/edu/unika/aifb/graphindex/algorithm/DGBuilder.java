@@ -91,11 +91,6 @@ public class DGBuilder {
 		
 		makeDataGuide(startVertices, dgRoot);
 		
-//		DFSCoding dfsc = new DFSCoding();
-//		for (Vertex v : dataGuide.vertices()) {
-//			v.setCanonicalLabel(dfsc.getCanonicalLabel(v, true));
-//		}
-		
 		return dataGuide;
 	}
 }

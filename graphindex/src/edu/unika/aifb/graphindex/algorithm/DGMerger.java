@@ -157,6 +157,7 @@ public class DGMerger {
 				}
 				else
 					g2.unload(false);
+				m_gi.clearCache();
 			}
 
 			edges += g1.numberOfEdges();
@@ -166,20 +167,21 @@ public class DGMerger {
 			g1.unload(false);
 //			Util.printDOT("merged_" + g1.getName() + ".dot", g1);
 			
-			log.info(m_guides + " dgs left");
+			log.info(m_guides.size() + " dgs left");
 			
 			if (Util.freeMemory() < 300000) {
+				long free = Util.freeMemory();
 				m_em.unloadAllExtensions();
-				log.debug(m_gi.cacheHits + "/" + m_gi.cacheMisses);
-				log.debug(Util.freeMemory() / 1000 + ", " + m_guides.size());
+				log.debug("free: " + Util.freeMemory() / 1000 + ", before: " + free / 1000 + " (" + (Util.freeMemory() - free) / 1000 + " freed)");
 			}
 		}
+		
 		m_guides = merged;
 		
 		int avgVertices = vertices / m_guides.size();
 		int avgEdges = edges / m_guides.size();
 		
-		log.debug(m_gi.cacheHits + "/" + m_gi.cacheMisses);
+		log.debug(m_gi.cacheStats());
 		log.info("number of guides after merging: " + m_guides.size());
 		log.info("avg edges: + " + avgEdges + ", avg vertices: " + avgVertices);
 		

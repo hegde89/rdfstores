@@ -258,6 +258,14 @@ public class GraphIsomorphism {
 		cacheMisses++;
 		return false;
 	}
+	
+	public void clearCache() {
+		m_isomorphismCache.clear();
+	}
+	
+	public String cacheStats() {
+		return "cache size: " + m_isomorphismCache.keySet().size() + ", hits: " + cacheHits + ", misses: " + cacheMisses;
+	}
 
 	private boolean isIsomorph(Vertex x, Vertex y, Map<String,String> prevMapps) {
 		VertexPair vp = new VertexPair(x, y);

@@ -1,9 +1,8 @@
 package edu.unika.aifb.graphindex.storage.lucene;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.io.IOException;
+
+import org.apache.lucene.index.CorruptIndexException;
 
 import edu.unika.aifb.graphindex.storage.AbstractExtensionManager;
 import edu.unika.aifb.graphindex.storage.Extension;
@@ -24,6 +23,27 @@ public class LuceneExtensionManager extends AbstractExtensionManager {
 	
 	public void join(String leftExt, String leftProperty, String rightExt) {
 		
+	}
+
+	public void flushAllCaches() throws StorageException {
+		boolean bulk = bulkUpdating();
+		if (bulk)
+			finishBulkUpdate();
+		
+		for (Extension e: m_handlers.values())
+			e.flush();
+		System.gc();
+		
+		try {
+			((LuceneExtensionStorage)m_storage).flushWriter();
+		} catch (CorruptIndexException e1) {
+			throw new StorageException(e1);
+		} catch (IOException e1) {
+			throw new StorageException(e1);
+		}
+		
+		if (bulk)
+			startBulkUpdate();
 	}
 }
 

@@ -287,6 +287,10 @@ public class Graph implements Serializable, Storable {
 		m_status = Storable.STATUS_STUB;
 	}
 	
+	public String toString() {
+		return getName() + "(" + numberOfVertices() + "," + numberOfEdges() + "," + getRoot().getLabel() + ")";
+	}
+	
 	public void unload() {
 		unload(true);
 	}

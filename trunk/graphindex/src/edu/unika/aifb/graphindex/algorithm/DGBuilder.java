@@ -7,17 +7,18 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.extensions.Extension;
-import edu.unika.aifb.graphindex.extensions.ExtensionManager;
-import edu.unika.aifb.graphindex.graph.DFSCoding;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphFactory;
 import edu.unika.aifb.graphindex.graph.Vertex;
+import edu.unika.aifb.graphindex.storage.Extension;
+import edu.unika.aifb.graphindex.storage.ExtensionManager;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.StorageManager;
 
 public class DGBuilder {
 
-	private ExtensionManager m_em = ExtensionManager.getInstance();
+	private ExtensionManager m_em = StorageManager.getInstance().getExtensionManager();
 	private Map<Set<Vertex>,Vertex> m_targetHash;
 	private int m_nidx = 0;
 
@@ -27,7 +28,8 @@ public class DGBuilder {
 		m_targetHash = new HashMap<Set<Vertex>,Vertex>();
 	}
 	
-	private void makeDataGuide(Set<Vertex> t1, Vertex d1) {
+	private void makeDataGuide(Set<Vertex> t1, Vertex d1) throws StorageException {
+//		log.debug(t1.size() + " " + d1);
 		Map<String,Set<Vertex>> p = new HashMap<String,Set<Vertex>>();
 		Map<String,Set<String[]>> exts = new HashMap<String,Set<String[]>>();
 		for (Vertex v : t1) {
@@ -54,17 +56,17 @@ public class DGBuilder {
 			Vertex d2 = m_targetHash.get(t2);
 			if (d2 != null) {
 				d1.getGraph().addEdge(new Edge(d1, d2, l));
-				Extension ext = m_em.getExtension(d2.getLabel());
+				Extension ext = m_em.extension(d2.getLabel());
 				for (String[] t : exts.get(l))
-					ext.add(t[0], t[1], t[2]);
+					ext.addTriple(t[2], t[1], t[0]);
 			}
 			else {
-				d2 = new Vertex("dgO" + ++m_nidx);
+				d2 = new Vertex("dgo" + ++m_nidx);
 				
 				m_targetHash.put(t2, d2);
-				Extension ext = m_em.getExtension(d2.getLabel());
+				Extension ext = m_em.extension(d2.getLabel());
 				for (String[] t : exts.get(l))
-					ext.add(t[0], t[1], t[2]);
+					ext.addTriple(t[2], t[1], t[0]);
 
 				d1.getGraph().addVertex(d2);
 				d1.getGraph().addEdge(new Edge(d1, d2, l));
@@ -74,11 +76,11 @@ public class DGBuilder {
 		}
 	}
 	
-	public Graph buildDataGuide(Graph sourceGraph) {
+	public Graph buildDataGuide(Graph sourceGraph) throws StorageException {
 		Graph dataGuide = GraphFactory.graph();
 		
-		Vertex dgRoot = new Vertex("dgR" + ++m_nidx);
-		m_em.getExtension(dgRoot.getLabel()).add(sourceGraph.getRoot().getLabel(), "", null);
+		Vertex dgRoot = new Vertex("dgr" + ++m_nidx);
+		m_em.extension(dgRoot.getLabel()).addTriple("", "", sourceGraph.getRoot().getLabel());
 		
 		dataGuide.addVertex(dgRoot);
 		dataGuide.setRoot(dgRoot);

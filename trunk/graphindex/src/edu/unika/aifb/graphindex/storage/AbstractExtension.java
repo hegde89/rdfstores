@@ -16,7 +16,7 @@ public abstract class AbstractExtension implements Extension {
 		return m_uri;
 	}
 	
-	protected boolean isCachingOn() {
-		return m_manager.isCaching();
+	protected int getMode() {
+		return m_manager.getMode();
 	}
 }

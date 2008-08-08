@@ -1,8 +1,10 @@
 package edu.unika.aifb.graphindex;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 import edu.unika.aifb.graphindex.graph.Graph;
+import edu.unika.aifb.graphindex.graph.GraphFactory;
 
 public class Util {
 	
@@ -111,5 +114,17 @@ public class Util {
 	        return 1;
 	    else
 	        return n * factorial( n - 1 );
+	}
+	
+	public static Graph loadGT(String file) throws IOException {
+		Graph g = GraphFactory.graph();
+		
+		BufferedReader in = new BufferedReader(new FileReader(file));
+		String input;
+		while ((input = in.readLine()) != null) {
+			String[] t = input.split("\t");
+			g.addEdge(t[0], t[1], t[2]);
+		}
+		return g;
 	}
 }

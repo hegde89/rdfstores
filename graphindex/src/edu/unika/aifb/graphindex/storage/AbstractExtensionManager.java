@@ -5,12 +5,17 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 public abstract class AbstractExtensionManager implements ExtensionManager {
 	protected Set<String> m_extensionUris;
 	protected Map<String,Extension> m_handlers;
 	protected ExtensionStorage m_storage;
 	protected boolean m_caching;
 	protected boolean m_bulk = false;
+	protected int m_mode = ExtensionManager.MODE_NOCACHE;
+	
+	private static final Logger log = Logger.getLogger(AbstractExtensionManager.class);
 	
 	protected AbstractExtensionManager() {
 		m_handlers = new HashMap<String,Extension>();
@@ -28,25 +33,20 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 		m_storage.close();
 	}
 
-	public void unloadAll() throws StorageException {
-		for (Extension e: m_handlers.values())
-			e.unload();
-		System.gc();
+	public void setMode(int mode) {
+		m_mode = mode;
 	}
 	
-	public boolean isCaching() {
-		return m_caching;
+	public int getMode() {
+		return m_mode;
 	}
 	
-	public void setCaching(boolean caching) {
-		m_caching = caching;
-	}
-	
-	public void startBulkUpdate() {
+	public void startBulkUpdate() throws StorageException {
 		m_bulk = true;
+		m_storage.startBulkUpdate();
 	}
 	
-	public void endBulkUpdate() throws StorageException {
+	public void finishBulkUpdate() throws StorageException {
 		m_bulk = false;
 		m_storage.finishBulkUpdate();
 	}
@@ -64,13 +64,24 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 		m_storage.setExtensionManager(this);
 	}
 	
+	public void removeExtension(String extUri) throws StorageException {
+		Extension ext = m_handlers.get(extUri);
+		if (ext == null)
+			return;
+		
+		m_handlers.remove(extUri);
+		m_extensionUris.remove(extUri);
+		ext.remove();
+	}
+	
 	public boolean registerExtensionHandler(String extUri, Extension extension) {
 		if (m_handlers.containsKey(extUri))
 			return false;
+		m_extensionUris.add(extUri);
 		m_handlers.put(extUri, extension);
 		return true;
 	}
-
+	
 	public boolean extensionExists(String extUri) {
 		return m_extensionUris.contains(extUri);
 	}

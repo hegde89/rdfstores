@@ -92,8 +92,8 @@ public class DFSGraphVisitor implements GraphVisitor {
 			limits[i] = m_node2EdgesList.get(nodes.get(i)).size();
 			if (limits[i] > 0)
 				nrOfTrees *= limits[i];
-			if (m_startNode.getGraph().getName().equals("graph11122"))
-				System.out.print(limits[i] + " ");
+//			if (m_startNode.getGraph().getName().equals("graph11122"))
+//				System.out.print(limits[i] + " ");
 		}
 		if (nrOfTrees > 1000)
 			log.debug(nrOfTrees);
@@ -129,6 +129,10 @@ public class DFSGraphVisitor implements GraphVisitor {
 			
 			done = carry;
 		}
+	}
+	
+	public void reset() {
+		m_startNode = null;
 	}
 	
 	public void visit(Vertex v) {

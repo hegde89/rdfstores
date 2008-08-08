@@ -5,8 +5,10 @@ import java.util.Set;
 public interface Extension {
 	public String getUri();
 	
-	public void unload() throws StorageException;
+	public void flush() throws StorageException;
+	public void remove() throws StorageException;
 
+	public Set<Triple> getTriples() throws StorageException;
 	public Set<Triple> getTriples(String propertyUri) throws StorageException;
 	public Set<Triple> getTriples(String propertyUri, String objectValue) throws StorageException;
 	

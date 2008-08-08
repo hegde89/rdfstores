@@ -15,6 +15,7 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Hit;
@@ -44,7 +45,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private final String FIELD_TYPE = "type";
 	private final String FIELD_VAL = "value";
 	private final String TYPE_EXTLIST = "extension_list";
-	private final String EXT_PATH_SEP = "//";
+	private final String EXT_PATH_SEP = "__";
 	private final static Logger log = Logger.getLogger(LuceneExtensionStorage.class);
 	
 	public LuceneExtensionStorage(String directory) {
@@ -54,6 +55,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public void initialize(boolean clean) {
 		try {
 			m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+			m_writer.setRAMBufferSizeMB(256);
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (CorruptIndexException e) {
@@ -74,10 +76,16 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
+	public void startBulkUpdate() throws StorageException {
+		
+	}
+	
 	public void finishBulkUpdate() throws StorageException {
 		try {
+			log.debug("flushing...");
 			m_writer.flush();
 			reopen();
+			log.debug("flushed and reopened");
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
@@ -92,16 +100,15 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		Set<String> uris = new HashSet<String>();
 		
 		try {
-			Hits hits = m_searcher.search(new TermQuery(new Term(FIELD_TYPE, TYPE_EXTLIST)));
-			
-			Document doc = hits.doc(0);
-			
-			if (doc != null) {
-				String uriString = doc.getField(FIELD_VAL).stringValue();
-				for (String uri :uriString.split("\n")) {
-					uris.add(uri);
+			TermEnum te = m_reader.terms();
+			while (te.next()) {
+				Term t = te.term();
+				if (t.field().equals(FIELD_EXT)) {
+					String[] path = t.text().split(EXT_PATH_SEP.replaceAll("\\|", "\\\\|"));
+					uris.add(path[0]);
 				}
 			}
+			log.debug(uris.size() + " extensions");
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
@@ -114,31 +121,11 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public void saveExtensionList(Set<String> uris) throws StorageException {
 		if (bulkUpdating())
 			throw new StorageException("in bulk mode");
-		
-		try {
-			m_writer.deleteDocuments(new Term(FIELD_TYPE, TYPE_EXTLIST));
-			
-			String uriString = "";
-			String addCR = "";
-			for (String uri : uris) {
-				uriString += addCR + uri;
-				addCR = "\n";
-			}
-			
-			Document doc = new Document();
-			doc.add(new Field(FIELD_TYPE, TYPE_EXTLIST, Field.Store.NO, Field.Index.UN_TOKENIZED));
-			doc.add(new Field(FIELD_VAL, uriString, Field.Store.YES, Field.Index.NO));
-			
-			m_writer.addDocument(doc);
-			
-			m_writer.flush();
-			reopen();
-		} catch (CorruptIndexException e) {
-			throw new StorageException(e);
-		} catch (IOException e) {
-			throw new StorageException(e);
-		}
-		
+	}
+	
+	public void flushWriter() throws CorruptIndexException, IOException {
+		m_writer.flush();
+		reopen();
 	}
 	
 	private void reopen() throws CorruptIndexException, IOException {
@@ -171,7 +158,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	@SuppressWarnings("unchecked")
 	private Set<Triple> executeQuery(Query q) throws IOException {
-		log.debug("query: " + q);
+//		log.debug("query: " + q);
+//		log.debug(q.rewrite(m_reader));
 		Set<Triple> triples = new HashSet<Triple>();
 		
 		// TODO lucene doc says that retrieving all documents matching a query should be done with HitCollector
@@ -203,11 +191,11 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	private Document createDocument(String extUri, Triple t) {
 		Document doc = new Document();
-		
-		doc.add(new Field(FIELD_EXT, getPath(extUri, t.getProperty(), t.getObject()), Field.Store.NO, Field.Index.TOKENIZED));
-		doc.add(new Field(FIELD_SUBJECT, t.getSubject(), Field.Store.YES, Field.Index.NO));
-		doc.add(new Field(FIELD_PROPERTY, t.getProperty(), Field.Store.YES, Field.Index.NO));
-		doc.add(new Field(FIELD_OBJECT, t.getObject(), Field.Store.YES, Field.Index.NO));
+		doc.add(new Field(FIELD_EXT, getPath(extUri, t.getProperty(), t.getObject()), Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_SUBJECT, t.getSubject(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+		doc.add(new Field(FIELD_PROPERTY, t.getProperty(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+		doc.add(new Field(FIELD_OBJECT, t.getObject(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+//		log.debug(doc);
 		
 		return doc;
 	}
@@ -249,12 +237,12 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private void deleteDataByPath(String queryPath) throws IOException {
 		List<Term> terms = new ArrayList<Term>();
 		
-		PrefixQuery q = new PrefixQuery(getTerm(queryPath));
+		PrefixQuery q = new PrefixQuery(getTermForPath(queryPath));
 		BooleanQuery bq = (BooleanQuery)q.rewrite(m_reader);
 		
 		for (BooleanClause bc : bq.getClauses())
 			terms.add(((TermQuery)bc.getQuery()).getTerm());
-		
+
 		m_writer.deleteDocuments(terms.toArray(new Term[]{}));
 		if (!bulkUpdating()) {
 			m_writer.flush();

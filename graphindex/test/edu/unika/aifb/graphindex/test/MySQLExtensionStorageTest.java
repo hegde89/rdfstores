@@ -11,24 +11,24 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtension;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.Triple;
+import edu.unika.aifb.graphindex.storage.mysql.MySQLExtensionManager;
+import edu.unika.aifb.graphindex.storage.mysql.MySQLExtensionStorage;
 
-public class TestLuceneExtensionStorage {
+public class MySQLExtensionStorageTest {
 
 	ExtensionManager manager;
 	
 	@Before
 	public void setUp() throws Exception {
-		ExtensionStorage es = new LuceneExtensionStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/index/test");
+		MySQLExtensionStorage es = new MySQLExtensionStorage();
+		es.setPrefix("test");
 		
-		manager = new LuceneExtensionManager();
+		manager = new MySQLExtensionManager();
 		manager.setExtensionStorage(es);
 		manager.initialize(true);
 	}
@@ -46,12 +46,10 @@ public class TestLuceneExtensionStorage {
 		
 		System.out.println(ts);
 		
-		Extension e = manager.extension("dgo1");
+		Extension e = manager.extension("ext1");
 		manager.startBulkUpdate();
 		e.addTriples(ts);
 		manager.finishBulkUpdate();
-		
-		System.out.println(manager.getExtensionStorage().loadExtensionList());
 		
 		Set<Triple> triples = e.getTriples("p1");
 		System.out.println(triples);

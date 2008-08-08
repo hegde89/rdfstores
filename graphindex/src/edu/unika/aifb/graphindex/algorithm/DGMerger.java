@@ -14,13 +14,13 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.extensions.ExtensionManager;
-import edu.unika.aifb.graphindex.graph.DFSCoding;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
-import edu.unika.aifb.graphindex.graph.GraphElement;
 import edu.unika.aifb.graphindex.graph.GraphIsomorphism;
 import edu.unika.aifb.graphindex.graph.Vertex;
+import edu.unika.aifb.graphindex.storage.ExtensionManager;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.StorageManager;
 
 public class DGMerger {
 	private class Tuple {
@@ -31,16 +31,22 @@ public class DGMerger {
 		}
 	}
 	
-	private ExtensionManager m_em = ExtensionManager.getInstance();
+	private ExtensionManager m_em = StorageManager.getInstance().getExtensionManager();
+	@Deprecated
 	private List<Graph> m_guides;
 	private Set<Vertex> m_visitedVertices;
 	private GraphIsomorphism m_gi;
 	
 	private static final Logger log = Logger.getLogger(DGMerger.class);
 
+	public DGMerger() {
+		this(null);
+	}
+	
+	@Deprecated
 	public DGMerger(List<Graph> guides) {
 		m_guides = guides;
-		m_gi = new GraphIsomorphism(true);
+		m_gi = new GraphIsomorphism(false);
 	}
 	
 	public List<Graph> getMerged() {
@@ -57,11 +63,22 @@ public class DGMerger {
 		m_guides = new ArrayList<Graph>(Arrays.asList(list));
 	}
 	
+	/**
+	 * Determines if two graphs can be merged by checking if one graph
+	 * subsumes the other. This method uses the graph subsumption algorithm,
+	 * which checks if corresponding nodes in both graphs have the same
+	 * incoming paths. This is more expensive than the weaker implementation,
+	 * {@link #subsumesWeak(Graph, Graph)} 
+	 * 
+	 * @param g1
+	 * @param g2
+	 * @return true if g1 subsumes g2, false otherwise
+	 */
 	public boolean subsumes(Graph g1, Graph g2) {
 		HashSet<Vertex> visitedVertices = new HashSet<Vertex>();
+		m_gi.clearCache();
 		
 		Stack<Tuple> stack = new Stack<Tuple>();
-
 		stack.push(new Tuple(g1.getRoot(), g2.getRoot()));
 		
 		while (stack.size() != 0) {
@@ -95,8 +112,23 @@ public class DGMerger {
 		return true;
 	}
 	
-	public void merge(Graph g1, Vertex v1, Graph g2, Vertex v2) {
-		m_em.mergeExtension(v1.getLabel(), v2.getLabel());
+	/**
+	 * Checks if two graphs are isomorphic and therefore can be merged. This is
+	 * relatively inexpensive as the search space is much reduced, because the root
+	 * node of both graphs have to be mapped to each other. 
+	 * 
+	 * @param g1
+	 * @param g2
+	 * @return true if g1 and g2 are isomorphic, false otherwise
+	 */
+	public boolean subsumesWeak(Graph g1, Graph g2) {
+		m_gi.clearCache();
+		return m_gi.isIsomorph(g1.getRoot(), g2.getRoot());
+	}
+	
+	public void merge(Graph g1, Vertex v1, Graph g2, Vertex v2) throws StorageException {
+//		m_em.mergeExtension(v1.getLabel(), v2.getLabel());
+		m_em.extension(v1.getLabel()).mergeExtension(m_em.extension(v2.getLabel()));
 		m_visitedVertices.add(v2);
 		
 		for (Edge e : v2.outgoingEdges()) {
@@ -129,7 +161,26 @@ public class DGMerger {
 		}
 	}
 	
-	public void merge() {
+	/** 
+	 * Merge graph g2 into graph g1 by merging extensions of corresponding nodes.
+	 * 
+	 * @param g1
+	 * @param g2
+	 * @throws StorageException
+	 */
+	public void merge(Graph g1, Graph g2) throws StorageException {
+		m_visitedVertices = new HashSet<Vertex>();
+		merge(g1, g1.getRoot(), g2, g2.getRoot());
+	}
+	
+	/**
+	 * Merges all guides in m_guides by comparing all guides to each other.
+	 * Really slow and therefore deprecated. 
+	 * 
+	 * @throws StorageException
+	 */
+	@Deprecated
+	public void merge() throws StorageException {
 		log.info("number of guides before merging: " + m_guides.size());
 		
 		log.debug(m_guides.get(0).numberOfVertices() + " " + m_guides.get(m_guides.size() - 1).numberOfVertices());
@@ -137,6 +188,8 @@ public class DGMerger {
 		log.debug(m_guides.get(0).numberOfVertices() + " " + m_guides.get(m_guides.size() - 1).numberOfVertices());
 		
 		int edges = 0, vertices = 0;
+		
+		int subsumptionTests = 0;
 		
 		List<Graph> merged = new ArrayList<Graph>();
 		for (int i = 0; i < m_guides.size(); i++) {
@@ -147,6 +200,7 @@ public class DGMerger {
 				Graph g2 = m_guides.get(j);
 				g2.load();
 
+				subsumptionTests++;
 				if (subsumes(g1, g2)) {
 //					log.debug("merging " + g2.getName() + " into " + g1.getName());
 					m_guides.remove(j);
@@ -171,10 +225,11 @@ public class DGMerger {
 			
 			if (Util.freeMemory() < 300000) {
 				long free = Util.freeMemory();
-				m_em.unloadAllExtensions();
+//				m_em.unloadAllExtensions();
 				log.debug("free: " + Util.freeMemory() / 1000 + ", before: " + free / 1000 + " (" + (Util.freeMemory() - free) / 1000 + " freed)");
 			}
 		}
+		log.debug("subsumption tests: " + subsumptionTests);
 		
 		m_guides = merged;
 		
@@ -185,6 +240,6 @@ public class DGMerger {
 		log.info("number of guides after merging: " + m_guides.size());
 		log.info("avg edges: + " + avgEdges + ", avg vertices: " + avgVertices);
 		
-		m_em.unloadAllExtensions();
+//		m_em.unloadAllExtensions();
 	}
 }

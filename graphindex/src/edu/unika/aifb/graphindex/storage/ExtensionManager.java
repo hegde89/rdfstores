@@ -1,8 +1,11 @@
 package edu.unika.aifb.graphindex.storage;
 
 public interface ExtensionManager {
-	public void initialize(boolean clean) throws StorageException;
-	public void unloadAll() throws StorageException;
+	public static final int MODE_NOCACHE = 0;
+	public static final int MODE_WRITECACHE = 1;
+	public static final int MODE_READONLY = 2;
+	
+	public void initialize(boolean clean) throws StorageException;	
 	public void close() throws StorageException;
 	
 	public ExtensionStorage getExtensionStorage();
@@ -10,14 +13,17 @@ public interface ExtensionManager {
 	
 	public Extension extension(String extUri) throws StorageException;
 	public boolean extensionExists(String extUri);
+	public void removeExtension(String extUri) throws StorageException;
 	
 	public boolean registerExtensionHandler(String extUri, Extension handler);
 	
-	public boolean isCaching();
-	public void setCaching(boolean caching);
+	public int getMode();
+	public void setMode(int mode);
+	public void flushAllCaches() throws StorageException;
+	
 	public void join(String leftExt, String leftProperty, String rightExt);
 	
-	public void startBulkUpdate();
-	public void endBulkUpdate() throws StorageException;
+	public void startBulkUpdate() throws StorageException;
+	public void finishBulkUpdate() throws StorageException;
 	public boolean bulkUpdating();
 }

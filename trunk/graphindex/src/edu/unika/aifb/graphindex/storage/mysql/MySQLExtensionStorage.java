@@ -29,7 +29,8 @@ public class MySQLExtensionStorage extends AbstractExtensionStorage {
 		m_prefix = prefix + "_";
 	}
 
-	public void initialize(boolean clean) throws StorageException {
+	public void initialize(boolean clean, boolean readonly) throws StorageException {
+		super.initialize(clean, readonly);
 		try {
 			Class.forName ("com.mysql.jdbc.Driver");
 			Class.forName("net.sf.log4jdbc.DriverSpy");

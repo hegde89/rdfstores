@@ -52,10 +52,13 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		m_directory = directory;
 	}
 	
-	public void initialize(boolean clean) {
+	public void initialize(boolean clean, boolean readonly) throws StorageException {
+		super.initialize(clean, readonly);
 		try {
-			m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
-			m_writer.setRAMBufferSizeMB(256);
+			if (!m_readonly) {
+				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+				m_writer.setRAMBufferSizeMB(256);
+			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (CorruptIndexException e) {
@@ -67,7 +70,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public void close() {
 		try {
-			m_writer.close();
+			if (!m_readonly)
+				m_writer.close();
 			m_searcher.close();
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
@@ -76,14 +80,20 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
+	private void checkReadOnly() {
+		if (m_readonly)
+			throw new UnsupportedOperationException("no updates while readonly");
+	}
+	
 	public void startBulkUpdate() throws StorageException {
-		
+		checkReadOnly();
 	}
 	
 	public void finishBulkUpdate() throws StorageException {
 		try {
 			log.debug("flushing...");
-			m_writer.flush();
+			if (!m_readonly)
+				m_writer.flush();
 			reopen();
 			log.debug("flushed and reopened");
 		} catch (CorruptIndexException e) {
@@ -119,12 +129,14 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void saveExtensionList(Set<String> uris) throws StorageException {
+		checkReadOnly();
 		if (bulkUpdating())
 			throw new StorageException("in bulk mode");
 	}
 	
 	public void flushWriter() throws CorruptIndexException, IOException {
-		m_writer.flush();
+		if (!m_readonly)
+			m_writer.flush();
 		reopen();
 	}
 	
@@ -201,6 +213,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void saveData(String extUri, Triple triple) {
+		checkReadOnly();
 		try {
 			Document doc = createDocument(extUri, triple);
 			m_writer.addDocument(doc);
@@ -217,6 +230,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void saveData(String extUri, Set<Triple> triples) {
+		checkReadOnly();
 		try {
 			for (Triple t : triples) {
 				Document doc = createDocument(extUri, t);
@@ -251,6 +265,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void deleteData(String extUri) throws IOException {
+		checkReadOnly();
 		deleteDataByPath(getPath(extUri));
 	}
 }

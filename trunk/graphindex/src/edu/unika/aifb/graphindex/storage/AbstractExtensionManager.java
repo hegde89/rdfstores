@@ -11,7 +11,7 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 	protected Set<String> m_extensionUris;
 	protected Map<String,Extension> m_handlers;
 	protected ExtensionStorage m_storage;
-	protected boolean m_caching;
+	protected boolean m_readonly;
 	protected boolean m_bulk = false;
 	protected int m_mode = ExtensionManager.MODE_NOCACHE;
 	
@@ -22,14 +22,16 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 		m_extensionUris = new HashSet<String>();
 	}
 	
-	public void initialize(boolean clean) throws StorageException {
-		m_storage.initialize(clean);
+	public void initialize(boolean clean, boolean readonly) throws StorageException {
+		m_readonly = readonly;
+		m_storage.initialize(clean, readonly);
 		if (!clean)
 			m_extensionUris = m_storage.loadExtensionList();
 	}
 	
 	public void close() throws StorageException {
-		m_storage.saveExtensionList(m_extensionUris);
+		if (getMode() != ExtensionManager.MODE_READONLY)
+			m_storage.saveExtensionList(m_extensionUris);
 		m_storage.close();
 	}
 

@@ -126,6 +126,7 @@ public class LuceneExtension extends AbstractExtension {
 					triples = m_les.loadData(getUri());
 				else
 					triples = object == null ? m_les.loadData(getUri(), propertyUri) : m_les.loadData(getUri(), propertyUri, object);
+				break;
 				
 			case ExtensionManager.MODE_WRITECACHE:
 				throw new UnsupportedOperationException("write only mode: reads not permitted");

@@ -5,7 +5,7 @@ public interface ExtensionManager {
 	public static final int MODE_WRITECACHE = 1;
 	public static final int MODE_READONLY = 2;
 	
-	public void initialize(boolean clean) throws StorageException;	
+	public void initialize(boolean clean, boolean readonly) throws StorageException;	
 	public void close() throws StorageException;
 	
 	public ExtensionStorage getExtensionStorage();

@@ -30,7 +30,7 @@ public class MySQLExtensionStorageTest {
 		
 		manager = new MySQLExtensionManager();
 		manager.setExtensionStorage(es);
-		manager.initialize(true);
+		manager.initialize(true, false);
 	}
 
 	@Test

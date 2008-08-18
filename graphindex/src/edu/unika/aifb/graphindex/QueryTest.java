@@ -88,6 +88,6 @@ public class QueryTest {
 		SubgraphMatcher sm = new NaiveSubgraphMatcher();
 		
 		QueryEvaluator qe = new QueryEvaluator(sm);
-		qe.evaluate(q, idx);
+//		qe.evaluate(q, idx);
 	}
 }

@@ -18,7 +18,7 @@ public class NaiveSubgraphMatcher implements SubgraphMatcher {
 
 	private Logger log = Logger.getLogger(NaiveSubgraphMatcher.class);
 
-	public List<Map<String,String>> findMapping(String indent, Vertex hostVertex, Vertex patternVertex) {
+	private List<Map<String,String>> findMapping(String indent, Vertex hostVertex, Vertex patternVertex) {
 		List<Map<String,String>> list = new ArrayList<Map<String,String>>();
 //		log.debug(indent + hostVertex + " " + patternVertex);
 		
@@ -130,7 +130,7 @@ public class NaiveSubgraphMatcher implements SubgraphMatcher {
 							i.remove();
 					}
 					matching.addMappings(mappingList);
-					log.debug("finished: " + mappingList.size());
+//					log.debug("finished: " + mappingList.size());
 //					log.debug("--------------------------------------------");
 				}
 				

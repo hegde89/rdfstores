@@ -30,7 +30,7 @@ public class TestLuceneExtensionStorage {
 		
 		manager = new LuceneExtensionManager();
 		manager.setExtensionStorage(es);
-		manager.initialize(true);
+		manager.initialize(true, false);
 	}
 
 	@Test

@@ -27,7 +27,7 @@ public class DGTest {
 		
 		manager = new LuceneExtensionManager();
 		manager.setExtensionStorage(es);
-		manager.initialize(true);
+		manager.initialize(true, false);
 		
 		StorageManager.getInstance().setExtensionManager(manager);
 	}

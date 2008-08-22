@@ -183,7 +183,7 @@ public class MySQLGraphStorage implements GraphStorageEngine {
 			lock();
 			Statement st = m_conn.createStatement();
 //			st.execute("DROP TABLE IF EXISTS " + tableName);
-			st.execute("REPLACE INTO " + m_prefix + "graphs (name, id, vertices, root) VALUES('" + g.getName() + "', '" + g.getId() + "', '" + g.numberOfVertices() + "', '" + g.getRoot().getLabel() + "')");
+			st.execute("REPLACE INTO " + m_prefix + "graphs (name, id, vertices, root) VALUES('" + g.getName() + "', '" + g.getId() + "', '" + g.numberOfVertices() + "', '" + (g.getRoot() != null ? g.getRoot().getLabel() : "") + "')");
 //			st.execute("CREATE TABLE " + tableName + " (source varchar(255) not null, edge varchar(255) not null, target varchar(255) not null, type varchar(255))");
 			if (m_existing.contains(g.getName())) {
 				st.execute("DELETE FROM " + m_prefix + "graphdata WHERE name = '" + g.getName() + "'");

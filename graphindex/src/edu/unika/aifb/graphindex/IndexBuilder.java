@@ -50,7 +50,7 @@ public class IndexBuilder {
 		idx = idx >= 0 ? idx : -1 - idx;
 
 		// If a collection has multiple entries with the same value
-		// Collections.binarySearch make no guarantee which one will be returned.
+		// Collections.binarySearch makes no guarantee which one will be returned.
 		// This makes sure idx points to the left-most entry.
 		for (int i = idx - 1; i >= 0; i--) {
 			if (m_guides.get(i).numberOfVertices() > g.numberOfVertices()) {

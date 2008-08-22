@@ -21,10 +21,6 @@ public class LuceneExtensionManager extends AbstractExtensionManager {
 		return e;
 	}
 	
-	public void join(String leftExt, String leftProperty, String rightExt) {
-		
-	}
-
 	public void flushAllCaches() throws StorageException {
 		boolean bulk = bulkUpdating();
 		if (bulk)

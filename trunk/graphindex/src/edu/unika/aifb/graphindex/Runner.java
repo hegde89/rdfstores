@@ -1,12 +1,14 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
 
+import edu.unika.aifb.graphindex.algorithm.NaiveOneIndex;
 import edu.unika.aifb.graphindex.algorithm.NaiveSubgraphMatcher;
 import edu.unika.aifb.graphindex.algorithm.SubgraphMatcher;
-import edu.unika.aifb.graphindex.graph.GraphManager;
-import edu.unika.aifb.graphindex.graph.GraphStorageEngine;
-import edu.unika.aifb.graphindex.graph.MySQLGraphStorage;
+import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
+import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
@@ -17,10 +19,14 @@ import edu.unika.aifb.graphindex.query.Query;
 import edu.unika.aifb.graphindex.query.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
+import edu.unika.aifb.graphindex.storage.GraphManager;
+import edu.unika.aifb.graphindex.storage.GraphManagerImpl;
+import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 
 public class Runner {
 
@@ -79,7 +85,7 @@ public class Runner {
 		}
 		else if (dataset.equals("wordnet")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet_1m.nt");
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet_100k.nt");
 		}
 		else if (dataset.equals("lubm")) {
 			importer = new OntologyImporter();
@@ -88,9 +94,9 @@ public class Runner {
 					importer.addImport(f.getAbsolutePath());
 				}
 			}
-//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
-//				if (f.getName().startsWith("University"))
-//					importer.addImport(f.getAbsolutePath());
+			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+				if (f.getName().startsWith("University"))
+					importer.addImport(f.getAbsolutePath());
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
@@ -118,37 +124,37 @@ public class Runner {
 		}
 		
 		ExtensionStorage es = new LuceneExtensionStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/index/" + args[1]);
-		ExtensionManager manager = new LuceneExtensionManager();
-		manager.setExtensionStorage(es);
+		ExtensionManager em = new LuceneExtensionManager();
+		em.setExtensionStorage(es);
 		
-		StorageManager.getInstance().setExtensionManager(manager);
+		GraphStorage gs = new LuceneGraphStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/graph/" + args[1]);
+		GraphManager gm = new GraphManagerImpl();
+		gm.setGraphStorage(gs);
+		
+		StorageManager.getInstance().setExtensionManager(em);
+		StorageManager.getInstance().setGraphManager(gm);
 		
 		if (args[0].equals("create")) {
-			manager.initialize(true, false);
+			em.initialize(true, false);
+			gm.initialize(true);
 			
-			GraphStorageEngine gmstorage = new MySQLGraphStorage(true);
-			GraphManager.getInstance().setStorageEngine(gmstorage);
-			
-			gmstorage.setPrefix(args[1]);
-			gmstorage.init();
-			
-			GLGraphBuilder gb = new GLGraphBuilder();
+			JGraphTBuilder jgb = new JGraphTBuilder();
+//			GLGraphBuilder gb = new GLGraphBuilder();
 			Importer importer = getImporter(args[2]);
 			
-			importer.setGraphBuilder(gb);
+//			importer.setGraphBuilder(gb);
+			importer.setGraphBuilder(jgb);
 			importer.doImport();
 			
-			IndexBuilder ib = new IndexBuilder(gb.getGraph());
+			OneIndexBuilder ib = new OneIndexBuilder(jgb.getGraph());
 			ib.buildIndex();
+			
+//			IndexBuilder ib = new IndexBuilder(gb.getGraph());
+//			ib.buildIndex();
 		}
 		else if(args[0].equals("query")) {
-			manager.initialize(false, true);
-			
-			GraphStorageEngine gmstorage = new MySQLGraphStorage(false);
-			GraphManager.getInstance().setStorageEngine(gmstorage);
-			
-			gmstorage.setPrefix(args[1]);
-			gmstorage.init();
+			em.initialize(false, true);
+			gm.initialize(false);
 			
 			Index index = new Index();
 			index.load();
@@ -159,7 +165,8 @@ public class Runner {
 			qe.evaluate(getQuery(args[2]), index);
 		}
 		
-		manager.close();
+		em.close();
+		gm.close();
 	}
 
 }

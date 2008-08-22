@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex.storage;
 
 public class StorageManager {
 	private ExtensionManager m_extManager;
+	private GraphManager m_graphManager;
 	
 	private static StorageManager m_instance = null;
 	
@@ -23,4 +24,11 @@ public class StorageManager {
 		m_extManager = manager;
 	}
 
+	public GraphManager getGraphManager() {
+		return m_graphManager;
+	}
+	
+	public void setGraphManager(GraphManager gm) {
+		m_graphManager = gm;
+	}
 }

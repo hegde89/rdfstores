@@ -49,9 +49,11 @@ public class OntologyImporter extends Importer {
 		m_resolver = new DefaultOntologyResolver();
 		m_ontoManager = KAON2Manager.newOntologyManager();
 		m_ontoManager.setOntologyResolver(m_resolver);
-		
-		for (String fileName : m_files)
+
+		for (String fileName : m_files) {
 			m_ontoManager.openOntology(((DefaultOntologyResolver)m_ontoManager.getOntologyResolver()).registerOntology(new File(fileName)), new HashMap<String,Object>());
+			log.debug("opened " + fileName);
+		}
 		
 		((DefaultOntologyResolver)m_ontoManager.getOntologyResolver()).registerReplacement("http://example.org/import_ontology", "file:import_ontology.owl");
 		m_ontology = m_ontoManager.createOntology("http://example.org/import_ontology", new HashMap<String,Object>());
@@ -90,6 +92,7 @@ public class OntologyImporter extends Importer {
 	public void doImport() {
 		try {
 			loadOntology();
+			log.info("ontologies loaded");
 			
 			int axioms = 0, totalAxioms = 0;
 			Set<String> classes = new HashSet<String>();
@@ -110,14 +113,14 @@ public class OntologyImporter extends Importer {
 						OWLClass sub = (OWLClass)sco.getSubDescription();
 						OWLClass sup = (OWLClass)sco.getSuperDescription();
 						
-						m_gb.addTriple(sub.getURI(), SUBCLASSOF, sup.getURI());
+						m_sink.triple(sub.getURI(), SUBCLASSOF, sup.getURI());
 						axioms++;
 					}
 				}
 				
 				if (a instanceof SubObjectPropertyOf) {
 					SubObjectPropertyOf sop = (SubObjectPropertyOf)a;
-					log.debug(sop);
+//					log.debug(sop);
 				}
 				
 				if (a instanceof SubDataPropertyOf) {
@@ -126,7 +129,7 @@ public class OntologyImporter extends Importer {
 				
 				if (a instanceof ObjectPropertyMember) {
 					ObjectPropertyMember opm = (ObjectPropertyMember)a;
-					m_gb.addTriple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI());
+					m_sink.triple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI());
 					axioms++;
 				}
 				
@@ -135,7 +138,7 @@ public class OntologyImporter extends Importer {
 					String datatype = getDatatype((DataProperty)dpm.getDataProperty());
 //					log.debug(dpm);
 					if (datatype != null) {
-						m_gb.addTriple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString());
+						m_sink.triple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString());
 						axioms++;
 					}
 				}
@@ -144,7 +147,7 @@ public class OntologyImporter extends Importer {
 					ClassMember cm = (ClassMember)a;
 					if (cm.getDescription() instanceof OWLClass) {
 						OWLClass c = (OWLClass)cm.getDescription();
-						m_gb.addTriple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI());
+						m_sink.triple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI());
 						axioms++;
 					}
 				}
@@ -152,10 +155,15 @@ public class OntologyImporter extends Importer {
 //				log.debug(a + " " + a.getClass());
 			}
 			log.debug("axioms: " + axioms + "/" + totalAxioms);
-			log.debug(classes);
+//			log.debug(classes);
 			
 //			for (Axiom a : m_ontology.createAxiomRequest().setCondition("superDescription", OWLClass.OWL_THING).getAll())
 //				log.debug(a);
+			
+			m_ontoManager.close();
+			m_ontology = null;
+			m_resolver = null;
+			m_datatypes.clear();
 			
 		} catch (KAON2Exception e) {
 			e.printStackTrace();

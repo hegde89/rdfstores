@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex.graph;
 
 import java.util.List;
 
+@Deprecated
 public class GraphManager {
 	private GraphStorageEngine m_engine;
 	

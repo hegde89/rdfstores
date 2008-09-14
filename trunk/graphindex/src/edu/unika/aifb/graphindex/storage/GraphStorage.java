@@ -5,7 +5,7 @@ import java.util.Set;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 
 public interface GraphStorage {
-	public void initialize(boolean clean) throws StorageException;
+	public void initialize(boolean clean, boolean readonly) throws StorageException;
 	public void close() throws StorageException;
 
 	public void setGraphManager(GraphManager graphManager);

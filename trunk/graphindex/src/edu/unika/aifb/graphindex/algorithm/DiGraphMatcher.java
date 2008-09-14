@@ -15,8 +15,22 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
-import edu.unika.aifb.graphindex.test.FeasibilityChecker;
 
+/**
+ * Implementation of the VF2 graph isomorphism algorithm, published in:
+ <p>
+ 	Luigi P. Cordella, Pasquale Foggia, Carlo Sansone, Mario Vento,
+	"A (Sub)Graph Isomorphism Algorithm for Matching Large Graphs,"
+	IEEE Transactions on Pattern Analysis and Machine Intelligence,
+	vol. 26,  no. 10,  pp. 1367-1372,  Oct.,  2004.
+	<p>
+ * Inspired by the implementation in the NetworkX graph library for Python: {@link https://networkx.lanl.gov/wiki}
+ * 	 
+ * @author gl
+ *
+ * @param <V>
+ * @param <E>
+ */
 public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, Iterable<IsomorphismRelation<V,E>> {
 	
 	public class DiGMState {
@@ -165,6 +179,17 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 	private boolean m_generateMappings;
 	private final static Logger log = Logger.getLogger(DiGraphMatcher.class);
 	
+	/**
+	 * Create a new matcher object. If testing for subgraph isomorphism, <code>graph1</code> should be the "smaller" graph. If
+	 * <code>generateMappings</code> is true, all possible mappings are generated, which can take time. Otherwise, the algorithm
+	 * stops as early as possible and does not generate any mappings.
+	 * <p>
+	 * This class also implements the Iterable interface, which is used to iterate over all mappings generated.
+	 * 
+	 * @param graph1
+	 * @param graph2
+	 * @param generateMappings wether to generate mappings or just check for isomorphisms 
+	 */
 	public DiGraphMatcher(DirectedGraph<V,E> graph1, DirectedGraph<V,E> graph2, boolean generateMappings) {
 		g1 = graph2;
 		g2 = graph1;
@@ -180,15 +205,35 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		
 		m_mappings = new ArrayList<Map<V,V>>();
 		m_test = TEST_GRAPH;
-		m_checker = null;
+		m_checker = new FeasibilityChecker<V,E,DirectedGraph<V,E>>() { // default checker, always returns true
+			public boolean isEdgeCompatible(E e1, E e2) {
+				return true;
+			}
+
+			public boolean isVertexCompatible(V n1, V n2) {
+				return true;
+			}
+		};
 		m_generateMappings = generateMappings;
 	}
 	
+	/**
+	 * Create a new matcher object. If testing for subgraph isomorphism, <code>graph1</code> should be the "smaller" graph. If
+	 * <code>generateMappings</code> is true, all possible mappings are generated, which can take time. Otherwise, the algorithm
+	 * stops as early as possible and does not generate any mappings. The feasibility checker is used to determine semantic 
+	 * feasibility.
+	 * 
+	 * @param graph1
+	 * @param graph2
+	 * @param generateMappings
+	 * @param checker a FeasibilityChecker which is used to determine if the current mapping can be extended by the two nodes
+	 */
 	public DiGraphMatcher(DirectedGraph<V,E> graph1, DirectedGraph<V,E> graph2, boolean generateMappings, FeasibilityChecker<V,E,DirectedGraph<V,E>> checker) {
 		this(graph1, graph2, generateMappings);
 		m_checker = checker;
 	}
 	
+	// TODO add predecessors and successors to graph class
 	private Set<V> predecessors(DirectedGraph<V,E> g, V v) {
 		Set<V> preds = new HashSet<V>();
 		for (E edge : g.incomingEdgesOf(v)) {
@@ -205,6 +250,11 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		return succs;
 	}
 	
+	/**
+	 * Determines if <code>graph1</code> is isomorphic to a subgraph of <code>graph2</code>. 
+	 * 
+	 * @return true, if <code>graph1</code> is isomorphic to a subgraph of <code>graph2</code>, false otherwise
+	 */
 	public boolean isSubgraphIsomorphic() {
 		m_test = TEST_SUBGRAPH;
 		m_mappings.clear();
@@ -216,6 +266,11 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		return found;
 	}
 	
+	/**
+	 * Determines if <code>graph1</code> and <code>graph2</code> are isomorphic.
+	 * 
+	 * @return true, if <code>graph1</code> and <code>graph2</code> are isomorphic, false otherwise
+	 */
 	public boolean isIsomorphic() {
 		m_test = TEST_GRAPH;
 		m_mappings.clear();
@@ -261,7 +316,7 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 //			log.debug("cp: " + candidatePairs);
 			for (Pair p : candidatePairs) {
 //				log.debug("trying " + p);
-				if (isSyntacticallyFeasible(p.n1, p.n2) && isSemanticallyFeasible(p.n1, p.n2)) {
+				if (isFeasible(p.n1, p.n2)) {// && isSemanticallyFeasible(p.n1, p.n2)) {
 					DiGMState newState = new DiGMState(p.n1, p.n2);
 					if (match(newState)) {
 						found = true;
@@ -323,11 +378,25 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		return candidates;
 	}
 	
-	private boolean isSemanticallyFeasible(V n1, V n2) {
-		return m_checker != null ? m_checker.isSemanticallyFeasible(g1, g2, n1, n2, core1, core2) : true;
+	private boolean edgeSetsCompatible(Set<E> g1edges, Set<E> g2edges) {
+		for (E e1 : g1edges) {
+			boolean found = false;
+			for (E e2 : g2edges) {
+				if (m_checker.isEdgeCompatible(e1, e2)) {
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				return false;
+		}
+		return true;
 	}
 
-	private boolean isSyntacticallyFeasible(V n1, V n2) {
+	private boolean isFeasible(V n1, V n2) {
+		
+		if (!m_checker.isVertexCompatible(n1, n2))
+			return false;
 		
 		// R_self
 //		if (g1.getAllEdges(n1, n1).size() != g2.getAllEdges(n2, n2).size())
@@ -336,44 +405,76 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		// R_pred
 		for (V n1pred : predecessors(g1, n1)) {
 			if (core1.containsKey(n1pred)) {
-				Set<V> n2preds = predecessors(g2, n2); 
-				if (!n2preds.contains(core1.get(n1pred)))
-					return false;
-				else if (g1.getAllEdges(n1pred, n1).size() != g2.getAllEdges(core1.get(n1pred), n2).size())
-					return false;
+				Set<E> g1edges = g1.getAllEdges(n1pred, n1);
+				Set<V> n2preds = predecessors(g2, n2);
+				
+				if (g1edges.size() > 0) {
+					for (V n2pred : n2preds) {
+						if (n2pred.equals(core1.get(n1pred))) {
+							Set<E> g2edges = g2.getAllEdges(core1.get(n1pred), n2);
+							if (g1edges.size() > g2edges.size())
+								return false;
+							if (!edgeSetsCompatible(g1edges, g2edges))
+								return false;
+						}
+					}
+				}
+				else {
+					log.error("should not happen, g1edges should be > 0");
+				}
+//				if (!n2preds.contains(core1.get(n1pred))) 
+//					return false;
+//				else if (g1.getAllEdges(n1pred, n1).size() > g2.getAllEdges(core1.get(n1pred), n2).size())
+//					return false;
 			}
 		}
 		
-		for (V n2pred : predecessors(g2, n2)) {
-			if (core2.containsKey(n2pred)) {
-				Set<V> n1preds = predecessors(g1, n1); 
-				if (!n1preds.contains(core2.get(n2pred)))
-					return false;
-				else if (g2.getAllEdges(n2pred, n2).size() != g1.getAllEdges(core2.get(n2pred), n1).size())
-					return false;
-			}
-		}
+//		for (V n2pred : predecessors(g2, n2)) {
+//			if (core2.containsKey(n2pred)) {
+//				Set<V> n1preds = predecessors(g1, n1); 
+//				if (!n1preds.contains(core2.get(n2pred)))
+//					return false;
+//				else if (g2.getAllEdges(n2pred, n2).size() != g1.getAllEdges(core2.get(n2pred), n1).size())
+//					return false;
+//			}
+//		}
 		
 		// R_succ
 		for (V n1succ : successors(g1, n1)) {
 			if (core1.containsKey(n1succ)) {
-				Set<V> n2succs = successors(g2, n2); 
-				if (!n2succs.contains(core1.get(n1succ)))
-					return false;
-				else if (g1.getAllEdges(n1succ, n1).size() != g2.getAllEdges(core1.get(n1succ), n2).size())
-					return false;
+				Set<E> g1edges = g1.getAllEdges(n1, n1succ);
+				Set<V> n2succs = successors(g2, n2);
+				
+				if (g1edges.size() > 0) {
+					for (V n2succ : n2succs) {
+						if (n2succ.equals(core1.get(n1succ))) {
+							Set<E> g2edges = g2.getAllEdges(n2, core1.get(n1succ));
+							if (g1edges.size() > g2edges.size())
+								return false;
+							if (!edgeSetsCompatible(g1edges, g2edges))
+								return false;
+						}
+					}
+				}
+				else {
+					log.error("should not happen, g1edges should be > 0");
+				}
+//				if (!n2succs.contains(core1.get(n1succ)))
+//					return false;
+//				else if (g1.getAllEdges(n1succ, n1).size() > g2.getAllEdges(core1.get(n1succ), n2).size())
+//					return false;
 			}
 		}
 		
-		for (V n2succ : successors(g2, n2)) {
-			if (core2.containsKey(n2succ)) {
-				Set<V> n1succs = successors(g1, n1); 
-				if (!n1succs.contains(core2.get(n2succ)))
-					return false;
-				else if (g2.getAllEdges(n2succ, n2).size() != g1.getAllEdges(core2.get(n2succ), n1).size())
-					return false;
-			}
-		}
+//		for (V n2succ : successors(g2, n2)) {
+//			if (core2.containsKey(n2succ)) {
+//				Set<V> n1succs = successors(g1, n1); 
+//				if (!n1succs.contains(core2.get(n2succ)))
+//					return false;
+//				else if (g2.getAllEdges(n2succ, n2).size() != g1.getAllEdges(core2.get(n2succ), n1).size())
+//					return false;
+//			}
+//		}
 		
 		// R_termin
 		int num1 = count(predecessors(g1, n1), in1.keySet(), core1.keySet());
@@ -429,7 +530,14 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		}
 		return n;
 	}
-	
+
+	/**
+	 * The number of mappings generated by the previous call to isSubgraphIsomorphic() or 
+	 * isIsomorphic(). If the matcher was created with <code>generateMappings=false</code> this
+	 * will always return zero.
+	 * 
+	 * @return the number of mappings
+	 */
 	public int numberOfMappings() {
 		return m_mappings.size();
 	}

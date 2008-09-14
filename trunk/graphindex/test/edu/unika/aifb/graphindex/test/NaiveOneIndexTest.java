@@ -24,19 +24,25 @@ public class NaiveOneIndexTest {
 	public void setUp() throws Exception {
 		graph = new DefaultDirectedGraph<String,LabeledEdge<String>>(new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
 		
-		addEdge("A", "A", "d");
 		addEdge("A", "B", "a");
-		addEdge("A", "C", "b");
-		addEdge("G", "C", "g");
-		addEdge("A", "D", "a");
-		addEdge("D", "E", "a");
-		addEdge("B", "F", "a");
-		addEdge("F", "A", "a");
-		addEdge("A", "X", "y");
-		addEdge("A", "Y", "y");
-		addEdge("A", "Z", "y");
-		addEdge("Y", "T", "x");
-		addEdge("Z", "S", "z");
+		addEdge("B", "C", "a");
+		addEdge("A", "D", "c");
+		addEdge("A", "G", "c");
+//		addEdge("D", "C", "a");
+		addEdge("A", "E", "c");
+		addEdge("E", "F", "a");
+//		addEdge("C", "E", "d");
+//		addEdge("A", "C", "b");
+//		addEdge("G", "C", "g");
+//		addEdge("A", "D", "a");
+//		addEdge("D", "E", "a");
+//		addEdge("B", "F", "a");
+//		addEdge("F", "A", "a");
+//		addEdge("A", "X", "y");
+//		addEdge("A", "Y", "y");
+//		addEdge("A", "Z", "y");
+//		addEdge("Y", "T", "x");
+//		addEdge("Z", "S", "z");
 	}
 	
 	private void addEdge(String src, String dst, String edge) {
@@ -49,7 +55,7 @@ public class NaiveOneIndexTest {
 	public void testNaiveOneIndex() throws StorageException {
 		NaiveOneIndex idx = new NaiveOneIndex(graph);
 		Set<String> vertices = new HashSet<String>();
-		vertices.addAll(Arrays.asList(new String[] {"A", "B", "C", "D", "E", "F", "G", "X", "Y", "Z", "S", "T"}));
+		vertices.addAll(Arrays.asList(new String[] {"A", "B", "C", "E", "F", "G"}));//, "C", "D", "E", "F", "G", "X", "Y", "Z", "S", "T"}));
 		idx.createOneIndex(vertices);
 	}
 

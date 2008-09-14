@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import edu.unika.aifb.graphindex.query.QueryGraph;
 
+@Deprecated
 public class GraphFactory {
 	private static int m_id = 0;
 	

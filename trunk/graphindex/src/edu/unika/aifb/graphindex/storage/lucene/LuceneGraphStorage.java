@@ -40,11 +40,13 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		m_directory = directory;
 	}
 	
-	public void initialize(boolean clean) throws StorageException {
-		super.initialize(clean);
+	public void initialize(boolean clean, boolean readonly) throws StorageException {
+		super.initialize(clean, readonly);
 		try {
-			m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
-			m_writer.setRAMBufferSizeMB(256);
+			if (!m_readonly) {
+				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+				m_writer.setRAMBufferSizeMB(256);
+			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		}
@@ -58,8 +60,10 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	
 	public void close() throws StorageException {
 		try {
-			m_writer.close();
-			m_searcher.close();
+			if (!m_readonly && m_writer != null)
+				m_writer.close();
+			if (m_searcher != null)
+				m_searcher.close();
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

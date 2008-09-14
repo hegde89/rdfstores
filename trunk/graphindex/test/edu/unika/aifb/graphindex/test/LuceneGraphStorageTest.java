@@ -25,7 +25,7 @@ public class LuceneGraphStorageTest {
 		
 		manager = new GraphManagerImpl();
 		manager.setGraphStorage(gs);
-		manager.initialize(true);
+		manager.initialize(true, false);
 
 		StorageManager.getInstance().setGraphManager(manager);
 	}

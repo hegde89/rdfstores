@@ -11,6 +11,7 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.junit.Test;
 
 import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
+import edu.unika.aifb.graphindex.algorithm.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 
 public class DiGraphMatcherTest {
@@ -29,9 +30,9 @@ public class DiGraphMatcherTest {
 
 		addEdge(g1, "A", "a", "B");
 //		addEdge(g1, "B", "b", "B");
-		addEdge(g1, "B", "c", "A");
-//		addEdge(g1, "B", "a", "C");
-		addEdge(g1, "C", "a", "D");
+		addEdge(g1, "B", "a", "A");
+		addEdge(g1, "B", "a", "C");
+//		addEdge(g1, "C", "a", "D");
 		
 		addEdge(g2, "Y", "a", "Z");
 
@@ -40,24 +41,33 @@ public class DiGraphMatcherTest {
 		addEdge(g3, "D", "c", "X");
 //		addEdge(g3, "X", "a", "C");
 		
-		DiGraphMatcher<String,LabeledEdge<String>> gm = new DiGraphMatcher<String,LabeledEdge<String>>(g1, g3, false,
+		DiGraphMatcher<String,LabeledEdge<String>> gm = new DiGraphMatcher<String,LabeledEdge<String>>(g2, g1, true,
 				new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
 					public boolean isSemanticallyFeasible(DirectedGraph<String,LabeledEdge<String>> g1,	DirectedGraph<String,LabeledEdge<String>> g2,	String n1, String n2, Map<String,String> core1, Map<String,String> core2) {
+						return true;
 //						System.out.println(n1 + " " + n2);
-						List<String> g1labels = new ArrayList<String>();
-						for (LabeledEdge<String> e : g1.incomingEdgesOf(n1)) {
-							if (core1.containsKey(g1.getEdgeSource(e)))
-								g1labels.add(e.getLabel());
-						}
-
-						List<String> g2labels = new ArrayList<String>();
-						for (LabeledEdge<String> e : g2.incomingEdgesOf(n2)) {
-							if (core2.containsKey(g2.getEdgeSource(e)))
-								g2labels.add(e.getLabel());
-						}
+//						List<String> g1labels = new ArrayList<String>();
+//						for (LabeledEdge<String> e : g1.incomingEdgesOf(n1)) {
+//							if (core1.containsKey(g1.getEdgeSource(e)))
+//								g1labels.add(e.getLabel());
+//						}
+//
+//						List<String> g2labels = new ArrayList<String>();
+//						for (LabeledEdge<String> e : g2.incomingEdgesOf(n2)) {
+//							if (core2.containsKey(g2.getEdgeSource(e)))
+//								g2labels.add(e.getLabel());
+//						}
 //						System.out.println(g1labels + " " + g2labels);
-						
-						return g1labels.equals(g2labels);
+//						
+//						return g1labels.equals(g2labels);
+					}
+
+					public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+						return e1.getLabel().equals(e2.getLabel());
+					}
+
+					public boolean isVertexCompatible(String n1, String n2) {
+						return true;
 					}
 				});
 		System.out.println(gm.isSubgraphIsomorphic());

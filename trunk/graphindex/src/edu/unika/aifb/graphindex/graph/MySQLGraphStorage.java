@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.extensions.ExtEntry;
 
+@Deprecated
 public class MySQLGraphStorage implements GraphStorageEngine {
 	private Connection m_conn;
 	private Set<String> m_existing;

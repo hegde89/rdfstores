@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
+import org.jgrapht.alg.StrongConnectivityInspector;
 
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
@@ -257,6 +258,11 @@ public class NaiveOneIndex {
 	}
 	
 	private Partition initialize(Set<String> vertices) {
+//		StrongConnectivityInspector<String,LabeledEdge<String>> sci = new StrongConnectivityInspector<String,LabeledEdge<String>>(m_graph);
+//		for (Set<String> component : sci.stronglyConnectedSets()) {
+//			log.debug(component);
+//		}
+		
 		Block b = new Block();
 		b.addVertices(vertices);
 
@@ -320,6 +326,35 @@ public class NaiveOneIndex {
 		return g;
 	}
 	
+	public void purgeSelfloops(Partition p) {
+		List<Block> newBlocks = new LinkedList<Block>();
+		for (Block b : p.getBlocks()) {
+			String v = b.getVertices().toArray(new String[] {})[0];
+			boolean hasSelfloop = false;
+			for (String v2 : b.getVertices()) {
+				if (v != v2 && m_graph.getAllEdges(v, v2).size() > 0) {
+					hasSelfloop = true;
+					break;
+				}
+			}
+			
+			if (hasSelfloop) {
+				Block nb = new Block();
+				int i = 0;
+				int x = b.getVertices().size() / 2;
+				Iterator<String> vertices = b.getVertices().iterator();
+				while (i < x) {
+					nb.addVertex(vertices.next());
+					vertices.remove();
+					i++;
+				}
+				newBlocks.add(nb);
+			}
+		}
+		for (Block nb : newBlocks)
+			p.addBlock(nb);
+	}
+	
 	public NamedGraph<String,LabeledEdge<String>> createOneIndex(Set<String> vertices) throws StorageException {
 		Partition p = initialize(vertices);
 		
@@ -339,14 +374,19 @@ public class NaiveOneIndex {
 				}
 			}
 			
-			if (p.getBlocks().size() != psize) {
+			if (p.getBlocks().size() != psize || psize == 1) {
 				if (p.stable())
 					done = true;
+			}
+			
+			if ((System.currentTimeMillis() - start) / 1000 > 30) {
+				log.debug("current psize: " + p.getBlocks().size() + ", duration: " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
 			}
 			
 //			log.debug(p + " " + p.stable());
 //			done = true;
 		}
+//		log.debug(p);
 		
 		long duration = (System.currentTimeMillis() - start) / 1000;
 		
@@ -359,6 +399,8 @@ public class NaiveOneIndex {
 		if (duration > 30) {
 			log.debug("psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds");
 		}
+		
+		purgeSelfloops(p);
 		
 		return createIndexGraph(p);
 	}

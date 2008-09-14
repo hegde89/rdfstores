@@ -136,11 +136,11 @@ public class OneIndex {
 		}
 		
 		public boolean stable(Block b, String label) {
-			
+			return false;
 		}
 		
 		public boolean stable(Block b) {
-			
+			return false;
 		}
 		
 		public Set<Node> image() {

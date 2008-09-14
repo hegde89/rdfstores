@@ -1,14 +1,11 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.IOException;
 
-import edu.unika.aifb.graphindex.algorithm.NaiveOneIndex;
-import edu.unika.aifb.graphindex.algorithm.NaiveSubgraphMatcher;
-import edu.unika.aifb.graphindex.algorithm.SubgraphMatcher;
-import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
-import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import com.apple.component.Component;
+
+import edu.unika.aifb.graphindex.importer.ComponentImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
@@ -35,9 +32,13 @@ public class Runner {
 		
 		if (dataset.equals("simple")) {
 			Individual p1 = new Individual("http://example.org/simple#P1");
-			q.addLiteral(new Literal(new Predicate("http://example.org/simple#a"), new Variable("?x"), p1));
-			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?x"), new Variable("?z")));
-			q.addLiteral(new Literal(new Predicate("http://example.org/simple#p"), p1, new Variable("?a")));
+//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#a"), new Variable("?x"), p1));
+//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?x"), new Variable("?z")));
+//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#p"), p1, new Variable("?a")));
+			
+			Individual a1 = new Individual("http://example.org/simple#A2");
+			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), a1, new Variable("?y")));
+			q.addLiteral(new Literal(new Predicate("http://example.org/simple#a"), new Variable("?y"), new Variable("?z")));
 
 //			q.addLiteral(new Literal(new Predicate("http://example.org/simple#m"), new Variable("?x"), new Variable("?y")));
 //			q.addLiteral(new Literal(new Predicate("http://example.org/simple#o"), new Variable("?x"), new Variable("?z")));
@@ -85,7 +86,11 @@ public class Runner {
 		}
 		else if (dataset.equals("wordnet")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet_100k.nt");
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet.nt");
+		}
+		else if (dataset.equals("freebase")) {
+			importer = new NTriplesImporter();
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/freebase/freebase_1m.nt");
 		}
 		else if (dataset.equals("lubm")) {
 			importer = new OntologyImporter();
@@ -94,9 +99,9 @@ public class Runner {
 					importer.addImport(f.getAbsolutePath());
 				}
 			}
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
-				if (f.getName().startsWith("University"))
-					importer.addImport(f.getAbsolutePath());
+//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+//				if (f.getName().startsWith("University"))
+//					importer.addImport(f.getAbsolutePath());
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
@@ -110,14 +115,19 @@ public class Runner {
 			importer = new NTriplesImporter();
 			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swetodblp");
 		}
+		else if (dataset.equals("simple_components")) {
+			importer = new ComponentImporter();
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/components/simple");
+		}
 		return importer;
 	}
 	
 	/**
 	 * @param args
 	 * @throws StorageException 
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws StorageException {
+	public static void main(String[] args) throws StorageException, IOException {
 		if (args.length != 3) {
 			System.out.println("Usage:\nRunner partition <prefix> <dataset>\nRunner query <prefix> <dataset>");
 			return;
@@ -134,19 +144,33 @@ public class Runner {
 		StorageManager.getInstance().setExtensionManager(em);
 		StorageManager.getInstance().setGraphManager(gm);
 		
-		if (args[0].equals("create")) {
-			em.initialize(true, false);
-			gm.initialize(true);
-			
-			JGraphTBuilder jgb = new JGraphTBuilder();
-//			GLGraphBuilder gb = new GLGraphBuilder();
+		if (args[0].equals("analyze") || args[0].equals("analyse")) {
+			DatasetAnalyzer da = new DatasetAnalyzer();
+
 			Importer importer = getImporter(args[2]);
-			
-//			importer.setGraphBuilder(gb);
-			importer.setGraphBuilder(jgb);
+			importer.setTripleSink(da);
 			importer.doImport();
 			
-			OneIndexBuilder ib = new OneIndexBuilder(jgb.getGraph());
+			da.printAnalysis();
+		}
+		else if (args[0].equals("partition")) {
+			TriplesPartitioner tp = new TriplesPartitioner("components/" + args[1]);
+			
+			Importer importer = getImporter(args[2]);
+			importer.setTripleSink(tp);
+			importer.doImport();
+			
+			tp.write("components/" + args[1]);
+		}
+		else if (args[0].equals("create")) {
+			em.initialize(true, false);
+			gm.initialize(true, false);
+			
+			Importer importer = getImporter(args[2]);
+			LVertexSetBuilder vb = new LVertexSetBuilder(importer, "components/" + args[1], false, false);
+			HashValueProvider hvp = new HashValueProvider("components/" + args[1] + ".hashes");
+			
+			FastIndexBuilder ib = new FastIndexBuilder(vb, hvp);
 			ib.buildIndex();
 			
 //			IndexBuilder ib = new IndexBuilder(gb.getGraph());
@@ -154,14 +178,12 @@ public class Runner {
 		}
 		else if(args[0].equals("query")) {
 			em.initialize(false, true);
-			gm.initialize(false);
+			gm.initialize(false, true);
 			
-			Index index = new Index();
+			StructureIndex index = new StructureIndex();
 			index.load();
 			
-			SubgraphMatcher sm = new NaiveSubgraphMatcher();
-			
-			QueryEvaluator qe = new QueryEvaluator(sm);
+			QueryEvaluator qe = new QueryEvaluator();
 			qe.evaluate(getQuery(args[2]), index);
 		}
 		

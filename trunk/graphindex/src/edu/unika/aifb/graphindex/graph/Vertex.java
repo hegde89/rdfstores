@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.extensions.ExtEntry;
-import edu.unika.aifb.graphindex.extensions.Extension;
 
 public class Vertex extends AbstractGraphElement implements Cloneable, Serializable {
 	private static final long serialVersionUID = -8665993784469507490L;

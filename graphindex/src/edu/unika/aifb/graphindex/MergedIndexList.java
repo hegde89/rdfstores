@@ -9,11 +9,11 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class MergedIndexList<G> {
 	
-	private IndexMerger<G> m_merger;
+	private IndexGraphMerger<G> m_merger;
 	private LinkedList<G> m_graphs;
 	private Comparator<G> m_comparator;
 	
-	public MergedIndexList(IndexMerger<G> merger, Comparator<G> comparator) {
+	public MergedIndexList(IndexGraphMerger<G> merger, Comparator<G> comparator) {
 		m_merger = merger;
 		m_comparator = comparator;
 		m_graphs = new LinkedList<G>();

@@ -1,16 +1,24 @@
 package edu.unika.aifb.graphindex.graph;
 
-import java.util.List;
 import java.util.Set;
 
 import org.jgrapht.EdgeFactory;
-import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
 
-public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends DefaultDirectedGraph<String,LabeledEdge<String>> {
+/**
+ * A subclass of DirectedMultigraph, which adds a name and the ability to store and load the graph
+ * using the graph storage interface. Vertices and edge labels have to be strings.
+ * 
+ * @author gl
+ *
+ * @param <V> vertex type
+ * @param <E> edge type
+ */
+public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends DirectedMultigraph<String,LabeledEdge<String>> {
 	
 	private static final long serialVersionUID = -6948953756502811617L;
 	
@@ -30,13 +38,15 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	}
 	
 	private void initialize() throws StorageException {
-		m_gs = StorageManager.getInstance().getGraphManager().getGraphStorage();
-		
-		Set<LabeledEdge<String>> edges = m_gs.loadEdges(m_name);
-		for (LabeledEdge<String> edge : edges) {
-			addVertex(edge.getSrc());
-			addVertex(edge.getDst());
-			addEdge(edge.getSrc(), edge.getDst(), edge);
+		if (StorageManager.getInstance().getGraphManager() != null) {
+			m_gs = StorageManager.getInstance().getGraphManager().getGraphStorage();
+			
+			Set<LabeledEdge<String>> edges = m_gs.loadEdges(m_name);
+			for (LabeledEdge<String> edge : edges) {
+				addVertex(edge.getSrc());
+				addVertex(edge.getDst());
+				addEdge(edge.getSrc(), edge.getDst(), edge);
+			}
 		}
 	}
 	
@@ -48,6 +58,13 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 		m_gs.saveEdges(m_name, edgeSet());
 	}
 	
+	/**
+	 * Shortcut method to add an edge, without having to add the vertices beforehand.
+	 * 
+	 * @param src
+	 * @param edge
+	 * @param dst
+	 */
 	public void addEdge(V src, String edge, V dst) {
 		addVertex(src);
 		addVertex(dst);

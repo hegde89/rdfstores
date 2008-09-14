@@ -66,13 +66,16 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		BooleanQuery.setMaxClauseCount(65536);
 	}
 	
 	public void close() {
 		try {
-			if (!m_readonly)
+			if (!m_readonly && m_writer != null)
 				m_writer.close();
-			m_searcher.close();
+			if (m_searcher != null)
+				m_searcher.close();
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

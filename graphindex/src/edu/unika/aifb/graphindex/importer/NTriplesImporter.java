@@ -64,6 +64,7 @@ public class NTriplesImporter extends Importer {
 //				if (l.getDatatype() != null)
 //					target = l.getDatatype().toString();
 				target = l.stringValue();
+				target = target.replaceAll("\n", "\\\\" + "n");
 			}
 			else if (st.getObject() instanceof BNode) {
 				BNode bn = (BNode)st.getObject();
@@ -75,8 +76,10 @@ public class NTriplesImporter extends Importer {
 			}
 			
 			if (source != null && target != null && label != null) {
-				m_gb.addTriple(source, label, target);
+				m_sink.triple(source, label, target);
 				m_triplesAdded++;
+//				if (m_triplesAdded % 500000 == 0)
+//					log.debug("nt importer: " + m_triplesAdded + " triples imported");
 			}
 			else {
 				log.debug(source + " " + label + " " + target);
@@ -115,6 +118,7 @@ public class NTriplesImporter extends Importer {
 			}
 			
 			log.info("triples: " + m_triplesAdded + "/" + m_triplesTotal);
+			m_triplesAdded = m_triplesTotal = 0;
 		}
 	}
 

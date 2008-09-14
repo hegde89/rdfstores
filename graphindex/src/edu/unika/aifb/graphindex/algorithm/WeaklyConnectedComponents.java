@@ -1,5 +1,6 @@
 package edu.unika.aifb.graphindex.algorithm;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -19,9 +20,15 @@ public class WeaklyConnectedComponents<V,E> {
 		m_iterator = m_components.iterator();
 	}
 	
+	public int size() {
+		return m_components.size();
+	}
+	
 	public Set<V> nextComponent() {
 		if (!m_iterator.hasNext())
 			return null;
-		return m_iterator.next();
+		Set<V> c = m_iterator.next();
+		m_iterator.remove();
+		return new HashSet<V>(c);
 	}
 }

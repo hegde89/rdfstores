@@ -1,5 +1,6 @@
 package edu.unika.aifb.graphindex.graph;
 
+@Deprecated
 public interface Storable {
 	public static int STATUS_NEW = 0;
 	public static int STATUS_LOADED = 1;

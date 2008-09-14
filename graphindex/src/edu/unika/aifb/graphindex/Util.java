@@ -16,10 +16,30 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
+import org.jgrapht.ext.DOTExporter;
+import org.jgrapht.ext.EdgeNameProvider;
+import org.jgrapht.ext.VertexNameProvider;
+
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphFactory;
+import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.graph.NamedGraph;
 
 public class Util {
+	private static MessageDigest m_md;
+	
+	static {
+		try {
+			m_md = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	synchronized public static long hash(String uri) {
+		byte[] hash = m_md.digest(uri.getBytes());
+		return new BigInteger(new byte[] {hash[14], hash[12], hash[10], hash[8], hash[6], hash[4], hash[2], hash[0]}).longValue();
+	}
 	
 	public static String digest(String uri) {
 		try{
@@ -65,7 +85,50 @@ public class Util {
 			e.printStackTrace();
 		}
 	}
+	
+	public static void printDOT(Writer out, NamedGraph<String,LabeledEdge<String>> graph) {
+		try {
+			DOTExporter<String,LabeledEdge<String>> exporter = new DOTExporter<String,LabeledEdge<String>>(
+					// id
+					new VertexNameProvider<String>() {
+						public String getVertexName(String v) {
+							return v;
+						}
+					},
+					// label
+					new VertexNameProvider<String>() {
+						public String getVertexName(String v) {
+							return v;
+						}
+					},
+					new EdgeNameProvider<LabeledEdge<String>>() {
+						public String getEdgeName(LabeledEdge<String> edge) {
+							return truncateUri(edge.getLabel());
+						}
+					});
+			exporter.export(out, graph);
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void printDOT(NamedGraph<String,LabeledEdge<String>> graph) {
+		try {
+			printDOT(new FileWriter(graph.getName() + ".dot"), graph);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
+	public static void printDOT(String fileName, NamedGraph<String,LabeledEdge<String>> graph) {
+		try {
+			printDOT(new FileWriter(fileName), graph);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public static void printDOT(Graph graph) {
 		printDOT(new PrintWriter(System.out), graph);
 	}
@@ -96,6 +159,12 @@ public class Util {
 	public static long freeMemory() {
 		Runtime r = Runtime.getRuntime();
 		return (r.freeMemory() + (r.maxMemory() - r.totalMemory())) / 1000;
+	}
+	
+	public static String memory() {
+		Runtime r = Runtime.getRuntime();
+		long max = r.maxMemory() / 1000;
+		return "memory (used/free/max): " + (max - freeMemory()) / 1000 + "/" + freeMemory() / 1000 + "/" + r.maxMemory() / 1000000;
 	}
 
 	public static Object[] permute(int k, Object[] os) {

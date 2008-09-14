@@ -1,0 +1,29 @@
+package edu.unika.aifb.graphindex.storage;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import edu.unika.aifb.graphindex.graph.LabeledEdge;
+
+public class NullGraphStorage extends AbstractGraphStorage {
+
+	public void initialize(boolean clean) throws StorageException {
+	}
+
+	public void close() throws StorageException {
+	}
+
+	public Set<String> loadGraphList() throws StorageException {
+		return new HashSet<String>();
+	}
+
+	public void saveGraphList(Set<String> graphs) throws StorageException {
+	}
+
+	public Set<LabeledEdge<String>> loadEdges(String graphName) throws StorageException {
+		return new HashSet<LabeledEdge<String>>();
+	}
+
+	public void saveEdges(String graphName, Set<LabeledEdge<String>> edges) throws StorageException {
+	}
+}

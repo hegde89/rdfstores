@@ -42,18 +42,20 @@ public class QueryValidator {
 	public static void main(String[] args) throws KAON2Exception, InterruptedException, ParseException {
 		m_files = new ArrayList<String>();
 		int j = 0;
-		for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/").listFiles()) {
-			if (f.getName().startsWith("University") || f.getName().startsWith("univ")) {
-				m_files.add(f.getAbsolutePath());
-				j++;
-				if (j == 3)
-					break;
-			}
-		}
+//		for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/").listFiles()) {
+//			if (f.getName().startsWith("University") || f.getName().startsWith("univ")) {
+//				m_files.add(f.getAbsolutePath());
+//				j++;
+//				if (j == 3)
+//					break;
+//			}
+//		}
+		m_files.add("/Users/gl/Studium/diplomarbeit/datasets/test.owl");
 
 		loadOntology();
 		
-		String query = "SELECT ?x  WHERE { ?x <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent> . }";
+//		String query = "SELECT ?x  WHERE { ?x <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent> . }";
+		String query = "SELECT ?x ?y  WHERE { ?x <http://www.owl-ontologies.com/Ontology1219504054.owl#friendOf> ?y . }";
 
 		Reasoner r = m_ontology.createReasoner();
 //		SPARQLParser p = new SPARQLParser(new StringReader(query));

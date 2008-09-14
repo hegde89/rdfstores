@@ -1,0 +1,178 @@
+package edu.unika.aifb.graphindex;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
+import org.jgrapht.UndirectedGraph;
+import org.jgrapht.alg.ConnectivityInspector;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.Pseudograph;
+
+import edu.unika.aifb.graphindex.importer.Importer;
+
+public class TriplesPartitioner implements TripleSink {
+	
+	private Map<Long,Integer> h2p;
+	private Map<Integer,Set<Integer>> pmap;
+	private PrintWriter m_hashWriter;
+	private int m_pid;
+	private int m_triples = 0;
+	private final int MERGE_INTERVAL = 2500000;
+	private final int PCOUNT_INTERVAL = 50000000;
+	private final int STATUS_INTERVAL = 50000;
+	private static final Logger log = Logger.getLogger(TriplesPartitioner.class);
+	
+	public TriplesPartitioner(String prefix) throws IOException {
+		h2p = new HashMap<Long,Integer>();
+		pmap = new HashMap<Integer,Set<Integer>>();
+		m_hashWriter = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".hashes")));
+		m_pid = 0;
+	}
+	
+	public void triple(String s, String p, String o) {
+		long sh = Util.hash(s);
+		long oh = Util.hash(o);
+		
+		if (h2p.containsKey(sh) && h2p.containsKey(oh)) {
+			int spid = h2p.get(sh);
+			int opid = h2p.get(oh);
+			if (spid != opid) {
+				Set<Integer> plist = pmap.get(spid);
+				if (plist == null) {
+					plist = new HashSet<Integer>();
+					pmap.put(spid, plist);
+				}
+				plist.add(opid);
+			}
+		}
+		else if (h2p.containsKey(sh) && !h2p.containsKey(oh)) {
+			m_hashWriter.println(oh + "\t" + o);
+			h2p.put(oh, h2p.get(sh));
+		}
+		else if (!h2p.containsKey(sh) && h2p.containsKey(oh)) {
+			m_hashWriter.println(sh + "\t" + s);
+			h2p.put(sh, h2p.get(oh));
+		}
+		else {
+			m_hashWriter.println(sh + "\t" + s);
+			m_hashWriter.println(oh + "\t" + o);
+			h2p.put(sh, m_pid);
+			h2p.put(oh, m_pid);
+			m_pid++;
+		}
+		
+		if (m_triples % MERGE_INTERVAL == 0)
+			mergePartitions();
+		
+		if (m_triples % PCOUNT_INTERVAL == 0)
+			log.debug("components: " + partitionCount());
+		
+		if (m_triples % STATUS_INTERVAL == 0)
+			log.debug(m_triples + " " + h2p.size() + " " + pmap.size());
+		
+		m_triples++;
+	}
+	
+	private void mergePartitions() {
+		UndirectedGraph<Integer,DefaultEdge> g = new Pseudograph<Integer,DefaultEdge>(DefaultEdge.class);
+		
+		for (int p1 : pmap.keySet())
+			for (int p2 : pmap.get(p1)) {
+				g.addVertex(p1);
+				g.addVertex(p2);
+				g.addEdge(p1, p2);
+			}
+		
+		m_pid++;
+		Map<Integer,Integer> old2new = new HashMap<Integer,Integer>();
+		
+		ConnectivityInspector<Integer,DefaultEdge> ci = new ConnectivityInspector<Integer,DefaultEdge>(g);
+		for (Set<Integer> component : ci.connectedSets()) {
+			for (int p : component)
+				old2new.put(p, m_pid);
+			m_pid++;
+		}
+		
+		for (long h : h2p.keySet()) {
+			int pid = h2p.get(h);
+			if (old2new.get(pid) != null) 
+				h2p.put(h, old2new.get(pid));
+		}
+		
+		pmap.clear();
+	}
+	
+	private int partitionCount() {
+		Set<Integer> partitions = new HashSet<Integer>();
+		for (int i : h2p.values())
+			partitions.add(i);
+		return partitions.size();
+	}
+	
+	public void write(String prefix) {
+		mergePartitions();
+		
+		m_hashWriter.close();
+		
+		Map<Integer,Integer> p2c = new HashMap<Integer,Integer>();
+		Map<Integer,PrintWriter> p2f = new HashMap<Integer,PrintWriter>();
+		
+		for (long h : h2p.keySet()) {
+			int p = h2p.get(h);
+		
+			// accumulate partition sizes
+			if (!p2c.containsKey(p))
+				p2c.put(p, 0);
+			p2c.put(p, p2c.get(p) + 1);
+			
+			// open a PrinterWriter for partition p
+			PrintWriter pw;
+			if (!p2f.containsKey(p)) {
+				try {
+					pw = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".component" + p, true)));
+					p2f.put(p, pw);
+				}
+				catch (IOException e) {
+					log.debug(e);
+					for (PrintWriter w : p2f.values())
+						w.close();
+					p2f.clear();
+					
+					try {
+						pw = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".component" + p, true)));
+						p2f.put(p, pw);
+					} catch (IOException e1) {
+						e1.printStackTrace();
+						return;
+					}
+				}
+			}
+			else
+				pw = p2f.get(p);
+			
+			pw.println(h);
+		}
+		
+		for (PrintWriter pw : p2f.values())
+			pw.close();
+		
+		int min = Integer.MAX_VALUE, max = 0, avg = 0;
+		for (int c : p2c.values()) {
+			if (c > max)
+				max = c;
+			if (c < min)
+				min = c;
+			avg += c;
+		}
+		avg /= p2c.size();
+		
+		log.info("triples: " + m_triples + ", components (total/min/max/avg): " + partitionCount() + "/" + min + "/" + max + "/" + avg);
+	}
+}

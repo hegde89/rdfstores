@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import edu.unika.aifb.graphindex.graph.Graph;
-import edu.unika.aifb.graphindex.graph.Path;
+import org.jgrapht.graph.ClassBasedEdgeFactory;
+
+import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class Query {
 	private List<Literal> m_literals;
@@ -28,8 +30,8 @@ public class Query {
 		return m_literals.add(o);
 	}
 
-	public QueryGraph toQueryGraph() {
-		QueryGraph g = new QueryGraph("query");
+	public NamedQueryGraph<String,LabeledQueryEdge<String>> toQueryGraph() throws StorageException {
+		NamedQueryGraph<String,LabeledQueryEdge<String>> g = new NamedQueryGraph<String,LabeledQueryEdge<String>>("query", new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledQueryEdge.class));
 		for (Literal l : m_literals) {
 			g.addEdge(l.getSubject(), l.getPredicate(), l.getObject());
 		}

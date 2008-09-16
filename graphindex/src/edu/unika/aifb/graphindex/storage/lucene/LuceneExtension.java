@@ -16,18 +16,6 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.Triple;
 
 public class LuceneExtension extends AbstractExtension {
-	public static final class Status extends Parameter {
-		private Status(String name) {
-			super(name);
-		}
-		
-		public static final Status NEW = new Status("NEW");
-		public static final Status STUB = new Status("STUB");
-		public static final Status MODIFIED = new Status("MODIFIED");
-		public static final Status PART_LOADED = new Status("PART_LOADED");
-		public static final Status PERSISTED = new Status("PERSISTED");
-		public static final Status REMOVED = new Status("REMOVED");
-	}
 
 	private LuceneExtensionStorage m_les;
 	private Map<String,Set<Triple>> m_readCache;

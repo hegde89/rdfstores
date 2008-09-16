@@ -3,12 +3,23 @@ package edu.unika.aifb.graphindex;
 import java.io.File;
 import java.io.IOException;
 
-import com.apple.component.Component;
+import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.LVertex;
+import edu.unika.aifb.graphindex.data.LVertexM;
+import edu.unika.aifb.graphindex.data.ListVertexCollection;
+import edu.unika.aifb.graphindex.data.MapVertexCollection;
+import edu.unika.aifb.graphindex.data.VertexFactory;
+import edu.unika.aifb.graphindex.data.VertexListBuilder;
+import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.importer.ComponentImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
+import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
 import edu.unika.aifb.graphindex.query.Individual;
 import edu.unika.aifb.graphindex.query.Literal;
 import edu.unika.aifb.graphindex.query.Predicate;
@@ -26,6 +37,8 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 
 public class Runner {
+
+	private static final Logger log = Logger.getLogger(Runner.class);
 
 	private static Query getQuery(String dataset) {
 		Query q = new Query(new String[] {"?x", "?y", "?z"});
@@ -111,9 +124,9 @@ public class Runner {
 			importer = new NTriplesImporter();
 			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/dbpedia/infobox_500k.nt");
 		}
-		else if (dataset.equals("dblp")) {
+		else if (dataset.equals("sweto")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swetodblp");
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swetodblp/swetodblp_april_2008-mod.nt");
 		}
 		else if (dataset.equals("simple_components")) {
 			importer = new ComponentImporter();
@@ -144,6 +157,7 @@ public class Runner {
 		StorageManager.getInstance().setExtensionManager(em);
 		StorageManager.getInstance().setGraphManager(gm);
 		
+		long start = System.currentTimeMillis();
 		if (args[0].equals("analyze") || args[0].equals("analyse")) {
 			DatasetAnalyzer da = new DatasetAnalyzer();
 
@@ -161,16 +175,28 @@ public class Runner {
 			importer.doImport();
 			
 			tp.write("components/" + args[1]);
+
+		}
+		else if (args[0].equals("transform")) {
+			VertexFactory.setCollectionClass(MapVertexCollection.class);
+			VertexFactory.setVertexClass(LVertexM.class);
+			
+			Importer importer = getImporter(args[2]);
+			
+			VertexListBuilder vb = new VertexListBuilder(importer, "components/" + args[1]);
+			vb.write("components/" + args[1]);
 		}
 		else if (args[0].equals("create")) {
+			VertexFactory.setCollectionClass(ListVertexCollection.class);
+			VertexFactory.setVertexClass(LVertexM.class);
+
 			em.initialize(true, false);
 			gm.initialize(true, false);
 			
-			Importer importer = getImporter(args[2]);
-			LVertexSetBuilder vb = new LVertexSetBuilder(importer, "components/" + args[1], false, false);
+			VertexListProvider vlp = new VertexListProvider("components/" + args[1]);
 			HashValueProvider hvp = new HashValueProvider("components/" + args[1] + ".hashes");
 			
-			FastIndexBuilder ib = new FastIndexBuilder(vb, hvp);
+			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
 			
 //			IndexBuilder ib = new IndexBuilder(gb.getGraph());
@@ -189,6 +215,8 @@ public class Runner {
 		
 		em.close();
 		gm.close();
+		
+		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");
 	}
 
 }

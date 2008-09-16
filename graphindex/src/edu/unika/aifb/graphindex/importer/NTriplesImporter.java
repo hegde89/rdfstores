@@ -117,7 +117,7 @@ public class NTriplesImporter extends Importer {
 				e.printStackTrace();
 			}
 			
-			log.info("triples: " + m_triplesAdded + "/" + m_triplesTotal);
+//			log.info("triples: " + m_triplesAdded + "/" + m_triplesTotal);
 			m_triplesAdded = m_triplesTotal = 0;
 		}
 	}

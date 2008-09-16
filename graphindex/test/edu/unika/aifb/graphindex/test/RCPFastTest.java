@@ -30,7 +30,7 @@ import edu.unika.aifb.graphindex.algorithm.RCP;
 import edu.unika.aifb.graphindex.algorithm.RCPFast;
 import edu.unika.aifb.graphindex.algorithm.RCP.Block;
 import edu.unika.aifb.graphindex.algorithm.RCP.Partition;
-import edu.unika.aifb.graphindex.graph.LVertex;
+import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;

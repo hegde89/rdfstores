@@ -96,7 +96,6 @@ public class RunnerOldRCP {
 			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/").listFiles()) {
 				if (f.getName().startsWith("University")) {
 					importer.addImport(f.getAbsolutePath());
-					break;
 				}
 			}
 //			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())

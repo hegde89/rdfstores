@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.data;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -8,6 +8,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import edu.unika.aifb.graphindex.Util;
 
 public class HashValueProvider {
 	private Map<Long,String> m_hashes;

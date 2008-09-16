@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.indexing;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -9,14 +9,17 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
+import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
 import edu.unika.aifb.graphindex.algorithm.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.algorithm.NaiveOneIndex;
 import edu.unika.aifb.graphindex.algorithm.RCP;
 import edu.unika.aifb.graphindex.algorithm.RCPFast;
 import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
-import edu.unika.aifb.graphindex.graph.IVertex;
-import edu.unika.aifb.graphindex.graph.LVertex;
+import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.data.LVertex;
+import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
@@ -58,12 +61,12 @@ public class FastIndexBuilder {
 	}
 	
 	private ExtensionManager m_em;
-	private LVertexSetBuilder m_vb;
+	private VertexListProvider m_vlp;
 	private HashValueProvider m_hashProvider;
 	private static final Logger log = Logger.getLogger(FastIndexBuilder.class);
 
-	public FastIndexBuilder(LVertexSetBuilder vb, HashValueProvider hashProvider) {
-		m_vb = vb;
+	public FastIndexBuilder(VertexListProvider vb, HashValueProvider hashProvider) {
+		m_vlp = vb;
 		m_em = StorageManager.getInstance().getExtensionManager();
 		m_hashProvider = hashProvider;
 	}
@@ -71,7 +74,7 @@ public class FastIndexBuilder {
 	public void buildIndex() throws StorageException, NumberFormatException, IOException {
 		long start = System.currentTimeMillis();
 		
-		RCPFast rcp = new RCPFast(m_vb.getHashes(), m_hashProvider);
+		RCPFast rcp = new RCPFast(null, m_hashProvider);
 
 		m_em.setMode(ExtensionManager.MODE_WRITECACHE);
 		m_em.startBulkUpdate();
@@ -85,10 +88,10 @@ public class FastIndexBuilder {
 		
 		int cnr = 0;
 		List<IVertex> component;
-		while ((component = m_vb.nextComponent()) != null) {
-			m_hashProvider.setEdges(m_vb.getEdges());
+		while ((component = m_vlp.nextComponent()) != null) {
+			m_hashProvider.setEdges(m_vlp.getEdges());
 			log.info("component size: " + component.size() + " vertices");
-			log.info("unique edges: " + m_vb.getEdges().size());
+			log.info("unique edges: " + m_vlp.getEdges().size());
 			
 			NamedGraph<String,LabeledEdge<String>> g = rcp.createIndex(component);
 			log.info("index graph vertices: " + g.vertexSet().size() + ", edges: " + g.edgeSet().size());

@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.indexing;
 
 import java.util.Collections;
 import java.util.Comparator;

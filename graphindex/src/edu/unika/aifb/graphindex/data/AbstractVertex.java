@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.graph;
+package edu.unika.aifb.graphindex.data;
 
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.algorithm.RCPFast;
@@ -37,10 +37,12 @@ public abstract class AbstractVertex implements IVertex {
 	
 	public IVertex getNext() {
 		return m_next;
+//		return null;
 	}
 	
 	public IVertex getPrev() {
 		return m_prev;
+//		return null;
 	}
 	
 	public void setNext(IVertex next) {

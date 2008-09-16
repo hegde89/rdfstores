@@ -6,9 +6,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.GraphBuilder;
-import edu.unika.aifb.graphindex.TripleSink;
-
 public abstract class Importer {
 
 	protected TripleSink m_sink;

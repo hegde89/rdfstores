@@ -12,8 +12,9 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.SVertex;
+import edu.unika.aifb.graphindex.importer.TripleSink;
 
-public class JGraphTBuilder2 implements GraphBuilder {
+public class JGraphTBuilder2 implements TripleSink {
 	private DirectedGraph<SVertex,LabeledEdge<SVertex>> m_graph;
 	private Map<String,SVertex> vertices = new HashMap<String,SVertex>();
 	

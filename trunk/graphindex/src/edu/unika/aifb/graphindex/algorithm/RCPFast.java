@@ -15,12 +15,12 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.HashValueProvider;
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.algorithm.RCP.Block;
 import edu.unika.aifb.graphindex.algorithm.RCP.Partition;
-import edu.unika.aifb.graphindex.graph.IVertex;
-import edu.unika.aifb.graphindex.graph.LVertex;
+import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
@@ -436,9 +436,10 @@ public class RCPFast {
 		Set<XBlock> cbs = new HashSet<XBlock>();
 		
 		Set<Long> labels = new TreeSet<Long>();
+		labels.addAll(m_hashes.getEdges());
+
 		for (IVertex v : vertices) {
 //			labels.addAll(v.getImage().keySet());
-			labels.addAll(m_hashes.getEdges());
 			startBlock.add(v);
 		}
 		
@@ -606,9 +607,9 @@ public class RCPFast {
 			movedIn++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
-			if (duration > 30) {
+//			if (duration > 30) {
 				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
-			}
+//			}
 		}
 		log.info("partition size: " + p.m_blocks.size());
 		log.info("steps: " + steps);

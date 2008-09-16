@@ -1,7 +1,6 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,12 +8,18 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
-import org.semanticweb.kaon2.api.Ontology;
 
+import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.VertexFactory;
+import edu.unika.aifb.graphindex.data.VertexListBuilder;
+import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.importer.CompositeImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
+import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -47,7 +52,7 @@ public class Main {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static void main(String[] args) throws StorageException, IOException {
+	public static void main(String[] args) throws StorageException, IOException, ClassNotFoundException {
 		
 		if (args.length != 2) {
 			log.error("Usage: Main <configfile> [partition|index|query]");
@@ -55,6 +60,11 @@ public class Main {
 		}
 		
 		Map config = (Map)Yaml.load(new File(args[0]));
+		
+		String pVertexClass = (String)config.get("partitioning_vertexclass");
+		String pCollectionClass = (String)config.get("partitioning_collectionclass");
+		String iVertexClass = (String)config.get("indexing_vertexclass");
+		String iCollectionClass = (String)config.get("indexing_collectionclass");
 		
 		String indexName = (String)config.get("index_name");
 		String outputDirectory = (String)config.get("output_directory");
@@ -116,6 +126,9 @@ public class Main {
 			da.printAnalysis();
 		}
 		if (args[1].equals("partition")) {
+			VertexFactory.setCollectionClass(Class.forName(pCollectionClass));
+			VertexFactory.setVertexClass(Class.forName(pVertexClass));
+
 			TriplesPartitioner tp = new TriplesPartitioner(componentPrefix);
 			
 			Importer importer = getImporter(ntFiles, owlFiles);
@@ -124,8 +137,16 @@ public class Main {
 			
 			tp.write(componentPrefix);
 			
+			tp = null;
+			System.gc();
+			
+			VertexListBuilder vb = new VertexListBuilder(importer, componentPrefix);
+			vb.write(componentPrefix);
 		}
 		if (args[1].equals("index")) {
+			VertexFactory.setCollectionClass(Class.forName(iCollectionClass));
+			VertexFactory.setVertexClass(Class.forName(iVertexClass));
+
 			ExtensionStorage es = new LuceneExtensionStorage(indexDirectory);
 			ExtensionManager em = new LuceneExtensionManager();
 			em.setExtensionStorage(es);
@@ -139,11 +160,10 @@ public class Main {
 			em.initialize(true, false);
 			gm.initialize(true, false);
 			
-			Importer importer = getImporter(ntFiles, owlFiles);
-			LVertexSetBuilder vb = new LVertexSetBuilder(importer, componentPrefix, false, false);
+			VertexListProvider vlp = new VertexListProvider(componentPrefix);
 			HashValueProvider hvp = new HashValueProvider(hashesFile);
 			
-			FastIndexBuilder ib = new FastIndexBuilder(vb, hvp);
+			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
 		}
 		else if (args[1].equals("query")) {

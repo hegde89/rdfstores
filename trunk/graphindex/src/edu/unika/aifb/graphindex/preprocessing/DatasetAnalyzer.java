@@ -1,9 +1,11 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+
+import edu.unika.aifb.graphindex.importer.TripleSink;
 
 public class DatasetAnalyzer implements TripleSink {
 

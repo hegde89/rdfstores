@@ -1,7 +1,7 @@
 /**
  * 
  */
-package edu.unika.aifb.graphindex.graph;
+package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +50,10 @@ public class LVertex extends AbstractVertex {
 		}
 		if (!image.contains(v))
 			image.add(v);
+	}
+	
+	public void setImage(long label, List<IVertex> image) {
+		m_image.put(label, image);
 	}
 	
 	public void clearInfo() {

@@ -14,6 +14,8 @@ import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
+import edu.unika.aifb.graphindex.indexing.IndexGraphMerger;
+import edu.unika.aifb.graphindex.indexing.MergedIndexList;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -86,6 +88,7 @@ public class OneIndexBuilder {
 			log.info("component " + cnr + "/" + size + ": " + component.size() + " vertices");
 			
 			NamedGraph<String,LabeledEdge<String>> g = idx.createOneIndex(component);
+			log.debug("graph: " + g.vertexSet().size() + " " + g.edgeSet().size());
 			list.add(g);
 			cnr++;
 			

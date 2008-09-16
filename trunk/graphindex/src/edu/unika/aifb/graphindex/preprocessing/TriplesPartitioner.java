@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -15,7 +15,9 @@ import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.Pseudograph;
 
+import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.importer.Importer;
+import edu.unika.aifb.graphindex.importer.TripleSink;
 
 public class TriplesPartitioner implements TripleSink {
 	
@@ -40,10 +42,12 @@ public class TriplesPartitioner implements TripleSink {
 		long sh = Util.hash(s);
 		long oh = Util.hash(o);
 		
+		// both uris are known
 		if (h2p.containsKey(sh) && h2p.containsKey(oh)) {
 			int spid = h2p.get(sh);
 			int opid = h2p.get(oh);
 			if (spid != opid) {
+				// uris are in different partitions, mark partitions as being one partition
 				Set<Integer> plist = pmap.get(spid);
 				if (plist == null) {
 					plist = new HashSet<Integer>();
@@ -53,14 +57,17 @@ public class TriplesPartitioner implements TripleSink {
 			}
 		}
 		else if (h2p.containsKey(sh) && !h2p.containsKey(oh)) {
+			// add the object to the partition of the subject
 			m_hashWriter.println(oh + "\t" + o);
 			h2p.put(oh, h2p.get(sh));
 		}
 		else if (!h2p.containsKey(sh) && h2p.containsKey(oh)) {
+			// add the subject to the partition of the object
 			m_hashWriter.println(sh + "\t" + s);
 			h2p.put(sh, h2p.get(oh));
 		}
 		else {
+			// both unknown -> create new partition
 			m_hashWriter.println(sh + "\t" + s);
 			m_hashWriter.println(oh + "\t" + o);
 			h2p.put(sh, m_pid);
@@ -83,6 +90,9 @@ public class TriplesPartitioner implements TripleSink {
 	private void mergePartitions() {
 		UndirectedGraph<Integer,DefaultEdge> g = new Pseudograph<Integer,DefaultEdge>(DefaultEdge.class);
 		
+		// convert partition map to a graph
+		// - partitions are nodes
+		// - an edge between partitions signifies that the partitions need to be merged
 		for (int p1 : pmap.keySet())
 			for (int p2 : pmap.get(p1)) {
 				g.addVertex(p1);
@@ -93,6 +103,7 @@ public class TriplesPartitioner implements TripleSink {
 		m_pid++;
 		Map<Integer,Integer> old2new = new HashMap<Integer,Integer>();
 		
+		// all partitions in a connected component are combined to one new partition
 		ConnectivityInspector<Integer,DefaultEdge> ci = new ConnectivityInspector<Integer,DefaultEdge>(g);
 		for (Set<Integer> component : ci.connectedSets()) {
 			for (int p : component)
@@ -140,6 +151,9 @@ public class TriplesPartitioner implements TripleSink {
 					p2f.put(p, pw);
 				}
 				catch (IOException e) {
+					// exceptions are probably due to too many open files
+					// close all open file descriptors and try again
+					// TODO configuration option to specify maximum open files
 					log.debug(e);
 					for (PrintWriter w : p2f.values())
 						w.close();

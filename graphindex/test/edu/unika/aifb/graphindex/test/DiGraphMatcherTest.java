@@ -11,6 +11,7 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.junit.Test;
 
 import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
+import edu.unika.aifb.graphindex.algorithm.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.algorithm.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 
@@ -28,48 +29,56 @@ public class DiGraphMatcherTest {
 		DirectedGraph<String,LabeledEdge<String>> g2 = new DefaultDirectedGraph<String,LabeledEdge<String>>(new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
 		DirectedGraph<String,LabeledEdge<String>> g3 = new DefaultDirectedGraph<String,LabeledEdge<String>>(new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
 
-		addEdge(g1, "A", "a", "B");
-//		addEdge(g1, "B", "b", "B");
-		addEdge(g1, "B", "a", "A");
+		addEdge(g1, "A", "f", "J");
+		addEdge(g1, "A", "f", "B");
+		addEdge(g1, "B", "f", "A");
+		addEdge(g1, "A", "a", "C");
 		addEdge(g1, "B", "a", "C");
-//		addEdge(g1, "C", "a", "D");
+		addEdge(g1, "C", "p", "D");
+		addEdge(g1, "G", "a", "C");
+		addEdge(g1, "G", "f", "H");
 		
-		addEdge(g2, "Y", "a", "Z");
+//		addEdge(g2, "Y", "a", "Z");
+		addEdge(g2, "Y", "f", "X");
+//		addEdge(g2, "Y", "a", "Z");
 
-		addEdge(g3, "X", "a", "D");
-//		addEdge(g3, "D", "b", "D");
-		addEdge(g3, "D", "c", "X");
-//		addEdge(g3, "X", "a", "C");
+		addEdge(g3,"b49","subClassOf","b48");
+		addEdge(g3,"b56","is_a","b49");
+		addEdge(g3,"b50","is_a","b44");
+		addEdge(g3,"b40","a","b37");
+		addEdge(g3,"b57","a","b37");
+		addEdge(g3,"b41","a","b56");
+		addEdge(g3,"b26","k","b46");
+		addEdge(g3,"b40","f","b40");
+		addEdge(g3,"b40","f","b57");
+		addEdge(g3,"b57","name","b33");
+		addEdge(g3,"b1","a","b22");
+		addEdge(g3,"b41","name","b54");
+		addEdge(g3,"b57","reflexive","b57");
+		addEdge(g3,"b37","p","b50");
+		addEdge(g3,"b41","is_a","b52");
+		addEdge(g3,"b52","subClassOf","b48");
+		addEdge(g3,"b37","is_a","b49");
+		addEdge(g3,"b1","blah","b48");
+		addEdge(g3,"b1","m","b26");
+		addEdge(g3,"b22","is_a","b49");
+		addEdge(g3,"b1","is_a","b48");
+		addEdge(g3,"b1","name","b18");
+		addEdge(g3,"b40","name","b33");
+		addEdge(g3,"b57","is_a","b52");
+		addEdge(g3,"b1","is_a","b52");
+		addEdge(g3,"b3","is_a","b44");
+		addEdge(g3,"b40","is_a","b52");
+		addEdge(g3,"b22","p","b50");
+		addEdge(g3,"b1","o","b46");
+		addEdge(g3,"b56","p","b50");
+		addEdge(g3,"b44","subClassOf","b48");
+		addEdge(g3,"b37","p","b3");
+		addEdge(g3,"b40","reflexive","b40");
+		addEdge(g3,"b57","f","b40");
+		addEdge(g3,"b40","f","b41");
 		
-		DiGraphMatcher<String,LabeledEdge<String>> gm = new DiGraphMatcher<String,LabeledEdge<String>>(g2, g1, true,
-				new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
-					public boolean isSemanticallyFeasible(DirectedGraph<String,LabeledEdge<String>> g1,	DirectedGraph<String,LabeledEdge<String>> g2,	String n1, String n2, Map<String,String> core1, Map<String,String> core2) {
-						return true;
-//						System.out.println(n1 + " " + n2);
-//						List<String> g1labels = new ArrayList<String>();
-//						for (LabeledEdge<String> e : g1.incomingEdgesOf(n1)) {
-//							if (core1.containsKey(g1.getEdgeSource(e)))
-//								g1labels.add(e.getLabel());
-//						}
-//
-//						List<String> g2labels = new ArrayList<String>();
-//						for (LabeledEdge<String> e : g2.incomingEdgesOf(n2)) {
-//							if (core2.containsKey(g2.getEdgeSource(e)))
-//								g2labels.add(e.getLabel());
-//						}
-//						System.out.println(g1labels + " " + g2labels);
-//						
-//						return g1labels.equals(g2labels);
-					}
-
-					public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
-						return e1.getLabel().equals(e2.getLabel());
-					}
-
-					public boolean isVertexCompatible(String n1, String n2) {
-						return true;
-					}
-				});
+		DiGraphMatcher<String,LabeledEdge<String>> gm = new DiGraphMatcher<String,LabeledEdge<String>>(g2, g1, true, new EdgeLabelFeasibilityChecker());
 		System.out.println(gm.isSubgraphIsomorphic());
 		System.out.println(gm.numberOfMappings());
 		for (IsomorphismRelation<String,LabeledEdge<String>> iso : gm) {

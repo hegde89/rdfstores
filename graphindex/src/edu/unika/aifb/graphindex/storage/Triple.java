@@ -1,13 +1,61 @@
 package edu.unika.aifb.graphindex.storage;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @author gl
+ *
+ */
 public class Triple {
 	private String m_subject, m_property, m_object;
+	
+	/**
+	 * Triples whose subjects equal the object of this triple.
+	 */
+	private List<Triple> m_next;
+	
+	
+	/**
+	 * Triples whose objects equal the subject of this triple. 
+	 */
+	private List<Triple> m_prev;
 
 	public Triple(String subject, String property, String object) {
 		super();
 		m_object = object;
 		m_property = property;
 		m_subject = subject;
+		m_next = new ArrayList<Triple>();
+		m_prev = new ArrayList<Triple>();
+	}
+	
+	/**
+	 * Returns previously added triples where the subject equals the object of this triple.
+	 * 
+	 * @return triples whose subjects equal the object of this triple
+	 */
+	public List<Triple> getNext() {
+		return m_next;
+	}
+	
+	/**
+	 * Returns previously added triples where the object equals the subject of this triple.
+	 * 
+	 * @return triples whose objects equal the subject of this triple
+	 */
+	public List<Triple> getPrev() {
+		return m_prev;
+	}
+	
+	public void addNext(Triple t) {
+		// TODO check condition
+		m_next.add(t);
+	}
+	
+	public void addPrev(Triple t) {
+		// TODO check condition
+		m_prev.add(t);
 	}
 
 	public String getSubject() {

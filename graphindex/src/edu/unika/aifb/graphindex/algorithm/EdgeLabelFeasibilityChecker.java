@@ -17,6 +17,7 @@ import edu.unika.aifb.graphindex.graph.LabeledEdge;
 public class EdgeLabelFeasibilityChecker implements FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> {
 
 	public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+//		System.out.println(e1 + " " + e2 + " " + e1.getLabel() + " " + e2.getLabel());
 		return e1.getLabel().equals(e2.getLabel());
 	}
 

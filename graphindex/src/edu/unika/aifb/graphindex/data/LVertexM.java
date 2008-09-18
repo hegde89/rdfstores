@@ -59,7 +59,11 @@ public class LVertexM extends AbstractVertex {
 	
 	public Map<Long,List<IVertex>> getImage() {
 //		return m_image;
-		return null;
+	
+		Map<Long,List<IVertex>> image = new HashMap<Long,List<IVertex>>();
+		for (Image i : m_images)
+			image.put(i.label, i.image);
+		return image;
 	}
 	
 	public List<IVertex> getImage(long label) {
@@ -95,7 +99,7 @@ public class LVertexM extends AbstractVertex {
 	}
 
 	public void clearInfo() {
-		m_infos.clear();
+		m_infos = new ArrayList<Info>();
 	}
 	
 	private Info getInfoObject(long label) {
@@ -122,6 +126,10 @@ public class LVertexM extends AbstractVertex {
 
 	public void incSInfo(long label) {
 		getInfoObject(label).sval++;
+	}
+	
+	public void decSInfo(long label) {
+		getInfoObject(label).sval--;
 	}
 
 	public void setInfo(long label, int val) {

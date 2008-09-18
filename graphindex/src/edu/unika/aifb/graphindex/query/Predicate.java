@@ -11,6 +11,10 @@ public class Predicate {
 		return m_uri;
 	}
 	
+	public String toString() {
+		return m_uri;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

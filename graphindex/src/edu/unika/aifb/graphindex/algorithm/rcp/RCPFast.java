@@ -1,10 +1,9 @@
-package edu.unika.aifb.graphindex.algorithm;
+package edu.unika.aifb.graphindex.algorithm.rcp;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -16,8 +15,6 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.algorithm.RCP.Block;
-import edu.unika.aifb.graphindex.algorithm.RCP.Partition;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.data.LVertex;
@@ -32,336 +29,8 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.Triple;
 
 public class RCPFast {
-	private static int block_id = 0;
+	static int block_id = 0;
 
-	private class Splitters {
-		LinkedList<XBlock> m_splitters;
-		
-		public Splitters() {
-			m_splitters = new LinkedList<XBlock>();
-		}
-		
-		public void add(XBlock xblock) {
-			m_splitters.addLast(xblock);
-		}
-		
-		public boolean contains(XBlock xblock) {
-			return m_splitters.contains(xblock);
-		}
-		
-		public XBlock remove() {
-			return m_splitters.removeFirst();
-		}
-		
-		public int size() {
-			return m_splitters.size();
-		}
-		
-		public String toString() {
-			String s = "";
-			String comma = "";
-			for (XBlock b : m_splitters) {
-				s += comma + b;
-				comma = ", ";
-			}
-			return s;
-		}
-	}
-	
-	public class Partition {
-		private List<Block> m_blocks;
-		
-		public Partition() {
-			m_blocks = new ArrayList<Block>();
-		}
-		
-		public void add(Block block) {
-			m_blocks.add(block);
-		}
-		
-		public void remove(Block block) {
-			m_blocks.remove(block);
-		}
-		
-		public List<Block> getBlocks() {
-			return m_blocks;
-		}
-		
-		private boolean stable(Block other) {
-			for (Block b : m_blocks) {
-				if (!b.stable(other))
-					return false;
-			}
-			return true;
-		}
-		
-		public boolean stable(Set<LVertex> vertices) {
-			for (Block b : m_blocks) {
-				if (!b.stable(vertices))
-					return false;
-			}
-			return true;
-		}
-		
-		public boolean stable() {
-			for (Block b : m_blocks) {
-				if (!stable(b))
-					return false;
-			}
-			return true;
-		}
-		
-		public String toString() {
-			String s = "";
-			String comma = "";
-			for (Block b : m_blocks) {
-				s += comma + b;
-				comma = ", ";
-			}
-			return s;
-		}
-	}
-	
-	public class XBlock {
-		private LinkedList<Block> m_blocks;
-		
-		public XBlock() {
-			m_blocks = new LinkedList<Block>();
-		}
-		
-		public XBlock(Block b) {
-			this();
-			addBlock(b);
-		}
-		
-		public Block getFirstBlock() {
-			return m_blocks.getFirst();
-		}
-		
-		public Block getSecondBlock() {
-			return m_blocks.get(1);
-		}
-		
-		public void addBlock(Block b) {
-			m_blocks.add(b);
-			b.setXBlock(this);
-		}
-
-		public void remove(Block block) {
-			m_blocks.remove(block);
-		}
-		
-		public boolean isCompound() {
-			return m_blocks.size() > 1;
-		}
-		
-		public int numberOfBlocks() {
-			return m_blocks.size();
-		}
-		
-		public int numberOfVertices() {
-			return 0;
-		}
-		
-		public String toString() {
-			String s = "(xb ";
-			String comma = "";
-			for (Block b : m_blocks) {
-				s += comma + b;
-				comma = ", ";
-			}
-			return s + ")";
-		}
-
-		public List<Block> getBlocks() {
-			return m_blocks;
-		}
-	}
-
-	public class Block implements Iterable<IVertex> {
-		private IVertex m_head;
-		private IVertex m_tail;
-//		private Block m_next, m_prev;
-		private int m_size;
-		private XBlock m_parent;
-		private String m_name = "b" + ++block_id;
-		private Block m_splitBlock;
-		
-		public Block() {
-			m_head = null;
-			m_tail = null;
-		}
-		
-		public Block getSplitBlock() {
-			return m_splitBlock;
-		}
-		
-		public void setSplitBlock(Block splitBlock) {
-			m_splitBlock = splitBlock;
-		}
-		
-		public XBlock getXBlock() {
-			return m_parent;
-		}
-		
-		public void setXBlock(XBlock xblock) {
-			m_parent = xblock;
-		}
-		
-		public void add(IVertex v) {
-			if (m_head == null) {
-				m_head = v;
-				m_tail = v;
-				v.setNext(null);
-				v.setPrev(null);
-			}
-			else {
-				m_tail.setNext(v);
-				v.setPrev(m_tail);
-				v.setNext(null);
-				m_tail = v;
-			}
-			v.setBlock(this);
-			m_size++;
-		}
-		
-		public void remove(IVertex v) {
-			if (v.getBlock() != this)
-				return;
-			
-			if (v.getPrev() != null)
-				v.getPrev().setNext(v.getNext());
-			if (v.getNext() != null)
-				v.getNext().setPrev(v.getPrev());
-			if (m_head == v)
-				m_head = v.getNext();
-			if (m_tail == v)
-				m_tail = v.getPrev();
-			v.setNext(null);
-			v.setPrev(null);
-			v.setBlock(null);
-			m_size--;
-		}
-		
-		public int size() {
-//			int s = 0;
-//			for (Iterator<LVertex> i = iterator(); i.hasNext(); ) {
-//				i.next();
-//				s++;
-//			}
-//			System.out.println(m_size == s);
-			return m_size;
-		}
-		
-		public Map<Long,Set<IVertex>> image() {
-			Map<Long,Set<IVertex>> image = new HashMap<Long,Set<IVertex>>();
-			
-			for (IVertex v : this) {
-				for (long label : v.getEdgeLabels()) {
-					if (!image.containsKey(label))
-						image.put(label, new HashSet<IVertex>());
-					image.get(label).addAll(v.getImage(label));
-				}
-			}
-			
-			return image;
-		}
-		
-		public boolean stable(Set<LVertex> vertices) {
-			Map<Long,Set<IVertex>> bimage = new HashMap<Long,Set<IVertex>>();
-			
-			for (IVertex v : vertices) {
-				for (long label : v.getEdgeLabels()) {
-					if (!bimage.containsKey(label))
-						bimage.put(label, new HashSet<IVertex>());
-					bimage.get(label).addAll(v.getImage(label));
-				}
-			}
-//			log.debug(this.size() + " ownImage: " + image.size() + ", b: " + b.size());
-			
-			for (long label : bimage.keySet()) {
-				boolean foundOneNotInImage = false;
-				boolean foundOneInImage = false;
-				for (IVertex v : this) {
-					if (bimage.get(label).contains(v)) {
-						if (foundOneNotInImage)
-							return false;
-						foundOneInImage = true;
-					}
-					else {
-						if (foundOneInImage)
-							return false;
-						foundOneNotInImage = true;
-					}
-				}
-			}
-			
-			return true;
-		}
-		
-		public boolean stable(Block b) {
-			Map<Long,Set<IVertex>> bimage = b.image();
-//			log.debug(this.size() + " ownImage: " + image.size() + ", b: " + b.size());
-			
-			for (long label : bimage.keySet()) {
-				boolean foundOneNotInImage = false;
-				boolean foundOneInImage = false;
-				for (IVertex v : this) {
-					if (bimage.get(label).contains(v)) {
-						if (foundOneNotInImage)
-							return false;
-						foundOneInImage = true;
-					}
-					else {
-						if (foundOneInImage)
-							return false;
-						foundOneNotInImage = true;
-					}
-				}
-			}
-			
-			return true;
- 		}
-		
-		public String toString() {
-			String s = m_name + "[";
-			String comma = "";
-			if (m_head != null) {
-				IVertex cur = m_head;
-				do {
-					s += comma + cur;
-					comma = ",";
-					cur = cur.getNext();
-				}
-				while (cur != null);
-			}
-			return s + "]";
-		}
-		
-		public Iterator<IVertex> iterator() {
-			return new Iterator<IVertex> () {
-				private IVertex cur = m_head;
-				public boolean hasNext() {
-					return cur != null;
-				}
-
-				public IVertex next() {
-					IVertex ret = cur;
-					cur = cur.getNext();
-					return ret;
-				}
-
-				public void remove() {
-					throw new UnsupportedOperationException("remove not supported");
-				}
-			};
-		}
-
-		public String getName() {
-			return m_name;
-		}
-	}
-	
 	private GraphManager m_gm;
 	private ExtensionManager m_em;
 	public static Map<Long,String> m_h2v;
@@ -453,6 +122,7 @@ public class RCPFast {
 		log.debug("setup complete, " + Util.memory());
 		log.debug("starting refinement process...");
 		
+		boolean first = true;
 		long start = System.currentTimeMillis();
 		int steps = 0;
 		while (w.size() > 0) {
@@ -517,7 +187,6 @@ public class RCPFast {
 							if (x.getClearedIn() < clearedIn) {
 								x.setClearedIn(clearedIn);
 								x.clearInfo();
-//								log.debug("cleared " + x);
 							}
 							x.incSInfo(label);
 						}
@@ -527,14 +196,6 @@ public class RCPFast {
 //				Set<LVertex> restb = new HashSet<LVertex>();
 				
 				for (Block block : s.getBlocks()) {
-//					for (LVertex v : block) {
-//						restb.add(v);
-//						if (!cleared.contains(v)) {
-//							v.getInfo().clear();
-//							v.getSInfo().clear();
-//						}
-//					}
-					
 					for (IVertex v : block) {
 						for (long label : labels) {
 							if (v.getImage(label) == null)
@@ -544,7 +205,6 @@ public class RCPFast {
 								if (x.getClearedIn() < clearedIn) {
 									x.setClearedIn(clearedIn);
 									x.clearInfo();
-//									log.debug("- cleared " + x);
 								}
 								x.incSInfo(label);
 							}
@@ -602,6 +262,7 @@ public class RCPFast {
 //						log.debug("bsb refinement affected p");
 				}
 				
+//				log.debug(p.stable(b_));
 			}
 			
 			movedIn++;
@@ -611,10 +272,12 @@ public class RCPFast {
 				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 //			}
 		}
+//		log.debug(p.stable());
 		log.info("partition size: " + p.m_blocks.size());
 		log.info("steps: " + steps);
 
 		purgeSelfloops(p);
+//		log.debug(p.stable());
 		
 		return createIndexGraph(p);
 	}

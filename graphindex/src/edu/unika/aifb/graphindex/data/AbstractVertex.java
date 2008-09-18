@@ -1,8 +1,8 @@
 package edu.unika.aifb.graphindex.data;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.algorithm.RCPFast;
-import edu.unika.aifb.graphindex.algorithm.RCPFast.Block;
+import edu.unika.aifb.graphindex.algorithm.rcp.Block;
+import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
 
 public abstract class AbstractVertex implements IVertex {
 	protected long m_id;

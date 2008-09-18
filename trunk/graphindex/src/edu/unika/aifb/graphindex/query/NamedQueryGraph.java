@@ -46,10 +46,17 @@ public class NamedQueryGraph<V extends String, E extends LabeledEdge<String>> ex
 	public Set<String> getGroundTerms() {
 		Set<String> groundTerms = new HashSet<String>();
 		for (String v : vertexSet()) {
-			if (getTerm(v) instanceof Individual)
+			if (getTerm(v) instanceof Individual || getTerm(v) instanceof Constant)
 				groundTerms.add(v);
 		}
 		return groundTerms;
 	}
 	
+	public Set<String> getVariables() {
+		Set<String> vars = new HashSet<String>();
+		for (String v : vertexSet()) 
+			if (getTerm(v) instanceof Variable)
+				vars.add(v);
+		return vars;
+	}
 }

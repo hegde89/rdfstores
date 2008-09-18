@@ -90,6 +90,33 @@ public class Runner {
 		return q;
 	}
 	
+	private static String getQueryString(String dataset) {
+		if (dataset.equals("simple")) {
+			String q1 = "?x http://example.org/simple#a ?p\n" +
+				"?y http://example.org/simple#a ?p\n" +
+				"?x http://example.org/simple#f ?y";
+			
+			String q2 = "?x http://example.org/simple#is_a ?y\n ?y http://example.org/simple#subClassOf ?z \n " +
+				"?a http://example.org/simple#is_a ?b\n ?b http://example.org/simple#subClassOf ?z";
+			
+			String q3 = "?x http://example.org/simple#subClassOf ?z\n ?y http://example.org/simple#subClassOf ?z";
+			
+			String q4 = "?x http://example.org/simple#f ?y";
+			
+			return q4;  
+		}
+		else if (dataset.equals("lubm")) {
+			String q1 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y";
+
+			String q2 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y\n" + 
+				"?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent\n" +
+				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0";
+			return q2;
+		}
+		
+		return null;
+	}
+	
 	private static Importer getImporter(String dataset) {
 		Importer importer = null;
 		
@@ -112,9 +139,9 @@ public class Runner {
 					importer.addImport(f.getAbsolutePath());
 				}
 			}
-//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
-//				if (f.getName().startsWith("University"))
-//					importer.addImport(f.getAbsolutePath());
+			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+				if (f.getName().startsWith("University"))
+					importer.addImport(f.getAbsolutePath());
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
@@ -203,14 +230,18 @@ public class Runner {
 //			ib.buildIndex();
 		}
 		else if(args[0].equals("query")) {
+			
 			em.initialize(false, true);
 			gm.initialize(false, true);
 			
 			StructureIndex index = new StructureIndex();
 			index.load();
 			
+			QueryParser qp = new QueryParser();
+			Query q = qp.parseQuery(getQueryString(args[2]));
+			
 			QueryEvaluator qe = new QueryEvaluator();
-			qe.evaluate(getQuery(args[2]), index);
+			qe.evaluate(q, index);
 		}
 		
 		em.close();

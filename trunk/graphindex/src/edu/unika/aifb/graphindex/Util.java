@@ -92,7 +92,7 @@ public class Util {
 					// id
 					new VertexNameProvider<String>() {
 						public String getVertexName(String v) {
-							return v;
+							return "\"" + v + "\"";
 						}
 					},
 					// label

@@ -11,8 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.algorithm.RCPFast;
-import edu.unika.aifb.graphindex.algorithm.RCPFast.Block;
+import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
 
 public class LVertex extends AbstractVertex {
 	private Map<Long,Integer> m_info;
@@ -60,7 +59,7 @@ public class LVertex extends AbstractVertex {
 		m_info = new HashMap<Long,Integer>();
 		m_sInfo = new HashMap<Long,Integer>();
 	}
-
+	
 	public int getInfo(long label) {
 		return m_info.get(label);
 	}
@@ -81,6 +80,11 @@ public class LVertex extends AbstractVertex {
 			m_sInfo.put(label, 1);
 		else
 			m_sInfo.put(label, m_sInfo.get(label) + 1);
+	}
+	
+	public void decSInfo(long label) {
+		if (m_sInfo.containsKey(label))
+			m_sInfo.put(label, m_sInfo.get(label) - 1);
 	}
 
 	public void setInfo(long label, int val) {

@@ -19,6 +19,7 @@ import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Hit;
+import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PrefixQuery;
@@ -173,18 +174,36 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	@SuppressWarnings("unchecked")
 	private Set<Triple> executeQuery(Query q) throws IOException {
-//		log.debug("query: " + q);
+		long start = System.currentTimeMillis();
 //		log.debug(q.rewrite(m_reader));
-		Set<Triple> triples = new HashSet<Triple>();
+		final Set<Triple> triples = new HashSet<Triple>();
 		
 		// TODO lucene doc says that retrieving all documents matching a query should be done with HitCollector
-		Hits hits = m_searcher.search(q);
-		for (Iterator i = hits.iterator(); i.hasNext(); ) {
-			Hit hit = (Hit)i.next();
-			Document doc = hit.getDocument();
-			Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
-			triples.add(t);
-		}
+//		Hits hits = m_searcher.search(q);
+//		for (Iterator i = hits.iterator(); i.hasNext(); ) {
+//			Hit hit = (Hit)i.next();
+//			Document doc = hit.getDocument();
+//			Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
+//			triples.add(t);
+//		}
+		
+		m_searcher.search(q, new HitCollector() {
+			@Override
+			public void collect(int docId, float score) {
+				Document doc;
+				try {
+					doc = m_reader.document(docId);
+					Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
+					triples.add(t);
+				} catch (CorruptIndexException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		log.debug("query: " + q + " (" + triples.size() + " results) {" + (System.currentTimeMillis() - start) + " ms}");
 		
 		return triples;
 	}

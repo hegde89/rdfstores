@@ -191,8 +191,8 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 	 * @param generateMappings wether to generate mappings or just check for isomorphisms 
 	 */
 	public DiGraphMatcher(DirectedGraph<V,E> graph1, DirectedGraph<V,E> graph2, boolean generateMappings) {
-		g1 = graph2;
-		g2 = graph1;
+		g1 = graph1;
+		g2 = graph2;
 		
 		core1 = new HashMap<V,V>();
 		core2 = new HashMap<V,V>();
@@ -304,11 +304,11 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 	}
 	
 	private boolean match(DiGMState state) {
-		if (core1.size() == g2.vertexSet().size()) {
+		if (core1.size() == g1.vertexSet().size()) {
+//			log.debug("found: " + core1);
 			if (m_generateMappings)
 				m_mappings.add(new HashMap<V,V>(core1));
 			return true;
-//			log.debug("nm:" + core1);
 		}
 		else {
 			boolean found = false;
@@ -345,13 +345,13 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		
 		SortedSet<V> t1out = getTerminalSet(g1, core1, out1);
 		SortedSet<V> t2out = getTerminalSet(g2, core2, out2);
-//		log.debug("core1: " + core1 + ", out1: " + out1);
-//		log.debug("core2: " + core2 + ", out2: " + out2);
+//		log.debug("core1: " + core1 + ", out1: " + out1 + ", t1out: " + t1out);
+//		log.debug("core2: " + core2 + ", out2: " + out2 + ", t2out: " + t2out);
 //		log.debug("t" + t1out + " " + t2out);
 		
 		if (t1out.size() != 0 && t2out.size() != 0) {
-			V n2 = t2out.first();
-			for (V n1 : t1out) 
+			V n1 = t1out.first();
+			for (V n2 : t2out) 
 				candidates.add(new Pair(n1, n2));
 		}
 		else {//if (t1out.size() == 0 && t2out.size() == 0) {
@@ -361,16 +361,16 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 //			log.debug("t2in: " + t2in);
 			
 			if (t1in.size() != 0 && t2in.size() != 0) {
-				V n2 = t2in.first();
-				for (V n1 : t1in)
+				V n1 = t1in.first();
+				for (V n2 : t2in)
 					candidates.add(new Pair(n1, n2));
 			}
 			else if (t1in.size() == 0 && t2in.size() == 0) {
-				TreeSet<V> diff = new TreeSet<V>(g2.vertexSet());
-				diff.removeAll(core2.keySet());
-				V n2 = diff.first();
-				for (V n1 : g1.vertexSet())
-					if (!core1.containsKey(n1))
+				TreeSet<V> diff = new TreeSet<V>(g1.vertexSet());
+				diff.removeAll(core1.keySet());
+				V n1 = diff.first();
+				for (V n2 : g2.vertexSet())
+					if (!core2.containsKey(n2))
 						candidates.add(new Pair(n1, n2));
 			}
 		}
@@ -392,12 +392,8 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		}
 		return true;
 	}
-
-	private boolean isFeasible(V n1, V n2) {
-		
-		if (!m_checker.isVertexCompatible(n1, n2))
-			return false;
-		
+	
+	private boolean isFeasibleIso(V n1, V n2) {
 		// R_self
 //		if (g1.getAllEdges(n1, n1).size() != g2.getAllEdges(n2, n2).size())
 //			return false;
@@ -455,6 +451,12 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 								return false;
 						}
 					}
+					
+					if (!n2succs.contains(core1.get(n1succ)))
+						log.debug("22");
+					else
+						log.debug("11");
+
 				}
 				else {
 					log.error("should not happen, g1edges should be > 0");
@@ -510,6 +512,123 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 			return false;
 		
 		return true;
+	}
+	
+	
+	private boolean isFeasibleSubgraph(V n1, V n2) {
+//		log.debug(" n1: " + n1 + ", n2: " + n2);
+//		log.debug(" core1: " + core1);
+		int termin1 = 0, termin2 = 0, termout1 = 0, termout2 = 0, new1 = 0, new2 = 0; 
+		// R_pred
+		for (V n1pred : predecessors(g1, n1)) {
+//			log.debug(" n1pred: " + n1pred);
+			if (core1.containsKey(n1pred)) {
+				Set<V> n2preds = predecessors(g2, n2);
+				if (!n2preds.contains(core1.get(n1pred)))
+					return false;
+				else if (g1.getAllEdges(n1pred, n1).size() > g2.getAllEdges(core1.get(n1pred), n2).size())
+					return false;
+
+				Set<E> g1edges = g1.getAllEdges(n1pred, n1);
+				
+				boolean found = false;
+				for (V n2pred : n2preds) {
+					if (core2.containsKey(n2pred)) {
+						Set<E> g2edges = g2.getAllEdges(n2pred, n2);
+	//					log.debug(core1 + " " + n1 + " " + n2 + " " + edgeSetsCompatible(g1edges, g2edges));
+						if (edgeSetsCompatible(g1edges, g2edges)) {
+							found = true;
+							break;
+						}
+					}
+				}
+				if (!found)
+					return false;
+			}
+			else {
+				if (in1.containsKey(n1pred))
+					termin1++;
+				if (out1.containsKey(n1pred))
+					termout1++;
+				if (!in1.containsKey(n1pred) && !out1.containsKey(n1pred))
+					new1++;
+			}
+		}
+		for (V n2pred : predecessors(g2, n2)) {
+			if (core2.containsKey(n2pred)) {
+				// monomorphism: do nothing
+			}
+			else {
+				if (in2.containsKey(n2pred))
+					termin2++;
+				if (out2.containsKey(n2pred))
+					termout2++;
+				if (!in2.containsKey(n2pred) && !out2.containsKey(n2pred))
+					new2++;
+			}
+		}
+		
+		// R_succ
+		for (V n1succ : successors(g1, n1)) {
+//			log.debug(" n1succ: " + n1succ);
+			if (core1.containsKey(n1succ)) {
+				Set<V> n2succs = successors(g2, n2);
+				if (!n2succs.contains(core1.get(n1succ)))
+					return false;
+				else if (g1.getAllEdges(n1succ, n1).size() > g2.getAllEdges(core1.get(n1succ), n2).size())
+					return false;
+				
+				Set<E> g1edges = g1.getAllEdges(n1, n1succ);
+				
+				boolean found = false;
+				for (V n2succ : n2succs) {
+					if (core2.containsKey(n2succ)) {
+						Set<E> g2edges = g2.getAllEdges(n2, n2succ);
+						if (edgeSetsCompatible(g1edges, g2edges)) {
+							found = true;
+							break;
+						}
+					}
+				}
+				if (!found)
+					return false;
+			}
+			else {
+				if (in1.containsKey(n1succ))
+					termin1++;
+				if (out1.containsKey(n1succ))
+					termout1++;
+				if (!in1.containsKey(n1succ) && !out1.containsKey(n1succ))
+					new1++;
+				
+			}
+		}
+		
+		for (V n2succ : successors(g2, n2)) {
+			if (core2.containsKey(n2succ)) {
+				// monomorphism: do nothing
+			}
+			else {
+				if (in2.containsKey(n2succ))
+					termin2++;
+				if (out2.containsKey(n2succ))
+					termout2++;
+				if (!in2.containsKey(n2succ) && !out2.containsKey(n2succ))
+					new2++;
+			}
+		}
+		
+		return termin1 <= termin2 && termout1 <= termout2 && (termin1 + termout1 + new1) <= (termin2 + termout2 + new2);
+	}
+
+	private boolean isFeasible(V n1, V n2) {
+		if (!m_checker.isVertexCompatible(n1, n2))
+			return false;
+		
+		if (m_test == TEST_GRAPH)
+			return isFeasibleIso(n1, n2);
+		else
+			return isFeasibleSubgraph(n1, n2);
 	}
 	
 	private boolean compareCount(int num1, int num2) {

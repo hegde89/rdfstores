@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.algorithm.RCPFast.Block;
+import edu.unika.aifb.graphindex.algorithm.rcp.Block;
 
 public interface IVertex {
 
@@ -22,6 +22,7 @@ public interface IVertex {
 	public void setSInfo(long label, int val);
 	public void incInfo(long label);
 	public void incSInfo(long label);
+	public void decSInfo(long label);
 	public void clearInfo();
 
 	public Set<Long> getEdgeLabels();

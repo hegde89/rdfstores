@@ -3,54 +3,42 @@
  */
 package edu.unika.aifb.graphindex;
 
+import java.util.Map;
+
 public class Result {
-	private Object[] m_data;
-	private ResultSet m_parent;
+	private Map<String,String> m_data;
+	private ResultSet m_rs;
 	
-	public Result(Object[] data) {
+	public Result(Map<String,String> data) {
 		this(null, data);
 	}
 	
-	public Result(ResultSet parent, Object[] data) {
-		m_parent = parent;
+	public Result(ResultSet rs, Map<String,String> data) {
+		m_rs = rs;
 		m_data = data;
 	}
 	
 	public void setResultSet(ResultSet rs) {
-		m_parent = rs;
-	}
-
-	public Object get(int col) {
-		return m_data[col];
+		m_rs = rs;
 	}
 	
-	public Object get(String var) {
-		return m_data[m_parent.getColumnForVariable(var)];
+	public String get(String var) {
+		return m_data.get(var);
 	}
 	
-	public void set(String var, Object val) {
-		m_data[m_parent.getColumnForVariable(var)] = val;
+	public void set(String var, String val) {
+		m_data.put(var, val);
 	}
 	
-	public Object[] get(String[] vars) {
-		Object[] data = new Object[vars.length];
-		for (int i = 0; i < vars.length; i++)
-			data[i] = get(vars[i]);
-		return data;
-	}
-
-	public Object[] getData() {
-		return m_data;
-	}
-
 	@Override
 	public String toString() {
-		String s = "[";
+		StringBuilder s = new StringBuilder();
+		s.append("[");
 		String comma = "";
-		for (Object o : m_data) {
-			s += comma + o;
+		for (String var : m_rs.getVars()) {
+			s.append(comma).append(get(var));
 			comma = ",";
 		}
-		return s + "]";
+		return s.append("]").toString();
 	}
 }

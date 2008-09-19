@@ -211,7 +211,6 @@ public class Runner {
 			importer.doImport();
 			
 			tp.write("output/" + args[1] + "/components/" + args[1]);
-
 		}
 		else if (args[0].equals("transform")) {
 			VertexFactory.setCollectionClass(MapVertexCollection.class);

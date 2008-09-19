@@ -652,27 +652,29 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 //		log.debug(" core1: " + core1);
 		int termin1 = 0, termin2 = 0, termout1 = 0, termout2 = 0, new1 = 0, new2 = 0; 
 		// R_pred
-		Map<V,List<E>> n1preds = preds(g1, n1);
+		Map<V,List<E>> n1predMap = preds(g1, n1);
+		Map<V,List<E>> n2predMap = preds(g2, n2);
 //		for (V n1pred : predecessors(g1, n1)) {
-		for (V n1pred : n1preds.keySet()) {
-			if (core1.containsKey(n1pred)) {
+		for (V n1pred : n1predMap.keySet()) {
+			V n1mapped = core1.get(n1pred);
+			if (n1mapped != null) {
+				List<E> n1predEdges = n1predMap.get(n1pred);
 //				Set<V> n2preds = predecessors(g2, n2);
-				Map<V,List<E>> n2preds = preds(g2, n2);
 //				if (!n2preds.contains(core1.get(n1pred)))
-				if (!n2preds.keySet().contains(core1.get(n1pred)))
+				if (!n2predMap.keySet().contains(n1mapped))
 					return false;
 //				else if (g1.getAllEdges(n1pred, n1).size() > g2.getAllEdges(core1.get(n1pred), n2).size())
-				else if (n1preds.get(n1pred).size() > n2preds.get(core1.get(n1pred)).size())
+				else if (n1predEdges.size() > n2predMap.get(n1mapped).size())
 					return false;
 
 //				Set<E> g1edges = g1.getAllEdges(n1pred, n1);
-				List<E> g1edges = n1preds.get(n1pred);
+				List<E> g1edges = n1predEdges;
 				
 				boolean found = false;
-				for (V n2pred : n2preds.keySet()) {
+				for (V n2pred : n2predMap.keySet()) {
 					if (core2.containsKey(n2pred)) {
 //						Set<E> g2edges = g2.getAllEdges(n2pred, n2);
-						List<E> g2edges = n2preds.get(n2pred);
+						List<E> g2edges = n2predMap.get(n2pred);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
 							break;
@@ -691,7 +693,9 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 					new1++;
 			}
 		}
-		for (V n2pred : predecessors(g2, n2)) {
+		
+//		for (V n2pred : predecessors(g2, n2)) {
+		for (V n2pred : n2predMap.keySet()) {
 			if (core2.containsKey(n2pred)) {
 				// monomorphism: do nothing
 			}
@@ -707,20 +711,22 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		
 		// R_succ
 		Map<V,List<E>> n1succs = succs(g1, n1);
+		Map<V,List<E>> n2succs = succs(g2, n2);
 //		for (V n1succ : successors(g1, n1)) {
 		for (V n1succ : n1succs.keySet()) {
-			if (core1.containsKey(n1succ)) {
+			V n1mapped = core1.get(n1succ);
+			if (n1mapped != null) {
+				List<E> n1succEdges = n1succs.get(n1succ);
 //				Set<V> n2succs = successors(g2, n2);
-				Map<V,List<E>> n2succs = succs(g2, n2);
 //				if (!n2succs.contains(core1.get(n1succ)))
-				if (!n2succs.keySet().contains(core1.get(n1succ)))
+				if (!n2succs.keySet().contains(n1mapped))
 					return false;
 //				else if (g1.getAllEdges(n1succ, n1).size() > g2.getAllEdges(core1.get(n1succ), n2).size())
-				else if (n1succs.get(n1succ).size() > n2succs.get(core1.get(n1succ)).size())
+				else if (n1succEdges.size() > n2succs.get(n1mapped).size())
 					return false;
 				
 //				Set<E> g1edges = g1.getAllEdges(n1, n1succ);
-				List<E> g1edges = n1succs.get(n1succ);
+				List<E> g1edges = n1succEdges;
 				
 				boolean found = false;
 //				for (V n2succ : n2succs) {
@@ -748,7 +754,8 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 			}
 		}
 		
-		for (V n2succ : successors(g2, n2)) {
+//		for (V n2succ : successors(g2, n2)) {
+		for (V n2succ : n2succs.keySet()) {
 			if (core2.containsKey(n2succ)) {
 				// monomorphism: do nothing
 			}

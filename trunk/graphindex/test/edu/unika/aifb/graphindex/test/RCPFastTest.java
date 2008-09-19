@@ -30,6 +30,8 @@ import edu.unika.aifb.graphindex.algorithm.RCP;
 import edu.unika.aifb.graphindex.algorithm.RCP.Block;
 import edu.unika.aifb.graphindex.algorithm.RCP.Partition;
 import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
+import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast2;
+import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
@@ -111,13 +113,13 @@ public class RCPFastTest {
 		LVertex x9 = new LVertex(2);
 		y1.addToImage(0, x5);
 		x5.addToImage(1, x9);
-		List<LVertex> v = new ArrayList<LVertex>();
+		List<IVertex> v = new ArrayList<IVertex>();
 		v.add(y1);
 		v.add(x5);
 		v.add(x9);
 		
-		RCPFast rcp = new RCPFast(null, null);
-		rcp.createIndex(vertices);
+		RCPFast2 rcp = new RCPFast2(null, null);
+		rcp.createIndex(v);
 	}
 
 	@After

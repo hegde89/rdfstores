@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
@@ -20,6 +21,7 @@ import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
+import edu.unika.aifb.graphindex.query.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -52,7 +54,7 @@ public class Main {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static void main(String[] args) throws StorageException, IOException, ClassNotFoundException {
+	public static void main(String[] args) throws StorageException, IOException, ClassNotFoundException, InterruptedException, ExecutionException {
 		
 		if (args.length != 2) {
 			log.error("Usage: Main <configfile> [partition|index|query]");
@@ -69,6 +71,8 @@ public class Main {
 		String indexName = (String)config.get("index_name");
 		String outputDirectory = (String)config.get("output_directory");
 		String inputDirectory = (String)config.get("input_directory");
+		
+		String query = (String)config.get("query");
 		
 		String indexDirectory = new File(outputDirectory + "/" + indexName + "/index").getAbsolutePath(); 
 		String graphDirectory = new File(outputDirectory + "/" + indexName + "/graph").getAbsolutePath();
@@ -167,7 +171,27 @@ public class Main {
 			ib.buildIndex();
 		}
 		else if (args[1].equals("query")) {
+			ExtensionStorage es = new LuceneExtensionStorage(indexDirectory);
+			ExtensionManager em = new LuceneExtensionManager();
+			em.setExtensionStorage(es);
 			
+			GraphStorage gs = new LuceneGraphStorage(graphDirectory);
+			GraphManager gm = new GraphManagerImpl();
+			gm.setGraphStorage(gs);
+			
+			StorageManager.getInstance().setExtensionManager(em);
+			StorageManager.getInstance().setGraphManager(gm);
+			em.initialize(false, true);
+			gm.initialize(false, true);
+			
+			StructureIndex index = new StructureIndex();
+			index.load();
+			
+			QueryParser qp = new QueryParser();
+			Query q = qp.parseQuery(query);
+			
+			QueryEvaluator qe = new QueryEvaluator();
+			qe.evaluate(q, index);
 		}
 	}
 }

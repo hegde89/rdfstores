@@ -58,7 +58,8 @@ public class LuceneExtension extends AbstractExtension {
 				m_writeCache.addAll(storedTriples);
 //				log.debug(getUri() + ": " + m_writeCache.size());
 				
-				m_les.deleteData(getUri());
+				if (storedTriples.size() > 0)
+					m_les.deleteData(getUri());
 //				log.debug("after delete: " + m_les.loadData(getUri()).size());
 				m_les.saveData(getUri(), m_writeCache);
 

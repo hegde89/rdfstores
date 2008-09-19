@@ -186,7 +186,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //			Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
 //			triples.add(t);
 //		}
-		
+//		log.debug("searching " + q);
 		m_searcher.search(q, new HitCollector() {
 			@Override
 			public void collect(int docId, float score) {
@@ -278,7 +278,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		
 		for (BooleanClause bc : bq.getClauses())
 			terms.add(((TermQuery)bc.getQuery()).getTerm());
-
+		log.debug("delete: " + queryPath);
 		m_writer.deleteDocuments(terms.toArray(new Term[]{}));
 		if (!bulkUpdating()) {
 			m_writer.flush();

@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.algorithm;
+package edu.unika.aifb.graphindex.graph.isomorphism;
 
 import java.util.ArrayList;
 import java.util.List;

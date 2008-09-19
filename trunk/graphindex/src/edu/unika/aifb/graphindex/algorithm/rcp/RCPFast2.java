@@ -143,22 +143,11 @@ public class RCPFast2 {
 			refinePartition(p, imageOf(b_, label), w, movedIn);
 			
 			movedIn++;
-			
-//			for (IVertex v : b_) {
-//				if (v.getImage(label) == null)
-//					continue;
-//				
-//				for (IVertex y : v.getImage(label)) {
-//					y.decSInfo(label);
-//					if (y.getSInfo(label) == 0) {
-//						y.setSInfo(label, y.getInfo(label));
-//					}
-//				}
-//			}
 		}
 		
 		log.debug("!c");
-		log.debug(p.stable(b_));
+//		log.debug(p.stable(b_));
+		steps++;
 			
 		for (IVertex v : vertices) {
 			for (long label : labels) {
@@ -244,18 +233,20 @@ public class RCPFast2 {
 				refinePartition(p, imageB, w, null);
 
 				Set<IVertex> imageBSB = new HashSet<IVertex>();
-				for (IVertex y : b_) {
-					if (y.getImage(label) == null)
+				for (IVertex v : b_) {
+					if (v.getImage(label) == null)
 						continue;
 					
-					for (IVertex x : y.getImage(label)) {
-						if (x.getInfo(label) == x.getSInfo(label))
-							imageBSB.add(x);
+					for (IVertex y : v.getImage(label)) {
+						if (y.getInfo(label) == y.getSInfo(label))
+							imageBSB.add(y);
 //							log.debug(x + " " + x.getInfo().get(label) + " " + x.getSInfo().get(label) + " " + x.getClearedIn());
 					}
 				}
-				
+//				int psize = p.getBlocks().size();
 				refinePartition(p, imageBSB, w, null);
+//				if (psize < p.getBlocks().size())
+//					log.debug("affected");
 				
 				for (IVertex v : b_) {
 					if (v.getImage(label) == null)
@@ -264,21 +255,21 @@ public class RCPFast2 {
 					for (IVertex y : v.getImage(label)) {
 						y.decSInfo(label);
 						if (y.getSInfo(label) == 0) {
-							y.setSInfo(label, y.getInfo(label));
+							y.setSInfo(label, v.getInfo(label));
 						}
 					}
 				}
 			}
 	
-			if (p.getBlocks().size() > 336)
-				log.debug("e " + p.stable(b_));
+//			if (p.getBlocks().size() > 336)
+//				log.debug("e " + p.stable(b_));
 			
 			movedIn++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
 			log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
-		log.debug(p.stable());
+//		log.debug(p.stable());
 		log.info("partition size: " + p.m_blocks.size());
 		log.info("steps: " + steps);
 

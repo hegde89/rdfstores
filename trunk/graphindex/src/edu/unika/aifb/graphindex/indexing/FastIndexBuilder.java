@@ -10,8 +10,6 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
-import edu.unika.aifb.graphindex.algorithm.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.algorithm.NaiveOneIndex;
 import edu.unika.aifb.graphindex.algorithm.RCP;
 import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
@@ -24,6 +22,8 @@ import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
+import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
+import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -39,19 +39,14 @@ public class FastIndexBuilder {
 	private class OneIndexMerger implements IndexGraphMerger<NamedGraph<String,LabeledEdge<String>>> {
 
 		public boolean merge(NamedGraph<String,LabeledEdge<String>> small, NamedGraph<String,LabeledEdge<String>> large) throws StorageException {
-//			return false;
 			DiGraphMatcher<String,LabeledEdge<String>> matcher = new DiGraphMatcher<String,LabeledEdge<String>>(small, large, true, new EdgeLabelFeasibilityChecker());
 			
 			if (!matcher.isIsomorphic())
 				return false;
 
-//			log.debug("merge " + small + " in " + large);
-			
-//			if (matcher.numberOfMappings() > 1)
-//				log.debug(matcher.numberOfMappings());
-			
 			for (IsomorphismRelation<String,LabeledEdge<String>> iso : matcher) {
 				for (String v : large.vertexSet()) {
+					// TODO verify true or false (DiGraphMatcher constructor parameter order may have changed)
 					m_em.extension(v).mergeExtension(m_em.extension(iso.getVertexCorrespondence(v, true)));
 				}
 				break;
@@ -75,7 +70,7 @@ public class FastIndexBuilder {
 	public void buildIndex() throws StorageException, NumberFormatException, IOException {
 		long start = System.currentTimeMillis();
 		
-		RCPFast rcp = new RCPFast(null, m_hashProvider);
+		RCPFast2 rcp = new RCPFast2(null, m_hashProvider);
 
 		m_em.setMode(ExtensionManager.MODE_WRITECACHE);
 		m_em.startBulkUpdate();

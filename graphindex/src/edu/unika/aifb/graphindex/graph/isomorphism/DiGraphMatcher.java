@@ -222,6 +222,24 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		g2preds = new HashMap<V,Set<V>>();
 		g1succs = new HashMap<V,Set<V>>();
 		g2succs = new HashMap<V,Set<V>>();
+		
+		log.debug("creating caches");
+		
+		for (V v : g1.vertexSet()) {
+			preds(g1, v);
+			predecessors(g1, v);
+			succs(g1, v);
+			successors(g1, v);
+		}
+		
+		for (V v : g2.vertexSet()) {
+			preds(g2, v);
+			predecessors(g2, v);
+			succs(g2, v);
+			successors(g2, v);
+		}
+		
+		log.debug("finished");
 	}
 	
 	/**

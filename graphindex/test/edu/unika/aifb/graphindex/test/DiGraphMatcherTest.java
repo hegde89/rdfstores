@@ -10,10 +10,10 @@ import org.jgrapht.graph.ClassBasedEdgeFactory;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.junit.Test;
 
-import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
-import edu.unika.aifb.graphindex.algorithm.EdgeLabelFeasibilityChecker;
-import edu.unika.aifb.graphindex.algorithm.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
+import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
+import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
 
 public class DiGraphMatcherTest {
 	
@@ -38,9 +38,9 @@ public class DiGraphMatcherTest {
 		addEdge(g1, "G", "a", "C");
 		addEdge(g1, "G", "f", "H");
 		
-//		addEdge(g2, "Y", "a", "Z");
-		addEdge(g2, "Y", "f", "X");
-//		addEdge(g2, "Y", "a", "Z");
+		addEdge(g2, "X", "a", "Z");
+		addEdge(g2, "X", "f", "Y");
+		addEdge(g2, "Y", "a", "Z");
 
 		addEdge(g3,"b49","subClassOf","b48");
 		addEdge(g3,"b56","is_a","b49");

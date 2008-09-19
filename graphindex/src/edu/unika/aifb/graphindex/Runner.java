@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
@@ -113,6 +114,11 @@ public class Runner {
 				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0";
 			return q2;
 		}
+		else if (dataset.equals("wordnet")) {
+			String q1 = "http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSatelliteSynset http://www.w3.org/2000/01/rdf-schema#subClassOf http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSynset";
+			
+			return q1;
+		}
 		
 		return null;
 	}
@@ -137,6 +143,7 @@ public class Runner {
 			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/").listFiles()) {
 				if (f.getName().startsWith("University")) {
 					importer.addImport(f.getAbsolutePath());
+//					break;
 				}
 			}
 			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
@@ -166,18 +173,20 @@ public class Runner {
 	 * @param args
 	 * @throws StorageException 
 	 * @throws IOException 
+	 * @throws InterruptedException 
+	 * @throws ExecutionException 
 	 */
-	public static void main(String[] args) throws StorageException, IOException {
+	public static void main(String[] args) throws StorageException, IOException, InterruptedException, ExecutionException {
 		if (args.length != 3) {
 			System.out.println("Usage:\nRunner partition <prefix> <dataset>\nRunner query <prefix> <dataset>");
 			return;
 		}
 		
-		ExtensionStorage es = new LuceneExtensionStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/index/" + args[1]);
+		ExtensionStorage es = new LuceneExtensionStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + args[1] + "/index");
 		ExtensionManager em = new LuceneExtensionManager();
 		em.setExtensionStorage(es);
 		
-		GraphStorage gs = new LuceneGraphStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/graph/" + args[1]);
+		GraphStorage gs = new LuceneGraphStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + args[1] + "/graph");
 		GraphManager gm = new GraphManagerImpl();
 		gm.setGraphStorage(gs);
 		
@@ -195,13 +204,13 @@ public class Runner {
 			da.printAnalysis();
 		}
 		else if (args[0].equals("partition")) {
-			TriplesPartitioner tp = new TriplesPartitioner("components/" + args[1]);
+			TriplesPartitioner tp = new TriplesPartitioner("output/" + args[1] + "/components/" + args[1]);
 			
 			Importer importer = getImporter(args[2]);
 			importer.setTripleSink(tp);
 			importer.doImport();
 			
-			tp.write("components/" + args[1]);
+			tp.write("output/" + args[1] + "/components/" + args[1]);
 
 		}
 		else if (args[0].equals("transform")) {
@@ -210,8 +219,8 @@ public class Runner {
 			
 			Importer importer = getImporter(args[2]);
 			
-			VertexListBuilder vb = new VertexListBuilder(importer, "components/" + args[1]);
-			vb.write("components/" + args[1]);
+			VertexListBuilder vb = new VertexListBuilder(importer, "output/" + args[1] + "/components/" + args[1]);
+			vb.write("output/" + args[1] + "/components/" + args[1]);
 		}
 		else if (args[0].equals("create")) {
 			VertexFactory.setCollectionClass(ListVertexCollection.class);
@@ -220,8 +229,8 @@ public class Runner {
 			em.initialize(true, false);
 			gm.initialize(true, false);
 			
-			VertexListProvider vlp = new VertexListProvider("components/" + args[1]);
-			HashValueProvider hvp = new HashValueProvider("components/" + args[1] + ".hashes");
+			VertexListProvider vlp = new VertexListProvider("output/" + args[1] + "/components/" + args[1]);
+			HashValueProvider hvp = new HashValueProvider("output/" + args[1] + "/components/" + args[1] + ".hashes");
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
@@ -230,7 +239,6 @@ public class Runner {
 //			ib.buildIndex();
 		}
 		else if(args[0].equals("query")) {
-			
 			em.initialize(false, true);
 			gm.initialize(false, true);
 			

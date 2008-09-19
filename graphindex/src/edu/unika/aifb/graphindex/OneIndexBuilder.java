@@ -7,13 +7,13 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
-import edu.unika.aifb.graphindex.algorithm.DiGraphMatcher;
-import edu.unika.aifb.graphindex.algorithm.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.algorithm.RCP;
 import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
+import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
+import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.indexing.IndexGraphMerger;
 import edu.unika.aifb.graphindex.indexing.MergedIndexList;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;

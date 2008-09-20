@@ -18,6 +18,7 @@ import edu.unika.aifb.graphindex.importer.ComponentImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
@@ -166,8 +167,12 @@ public class Runner {
 			importer = new ComponentImporter();
 			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/components/simple");
 		}
+		else if (dataset.equals("chefmoz")) {
+			importer = new RDFImporter();
+			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/chefmoz.rest.rdf");
+		}
 		return importer;
-	}
+ 	}
 	
 	/**
 	 * @param args

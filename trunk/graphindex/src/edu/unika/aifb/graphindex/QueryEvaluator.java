@@ -27,6 +27,7 @@ import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
+import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher2;
 import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.query.Constant;
@@ -235,14 +236,21 @@ public class QueryEvaluator {
 			
 			final List<Future<Set<Map<String,String>>>> futures = new ArrayList<Future<Set<Map<String,String>>>>();
 			
-			start(MATCH);
-			DiGraphMatcher<String,LabeledEdge<String>> matcher = new DiGraphMatcher<String,LabeledEdge<String>>(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
+//			DiGraphMatcher<String,LabeledEdge<String>> matcher = new DiGraphMatcher<String,LabeledEdge<String>>(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
+//					new MappingListener<String,LabeledEdge<String>>() {
+//						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
+//							futures.add(executor.submit(new MappingValidator(queryGraph, iso, m_groundTermCache)));
+//						}
+//			});
+			
+			DiGraphMatcher2 matcher = new DiGraphMatcher2(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
 							futures.add(executor.submit(new MappingValidator(queryGraph, iso, m_groundTermCache)));
 						}
 			});
 			
+			start(MATCH);
 			if (!matcher.isSubgraphIsomorphic()) {
 				end(MATCH);
 				continue;

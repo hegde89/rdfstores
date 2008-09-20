@@ -466,19 +466,69 @@ public class DiGraphMatcher<V,E> implements Iterator<IsomorphismRelation<V,E>>, 
 		return true;
 	}
 	
+	private class Tuple {
+		List<E> l1, l2;
+		public Tuple(List<E> l1, List<E> l2) {
+			this.l1 = l1;
+			this.l2 = l2;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((l1 == null) ? 0 : l1.hashCode());
+			result = prime * result + ((l2 == null) ? 0 : l2.hashCode());
+			return result;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Tuple other = (Tuple)obj;
+			if (l1 == null) {
+				if (other.l1 != null)
+					return false;
+			} else if (!l1.equals(other.l1))
+				return false;
+			if (l2 == null) {
+				if (other.l2 != null)
+					return false;
+			} else if (!l2.equals(other.l2))
+				return false;
+			return true;
+		}
+	}
+	
+	Map<Tuple,Boolean> edgeSetCache = new HashMap<Tuple,Boolean>();
+	
 	private boolean edgeSetsCompatible(List<E> g1edges, List<E> g2edges) {
-		for (E e1 : g1edges) {
-			boolean found = false;
-			for (E e2 : g2edges) {
-				if (m_checker.isEdgeCompatible(e1, e2)) {
-					found = true;
+		Tuple t = new Tuple(g1edges, g2edges);
+		Boolean val = edgeSetCache.get(t);
+		if (val == null) {
+			for (E e1 : g1edges) {
+				boolean found = false;
+				for (E e2 : g2edges) {
+					if (m_checker.isEdgeCompatible(e1, e2)) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					val = Boolean.FALSE;
 					break;
 				}
 			}
-			if (!found)
-				return false;
+			if (val == null)
+				val = Boolean.TRUE;
+			edgeSetCache.put(t, val);
 		}
-		return true;
+		return val;
 	}
 	
 	Map<V,Map<V,List<E>>> g1predsCache = new HashMap<V,Map<V,List<E>>>();

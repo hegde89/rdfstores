@@ -37,8 +37,7 @@ public class RCPFast2 {
 	private HashValueProvider m_hashes;
 	private static final Logger log = Logger.getLogger(RCPFast2.class);
 	
-	public RCPFast2(Map<Long,String> h2v, HashValueProvider provider) {
-		m_h2v = h2v;
+	public RCPFast2(HashValueProvider provider) {
 		m_gm = StorageManager.getInstance().getGraphManager();
 		m_em = StorageManager.getInstance().getExtensionManager();
 		m_hashes = provider;
@@ -145,8 +144,8 @@ public class RCPFast2 {
 			movedIn++;
 		}
 		
-		log.debug("!c");
-//		log.debug(p.stable(b_));
+		log.debug(p);
+		log.debug(p.stable(b_));
 		steps++;
 			
 		for (IVertex v : vertices) {
@@ -229,7 +228,7 @@ public class RCPFast2 {
 					for (IVertex y : v.getImage(label))
 						y.incInfo(label);
 				}
-				
+				log.debug("imageB: " + imageB);
 				refinePartition(p, imageB, w, null);
 
 				Set<IVertex> imageBSB = new HashSet<IVertex>();
@@ -243,6 +242,7 @@ public class RCPFast2 {
 //							log.debug(x + " " + x.getInfo().get(label) + " " + x.getSInfo().get(label) + " " + x.getClearedIn());
 					}
 				}
+				log.debug("imageBSB: " + imageBSB);
 //				int psize = p.getBlocks().size();
 				refinePartition(p, imageBSB, w, null);
 //				if (psize < p.getBlocks().size())
@@ -261,15 +261,15 @@ public class RCPFast2 {
 				}
 			}
 	
-//			if (p.getBlocks().size() > 336)
-//				log.debug("e " + p.stable(b_));
+			log.debug("e " + p.stable(b_));
+			log.debug(p);
 			
 			movedIn++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
 			log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
-//		log.debug(p.stable());
+		log.debug(p.stable());
 		log.info("partition size: " + p.m_blocks.size());
 		log.info("steps: " + steps);
 

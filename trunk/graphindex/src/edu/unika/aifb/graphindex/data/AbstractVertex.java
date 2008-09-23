@@ -63,10 +63,7 @@ public abstract class AbstractVertex implements IVertex {
 	
 	@Override
 	public String toString() {
-		if (RCPFast.m_h2v == null || RCPFast.m_h2v.size() == 0)
-			return "" + m_id;
-		else
-			return Util.truncateUri(RCPFast.m_h2v.get(m_id));
+		return "" + m_id;
 	}
 
 	@Override

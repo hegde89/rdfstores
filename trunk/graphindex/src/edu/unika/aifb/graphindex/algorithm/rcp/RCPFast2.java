@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -29,8 +30,6 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.Triple;
 
 public class RCPFast2 {
-	static int block_id = 0;
-
 	private GraphManager m_gm;
 	private ExtensionManager m_em;
 	public static Map<Long,String> m_h2v;
@@ -43,6 +42,19 @@ public class RCPFast2 {
 		m_hashes = provider;
 	}
 	
+	
+	/**
+	 * Refines the partition <code>p</code> with respect to the vertex set <code>image</code>, which in most
+	 * cases is the image of a block in <code>p</code>. This operation splits blocks in <code>p</code> so that
+	 * all blocks are either subsets of <code>image</code> or disjunct from <code>image</code>, ie. all blocks
+	 * are stable to <code>image</code>.<p>
+	 * 
+	 * XBlocks which were made compound by splitting are added to <code>w</code>.
+	 * 
+	 * @param p
+	 * @param image
+	 * @param w
+	 */
 	private void refinePartition(Partition p, Set<IVertex> image, Splitters w, Integer currentIteration) {
 		List<Block> splitBlocks = new LinkedList<Block>();
 		for (IVertex x : image) {
@@ -86,6 +98,14 @@ public class RCPFast2 {
 		}
 	}
 	
+	/**
+	 * Calculate the image set of a set of vertices. Only edges with the specified
+	 * label will be taken into account.
+	 * 
+	 * @param vertices
+	 * @param label
+	 * @return
+	 */
 	private Set<IVertex> imageOf(Collection<IVertex> vertices, long label) {
 		Set<IVertex> image = new HashSet<IVertex>();
 		for (IVertex v :vertices) {
@@ -101,72 +121,42 @@ public class RCPFast2 {
 		XBlock startXB = new XBlock();
 		Partition p = new Partition();
 		Block startBlock = new Block();
-//		Block startBlock2 = null;
 		Set<XBlock> cbs = new HashSet<XBlock>();
-		
 		Set<Long> labels = new TreeSet<Long>();
+
 		labels.addAll(m_hashes.getEdges());
 
-		for (IVertex v : vertices) {
-//			if (startBlock2 == null) {
-//				startBlock2 = new Block();
-//				startBlock2.add(v);
-//			}
-//			else
+		for (IVertex v : vertices)
 				startBlock.add(v);
-		}
 		
 		p.add(startBlock);
-//		p.add(startBlock2);
 		startXB.addBlock(startBlock);
-//		startXB.addBlock(startBlock2);
 		w.add(startXB);
 		
-		int movedIn = 0, clearedIn = 0;
+		int movedIn = 0;
 		
 		System.gc();
 		log.debug("setup complete, " + Util.memory());
 		log.debug("starting refinement process...");
 		
-		boolean first = true;
 		long start = System.currentTimeMillis();
 		int steps = 0;
 		
-		Block bl = startBlock;
+		startXB.calcInfo();
 		
-		List<IVertex> b_ = new ArrayList<IVertex>(bl.size());
-		for (Iterator<IVertex> i = bl.iterator(); i.hasNext(); )
+		List<IVertex> b_ = new ArrayList<IVertex>(startBlock.size());
+		for (Iterator<IVertex> i = startBlock.iterator(); i.hasNext(); )
 			b_.add(i.next());
 		
 		for (long label : labels) {
 			refinePartition(p, imageOf(b_, label), w, movedIn);
-			
 			movedIn++;
 		}
 		
-		log.debug(p);
-		log.debug(p.stable(b_));
 		steps++;
 			
-		for (IVertex v : vertices) {
-			for (long label : labels) {
-				if (v.getImage(label) == null)
-					continue;
-				
-				for (IVertex x : v.getImage(label)) {
-					x.incSInfo(label);
-				}
-			}
-		}
-		first = false;
-		
 		while (w.size() > 0) {
-			steps++;
-			XBlock xb = w.remove();
-			
-			XBlock s = xb;
-//				log.debug("compound splitter: " + s);
-//				log.debug("w: " + w);
+			XBlock s = w.remove();
 			
 			Block b;
 			if (s.getFirstBlock().size() <= s.getSecondBlock().size())
@@ -175,101 +165,75 @@ public class RCPFast2 {
 				b = s.getSecondBlock();
 			
 			s.remove(b);
+			
 			if (s.isCompound())
 				w.add(s);
 			
-			cbs.add(new XBlock(b));
-			
-//				log.debug("b: " + b);
-//				log.debug("w: " + w);
+			XBlock s_ = new XBlock(b);
+			s_.calcInfo(); // TODO is not really necessary, as we compute info for b below
+			cbs.add(s_);
 			
 			b_ = new ArrayList<IVertex>(b.size());
 			for (Iterator<IVertex> i = b.iterator(); i.hasNext(); )
 				b_.add(i.next());
-//				log.debug("b_" + b_);
-			
-			// calc info_s
-			if (first) {
-				for (IVertex v : vertices) {
-					for (long label : labels) {
-						if (v.getImage(label) == null)
-							continue;
-						
-						for (IVertex x : v.getImage(label)) {
-							x.incSInfo(label);
-						}
-					}
-				}
-				first = false;
-			}
-			
-			clearedIn++;
-			
-//				log.debug("b restb " + b_ + " " + restb);
 			
 			for (long label : labels) {
-//					log.debug("LABEL " + label);
-				
-				Set<IVertex> imageB = new HashSet<IVertex>();
-				for (IVertex v : b_) {
-					if (v.getImage(label) == null)
-						continue;
+//				log.debug("LABEL " + label);
 
-					for (IVertex y : v.getImage(label))
-						y.setInfo(label, 0);
-				}
-				
+				// calculate E(B) and LD
+				Set<IVertex> imageB = new HashSet<IVertex>();
+				Map<IVertex,Integer> ld = new HashMap<IVertex,Integer>();
 				for (IVertex v : b_) {
 					if (v.getImage(label) == null)
 						continue;
 					
 					imageB.addAll(v.getImage(label));
 					
-					for (IVertex y : v.getImage(label))
-						y.incInfo(label);
+					for (IVertex y : v.getImage(label)) {
+						if (!ld.containsKey(y))
+							ld.put(y, 1);
+						else
+							ld.put(y, ld.get(y) + 1);
+					}
 				}
-				log.debug("imageB: " + imageB);
+
 				refinePartition(p, imageB, w, null);
 
+				// calculate E(B) - E(S - B)
 				Set<IVertex> imageBSB = new HashSet<IVertex>();
-				for (IVertex v : b_) {
-					if (v.getImage(label) == null)
+				for (IVertex v : imageB) {
+					Integer sval = s.getInfo(v, label);
+					if (sval == null)
 						continue;
 					
-					for (IVertex y : v.getImage(label)) {
-						if (y.getInfo(label) == y.getSInfo(label))
-							imageBSB.add(y);
-//							log.debug(x + " " + x.getInfo().get(label) + " " + x.getSInfo().get(label) + " " + x.getClearedIn());
-					}
+					int val = sval;
+					
+					if (!ld.containsKey(v))
+						continue;
+					
+					// because B is a subset of S, if the number of incoming
+					// edges from B equals the number of incoming edges from S,
+					// all incoming edges of the vertex are from B, ie. the
+					// the vertex is part of E(B) - E(S - B)
+					if (val == (int)ld.get(v))
+						imageBSB.add(v);
 				}
-				log.debug("imageBSB: " + imageBSB);
-//				int psize = p.getBlocks().size();
+
 				refinePartition(p, imageBSB, w, null);
-//				if (psize < p.getBlocks().size())
-//					log.debug("affected");
-				
-				for (IVertex v : b_) {
-					if (v.getImage(label) == null)
-						continue;
-					
-					for (IVertex y : v.getImage(label)) {
-						y.decSInfo(label);
-						if (y.getSInfo(label) == 0) {
-							y.setSInfo(label, v.getInfo(label));
-						}
-					}
-				}
+
+				// update info map of S
+				for (IVertex v : ld.keySet())
+					s.decInfo(v, label, ld.get(v));
 			}
 	
-			log.debug("e " + p.stable(b_));
-			log.debug(p);
+//			log.debug("e " + p.stable(b_));
 			
-			movedIn++;
+			steps++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
 			log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
-		log.debug(p.stable());
+//		log.debug(p.stable());
 		log.info("partition size: " + p.m_blocks.size());
 		log.info("steps: " + steps);
 

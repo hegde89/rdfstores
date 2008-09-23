@@ -70,7 +70,7 @@ public class FastIndexBuilder {
 	public void buildIndex() throws StorageException, NumberFormatException, IOException {
 		long start = System.currentTimeMillis();
 		
-		RCPFast2 rcp = new RCPFast2(m_hashProvider);
+		RCPFast rcp = new RCPFast(m_hashProvider);
 
 		m_em.setMode(ExtensionManager.MODE_WRITECACHE);
 		m_em.startBulkUpdate();

@@ -29,16 +29,12 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.Triple;
 
 public class RCPFast {
-	static int block_id = 0;
-
 	private GraphManager m_gm;
 	private ExtensionManager m_em;
-	public static Map<Long,String> m_h2v;
 	private HashValueProvider m_hashes;
 	private static final Logger log = Logger.getLogger(RCPFast.class);
 	
-	public RCPFast(Map<Long,String> h2v, HashValueProvider provider) {
-		m_h2v = h2v;
+	public RCPFast(HashValueProvider provider) {
 		m_gm = StorageManager.getInstance().getGraphManager();
 		m_em = StorageManager.getInstance().getExtensionManager();
 		m_hashes = provider;

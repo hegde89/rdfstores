@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.data.LVertexM;
+import edu.unika.aifb.graphindex.data.LVertexM2;
 import edu.unika.aifb.graphindex.data.ListVertexCollection;
 import edu.unika.aifb.graphindex.data.MapVertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;

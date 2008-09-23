@@ -169,7 +169,7 @@ public class RunnerOldRCP {
 			index.load();
 			
 			QueryEvaluator qe = new QueryEvaluator();
-			qe.evaluate(getQuery(args[2]), index);
+//			qe.evaluate(getQuery(args[2]), index);
 		}
 		
 		em.close();

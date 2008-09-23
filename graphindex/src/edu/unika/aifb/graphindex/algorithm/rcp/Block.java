@@ -18,7 +18,8 @@ public class Block implements Iterable<IVertex> {
 //		private Block m_next, m_prev;
 		private int m_size;
 		private XBlock m_parent;
-		private String m_name = "b" + ++RCPFast.block_id;
+		private static int m_blockId = 0;
+		private String m_name = "b" + ++m_blockId;
 		private Block m_splitBlock;
 		
 		public Block() {

@@ -30,13 +30,17 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 	private IsomorphismRelation<String,LabeledEdge<String>> m_iso;
 	private Map<String,Boolean> m_groundTermCache;
 	private ExtensionManager m_em;
+	private StatisticsCollector m_collector;
+	private Timings t;
 	private static final Logger log = Logger.getLogger(MappingValidator.class);
 	
-	public MappingValidator(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, IsomorphismRelation<String,LabeledEdge<String>> iso, Map<String,Boolean> groundTermCache) {
+	public MappingValidator(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, IsomorphismRelation<String,LabeledEdge<String>> iso, Map<String,Boolean> groundTermCache, StatisticsCollector collector) {
 		m_iso = iso;
 		m_queryGraph = queryGraph;
 		m_groundTermCache = groundTermCache;
 		m_em = StorageManager.getInstance().getExtensionManager();
+		m_collector = collector;
+		t = new Timings();
 	}
 	
 	private Set<Map<String,String>> createMappings(String prefix, NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, String qv, Map<String,String> mapping, Triple triple) {
@@ -102,7 +106,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 	 * @throws StorageException
 	 */
 	public List<TriplePair> join(TripleSet targetTriples, String leftProperty, TripleSet sourceTriples) throws StorageException {
-//		start(JOIN);
+		t.start(Timings.JOIN);
 		// TODO use smaller triple set to create hash table (can't just swap, because we use
 		// different columns on each side)
 		
@@ -129,7 +133,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 			}
 		}
 		
-//		end(JOIN);
+		t.end(Timings.JOIN);
 		return result;
 	}
 	
@@ -163,9 +167,9 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 				
 				Set<Triple> triples = new HashSet<Triple>();
 				for (String property : labels) {
-//					start(DATA);
+					t.start(Timings.DATA);
 					Set<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(v, true)).getTriples(property, term.toString());
-//					end(DATA);
+					t.end(Timings.DATA);
 //					log.debug("  " + propTriples);
 					if (propTriples.size() == 0) {
 //						log.debug("not all ground terms found");
@@ -182,9 +186,9 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 				Set<Triple> triples = null;
 				for (LabeledEdge<String> edge : queryGraph.outgoingEdgesOf(v)) {
 					
-//					start(DATA);
+					t.start(Timings.DATA);
 					Set<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(edge.getDst(), true)).getTriples(edge.getLabel());
-//					end(DATA);
+					t.end(Timings.DATA);
 					if (triples == null) {
 						triples = new HashSet<Triple>();
 						for (Triple t : propTriples) {
@@ -236,19 +240,19 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 			
 			if (targetTriples == null) {
 				if (targetTerm instanceof Variable) {
-//					start(DATA);
+					t.start(Timings.DATA);
 					targetTriples = new TripleSet(m_em.extension(targetUri).getTriples(propertyUri));
-//					end(DATA);
+					t.end(Timings.DATA);
 				}
 				else if (targetTerm instanceof Individual) {
-//					start(DATA);
+					t.start(Timings.DATA);
 					targetTriples = new TripleSet(m_em.extension(targetUri).getTriples(propertyUri, targetTerm.toString()));
-//					end(DATA);
+					t.end(Timings.DATA);
 				}
 				else if (targetTerm instanceof Constant) {
-//					start(DATA);
+					t.start(Timings.DATA);
 					targetTriples = new TripleSet(m_em.extension(targetUri).getTriples(propertyUri, targetTerm.toString()));
-//					end(DATA);
+					t.end(Timings.DATA);
 				}
 			}
 			
@@ -257,14 +261,14 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 					sourceTriples = new TripleSet();
 					for (LabeledEdge<String> inEdge : queryGraph.incomingEdgesOf(source)) {
 						if (sourceTerm instanceof Variable) {
-//							start(DATA);
+							t.start(Timings.DATA);
 							sourceTriples.addTriples(m_em.extension(sourceUri).getTriples(inEdge.getLabel()));
-//							end(DATA);
+							t.end(Timings.DATA);
 						}
 						else if (sourceTerm instanceof Individual) {
-//							start(DATA);
+							t.start(Timings.DATA);
 							Set<Triple> triples = m_em.extension(sourceUri).getTriples(inEdge.getLabel());
-//							end(DATA);
+							t.end(Timings.DATA);
 							for (Triple t : triples)
 								if (t.getObject().equals(sourceTerm.toString()))
 									sourceTriples.addTriple(t);
@@ -283,7 +287,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 //						sourceTriples.addTriple(new Triple("", "", t.getSubject()));
 //					}
 					// TODO already finished, join is unnecessary
-					log.debug("join not necessary");
+//					log.debug("join not necessary");
 					joinNecessary = false;
 				}
 			}
@@ -356,10 +360,10 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 				done = true;
 		}
 		
-//		start(MAPPING);
+		t.start(Timings.MAPPING);
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		TripleSet set = tripleMapping.get("?x");
-		log.debug(set.getTriples());
+//		log.debug(set.getTriples());
 		for (Triple t : set.getTriples()) {
 			Set<Map<String,String>> mappings = createMappings("", queryGraph, "?x", new HashMap<String,String>(), t);
 			for (Map<String,String> map : mappings)
@@ -367,13 +371,14 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 					results.add(map);
 //					log.debug("m: " + map);
 		}
-//		end(MAPPING);
+		t.end(Timings.MAPPING);
 		return results;
 	}
 	
 	public Set<Map<String,String>> call() throws Exception {
 //		System.out.println(m_iso);
 		Set<Map<String,String>> set = validateMapping2(m_queryGraph, m_iso);
+		m_collector.addTimings(t);
 		return set;
 	}
 

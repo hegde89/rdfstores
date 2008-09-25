@@ -166,6 +166,15 @@ public class Util {
 		long max = r.maxMemory() / 1000;
 		return "memory (used/free/max): " + (max - freeMemory()) / 1000 + "/" + freeMemory() / 1000 + "/" + r.maxMemory() / 1000000;
 	}
+	
+	public static boolean belowMemoryLimit(int percentFree) {
+		long max = Runtime.getRuntime().maxMemory() / 1000;
+		long free = freeMemory();
+
+		if ((double)free / max * 100 < percentFree)
+			return true;
+		return false;
+	}
 
 	public static Object[] permute(int k, Object[] os) {
 		for (int j = 2; j <= os.length; j++) {
@@ -195,5 +204,10 @@ public class Util {
 			g.addEdge(t[0], t[1], t[2]);
 		}
 		return g;
+	}
+
+	public static void sortFile(String file, String fileOut) throws IOException, InterruptedException {
+		Process p = Runtime.getRuntime().exec("sort -o " + fileOut + " " + file);
+		p.waitFor();
 	}
 }

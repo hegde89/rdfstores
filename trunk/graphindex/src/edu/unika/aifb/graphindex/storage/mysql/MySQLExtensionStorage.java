@@ -56,6 +56,10 @@ public class MySQLExtensionStorage extends AbstractExtensionStorage {
 	public void close() {
 	}
 	
+	public void optimize() {
+		
+	}
+	
 	private void lock() throws SQLException {
 		Statement st = m_conn.createStatement();
 		st.execute("LOCK TABLES " + m_prefix + "extdata WRITE");

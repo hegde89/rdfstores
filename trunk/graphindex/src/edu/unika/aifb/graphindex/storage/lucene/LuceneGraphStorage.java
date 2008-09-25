@@ -70,6 +70,18 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			e.printStackTrace();
 		}	
 	}
+	
+	public void optimize() throws StorageException {
+		if (!m_readonly) {
+			try {
+				m_writer.optimize();
+			} catch (CorruptIndexException e) {
+				throw new StorageException(e);
+			} catch (IOException e) {
+				throw new StorageException(e);
+			}
+		}
+	}
 
 	private void reopen() throws CorruptIndexException, IOException {
 		m_reader = m_reader.reopen();

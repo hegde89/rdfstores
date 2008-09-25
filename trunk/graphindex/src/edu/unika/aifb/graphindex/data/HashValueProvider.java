@@ -12,29 +12,32 @@ import java.util.Set;
 import edu.unika.aifb.graphindex.Util;
 
 public class HashValueProvider {
+	private String m_hashFile;
 	private Map<Long,String> m_hashes;
-	private Map<Long,String> m_edgeHashes;
+	private Map<Long,String> m_propertyHashes;
 	private BufferedReader m_in;
 	
-	public HashValueProvider(String hashFile) throws FileNotFoundException {
+	public HashValueProvider(String hashFile, String propertyHashFile) throws IOException {
 		m_in = new BufferedReader(new FileReader(hashFile));
-		m_edgeHashes = new HashMap<Long,String>();
+		m_propertyHashes = new HashMap<Long,String>();
 		m_hashes = new HashMap<Long,String>();
-	}
-	
-	public void setEdges(Set<String> edges) {
-		m_edgeHashes.clear();
-		for (String edge : edges) {
-			m_edgeHashes.put(Util.hash(edge), edge);
+		m_hashFile = hashFile;
+		
+		BufferedReader in = new BufferedReader(new FileReader(propertyHashFile));
+		String input;
+		while ((input = in.readLine()) != null) {
+			input = input.trim();
+			String[] t = input.split("\t");
+			m_propertyHashes.put(Long.parseLong(t[0]), t[1]);
 		}
 	}
 	
 	public Set<Long> getEdges() {
-		return m_edgeHashes.keySet();
+		return m_propertyHashes.keySet();
 	}
 	
 	public String getValue(long hash) {
-		String value = m_edgeHashes.get(hash);
+		String value = m_propertyHashes.get(hash);
 		if (value != null)
 			return value;
 		
@@ -61,5 +64,10 @@ public class HashValueProvider {
 		}
 		
 		return m_hashes.get(hash);
+	}
+	
+	public void clearCache() throws FileNotFoundException {
+		m_in = new BufferedReader(new FileReader(m_hashFile));
+		m_hashes = new HashMap<Long,String>();
 	}
 }

@@ -9,10 +9,12 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.storage.AbstractExtension;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.Triple;
 
 public class LuceneExtension extends AbstractExtension {
@@ -63,11 +65,11 @@ public class LuceneExtension extends AbstractExtension {
 //				log.debug("after delete: " + m_les.loadData(getUri()).size());
 				m_les.saveData(getUri(), m_writeCache);
 
-				m_writeCache.clear();
+				m_writeCache = new HashSet<Triple>();
 				break;
 				
 			case ExtensionManager.MODE_READONLY:
-				m_readCache.clear();
+				m_readCache = new HashMap<String,Set<Triple>>();
 				break;
 				
 			default:
@@ -141,6 +143,11 @@ public class LuceneExtension extends AbstractExtension {
 		}
 		catch (IOException e) {
 			throw new StorageException(e);
+		}
+		
+		if (Util.belowMemoryLimit(30)) {
+			StorageManager.getInstance().getExtensionManager().flushAllCaches();
+			log.debug("flushed caches, " + Util.memory());
 		}
 		
 		return triples;

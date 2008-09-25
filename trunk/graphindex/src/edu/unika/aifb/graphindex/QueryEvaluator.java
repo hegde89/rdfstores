@@ -47,25 +47,22 @@ import edu.unika.aifb.graphindex.storage.Triple;
 public class QueryEvaluator {
 	private ExtensionManager m_em = StorageManager.getInstance().getExtensionManager();
 	private final Map<String,Boolean> m_groundTermCache;
+	private StructureIndex m_index;
+	private final StatisticsCollector m_collector = new StatisticsCollector();
+	private Timings m_timings;
+	
 	static final Logger log = Logger.getLogger(QueryEvaluator.class);
-	private long[] starts = new long[10];
-	private long[] timings = new long[10];
-	private final  int DATA = 0, JOIN = 1, MAPPING = 2, RS = 3, MATCH = 4;
 	
-	public QueryEvaluator() {
+	
+	public QueryEvaluator(StructureIndex index) {
 		m_groundTermCache = new HashMap<String,Boolean>();
-	}
-	
-	private void start(int timer) {
-		starts[timer] = System.currentTimeMillis();
-	}
-	
-	private void end(int timer) {
-		timings[timer] += System.currentTimeMillis() - starts[timer];
+		m_index = index;
+		
+		initialize();
 	}
 	
 	private ResultSet toResultSet(Set<Map<String,String>> mappings, Set<String> vars) {
-		start(RS);
+		m_timings.start(Timings.RS);
 		ResultSet rs = new ResultSet(vars.toArray(new String[]{}));
 		Set<String> toRemove = null;
 		
@@ -80,76 +77,78 @@ public class QueryEvaluator {
 				map.remove(key);
 			rs.addResult(new Result(map));
 		}
-		end(RS);
+		m_timings.end(Timings.RS);
 		return rs;
 	}
 	
-	public ResultSet evaluate(Query query, StructureIndex index) throws StorageException, InterruptedException, ExecutionException {
+	private void initialize() {
+		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
+			log.debug("index graph: " + indexGraph);
+			indexGraph.calc();
+		}
+		log.info("evaluator initialized");
+	}
+	
+	public ResultSet evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
+		log.info("evaluating...");
+		
 		long start = System.currentTimeMillis();
+		m_timings = new Timings();
 		
 		final NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph = query.toQueryGraph();
-		log.debug(queryGraph);
+		queryGraph.calc();
+		log.debug("query graph: " + queryGraph);
 		Util.printDOT("query.dot", queryGraph);
 		
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		
 		final ExecutorService executor = Executors.newFixedThreadPool(1);
-//		final ExecutorCompletionService<Set<Map<String,String>>> completionService = new ExecutorCompletionService<Set<Map<String,String>>>(executor);
+		final ExecutorCompletionService<Set<Map<String,String>>> completionService = new ExecutorCompletionService<Set<Map<String,String>>>(executor);
 		
-		int i = 0;
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
-		for (NamedGraph<String,LabeledEdge<String>> indexGraph : index.getIndexGraphs()) {
-			log.debug(indexGraph);
-			Util.printDOT(indexGraph);
-			
-			final List<Future<Set<Map<String,String>>>> futures = new ArrayList<Future<Set<Map<String,String>>>>();
-			
-//			DiGraphMatcher<String,LabeledEdge<String>> matcher = new DiGraphMatcher<String,LabeledEdge<String>>(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
-//					new MappingListener<String,LabeledEdge<String>>() {
-//						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-//							futures.add(executor.submit(new MappingValidator(queryGraph, iso, m_groundTermCache)));
-//						}
-//			});
+		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
 			
 			DiGraphMatcher2 matcher = new DiGraphMatcher2(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-							futures.add(executor.submit(new MappingValidator(queryGraph, iso, m_groundTermCache)));
+							completionService.submit(new MappingValidator(queryGraph, iso, m_groundTermCache, m_collector));
+//							log.debug("mapping");
 						}
 			});
 			
-			start(MATCH);
+			m_timings.start(Timings.MATCH);
 			if (!matcher.isSubgraphIsomorphic()) {
-				end(MATCH);
+				m_timings.end(Timings.MATCH);
 				continue;
 			}
-			end(MATCH);
+			m_timings.end(Timings.MATCH);
 			
 			log.info("matches: " + matcher.numberOfMappings());
 
-			for (Future<Set<Map<String,String>>> f : futures) {
-				Set<Map<String,String>> result = f.get();
-				if (result != null)
-					results.addAll(result);
+			for (int i = 0; i < matcher.numberOfMappings(); i++) {
+				Future<Set<Map<String,String>>> f = completionService.take();
+				Set<Map<String,String>> r = f.get();
+				if (r != null)
+					results.addAll(r);
 			}
 		}
 		executor.shutdown();
 		log.debug("result maps: " + results.size());
 		
-		long end = System.currentTimeMillis();
-		log.info((end - start) / 1000.0);
-		m_groundTermCache.clear();
 		
 		ResultSet rs = toResultSet(results, queryGraph.getVariables());
 		log.debug(rs);
 		log.debug("size: " + rs.size());
 		
-		log.debug("time spent");
-		log.debug(" subgraph matching: " + (timings[MATCH] / 1000.0));
-		log.debug(" retrieving data: " + (timings[DATA] / 1000.0));
-		log.debug(" joining: " + (timings[JOIN] / 1000.0));
-		log.debug(" computing mappings: " + (timings[MAPPING] / 1000.0));
-		log.debug(" building result set: " + (timings[RS] / 1000.0));
+		long end = System.currentTimeMillis();
+		log.info("duration: " + (end - start) / 1000.0);
+
+		m_collector.addTimings(m_timings);
+		
+		m_collector.logStats();
+		
+		m_groundTermCache.clear();
+
 		return null;
 	}
 }

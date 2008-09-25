@@ -64,17 +64,17 @@ public class ListVertexCollection implements VertexCollection {
 		while ((input = in.readLine()) != null) {
  			long hash = Long.parseLong(input);
 
-			if (m_vertexList.size() % 500000 == 0)
+			if (m_vertexList.size() % 2500000 == 0)
 				log.info("vertex objects created: " + m_vertexList.size() + ", " + Util.memory());
 
 			addVertex(hash);
 		}
-		log.debug("after loading vertices: " + Util.memory());
+//		log.debug("after loading vertices: " + Util.memory());
 		
 		Collections.sort(m_vertexList, m_vlistComparator);
 		
 		System.gc();
-		log.debug("vertex list sorted, " + Util.memory());
+		log.debug("vertex list loaded and sorted, " + Util.memory());
 	}
 
 	public List<IVertex> toList() {

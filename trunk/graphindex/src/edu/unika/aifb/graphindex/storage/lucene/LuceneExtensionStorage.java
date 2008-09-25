@@ -2,6 +2,8 @@ package edu.unika.aifb.graphindex.storage.lucene;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -58,7 +60,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		try {
 			if (!m_readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
-				m_writer.setRAMBufferSizeMB(256);
+				m_writer.setRAMBufferSizeMB(1024);
 			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
@@ -81,6 +83,18 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	public void optimize() throws StorageException {
+		if (!m_readonly) {
+			try {
+				m_writer.optimize();
+			} catch (CorruptIndexException e) {
+				throw new StorageException(e);
+			} catch (IOException e) {
+				throw new StorageException(e);
+			}
 		}
 	}
 	
@@ -176,7 +190,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private Set<Triple> executeQuery(Query q) throws IOException {
 		long start = System.currentTimeMillis();
 //		log.debug(q.rewrite(m_reader));
-		final Set<Triple> triples = new HashSet<Triple>();
 		
 		// TODO lucene doc says that retrieving all documents matching a query should be done with HitCollector
 //		Hits hits = m_searcher.search(q);
@@ -187,25 +200,31 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //			triples.add(t);
 //		}
 //		log.debug("searching " + q);
+		final List<Integer> docIds = new ArrayList<Integer>();
 		m_searcher.search(q, new HitCollector() {
 			@Override
 			public void collect(int docId, float score) {
-				Document doc;
-				try {
-					doc = m_reader.document(docId);
-					Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
-					triples.add(t);
-				} catch (CorruptIndexException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				docIds.add(docId);
 			}
 		});
-
-		log.debug("query: " + q + " (" + triples.size() + " results) {" + (System.currentTimeMillis() - start) + " ms}");
+		long search = System.currentTimeMillis() - start;
 		
-		return triples;
+//		Set<Triple> triples = new HashSet<Triple>(docIds.size());
+		List<Triple> tripleList = new ArrayList<Triple>(docIds.size() + 1);
+		Collections.sort(docIds);
+		for (int docId : docIds) {
+			Document doc = m_reader.document(docId);
+			Triple t = new Triple(doc.getField(FIELD_SUBJECT).stringValue(), doc.getField(FIELD_PROPERTY).stringValue(), doc.getField(FIELD_OBJECT).stringValue());
+//			triples.add(t);
+			tripleList.add(t);
+		}
+		
+		long retrieval = System.currentTimeMillis() - start - search;
+
+		log.debug("query: " + q + " (" + docIds.size() + " results) {" + (System.currentTimeMillis() - start) + " ms, s: " + search + " ms, r: " + retrieval + " ms}");
+		
+		return new HashSet<Triple>(tripleList);
+//		return triples;
 	}
 	
 	public Set<Triple> loadData(String extUri) throws IOException {

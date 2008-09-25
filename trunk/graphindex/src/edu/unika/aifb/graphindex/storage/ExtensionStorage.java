@@ -12,4 +12,5 @@ public interface ExtensionStorage {
 	public Set<String> loadExtensionList() throws StorageException;
 	public void saveExtensionList(Set<String> uris) throws StorageException;
 	public void setExtensionManager(ExtensionManager extensionManager);
+	public void optimize() throws StorageException;
 }

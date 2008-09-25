@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -16,31 +17,39 @@ import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.Pseudograph;
 
 import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.importer.HashedTripleSink;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 
-public class TriplesPartitioner implements TripleSink {
+public class TriplesPartitioner implements HashedTripleSink {
 	
 	private Map<Long,Integer> h2p;
 	private Map<Integer,Set<Integer>> pmap;
-	private PrintWriter m_hashWriter;
 	private int m_pid;
 	private int m_triples = 0;
+	private String m_componentDirectory;
 	private final int MERGE_INTERVAL = 2500000;
 	private final int PCOUNT_INTERVAL = 50000000;
 	private final int STATUS_INTERVAL = 50000;
 	private static final Logger log = Logger.getLogger(TriplesPartitioner.class);
 	
-	public TriplesPartitioner(String prefix) throws IOException {
+	public TriplesPartitioner(String componentDirectory) throws IOException {
 		h2p = new HashMap<Long,Integer>();
 		pmap = new HashMap<Integer,Set<Integer>>();
-		m_hashWriter = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".hashes")));
 		m_pid = 0;
+		m_componentDirectory = componentDirectory;
+		
+		for (File f : new File(componentDirectory).listFiles()) {
+			if (f.getName().startsWith("component")) {
+				f.delete();
+				log.debug("deleted " + f);
+			}
+		}
 	}
 	
-	public void triple(String s, String p, String o) {
-		long sh = Util.hash(s);
-		long oh = Util.hash(o);
+	public void triple(long s, long p, long o) {
+		long sh = s;
+		long oh = o;
 		
 		// both uris are known
 		if (h2p.containsKey(sh) && h2p.containsKey(oh)) {
@@ -58,18 +67,14 @@ public class TriplesPartitioner implements TripleSink {
 		}
 		else if (h2p.containsKey(sh) && !h2p.containsKey(oh)) {
 			// add the object to the partition of the subject
-			m_hashWriter.println(oh + "\t" + o);
 			h2p.put(oh, h2p.get(sh));
 		}
 		else if (!h2p.containsKey(sh) && h2p.containsKey(oh)) {
 			// add the subject to the partition of the object
-			m_hashWriter.println(sh + "\t" + s);
 			h2p.put(sh, h2p.get(oh));
 		}
 		else {
 			// both unknown -> create new partition
-			m_hashWriter.println(sh + "\t" + s);
-			m_hashWriter.println(oh + "\t" + o);
 			h2p.put(sh, m_pid);
 			h2p.put(oh, m_pid);
 			m_pid++;
@@ -127,10 +132,8 @@ public class TriplesPartitioner implements TripleSink {
 		return partitions.size();
 	}
 	
-	public void write(String prefix) {
+	public void write(){
 		mergePartitions();
-		
-		m_hashWriter.close();
 		
 		Map<Integer,Integer> p2c = new HashMap<Integer,Integer>();
 		Map<Integer,PrintWriter> p2f = new HashMap<Integer,PrintWriter>();
@@ -147,7 +150,7 @@ public class TriplesPartitioner implements TripleSink {
 			PrintWriter pw;
 			if (!p2f.containsKey(p)) {
 				try {
-					pw = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".component" + p, true)));
+					pw = new PrintWriter(new BufferedWriter(new FileWriter(m_componentDirectory + "/component" + p, true)));
 					p2f.put(p, pw);
 				}
 				catch (IOException e) {
@@ -160,7 +163,7 @@ public class TriplesPartitioner implements TripleSink {
 					p2f.clear();
 					
 					try {
-						pw = new PrintWriter(new BufferedWriter(new FileWriter(prefix + ".component" + p, true)));
+						pw = new PrintWriter(new BufferedWriter(new FileWriter(m_componentDirectory + "/component" + p, true)));
 						p2f.put(p, pw);
 					} catch (IOException e1) {
 						e1.printStackTrace();

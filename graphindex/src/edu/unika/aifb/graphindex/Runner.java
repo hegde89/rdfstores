@@ -2,6 +2,8 @@ package edu.unika.aifb.graphindex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
@@ -12,16 +14,21 @@ import edu.unika.aifb.graphindex.data.LVertexM;
 import edu.unika.aifb.graphindex.data.LVertexM2;
 import edu.unika.aifb.graphindex.data.ListVertexCollection;
 import edu.unika.aifb.graphindex.data.MapVertexCollection;
+import edu.unika.aifb.graphindex.data.SortedVertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexFactory;
 import edu.unika.aifb.graphindex.data.VertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.importer.ComponentImporter;
+import edu.unika.aifb.graphindex.importer.HashingTripleConverter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
+import edu.unika.aifb.graphindex.importer.TriplesImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
+import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
 import edu.unika.aifb.graphindex.query.Individual;
 import edu.unika.aifb.graphindex.query.Literal;
@@ -119,7 +126,28 @@ public class Runner {
 		else if (dataset.equals("wordnet")) {
 			String q1 = "http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSatelliteSynset http://www.w3.org/2000/01/rdf-schema#subClassOf http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSynset";
 			
-			return q1;
+			String q2 = "?x http://www.w3.org/2000/01/rdf-schema#subClassOf http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSynset";
+			
+			String q3 = "?x http://www.w3.org/2000/01/rdf-schema#subClassOf ?y";
+			
+			return q3;
+		}
+		else if (dataset.equals("sweto")) {
+			String q1 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn ?y";
+				
+			String q2 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y";
+			
+			String q3 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn ?y\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?z";
+			
+			String q4 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn '3-540-22116-6'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?z";
+			
+			String q5 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name 'Pattern Recognition'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?y";
+			
+			String q6 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name ?n";
+			
+			String q7 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name 'Pattern Recognition'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://lsdis.cs.uga.edu/projects/semdis/opus#Article";
+
+			return q7; 
 		}
 		
 		return null;
@@ -149,6 +177,9 @@ public class Runner {
 				}
 			}
 			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+				if (f.getName().startsWith("University"))
+					importer.addImport(f.getAbsolutePath());
+			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more/muchmore").listFiles())
 				if (f.getName().startsWith("University"))
 					importer.addImport(f.getAbsolutePath());
 		}
@@ -183,16 +214,28 @@ public class Runner {
 	 * @throws ExecutionException 
 	 */
 	public static void main(String[] args) throws StorageException, IOException, InterruptedException, ExecutionException {
-		if (args.length != 3) {
-			System.out.println("Usage:\nRunner partition <prefix> <dataset>\nRunner query <prefix> <dataset>");
+		if (args.length < 3) {
+			System.out.println("Usage:\nRunner [convert|partition|transform|create]+ <prefix> <dataset>");
 			return;
 		}
 		
-		ExtensionStorage es = new LuceneExtensionStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + args[1] + "/index");
+		Set<String> stages = new HashSet<String>();
+		for (int i = 0; i < args.length - 2; i++)
+			stages.add(args[i]);
+		String prefix = args[args.length - 2];
+		String dataset = args[args.length - 1];
+		
+		log.info("stages: " + stages);
+		log.info("prefix: " + prefix);
+		log.info("dataset: " + dataset);
+		
+		String outputDirectory = "/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + prefix;
+		
+		ExtensionStorage es = new LuceneExtensionStorage(outputDirectory + "/index");
 		ExtensionManager em = new LuceneExtensionManager();
 		em.setExtensionStorage(es);
 		
-		GraphStorage gs = new LuceneGraphStorage("/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + args[1] + "/graph");
+		GraphStorage gs = new LuceneGraphStorage(outputDirectory + "/graph");
 		GraphManager gm = new GraphManagerImpl();
 		gm.setGraphStorage(gs);
 		
@@ -200,50 +243,71 @@ public class Runner {
 		StorageManager.getInstance().setGraphManager(gm);
 		
 		long start = System.currentTimeMillis();
-		if (args[0].equals("analyze") || args[0].equals("analyse")) {
+		if (stages.contains("analyze") || stages.contains("analyse")) {
 			DatasetAnalyzer da = new DatasetAnalyzer();
 
-			Importer importer = getImporter(args[2]);
+			Importer importer = getImporter(dataset);
 			importer.setTripleSink(da);
 			importer.doImport();
 			
 			da.printAnalysis();
 		}
-		else if (args[0].equals("partition")) {
-			TriplesPartitioner tp = new TriplesPartitioner("output/" + args[1] + "/components/" + args[1]);
+		
+		if (stages.contains("convert")) {
+			log.info("stage: CONVERT");
+			TripleConverter tc = new TripleConverter(outputDirectory);
 			
-			Importer importer = getImporter(args[2]);
-			importer.setTripleSink(tp);
+			Importer importer = getImporter(dataset);
+			importer.setTripleSink(tc);
 			importer.doImport();
 			
-			tp.write("output/" + args[1] + "/components/" + args[1]);
+			tc.write();
+			
+			log.info("sorting...");
+			Util.sortFile(outputDirectory + "/input.ht", outputDirectory + "/input_sorted.ht");
+			log.info("sorting complete");
 		}
-		else if (args[0].equals("transform")) {
+		
+		if (stages.contains("partition")) {
+			log.info("stage: PARTITION");
+			TriplesPartitioner tp = new TriplesPartitioner(outputDirectory + "/components");
+			
+			Importer importer = new TriplesImporter();
+			importer.addImport(outputDirectory + "/input_sorted.ht");
+			importer.setTripleSink(new ParsingTripleConverter(tp));
+			importer.doImport();
+			
+			tp.write();
+		} 
+		
+		if (stages.contains("transform")) {
+			log.info("stage: TRANSFORM");
 			VertexFactory.setCollectionClass(MapVertexCollection.class);
 			VertexFactory.setVertexClass(LVertexM.class);
 			
-			Importer importer = getImporter(args[2]);
+			Importer importer = new TriplesImporter();
+			importer.addImport(outputDirectory + "/input_sorted.ht");
 			
-			VertexListBuilder vb = new VertexListBuilder(importer, "output/" + args[1] + "/components/" + args[1]);
-			vb.write("output/" + args[1] + "/components/" + args[1]);
+			SortedVertexListBuilder vb = new SortedVertexListBuilder(importer, outputDirectory + "/components");
+			vb.write();
 		}
-		else if (args[0].equals("create")) {
+		
+		if (stages.contains("create")) {
+			log.info("stage: CREATE");
 			VertexFactory.setCollectionClass(ListVertexCollection.class);
 			VertexFactory.setVertexClass(LVertexM.class);
 
 			em.initialize(true, false);
 			gm.initialize(true, false);
 			
-			VertexListProvider vlp = new VertexListProvider("output/" + args[1] + "/components/" + args[1]);
-			HashValueProvider hvp = new HashValueProvider("output/" + args[1] + "/components/" + args[1] + ".hashes");
+			VertexListProvider vlp = new VertexListProvider(outputDirectory + "/components/");
+			HashValueProvider hvp = new HashValueProvider(outputDirectory + "/hashes", outputDirectory + "/propertyhashes");
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
-			
-//			IndexBuilder ib = new IndexBuilder(gb.getGraph());
-//			ib.buildIndex();
 		}
-		else if(args[0].equals("query")) {
+		
+		if(stages.contains("query")) {
 			em.initialize(false, true);
 			gm.initialize(false, true);
 			
@@ -253,8 +317,16 @@ public class Runner {
 			QueryParser qp = new QueryParser();
 			Query q = qp.parseQuery(getQueryString(args[2]));
 			
-			QueryEvaluator qe = new QueryEvaluator();
-			qe.evaluate(q, index);
+			QueryEvaluator qe = new QueryEvaluator(index);
+			qe.evaluate(q);
+		}
+		
+		if (stages.contains("optimize")) {
+			em.initialize(false, false);
+			gm.initialize(false, false);
+			
+			em.getExtensionStorage().optimize();
+			gm.getGraphStorage().optimize();
 		}
 		
 		em.close();
@@ -262,5 +334,4 @@ public class Runner {
 		
 		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");
 	}
-
 }

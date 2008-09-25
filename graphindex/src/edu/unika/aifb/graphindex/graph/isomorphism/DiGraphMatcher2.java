@@ -16,6 +16,7 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.graph.NamedGraph;
 
 /**
  * Implementation of the VF2 graph isomorphism algorithm, published in:
@@ -71,7 +72,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			}
 		}
 
-		private void predUpdate(DirectedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> in) {
+		private void predUpdate(NamedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> in) {
 			Set<String> newNodes = new HashSet<String>();
 			for (String n : core.keySet()) {
 				for (String p : predecessors(g, n)) {
@@ -86,7 +87,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			}
 		}
 
-		private void succUpdate(DirectedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> out) {
+		private void succUpdate(NamedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> out) {
 			Set<String> newNodes = new HashSet<String>();
 			for (String n : core.keySet()) {
 				for (String p : successors(g, n)) {
@@ -169,7 +170,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	private final int TEST_GRAPH = 0;
 	private final int TEST_SUBGRAPH = 1;
 
-	private DirectedGraph<String,LabeledEdge<String>> g1, g2;
+	private NamedGraph<String,LabeledEdge<String>> g1, g2;
 	private Map<String,String> core1, core2;
 	private Map<String,Integer> in1, in2, out1, out2;
 	private DiGMState m_state;
@@ -194,10 +195,10 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	 * @param graph1
 	 * @param graph2
 	 * @param generateMappings
-	 *            wether to generate mappings or just check for isomorphisms
+	 *            whether to generate mappings or just check for isomorphisms
 	 */
-	public DiGraphMatcher2(DirectedGraph<String,LabeledEdge<String>> graph1,
-			DirectedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings) {
+	public DiGraphMatcher2(NamedGraph<String,LabeledEdge<String>> graph1,
+			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings) {
 		g1 = graph1;
 		g2 = graph2;
 
@@ -224,29 +225,6 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		};
 		m_listener = null;
 		m_generateMappings = generateMappings;
-
-		g1preds = new HashMap<String,Set<String>>();
-		g2preds = new HashMap<String,Set<String>>();
-		g1succs = new HashMap<String,Set<String>>();
-		g2succs = new HashMap<String,Set<String>>();
-
-		log.debug("creating caches");
-
-		for (String v : g1.vertexSet()) {
-			preds(g1, v);
-			predecessors(g1, v);
-			succs(g1, v);
-			successors(g1, v);
-		}
-
-		for (String v : g2.vertexSet()) {
-			preds(g2, v);
-			predecessors(g2, v);
-			succs(g2, v);
-			successors(g2, v);
-		}
-
-		log.debug("finished");
 	}
 
 	/**
@@ -264,15 +242,15 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	 *            a FeasibilityChecker which is used to determine if the current
 	 *            mapping can be extended by the two nodes
 	 */
-	public DiGraphMatcher2(DirectedGraph<String,LabeledEdge<String>> graph1,
-			DirectedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
+	public DiGraphMatcher2(NamedGraph<String,LabeledEdge<String>> graph1,
+			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
 			FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> checker) {
 		this(graph1, graph2, generateMappings);
 		m_checker = checker;
 	}
 
-	public DiGraphMatcher2(DirectedGraph<String,LabeledEdge<String>> graph1,
-			DirectedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
+	public DiGraphMatcher2(NamedGraph<String,LabeledEdge<String>> graph1,
+			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
 			FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> checker,
 			MappingListener<String,LabeledEdge<String>> listener) {
 		this(graph1, graph2, generateMappings);
@@ -280,54 +258,20 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		m_listener = listener;
 	}
 
-	public DiGraphMatcher2(DirectedGraph<String,LabeledEdge<String>> graph1,
-			DirectedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
+	public DiGraphMatcher2(NamedGraph<String,LabeledEdge<String>> graph1,
+			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
 			MappingListener<String,LabeledEdge<String>> listener) {
 		this(graph1, graph2, generateMappings);
 		m_listener = listener;
 	}
 
-	private Map<String,Set<String>> g1preds, g2preds, g1succs, g2succs;
-
 	// TODO add predecessors and successors to graph class
-	private Set<String> predecessors(DirectedGraph<String,LabeledEdge<String>> g, String v) {
-		Map<String,Set<String>> predCache;
-		if (g == g1)
-			predCache = g1preds;
-		else
-			predCache = g2preds;
-
-		Set<String> preds = predCache.get(v);
-
-		if (preds == null) {
-			preds = new HashSet<String>();
-			for (LabeledEdge<String> edge : g.incomingEdgesOf(v)) {
-				preds.add(g.getEdgeSource(edge));
-			}
-			predCache.put(v, preds);
-		}
-
-		return preds;
+	private Set<String> predecessors(NamedGraph<String,LabeledEdge<String>> g, String v) {
+		return g.predecessors(v);
 	}
 
-	private Set<String> successors(DirectedGraph<String,LabeledEdge<String>> g, String v) {
-		Map<String,Set<String>> succCache;
-		if (g == g1)
-			succCache = g1succs;
-		else
-			succCache = g2succs;
-
-		Set<String> succs = succCache.get(v);
-
-		if (succs == null) {
-			succs = new HashSet<String>();
-			for (LabeledEdge<String> edge : g.outgoingEdgesOf(v)) {
-				succs.add(g.getEdgeTarget(edge));
-			}
-			succCache.put(v, succs);
-		}
-
-		return succs;
+	private Set<String> successors(NamedGraph<String,LabeledEdge<String>> g, String v) {
+		return g.successors(v);
 	}
 
 	/**
@@ -536,79 +480,21 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		}
 		return val;
 	}
-
-	Map<String,Map<String,List<LabeledEdge<String>>>> g1predsCache = new HashMap<String,Map<String,List<LabeledEdge<String>>>>();
-	Map<String,Map<String,List<LabeledEdge<String>>>> g2predsCache = new HashMap<String,Map<String,List<LabeledEdge<String>>>>();
-
-	private Map<String,List<LabeledEdge<String>>> preds(DirectedGraph<String,LabeledEdge<String>> g, String String) {
-		Map<String,Map<String,List<LabeledEdge<String>>>> predsCache;
-		if (g == g1)
-			predsCache = g1predsCache;
-		else
-			predsCache = g2predsCache;
-
-		Map<String,List<LabeledEdge<String>>> preds = predsCache.get(String);
-		
-		if (preds == null) {
-			preds = new HashMap<String,List<LabeledEdge<String>>>();
-			for (LabeledEdge<String> inEdge : g.incomingEdgesOf(String)) {
-				String pred = inEdge.getSrc();
-				List<LabeledEdge<String>> edges = preds.get(pred);
-				if (edges == null) {
-					edges = new ArrayList<LabeledEdge<String>>();
-					preds.put(pred, edges);
-				}
-				edges.add(inEdge);
-			}
-			predsCache.put(String, preds);
-		}
-
-		return preds;
-	}
-
-	Map<String,Map<String,List<LabeledEdge<String>>>> g1succsCache = new HashMap<String,Map<String,List<LabeledEdge<String>>>>();
-	Map<String,Map<String,List<LabeledEdge<String>>>> g2succsCache = new HashMap<String,Map<String,List<LabeledEdge<String>>>>();
-
-	private Map<String,List<LabeledEdge<String>>> succs(DirectedGraph<String,LabeledEdge<String>> g, String String) {
-		Map<String,Map<String,List<LabeledEdge<String>>>> succsCache;
-		if (g == g1)
-			succsCache = g1succsCache;
-		else
-			succsCache = g2succsCache;
-
-		Map<String,List<LabeledEdge<String>>> succs = succsCache.get(String);
-		
-		if (succs == null) {
-			succs = new HashMap<String,List<LabeledEdge<String>>>();
-			for (LabeledEdge<String> outEdge : g.outgoingEdgesOf(String)) {
-				String succ = outEdge.getDst();
-				List<LabeledEdge<String>> edges = succs.get(succ);
-				if (edges == null) {
-					edges = new ArrayList<LabeledEdge<String>>();
-					succs.put(succ, edges);
-				}
-				edges.add(outEdge);
-			}
-			succsCache.put(String, succs);
-		}
-
-		return succs;
-	}
-
+	
 	private boolean isFeasibleIso(String n1, String n2) {
 		// R_self
 		// if (g1.getAllEdges(n1, n1).size() != g2.getAllEdges(n2, n2).size())
 		// return false;
 
 		// R_pred
-		Map<String,List<LabeledEdge<String>>> n1preds = preds(g1, n1);
+		Map<String,List<LabeledEdge<String>>> n1preds = g1.predecessorEdges(n1);
 		// for (String n1pred : predecessors(g1, n1)) {
 		for (String n1pred : n1preds.keySet()) {
 			if (core1.containsKey(n1pred)) {
 //				 Set<LabeledEdge<String>> g1edges = g1.getAllEdges(n1pred, n1);
 				List<LabeledEdge<String>> g1edges = n1preds.get(n1pred);
 				// Set<String> n2preds = predecessors(g2, n2);
-				Map<String,List<LabeledEdge<String>>> n2preds = preds(g2, n2);
+				Map<String,List<LabeledEdge<String>>> n2preds = g2.predecessorEdges(n2);
 
 				if (g1edges.size() > 0) {
 					// for (String n2pred : n2preds) {
@@ -727,33 +613,37 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	}
 
 	private boolean isFeasibleSubgraph(String n1, String n2) {
-		// log.debug(" n1: " + n1 + ", n2: " + n2);
-		// log.debug(" core1: " + core1);
 		int termin1 = 0, termin2 = 0, termout1 = 0, termout2 = 0, new1 = 0, new2 = 0;
+		
+		if (g2.outDegreeOf(n2) < g1.outDegreeOf(n1) || g2.inDegreeOf(n2) < g1.inDegreeOf(n1))
+			return false;
+		
+		if (!g2.outEdgeLabels(n2).containsAll(g1.outEdgeLabels(n1))) {
+			return false;
+		}
+		
+		if (!g2.inEdgeLabels(n2).containsAll(g1.inEdgeLabels(n1))) {
+			return false;
+		}
+		
 		// R_pred
-		Map<String,List<LabeledEdge<String>>> n1predMap = preds(g1, n1);
-		Map<String,List<LabeledEdge<String>>> n2predMap = preds(g2, n2);
-		// for (String n1pred : predecessors(g1, n1)) {
+		Map<String,List<LabeledEdge<String>>> n1predMap = g1.predecessorEdges(n1);
+		Map<String,List<LabeledEdge<String>>> n2predMap = g2.predecessorEdges(n2);
 		for (String n1pred : n1predMap.keySet()) {
 			String n1mapped = core1.get(n1pred);
 			if (n1mapped != null) {
 				List<LabeledEdge<String>> n1predEdges = n1predMap.get(n1pred);
-				// Set<String> n2preds = predecessors(g2, n2);
-				// if (!n2preds.contains(core1.get(n1pred)))
+
 				if (!n2predMap.keySet().contains(n1mapped))
 					return false;
-				// else if (g1.getAllEdges(n1pred, n1).size() >
-				// g2.getAllEdges(core1.get(n1pred), n2).size())
 				else if (n1predEdges.size() > n2predMap.get(n1mapped).size())
 					return false;
 
-				// Set<LabeledEdge<String>> g1edges = g1.getAllEdges(n1pred, n1);
 				List<LabeledEdge<String>> g1edges = n1predEdges;
 
 				boolean found = false;
 				for (String n2pred : n2predMap.keySet()) {
 					if (core2.containsKey(n2pred)) {
-						// Set<LabeledEdge<String>> g2edges = g2.getAllEdges(n2pred, n2);
 						List<LabeledEdge<String>> g2edges = n2predMap.get(n2pred);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
@@ -761,6 +651,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 						}
 					}
 				}
+				
 				if (!found)
 					return false;
 			} else {
@@ -773,7 +664,6 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			}
 		}
 
-		// for (String n2pred : predecessors(g2, n2)) {
 		for (String n2pred : n2predMap.keySet()) {
 			if (core2.containsKey(n2pred)) {
 				// monomorphism: do nothing
@@ -788,30 +678,23 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		}
 
 		// R_succ
-		Map<String,List<LabeledEdge<String>>> n1succs = succs(g1, n1);
-		Map<String,List<LabeledEdge<String>>> n2succs = succs(g2, n2);
-		// for (String n1succ : successors(g1, n1)) {
+		Map<String,List<LabeledEdge<String>>> n1succs = g1.successorEdges(n1);
+		Map<String,List<LabeledEdge<String>>> n2succs = g2.successorEdges(n2);
 		for (String n1succ : n1succs.keySet()) {
 			String n1mapped = core1.get(n1succ);
 			if (n1mapped != null) {
 				List<LabeledEdge<String>> n1succEdges = n1succs.get(n1succ);
-				// Set<String> n2succs = successors(g2, n2);
-				// if (!n2succs.contains(core1.get(n1succ)))
+
 				if (!n2succs.keySet().contains(n1mapped))
 					return false;
-				// else if (g1.getAllEdges(n1succ, n1).size() >
-				// g2.getAllEdges(core1.get(n1succ), n2).size())
 				else if (n1succEdges.size() > n2succs.get(n1mapped).size())
 					return false;
 
-				// Set<LabeledEdge<String>> g1edges = g1.getAllEdges(n1, n1succ);
 				List<LabeledEdge<String>> g1edges = n1succEdges;
 
 				boolean found = false;
-				// for (String n2succ : n2succs) {
 				for (String n2succ : n2succs.keySet()) {
 					if (core2.containsKey(n2succ)) {
-						// Set<LabeledEdge<String>> g2edges = g2.getAllEdges(n2, n2succ);
 						List<LabeledEdge<String>> g2edges = n2succs.get(n2succ);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
@@ -819,6 +702,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 						}
 					}
 				}
+				
 				if (!found)
 					return false;
 			} else {

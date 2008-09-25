@@ -1,9 +1,12 @@
 package edu.unika.aifb.graphindex.algorithm.rcp;
 
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,21 +21,16 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
-import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.graph.SVertex;
-import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class RCPFast2 {
 	private GraphManager m_gm;
 	private ExtensionManager m_em;
-	public static Map<Long,String> m_h2v;
 	private HashValueProvider m_hashes;
 	private static final Logger log = Logger.getLogger(RCPFast2.class);
 	
@@ -116,7 +114,7 @@ public class RCPFast2 {
 		return image;
 	}
 	
-	public NamedGraph<String,LabeledEdge<String>> createIndex(List<IVertex> vertices) throws StorageException {
+	public NamedGraph<String,LabeledEdge<String>> createIndex(List<IVertex> vertices, String partitionFile) throws StorageException, IOException {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Partition p = new Partition();
@@ -127,7 +125,7 @@ public class RCPFast2 {
 		labels.addAll(m_hashes.getEdges());
 
 		for (IVertex v : vertices)
-				startBlock.add(v);
+			startBlock.add(v);
 		
 		p.add(startBlock);
 		startXB.addBlock(startBlock);
@@ -240,7 +238,34 @@ public class RCPFast2 {
 		purgeSelfloops(p);
 //		log.debug(p.stable());
 		
-		return createIndexGraph(p);
+		NamedGraph<String,LabeledEdge<String>> g = createIndexGraph(p);
+		
+		writePartition(p, partitionFile);
+		
+		return g;
+	}
+	
+	private void writePartition(Partition p, String partitionFile) throws IOException {
+		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
+	
+		log.info("writing partition file...");
+		int blocks = 0;
+		for (Block b : p.getBlocks()) {
+			for (IVertex v : b) {
+				for (Long label : v.getEdgeLabels()) {
+					for (IVertex y : v.getImage(label)) {
+						out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId());
+					}
+				}
+			}
+			
+			blocks++;
+
+			if (blocks % 500 == 0)
+				log.debug(" blocks processed: " + blocks);
+		}
+		
+		out.close();
 	}
 
 	private void purgeSelfloops(Partition p) {
@@ -278,7 +303,9 @@ public class RCPFast2 {
 			p.add(nb);
 	}
 	
-	private NamedGraph<String,LabeledEdge<String>> createIndexGraph(Partition p) throws StorageException {
+	private NamedGraph<String,LabeledEdge<String>> createIndexGraph(Partition p) throws StorageException, FileNotFoundException {
+		log.info("creating index graph...");
+		int blocks = 0;
 		NamedGraph<String,LabeledEdge<String>> g = m_gm.graph();
 		for (Block b : p.getBlocks()) {
 			g.addVertex(b.getName());
@@ -290,11 +317,23 @@ public class RCPFast2 {
 						g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), m_hashes.getValue(label)));
 
 //						log.debug(m_hashes.getValue(v.getId()) + " " + m_hashes.getValue(label) + " " + m_hashes.getValue(y.getId()));
-						Extension extension = m_em.extension(y.getBlock().getName());
-						extension.addTriple(new Triple(m_hashes.getValue(v.getId()), m_hashes.getValue(label), m_hashes.getValue(y.getId())));
+//						Extension extension = m_em.extension(y.getBlock().getName());
+//						extension.addTriple(new Triple(m_hashes.getValue(v.getId()), m_hashes.getValue(label), m_hashes.getValue(y.getId())));
+						
+//						if (Util.belowMemoryLimit(10)) {
+//							log.debug("below memory limit... " + Util.memory());
+//							m_em.flushAllCaches();
+//							m_hashes.clearCache();
+//							log.debug("caches cleared, " + Util.memory());
+//						}
 					}
 				}
 			}
+			
+			blocks++;
+
+			if (blocks % 500 == 0)
+				log.debug(" blocks processed: " + blocks);
 		}
 		
 		return g;

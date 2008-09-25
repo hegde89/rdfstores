@@ -18,4 +18,5 @@ public interface GraphStorage {
 	
 	public Set<String> loadGraphList() throws StorageException;
 	public void saveGraphList(Set<String> graphs) throws StorageException;
+	public void optimize() throws StorageException;
 }

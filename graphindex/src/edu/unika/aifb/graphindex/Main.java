@@ -2,15 +2,18 @@ package edu.unika.aifb.graphindex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
 
 import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.SortedVertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexFactory;
 import edu.unika.aifb.graphindex.data.VertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexListProvider;
@@ -18,8 +21,11 @@ import edu.unika.aifb.graphindex.importer.CompositeImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
+import edu.unika.aifb.graphindex.importer.TriplesImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
+import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
 import edu.unika.aifb.graphindex.query.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
@@ -56,10 +62,22 @@ public class Main {
 	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws StorageException, IOException, ClassNotFoundException, InterruptedException, ExecutionException {
 		
-		if (args.length != 2) {
-			log.error("Usage: Main <configfile> [partition|index|query]");
+		if (args.length < 2) {
+			log.error("Usage: Main <configfile> [preprocess|index|query]");
 			return;
 		}
+		
+		Set<String> stages = new HashSet<String>();
+		for (int i = 1; i < args.length; i++)
+			stages.add(args[i]);
+		
+		if (stages.contains("preprocess")) {
+			stages.add("convert");
+			stages.add("partition");
+			stages.add("transform");
+		}
+		
+		log.info("stages: " + stages);
 		
 		Map config = (Map)Yaml.load(new File(args[0]));
 		
@@ -69,16 +87,16 @@ public class Main {
 		String iCollectionClass = (String)config.get("indexing_collectionclass");
 		
 		String indexName = (String)config.get("index_name");
-		String outputDirectory = (String)config.get("output_directory");
+		String outputDirectory = (String)config.get("output_directory") + "/" + indexName;
 		String inputDirectory = (String)config.get("input_directory");
 		
 		String query = (String)config.get("query");
 		
-		String indexDirectory = new File(outputDirectory + "/" + indexName + "/index").getAbsolutePath(); 
-		String graphDirectory = new File(outputDirectory + "/" + indexName + "/graph").getAbsolutePath();
-		String componentDirectory = new File(outputDirectory + "/" + indexName + "/components").getAbsolutePath();
-		String componentPrefix = componentDirectory + "/" + indexName;
-		String hashesFile = componentPrefix + ".hashes";
+		String indexDirectory = new File(outputDirectory + "/index").getAbsolutePath(); 
+		String graphDirectory = new File(outputDirectory + "/graph").getAbsolutePath();
+		String componentDirectory = new File(outputDirectory + "/components").getAbsolutePath();
+		String hashesFile = outputDirectory + "/hashes";
+		String propertyHashesFile = outputDirectory + "/propertyhashes";
 		
 		List<String> ntFiles = new LinkedList<String>();
 		List<String> owlFiles = new LinkedList<String>();
@@ -110,6 +128,7 @@ public class Main {
 			}
 		}
 		
+		log.info("output directory: " + outputDirectory);
 		log.info("components output directory: " + componentDirectory);
 		log.info("index output directory: " + indexDirectory);
 		log.info("graph output directory: " + graphDirectory);
@@ -120,7 +139,7 @@ public class Main {
 		for (String file : owlFiles)
 			log.info("  (owl) " + file);
 		
-		if (args[1].equals("analyze") || args[1].equals("analyse")) {
+		if (stages.contains("analyze") || stages.contains("analyse")) {
 			DatasetAnalyzer da = new DatasetAnalyzer();
 
 			Importer importer = getImporter(ntFiles, owlFiles);
@@ -129,25 +148,52 @@ public class Main {
 			
 			da.printAnalysis();
 		}
-		if (args[1].equals("partition")) {
+		
+		if (stages.contains("convert")) {
+			log.info("stage: CONVERT");
+
+			TripleConverter tc = new TripleConverter(outputDirectory);
+			
+			Importer importer = getImporter(ntFiles, owlFiles);
+			importer.setTripleSink(tc);
+			importer.doImport();
+			
+			tc.write();
+			
+			log.info("sorting...");
+			Util.sortFile(outputDirectory + "/input.ht", outputDirectory + "/input_sorted.ht");
+			log.info("sorting complete");
+		}
+		
+		if (stages.contains("partition")) {
+			log.info("stage: PARTITION");
+
+			TriplesPartitioner tp = new TriplesPartitioner(componentDirectory);
+			
+			Importer importer = new TriplesImporter();
+			importer.addImport(outputDirectory + "/input_sorted.ht");
+			importer.setTripleSink(new ParsingTripleConverter(tp));
+			importer.doImport();
+			
+			tp.write();
+		}
+		
+		if (stages.contains("transform")) {
+			log.info("stage: TRANSFORM");
+			
 			VertexFactory.setCollectionClass(Class.forName(pCollectionClass));
 			VertexFactory.setVertexClass(Class.forName(pVertexClass));
 
-			TriplesPartitioner tp = new TriplesPartitioner(componentPrefix);
+			Importer importer = new TriplesImporter();
+			importer.addImport(outputDirectory + "/input_sorted.ht");
 			
-			Importer importer = getImporter(ntFiles, owlFiles);
-			importer.setTripleSink(tp);
-			importer.doImport();
-			
-			tp.write(componentPrefix);
-			
-			tp = null;
-			System.gc();
-			
-			VertexListBuilder vb = new VertexListBuilder(importer, componentPrefix);
-			vb.write(componentPrefix);
+			SortedVertexListBuilder vb = new SortedVertexListBuilder(importer, componentDirectory);
+			vb.write();
 		}
-		if (args[1].equals("index")) {
+		
+		if (stages.contains("index")) {
+			log.info("stage: INDEX");
+			
 			VertexFactory.setCollectionClass(Class.forName(iCollectionClass));
 			VertexFactory.setVertexClass(Class.forName(iVertexClass));
 
@@ -164,13 +210,17 @@ public class Main {
 			em.initialize(true, false);
 			gm.initialize(true, false);
 			
-			VertexListProvider vlp = new VertexListProvider(componentPrefix);
-			HashValueProvider hvp = new HashValueProvider(hashesFile);
+			VertexListProvider vlp = new VertexListProvider(componentDirectory);
+			HashValueProvider hvp = new HashValueProvider(hashesFile, propertyHashesFile);
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
+			
+			em.close();
+			gm.close();
 		}
-		else if (args[1].equals("query")) {
+		
+		if (stages.contains("query")) {
 			ExtensionStorage es = new LuceneExtensionStorage(indexDirectory);
 			ExtensionManager em = new LuceneExtensionManager();
 			em.setExtensionStorage(es);
@@ -192,6 +242,9 @@ public class Main {
 			
 			QueryEvaluator qe = new QueryEvaluator();
 			qe.evaluate(q, index);
+			
+			em.close();
+			gm.close();
 		}
 	}
 }

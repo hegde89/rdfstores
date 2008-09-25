@@ -20,16 +20,16 @@ import org.apache.log4j.Logger;
 
 public class VertexListProvider {
 	private Iterator<File> m_componentFiles;
+	private File m_componentFile;
 	private Set<String> m_edges;
 	private static final Logger log = Logger.getLogger(VertexListProvider.class);
 
-	public VertexListProvider(String prefix) {
-		File prefixDir = new File(prefix).getParentFile();
-		String namePrefix = new File(prefix).getName();
+	public VertexListProvider(String componentDirectory) {
+		File componentDir = new File(componentDirectory);
 		
 		List<File> componentFiles = new ArrayList<File>();
-		for (File file : prefixDir.listFiles())
-			if (file.getName().startsWith(namePrefix + ".component"))
+		for (File file : componentDir.listFiles())
+			if (file.getName().startsWith("component") && !file.getName().endsWith("vertexlist") && !file.getName().contains("."))
 				componentFiles.add(file);
 		
 		Collections.sort(componentFiles, new Comparator<File>() {
@@ -45,13 +45,13 @@ public class VertexListProvider {
 		if (!m_componentFiles.hasNext())
 			return null;
 		
-		File componentFile = m_componentFiles.next();
+		m_componentFile = m_componentFiles.next();
 		
 		m_edges = new HashSet<String>();
 		VertexCollection vc = VertexFactory.collection();
-		vc.loadFromComponentFile(componentFile.getAbsolutePath());
+		vc.loadFromComponentFile(m_componentFile.getAbsolutePath());
 
-		BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath().replaceFirst("\\.component", ".vertexlist.component")));
+		BufferedReader in = new BufferedReader(new FileReader(m_componentFile.getAbsolutePath() + ".vertexlist"));
 		String input;
 		
 		IVertex currentVertex = null;
@@ -100,32 +100,24 @@ public class VertexListProvider {
 				m_edges.add(input);
 			}
 			else if (inImage) {
-//				String[] t = input.split(" ");
-//				long edgeLabel = Long.parseLong(t[0]);
-//				IVertex target = vc.getVertex(Long.parseLong(t[1]));
-//				currentVertex.addToImage(Long.parseLong(t[0]), target);
-				
 				IVertex target = vc.getVertex(Long.parseLong(input));
-				
-//				List<IVertex> image = currentImage.get(edgeLabel);
-//				if (image == null) {
-//					image = new ArrayList<IVertex>();
-//					currentImage.put(edgeLabel, image);
-//				}
-//				image.add(target);
 				
 				currentImage.get(currentLabel).add(target);
 				
 				triples++;
 			}
 			
-			if ((triples % 250000 == 0 && triples > 0))// || triples > 3500000)
+			if ((triples % 1000000 == 0 && triples > 0))
 				log.debug(" loaded " + vertices + " vertices, " + triples + " triples");
 		}
 		
 		log.info("vertex list loaded: " + vertices + " vertices, " + triples + " triples");
 		
 		return vc.toList();
+	}
+	
+	public File getComponentFile() {
+		return m_componentFile;
 	}
 	
 	public Set<String> getEdges() {

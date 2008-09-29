@@ -3,7 +3,7 @@
  */
 package edu.unika.aifb.graphindex;
 
-import edu.unika.aifb.graphindex.storage.Triple;
+import edu.unika.aifb.graphindex.data.Triple;
 
 public class TriplePair {
 	public Triple target;

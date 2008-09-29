@@ -2,40 +2,32 @@ package edu.unika.aifb.graphindex.indexing;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.Util;
-import edu.unika.aifb.graphindex.algorithm.NaiveOneIndex;
-import edu.unika.aifb.graphindex.algorithm.RCP;
-import edu.unika.aifb.graphindex.algorithm.WeaklyConnectedComponents;
-import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
 import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast2;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
-import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.graph.SVertex;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
 import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class FastIndexBuilder {
 
@@ -89,6 +81,11 @@ public class FastIndexBuilder {
 		int triples = 0;
 		for (File componentFile : m_componentFiles) {
 			log.info(" " + componentFile + ".partition");
+			
+			String currentExt = null;
+			Long currentProperty = null, currentObject = null;
+			Set<String> currentSubjects = new HashSet<String>();
+			
 			BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath() + ".partition"));
 			String input;
 			while ((input = in.readLine()) != null) {
@@ -97,12 +94,23 @@ public class FastIndexBuilder {
 				if (m_mergeMap.containsKey(t[0])) {
 					t[0] = m_mergeMap.get(t[0]);
 				}
-				Extension ext = m_em.extension(t[0]);
-				ext.addTriple(new Triple(
-						m_hashProvider.getValue(Long.parseLong(t[1])),
-						m_hashProvider.getValue(Long.parseLong(t[2])),
-						m_hashProvider.getValue(Long.parseLong(t[3]))
-				));
+				
+				long s = Long.parseLong(t[1]);
+				long p = Long.parseLong(t[2]);
+				long o = Long.parseLong(t[3]);
+				
+				if (!t[0].equals(currentExt) || currentProperty == null || currentProperty.longValue() != p || currentObject == null || currentObject.longValue() != o) {
+					if (currentSubjects.size() > 0) {
+						Extension ext = m_em.extension(currentExt);
+						ext.addTriples(currentSubjects, m_hashProvider.getValue(currentProperty.longValue()), m_hashProvider.getValue(currentObject.longValue()));
+					}
+					currentSubjects = new HashSet<String>();
+				}
+				
+				currentExt = t[0];
+				currentSubjects.add(m_hashProvider.getValue(s));
+				currentProperty = p;
+				currentObject = o;
 				
 				if (Util.belowMemoryLimit(20)) {
 					m_em.flushAllCaches();
@@ -113,13 +121,15 @@ public class FastIndexBuilder {
 				if (triples % 1000000 == 0)
 					log.debug(" triples: " + triples);
 			}
+			Extension ext = m_em.extension(currentExt);
+			ext.addTriples(currentSubjects, m_hashProvider.getValue(currentProperty.longValue()), m_hashProvider.getValue(currentObject.longValue()));
 		}
 		
 //		m_em.flushAllCaches();
 		m_em.finishBulkUpdate();
 	}
 	
-	public void buildIndex() throws StorageException, NumberFormatException, IOException {
+	public void buildIndex() throws StorageException, NumberFormatException, IOException, InterruptedException {
 		long start = System.currentTimeMillis();
 		
 		RCPFast2 rcp = new RCPFast2(m_hashProvider);

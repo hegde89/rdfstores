@@ -13,7 +13,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.storage.Triple;
+import edu.unika.aifb.graphindex.data.Triple;
 
 public class TripleSet {
 		private Set<Triple> m_triples;

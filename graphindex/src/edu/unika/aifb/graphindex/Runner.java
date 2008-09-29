@@ -113,7 +113,7 @@ public class Runner {
 			
 			String q4 = "?x http://example.org/simple#f ?y";
 			
-			return q4;  
+			return q1;  
 		}
 		else if (dataset.equals("lubm")) {
 			String q1 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y";
@@ -121,6 +121,7 @@ public class Runner {
 			String q2 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y\n" + 
 				"?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent\n" +
 				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0";
+
 			return q2;
 		}
 		else if (dataset.equals("wordnet")) {
@@ -130,7 +131,7 @@ public class Runner {
 			
 			String q3 = "?x http://www.w3.org/2000/01/rdf-schema#subClassOf ?y";
 			
-			return q3;
+			return q2;
 		}
 		else if (dataset.equals("sweto")) {
 			String q1 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn ?y";
@@ -146,8 +147,22 @@ public class Runner {
 			String q6 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name ?n";
 			
 			String q7 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name 'Pattern Recognition'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://lsdis.cs.uga.edu/projects/semdis/opus#Article";
+			
+			String q8 = "?x http://xmlns.com/foaf/0.1/name 'Anurag Garg'";
+			
+			String q9 = "?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://xmlns.com/foaf/0.1/Agent";
+			
+			String q10 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#pages '253-254'";
+			
+			String q11 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#number '1'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#pages '39-48'\n?x http://www.w3.org/2000/01/rdf-schema#label 'Parametric characterization of the form of the human pupil from blurred noisy images.'";
+			
+			String q12 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n ?x http://lsdis.cs.uga.edu/projects/semdis/opus#in_series ?z\n?z http://lsdis.cs.uga.edu/projects/semdis/opus#book_title 'WWW'";
 
-			return q7; 
+			String q13 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#in_series ?y";
+			
+			String q14 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#number '1'";
+
+			return q11; 
 		}
 		
 		return null;
@@ -305,6 +320,8 @@ public class Runner {
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
+			
+			((LuceneExtensionStorage)es).mergeExtensions();
 		}
 		
 		if(stages.contains("query")) {

@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.storage;
+package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
 import java.util.List;

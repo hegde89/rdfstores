@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex.storage.lucene;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,10 +30,13 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
 
+import edu.unika.aifb.graphindex.data.ExtensionSegment;
+import edu.unika.aifb.graphindex.data.ListExtensionSegment;
+import edu.unika.aifb.graphindex.data.SetExtensionSegment;
+import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
@@ -40,6 +44,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private IndexWriter m_writer;
 	private IndexReader m_reader;
 	private IndexSearcher m_searcher;
+	private LRUCache<Integer,Document> m_docCache;
 	
 	private final String FIELD_EXT = "ext";
 	private final String FIELD_SUBJECT = "subject";
@@ -53,6 +58,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public LuceneExtensionStorage(String directory) {
 		m_directory = directory;
+		m_docCache = new LRUCache<Integer,Document>(1024);
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -227,19 +233,53 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //		return triples;
 	}
 	
-	public Set<Triple> loadData(String extUri) throws IOException {
-		PrefixQuery q = new PrefixQuery(getTerm(extUri));
-		return executeQuery(q);
+	private List<Document> getDocuments(Query q) throws CorruptIndexException, IOException {
+		long start = System.currentTimeMillis();
+		
+		final List<Integer> docIds = new ArrayList<Integer>();
+		m_searcher.search(q, new HitCollector() {
+			public void collect(int docId, float score) {
+				docIds.add(docId);
+			}
+		});
+		
+		long search = System.currentTimeMillis() - start;
+		
+		Collections.sort(docIds);
+		List<Document> docs = new ArrayList<Document>(docIds.size());
+		for (int docId : docIds) {
+			Document doc = m_docCache.get(docId);
+			if (doc == null) {
+				doc = m_reader.document(docId);
+				m_docCache.put(docId, doc);
+			}
+			docs.add(doc);
+		}
+
+		long retrieval = System.currentTimeMillis() - start - search;
+
+//		log.debug("query: " + q + " (" + docIds.size() + " docs) {" + (System.currentTimeMillis() - start) + " ms, s: " + search + " ms, r: " + retrieval + " ms}");
+		
+		return docs;
 	}
 	
-	public Set<Triple> loadData(String extUri, String propertyUri) throws IOException {
-		PrefixQuery q = new PrefixQuery(getTerm(extUri, propertyUri));
-		return executeQuery(q);
-	}
-
-	public Set<Triple> loadData(String extUri, String propertyUri, String object) throws IOException {
-		TermQuery q = new TermQuery(getTerm(extUri, propertyUri, object));
-		return executeQuery(q);
+	public boolean hasDocs(String ext, String propertyUri, String object) throws StorageException  {
+		try {
+			long start = System.currentTimeMillis();
+			Query q = new TermQuery(getTerm(ext, propertyUri, object));
+			final List<Integer> docIds = new ArrayList<Integer>();
+			m_searcher.search(q, new HitCollector() {
+				public void collect(int doc, float score) {
+					docIds.add(doc);
+				}
+			});
+//			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
+			return docIds.size() > 0;
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
 	}
 	
 	private Document createDocument(String extUri, Triple t) {
@@ -253,42 +293,109 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return doc;
 	}
 	
-	public void saveData(String extUri, Triple triple) {
+	private String getPath(ExtensionSegment es) {
+		return es.getExtensionUri() + EXT_PATH_SEP + es.getProperty() + EXT_PATH_SEP + es.getObject() + EXT_PATH_SEP;
+	}
+	
+	private Document segmentToDocument(ExtensionSegment es) {
+		Document doc = new Document();
+		doc.add(new Field(FIELD_EXT, getPath(es), Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_OBJECT, es.getObject(), Field.Store.YES, Field.Index.NO));
+		doc.add(new Field(FIELD_SUBJECT, es.toSubjectString(), Field.Store.YES, Field.Index.NO));
+		return doc;
+	}
+	
+	private ExtensionSegment documentToSegment(Document doc, String extUri, String propertyUri) {
+		ListExtensionSegment es = new ListExtensionSegment(extUri, propertyUri, doc.getField(FIELD_OBJECT).stringValue());
+		String[] subjects = doc.getField(FIELD_SUBJECT).stringValue().split("\n");
+		es.setSubjects(Arrays.asList(subjects));
+		return es;
+	}
+	
+	public void saveExtensionSegment(ExtensionSegment es) throws CorruptIndexException, IOException {
 		checkReadOnly();
-		try {
-			Document doc = createDocument(extUri, triple);
-			m_writer.addDocument(doc);
-			
-			if (!bulkUpdating()) {
-				m_writer.flush();
-				reopen();
-			}
-		} catch (CorruptIndexException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		Document doc = segmentToDocument(es);
+		m_writer.addDocument(doc);
+		
+		if (!bulkUpdating()) {
+			m_writer.flush();
+			reopen();
 		}
 	}
 	
-	public void saveData(String extUri, Set<Triple> triples) {
-		checkReadOnly();
-		try {
-			for (Triple t : triples) {
-				Document doc = createDocument(extUri, t);
-				m_writer.addDocument(doc);
-			}
-			
-			if (!bulkUpdating()) {
-				m_writer.flush();
-				reopen();
-			}
-		} catch (CorruptIndexException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private String[] getPathFromTerm(Term t) {
+		String[] path = t.text().split(EXT_PATH_SEP);
+		return path;
 	}
-
+	
+	public List<ExtensionSegment> loadExtensionSegments(String extUri, String property) throws IOException {
+		long start = System.currentTimeMillis();
+		
+		PrefixQuery pq = new PrefixQuery(getTerm(extUri, property));
+		BooleanQuery bq = (BooleanQuery)pq.rewrite(m_reader);
+		
+		long rewrite = System.currentTimeMillis() - start;
+		
+		List<ExtensionSegment> segments = new ArrayList<ExtensionSegment>(bq.getClauses().length);
+		for (BooleanClause clause : bq.getClauses()) {
+			Term t = ((TermQuery)clause.getQuery()).getTerm();
+			if (t.field().equals(FIELD_EXT)) {
+				String[] path = getPathFromTerm(t);
+				ExtensionSegment es = loadExtensionSegment(extUri, property, path[2]);
+				if (es != null)
+					segments.add(es);
+			}
+		}
+		
+		long duration = System.currentTimeMillis() - start;
+		
+//		log.debug(" duration: " + duration + ", rewrite: " + rewrite);
+		return segments;
+	}
+	
+	public ExtensionSegment loadExtensionSegment(String extUri, String property, String object) throws CorruptIndexException, IOException {
+		long start = System.currentTimeMillis();
+		
+		TermQuery tq = new TermQuery(getTerm(extUri, property, object));
+		List<Document> docs = getDocuments(tq);
+		
+		long dr = System.currentTimeMillis() - start;
+		
+		ExtensionSegment es;
+		if (docs.size() == 1)
+			es = documentToSegment(docs.get(0), extUri, property);
+		else
+			es = null;
+		
+		long build = System.currentTimeMillis() - start - dr;
+//		if (docs.size() > 0)
+//			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
+		
+		return es;
+	}
+	
+	public void mergeExtensions() throws IOException {
+		TermEnum te = m_reader.terms();
+		while (te.next()) {
+			if (te.docFreq() > 1) {
+				Term t = te.term();
+//				log.debug("term " + t + " docfreq > 1");
+				String[] path = getPathFromTerm(t);
+				List<Document> docs = getDocuments(new TermQuery(t));
+				Set<String> subjects = new HashSet<String>();
+				for (Document doc : docs) {
+					for (String subject : doc.getField(FIELD_SUBJECT).stringValue().split("\n"))
+						subjects.add(subject);
+				}
+				SetExtensionSegment es = new SetExtensionSegment(path[0], path[1], path[2]);
+				es.setSubjects(subjects);
+				m_writer.updateDocument(t, segmentToDocument(es));
+			}
+		}
+		log.debug("optimizing...");
+		m_writer.optimize();
+	}
+	
 	private void deleteDataByPath(String queryPath) throws IOException {
 		List<Term> terms = new ArrayList<Term>();
 		

@@ -18,6 +18,7 @@ import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.data.LVertex;
+import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.SVertex;
@@ -26,7 +27,6 @@ import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class RCPFast {
 	private GraphManager m_gm;
@@ -326,7 +326,7 @@ public class RCPFast {
 
 //						log.debug(m_hashes.getValue(v.getId()) + " " + m_hashes.getValue(label) + " " + m_hashes.getValue(y.getId()));
 						Extension extension = m_em.extension(y.getBlock().getName());
-						extension.addTriple(new Triple(m_hashes.getValue(v.getId()), m_hashes.getValue(label), m_hashes.getValue(y.getId())));
+//						extension.addTriple(new Triple(m_hashes.getValue(v.getId()), m_hashes.getValue(label), m_hashes.getValue(y.getId())));
 					}
 				}
 			}

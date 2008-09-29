@@ -23,20 +23,17 @@ import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
 
 public class RCPFast2 {
 	private GraphManager m_gm;
-	private ExtensionManager m_em;
 	private HashValueProvider m_hashes;
 	private static final Logger log = Logger.getLogger(RCPFast2.class);
 	
 	public RCPFast2(HashValueProvider provider) {
 		m_gm = StorageManager.getInstance().getGraphManager();
-		m_em = StorageManager.getInstance().getExtensionManager();
 		m_hashes = provider;
 	}
 	
@@ -114,7 +111,7 @@ public class RCPFast2 {
 		return image;
 	}
 	
-	public NamedGraph<String,LabeledEdge<String>> createIndex(List<IVertex> vertices, String partitionFile) throws StorageException, IOException {
+	public NamedGraph<String,LabeledEdge<String>> createIndex(List<IVertex> vertices, String partitionFile) throws StorageException, IOException, InterruptedException {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Partition p = new Partition();
@@ -229,7 +226,8 @@ public class RCPFast2 {
 			steps++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
-			log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
+			if (steps % 500 == 0)
+				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
 //		log.debug(p.stable());
 		log.info("partition size: " + p.m_blocks.size());
@@ -245,7 +243,7 @@ public class RCPFast2 {
 		return g;
 	}
 	
-	private void writePartition(Partition p, String partitionFile) throws IOException {
+	private void writePartition(Partition p, String partitionFile) throws IOException, InterruptedException {
 		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
 	
 		log.info("writing partition file...");
@@ -261,11 +259,16 @@ public class RCPFast2 {
 			
 			blocks++;
 
-			if (blocks % 500 == 0)
+			if (blocks % 5000 == 0)
 				log.debug(" blocks processed: " + blocks);
 		}
 		
 		out.close();
+		
+		// sort partition file by extension uri, property uri, object
+		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
+		process.waitFor();
+		log.debug("sorted");
 	}
 
 	private void purgeSelfloops(Partition p) {
@@ -315,24 +318,13 @@ public class RCPFast2 {
 					for (IVertex y : v.getImage(label)) {
 						g.addVertex(y.getBlock().getName());
 						g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), m_hashes.getValue(label)));
-
-//						log.debug(m_hashes.getValue(v.getId()) + " " + m_hashes.getValue(label) + " " + m_hashes.getValue(y.getId()));
-//						Extension extension = m_em.extension(y.getBlock().getName());
-//						extension.addTriple(new Triple(m_hashes.getValue(v.getId()), m_hashes.getValue(label), m_hashes.getValue(y.getId())));
-						
-//						if (Util.belowMemoryLimit(10)) {
-//							log.debug("below memory limit... " + Util.memory());
-//							m_em.flushAllCaches();
-//							m_hashes.clearCache();
-//							log.debug("caches cleared, " + Util.memory());
-//						}
 					}
 				}
 			}
 			
 			blocks++;
 
-			if (blocks % 500 == 0)
+			if (blocks % 5000 == 0)
 				log.debug(" blocks processed: " + blocks);
 		}
 		

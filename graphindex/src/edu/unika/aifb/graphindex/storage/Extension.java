@@ -1,20 +1,20 @@
 package edu.unika.aifb.graphindex.storage;
 
+import java.util.List;
 import java.util.Set;
+
+import edu.unika.aifb.graphindex.data.Triple;
 
 public interface Extension {
 	public String getUri();
 	
 	public void flush() throws StorageException;
 	public void remove() throws StorageException;
-
-	public Set<Triple> getTriples() throws StorageException;
-	public Set<Triple> getTriples(String propertyUri) throws StorageException;
-	public Set<Triple> getTriples(String propertyUri, String objectValue) throws StorageException;
 	
-	public void addTriple(String subject, String property, String object) throws StorageException;
-	public void addTriple(Triple triple) throws StorageException;
-	public void addTriples(Set<Triple> triples) throws StorageException;
+	public void addTriples(Set<String> subjects, String property, String object) throws StorageException;
 
-	public void mergeExtension(Extension extension) throws StorageException;
+	public List<Triple> getTriplesList(String propertyUri) throws StorageException;
+	public List<Triple> getTriplesList(String propertyUri, String object) throws StorageException;
+
+//	public void mergeExtension(Extension extension) throws StorageException;
 }

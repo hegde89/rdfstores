@@ -216,6 +216,8 @@ public class Main {
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();
 			
+			((LuceneExtensionStorage)es).mergeExtensions();
+			
 			em.close();
 			gm.close();
 		}
@@ -240,8 +242,8 @@ public class Main {
 			QueryParser qp = new QueryParser();
 			Query q = qp.parseQuery(query);
 			
-			QueryEvaluator qe = new QueryEvaluator();
-			qe.evaluate(q, index);
+			QueryEvaluator qe = new QueryEvaluator(index);
+			qe.evaluate(q);
 			
 			em.close();
 			gm.close();

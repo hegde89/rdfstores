@@ -8,9 +8,9 @@ import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 
+import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class MySQLExtensionStorage extends AbstractExtensionStorage {
 

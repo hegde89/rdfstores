@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
+import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
@@ -29,6 +30,7 @@ import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher2;
 import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
+import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.query.Constant;
 import edu.unika.aifb.graphindex.query.Individual;
@@ -42,11 +44,13 @@ import edu.unika.aifb.graphindex.query.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.Triple;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 
 public class QueryEvaluator {
 	private ExtensionManager m_em = StorageManager.getInstance().getExtensionManager();
-	private final Map<String,Boolean> m_groundTermCache;
+	private LuceneExtensionStorage m_les = (LuceneExtensionStorage)m_em.getExtensionStorage();
+	private final GroundTermCache m_gtc;
+	private final Set<String> m_invalidVertices;
 	private StructureIndex m_index;
 	private final StatisticsCollector m_collector = new StatisticsCollector();
 	private Timings m_timings;
@@ -55,7 +59,8 @@ public class QueryEvaluator {
 	
 	
 	public QueryEvaluator(StructureIndex index) {
-		m_groundTermCache = new HashMap<String,Boolean>();
+		m_gtc = new GroundTermCache();
+		m_invalidVertices = new HashSet<String>();
 		m_index = index;
 		
 		initialize();
@@ -108,16 +113,49 @@ public class QueryEvaluator {
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
 			
-			DiGraphMatcher2 matcher = new DiGraphMatcher2(queryGraph, indexGraph, true, new EdgeLabelFeasibilityChecker(),
+			DiGraphMatcher2 matcher = new DiGraphMatcher2(queryGraph, indexGraph, true, 
+					new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
+						public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+							return e1.getLabel().equals(e2.getLabel());
+						}
+		
+						public boolean isVertexCompatible(String n1, String n2) {
+							if (!n1.startsWith("?")) { // not variable, ie. ground term
+								m_timings.start(Timings.GT);
+								Boolean value = m_gtc.get(n1, n2);
+								if (value == null) {
+									for (LabeledEdge<String> in : queryGraph.incomingEdgesOf(n1)) {
+										try {
+											if (m_les.hasDocs(n2, in.getLabel(), n1)) {
+												value = true;
+												break;
+											}
+											else {
+												value = false;
+												break;
+											}
+										} catch (StorageException e) {
+											e.printStackTrace();
+										}
+									}
+									m_gtc.put(n1, n2, value);
+								}
+								m_timings.end(Timings.GT);
+								return value;
+							}
+							return true;
+						}
+					},
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-							completionService.submit(new MappingValidator(queryGraph, iso, m_groundTermCache, m_collector));
-//							log.debug("mapping");
+							completionService.submit(new MappingValidator(queryGraph, iso, m_gtc, m_invalidVertices, m_collector));
+//							log.debug("mapping " + iso);
 						}
 			});
 			
 			m_timings.start(Timings.MATCH);
 			if (!matcher.isSubgraphIsomorphic()) {
+				log.debug("matches: 0");
 				m_timings.end(Timings.MATCH);
 				continue;
 			}
@@ -135,7 +173,6 @@ public class QueryEvaluator {
 		executor.shutdown();
 		log.debug("result maps: " + results.size());
 		
-		
 		ResultSet rs = toResultSet(results, queryGraph.getVariables());
 		log.debug(rs);
 		log.debug("size: " + rs.size());
@@ -144,10 +181,10 @@ public class QueryEvaluator {
 		log.info("duration: " + (end - start) / 1000.0);
 
 		m_collector.addTimings(m_timings);
-		
 		m_collector.logStats();
 		
-		m_groundTermCache.clear();
+		log.debug("cache size: " + m_gtc.size());
+		m_gtc.clear();
 
 		return null;
 	}

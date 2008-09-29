@@ -27,7 +27,9 @@ public class StatisticsCollector {
 		}
 		log.debug("time spent");
 		log.debug(" subgraph matching: " + (timings[Timings.MATCH] / 1000.0));
+		log.debug(" ground terms: " + (timings[Timings.GT] / 1000.0));
 		log.debug(" retrieving data: " + (timings[Timings.DATA] / 1000.0));
+		log.debug(" refining: " + (timings[Timings.REFINE] / 1000.0));
 		log.debug(" joining: " + (timings[Timings.JOIN] / 1000.0));
 		log.debug(" computing mappings: " + (timings[Timings.MAPPING] / 1000.0));
 		log.debug(" building result set: " + (timings[Timings.RS] / 1000.0));

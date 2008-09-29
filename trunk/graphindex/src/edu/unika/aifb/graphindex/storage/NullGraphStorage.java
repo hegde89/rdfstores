@@ -26,4 +26,9 @@ public class NullGraphStorage extends AbstractGraphStorage {
 
 	public void saveEdges(String graphName, Set<LabeledEdge<String>> edges) throws StorageException {
 	}
+
+	public void optimize() throws StorageException {
+		// TODO Auto-generated method stub
+		
+	}
 }

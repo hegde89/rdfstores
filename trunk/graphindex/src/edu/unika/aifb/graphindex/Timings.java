@@ -4,6 +4,7 @@ public class Timings {
 	private long[] starts = new long[10];
 	private long[] timings = new long[10];
 	public static final  int DATA = 0, JOIN = 1, MAPPING = 2, RS = 3, MATCH = 4;
+	public static final int REFINE = 5, GT = 6;
 	
 	public Timings() {
 		

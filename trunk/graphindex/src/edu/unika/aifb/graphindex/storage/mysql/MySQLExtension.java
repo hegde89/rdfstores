@@ -1,14 +1,15 @@
 package edu.unika.aifb.graphindex.storage.mysql;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Set;
 
+import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.storage.AbstractExtension;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.Triple;
 
 public class MySQLExtension extends AbstractExtension {
 
@@ -80,5 +81,23 @@ public class MySQLExtension extends AbstractExtension {
 	}
 
 	public void mergeExtension(Extension extension) throws StorageException {
+	}
+
+	public void addTriples(Set<String> subjects, String property, String object)
+			throws StorageException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public List<Triple> getTriplesList(String propertyUri)
+			throws StorageException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public List<Triple> getTriplesList(String propertyUri, String object)
+			throws StorageException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

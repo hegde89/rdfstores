@@ -14,9 +14,12 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
+import org.jgrapht.graph.ClassBasedEdgeFactory;
 
+import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * Implementation of the VF2 graph isomorphism algorithm, published in:
@@ -222,6 +225,10 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			public boolean isVertexCompatible(String n1, String n2) {
 				return true;
 			}
+
+			public boolean isValidMapping(Map<String,String> c1) {
+				return true;
+			}
 		};
 		m_listener = null;
 		m_generateMappings = generateMappings;
@@ -320,14 +327,29 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		return new IsomorphismRelation<String,LabeledEdge<String>>(g1list, g2list, g1, g2);
 	}
 
+	static int mid = 0;
 	private boolean match(DiGMState state) {
 		if (core1.size() == g1.vertexSet().size()) {
-			// log.debug("found: " + core1);
+//			log.debug("found: " + core1);
 			if (m_generateMappings) {
 				IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(core1);
 				m_isomorphisms.add(iso);
 				if (m_listener != null) {
 					m_listener.mapping(iso);
+				}
+				try {
+					NamedGraph<String,LabeledEdge<String>> mg = new NamedGraph<String,LabeledEdge<String>>("mapping" + mid, new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
+					for (String x : core1.values()) {
+						for (String y : core1.values()) {
+							for (LabeledEdge<String> e : g2.getAllEdges(x, y)) {
+								mg.addEdge(x, e.getLabel(), y);
+							}
+						}
+					}
+					Util.printDOT(mg);
+					mid++;
+				} catch (StorageException e) {
+					e.printStackTrace();
 				}
 			}
 			return true;
@@ -374,9 +396,10 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		// log.debug("t" + t1out + " " + t2out);
 
 		if (t1out.size() != 0 && t2out.size() != 0) {
-			String n1 = t1out.first();
+			String n1 = t1out.last();
 			for (String n2 : t2out)
-				candidates.add(new Pair(n1, n2));
+				if (m_checker.isVertexCompatible(n1, n2))
+					candidates.add(new Pair(n1, n2));
 		} else {// if (t1out.size() == 0 && t2out.size() == 0) {
 			SortedSet<String> t1in = getTerminalSet(g1, core1, in1);
 			SortedSet<String> t2in = getTerminalSet(g2, core2, in2);
@@ -384,16 +407,18 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			// log.debug("t2in: " + t2in);
 
 			if (t1in.size() != 0 && t2in.size() != 0) {
-				String n1 = t1in.first();
+				String n1 = t1in.last();
 				for (String n2 : t2in)
-					candidates.add(new Pair(n1, n2));
+					if (m_checker.isVertexCompatible(n1, n2))
+						candidates.add(new Pair(n1, n2));
 			} else if (t1in.size() == 0 && t2in.size() == 0) {
 				TreeSet<String> diff = new TreeSet<String>(g1.vertexSet());
 				diff.removeAll(core1.keySet());
-				String n1 = diff.first();
+				String n1 = diff.last();
 				for (String n2 : g2.vertexSet())
 					if (!core2.containsKey(n2))
-						candidates.add(new Pair(n1, n2));
+						if (m_checker.isVertexCompatible(n1, n2))
+							candidates.add(new Pair(n1, n2));
 			}
 		}
 
@@ -735,8 +760,8 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	}
 
 	private boolean isFeasible(String n1, String n2) {
-		if (!m_checker.isVertexCompatible(n1, n2))
-			return false;
+//		if (!m_checker.isVertexCompatible(n1, n2))
+//			return false;
 
 		if (m_test == TEST_GRAPH)
 			return isFeasibleIso(n1, n2);

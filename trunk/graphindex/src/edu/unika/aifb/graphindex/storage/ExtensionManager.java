@@ -2,7 +2,6 @@ package edu.unika.aifb.graphindex.storage;
 
 public interface ExtensionManager {
 	public static final int MODE_NOCACHE = 0;
-	public static final int MODE_WRITECACHE = 1;
 	public static final int MODE_READONLY = 2;
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException;	

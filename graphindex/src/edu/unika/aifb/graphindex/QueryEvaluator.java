@@ -91,7 +91,7 @@ public class QueryEvaluator {
 			log.debug("index graph: " + indexGraph);
 			indexGraph.calc();
 		}
-		log.info("evaluator initialized");
+		log.info("evaluator initialized, " + Util.memory());
 	}
 	
 	public ResultSet evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
@@ -120,13 +120,23 @@ public class QueryEvaluator {
 						}
 		
 						public boolean isVertexCompatible(String n1, String n2) {
+//							return checkVertexCompatible(n1, n2);
+							if (!n1.startsWith("?")) {
+								Boolean value = m_gtc.get(n1, n2);
+								if (value != null)
+									return value.booleanValue();
+							}
+							return true;
+						}
+						
+						public boolean checkVertexCompatible(String n1, String n2) {
 							if (!n1.startsWith("?")) { // not variable, ie. ground term
 								m_timings.start(Timings.GT);
 								Boolean value = m_gtc.get(n1, n2);
 								if (value == null) {
-									for (LabeledEdge<String> in : queryGraph.incomingEdgesOf(n1)) {
+									for (String label : queryGraph.inEdgeLabels(n1)) {
 										try {
-											if (m_les.hasDocs(n2, in.getLabel(), n1)) {
+											if (m_les.hasDocs(n2, label, n1)) {
 												value = true;
 												break;
 											}
@@ -141,7 +151,7 @@ public class QueryEvaluator {
 									m_gtc.put(n1, n2, value);
 								}
 								m_timings.end(Timings.GT);
-								return value;
+								return value.booleanValue();
 							}
 							return true;
 						}

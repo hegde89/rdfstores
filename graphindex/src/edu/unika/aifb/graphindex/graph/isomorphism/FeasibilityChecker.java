@@ -10,4 +10,6 @@ public interface FeasibilityChecker<V,E,G extends DirectedGraph<V,E>> {
 	public boolean isEdgeCompatible(E e1, E e2);
 	
 	public boolean isVertexCompatible(V n1, V n2);
+	
+	public boolean checkVertexCompatible(V n1, V n2);
 }

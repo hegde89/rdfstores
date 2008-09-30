@@ -11,7 +11,7 @@ public class GroundTermCache {
 	}
 	
 	private String getCacheString(String groundTerm, String ext) {
-		return groundTerm + "__" + ext;
+		return new StringBuilder().append(groundTerm).append("__").append(ext).toString();
 	}
 	
 	public void put(String groundTerm, String ext, boolean value) {

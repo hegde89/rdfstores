@@ -94,26 +94,28 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 		m_labelSuccessors = new HashMap<String,Map<String,Set<String>>>();
 		
 		for (String v : vertexSet()) {
+			Set<String> inLabels = new HashSet<String>();
+			m_inEdgeLabels.put(v, inLabels);
+
+			Set<String> outLabels = new HashSet<String>();
+			m_outEdgeLabels.put(v, outLabels);
+			
+			Set<String> preds = new HashSet<String>();
+			m_predecessors.put(v, preds);
+			
+			Set<String> succs = new HashSet<String>();
+			m_successors.put(v, succs);
+			
+			Map<String,List<LabeledEdge<String>>> predList = new HashMap<String,List<LabeledEdge<String>>>();
+			m_predecessorEdges.put(v, predList);
+			
+			Map<String,List<LabeledEdge<String>>> succList = new HashMap<String,List<LabeledEdge<String>>>();
+			m_successorEdges.put(v, succList);
+			
 			for (LabeledEdge<String> in : incomingEdgesOf(v)) {
-				Set<String> labels = m_inEdgeLabels.get(v);
-				if (labels == null) {
-					labels = new HashSet<String>();
-					m_inEdgeLabels.put(v, labels);
-				}
-				labels.add(in.getLabel());
+				inLabels.add(in.getLabel());
 				
-				Set<String> preds = m_predecessors.get(v);
-				if (preds == null) {
-					preds = new HashSet<String>();
-					m_predecessors.put(v, preds);
-				}
 				preds.add(in.getSrc());
-				
-				Map<String,List<LabeledEdge<String>>> predList = m_predecessorEdges.get(v);
-				if (predList == null) {
-					predList = new HashMap<String,List<LabeledEdge<String>>>();
-					m_predecessorEdges.put(v, predList);
-				}
 				
 				List<LabeledEdge<String>> edges = predList.get(in.getSrc());
 				if (edges == null) {
@@ -124,26 +126,10 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 			}
 			
 			for (LabeledEdge<String> out : outgoingEdgesOf(v)) {
-				Set<String> labels = m_outEdgeLabels.get(v);
-				if (labels == null) {
-					labels = new HashSet<String>();
-					m_outEdgeLabels.put(v, labels);
-				}
-				labels.add(out.getLabel());
+				outLabels.add(out.getLabel());
 				
-				Set<String> succs = m_successors.get(v);
-				if (succs == null) {
-					succs = new HashSet<String>();
-					m_successors.put(v, succs);
-				}
 				succs.add(out.getDst());
 
-				Map<String,List<LabeledEdge<String>>> succList = m_successorEdges.get(v);
-				if (succList == null) {
-					succList = new HashMap<String,List<LabeledEdge<String>>>();
-					m_successorEdges.put(v, succList);
-				}
-				
 				List<LabeledEdge<String>> edges = succList.get(out.getDst());
 				if (edges == null) {
 					edges = new ArrayList<LabeledEdge<String>>();
@@ -201,17 +187,19 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	}
 	
 	public Set<String> predecessors(V v) {
-		Set<String> vs = m_predecessors.get(v);
-		if (vs == null)
-			return new HashSet<String>();
-		return vs;
+		return m_predecessors.get(v);
+//		Set<String> vs = m_predecessors.get(v);
+//		if (vs == null)
+//			return new HashSet<String>();
+//		return vs;
 	}
 	
 	public Set<String> successors(V v) {
-		Set<String> vs = m_successors.get(v);
-		if (vs == null)
-			return new HashSet<String>();
-		return vs;
+		return m_successors.get(v);
+//		Set<String> vs = m_successors.get(v);
+//		if (vs == null)
+//			return new HashSet<String>();
+//		return vs;
 	}
 	
 	public Set<String> predecessors(V v, String label) {
@@ -223,31 +211,35 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	}
 
 	public Map<String,List<LabeledEdge<String>>> predecessorEdges(V v) {
-		Map<String,List<LabeledEdge<String>>> map = m_predecessorEdges.get(v);
-		if (map == null)
-			return new HashMap<String,List<LabeledEdge<String>>>();
-		return map;
+		return m_predecessorEdges.get(v);
+//		Map<String,List<LabeledEdge<String>>> map = m_predecessorEdges.get(v);
+//		if (map == null)
+//			return new HashMap<String,List<LabeledEdge<String>>>();
+//		return map;
 	}
 	
 	public Map<String,List<LabeledEdge<String>>> successorEdges(V v) {
-		Map<String,List<LabeledEdge<String>>> map = m_successorEdges.get(v);
-		if (map == null)
-			return new HashMap<String,List<LabeledEdge<String>>>();
-		return map;
+		return m_successorEdges.get(v);
+//		Map<String,List<LabeledEdge<String>>> map = m_successorEdges.get(v);
+//		if (map == null)
+//			return new HashMap<String,List<LabeledEdge<String>>>();
+//		return map;
 	}
 	
 	public Set<String> inEdgeLabels(V v) {
-		Set<String> labels = m_inEdgeLabels.get(v);
-		if (labels == null)
-			return new HashSet<String>();
-		return labels;
+		return m_inEdgeLabels.get(v);
+//		Set<String> labels = m_inEdgeLabels.get(v);
+//		if (labels == null)
+//			return new HashSet<String>();
+//		return labels;
 	}
 	
 	public Set<String> outEdgeLabels(V v) {
-		Set<String> labels = m_outEdgeLabels.get(v);
-		if (labels == null) 
-			return new HashSet<String>();
-		return labels;
+		return m_outEdgeLabels.get(v);
+//		Set<String> labels = m_outEdgeLabels.get(v);
+//		if (labels == null) 
+//			return new HashSet<String>();
+//		return labels;
 	}
 	
 	/**

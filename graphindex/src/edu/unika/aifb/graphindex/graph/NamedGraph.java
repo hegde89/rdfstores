@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.jgrapht.EdgeFactory;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -44,6 +46,7 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	
 	private Map<String,Set<LabeledEdge<String>>> m_label2Edges;
 	
+	private SortedSet<String> m_sortedVertices;
 	
 	
 	public NamedGraph(String name, Class<? extends E> edgeClass) throws StorageException {
@@ -182,6 +185,12 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 						preds.add(out.getDst());
 			}
 		}
+		
+		m_sortedVertices = new TreeSet<String>(vertexSet());
+	}
+	
+	public SortedSet<String> sortedVertexSet() {
+		return m_sortedVertices;
 	}
 	
 	public Set<LabeledEdge<String>> edgesByLabel(String label) {

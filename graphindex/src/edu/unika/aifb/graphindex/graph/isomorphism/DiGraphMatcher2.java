@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.graph.isomorphism;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -144,11 +145,11 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 
 		@Override
 		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((n1 == null) ? 0 : n1.hashCode());
-			result = prime * result + ((n2 == null) ? 0 : n2.hashCode());
-			return result;
+//			final int prime = 31;
+//			int result = 1;
+//			result = prime * result + ((n1 == null) ? 0 : n1.hashCode());
+//			result = prime * result + ((n2 == null) ? 0 : n2.hashCode());
+			return (n1 != null ? n1.hashCode() : 0) + (n2 != null ? n2.hashCode() : 0);
 		}
 
 		@Override
@@ -364,7 +365,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			return false;
 		} else {
 			boolean found = false;
-			Set<Pair> candidatePairs = getCandidatePairs();
+			Collection<Pair> candidatePairs = getCandidatePairs();
 			// log.debug("cp: " + candidatePairs);
 			for (Pair p : candidatePairs) {
 				// log.debug("trying " + p);
@@ -411,8 +412,8 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		return set;
 	}
 
-	private Set<Pair> getCandidatePairs() {
-		Set<Pair> candidates = new HashSet<Pair>();
+	private List<Pair> getCandidatePairs() {
+		List<Pair> candidates = new LinkedList<Pair>();
 
 		SortedSet<String> t1out = getTerminalSet(g1, core1, out1);
 		SortedSet<String> t2out = getTerminalSet(g2, core2, out2);
@@ -426,8 +427,6 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		else {
 			SortedSet<String> t1in = getTerminalSet(g1, core1, in1);
 			SortedSet<String> t2in = getTerminalSet(g2, core2, in2);
-			// log.debug("t1in: " + t1in);
-			// log.debug("t2in: " + t2in);
 
 			if (t1in.size() != 0 && t2in.size() != 0) {
 				String n1 = t1in.first();
@@ -436,9 +435,16 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 						candidates.add(new Pair(n1, n2));
 			} 
 			else if (t1in.size() == 0 && t2in.size() == 0) {
-				TreeSet<String> diff = new TreeSet<String>(g1.vertexSet());
-				diff.removeAll(core1.keySet());
-				String n1 = diff.first();
+//				TreeSet<String> diff = new TreeSet<String>(g1.vertexSet());
+//				diff.removeAll(core1.keySet());
+//				String n1 = diff.first();
+				String n1 = null;
+				for (String v : g1.sortedVertexSet())
+					if (!core1.containsKey(v)) {
+						n1 = v;
+						break;
+					}
+				
 				for (String n2 : g2.vertexSet())
 					if (!core2.containsKey(n2))
 						if (m_checker.isVertexCompatible(n1, n2))

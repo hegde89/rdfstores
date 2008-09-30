@@ -78,9 +78,11 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		private void predUpdate(NamedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> in) {
 			Set<String> newNodes = new HashSet<String>();
 			for (String n : core.keySet()) {
-				for (String p : predecessors(g, n)) {
-					if (!core.containsKey(p))
-						newNodes.add(p);
+				for (String label : m_labels) {
+					for (String p : g.predecessors(n, label)) {
+						if (!core.containsKey(p))
+							newNodes.add(p);
+					}
 				}
 			}
 			for (String n : newNodes) {
@@ -93,9 +95,11 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		private void succUpdate(NamedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> out) {
 			Set<String> newNodes = new HashSet<String>();
 			for (String n : core.keySet()) {
-				for (String p : successors(g, n)) {
-					if (!core.containsKey(p))
-						newNodes.add(p);
+				for (String label : m_labels) {
+					for (String p : g.successors(n, label)) {
+						if (!core.containsKey(p))
+							newNodes.add(p);
+					}
 				}
 			}
 			for (String n : newNodes) {
@@ -174,15 +178,20 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	private final int TEST_SUBGRAPH = 1;
 
 	private NamedGraph<String,LabeledEdge<String>> g1, g2;
+	private Set<String> m_labels;
+	
 	private Map<String,String> core1, core2;
 	private Map<String,Integer> in1, in2, out1, out2;
 	private DiGMState m_state;
+	
 	private List<IsomorphismRelation<String,LabeledEdge<String>>> m_isomorphisms;
-	private Iterator<IsomorphismRelation<String,LabeledEdge<String>>> m_isomorphismIterator;
+
 	private FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> m_checker;
 	private MappingListener<String,LabeledEdge<String>> m_listener;
+	
 	private int m_test;
 	private boolean m_generateMappings;
+	
 	private final static Logger log = Logger.getLogger(DiGraphMatcher2.class);
 
 	/**
@@ -204,6 +213,9 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings) {
 		g1 = graph1;
 		g2 = graph2;
+		m_labels = new HashSet<String>();
+		for (LabeledEdge<String> e : g1.edgeSet())
+			m_labels.add(e.getLabel());
 
 		core1 = new HashMap<String,String>();
 		core2 = new HashMap<String,String>();
@@ -226,7 +238,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 				return true;
 			}
 
-			public boolean isValidMapping(Map<String,String> c1) {
+			public boolean checkVertexCompatible(String n1, String n2) {
 				return true;
 			}
 		};
@@ -270,15 +282,6 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			MappingListener<String,LabeledEdge<String>> listener) {
 		this(graph1, graph2, generateMappings);
 		m_listener = listener;
-	}
-
-	// TODO add predecessors and successors to graph class
-	private Set<String> predecessors(NamedGraph<String,LabeledEdge<String>> g, String v) {
-		return g.predecessors(v);
-	}
-
-	private Set<String> successors(NamedGraph<String,LabeledEdge<String>> g, String v) {
-		return g.successors(v);
 	}
 
 	/**
@@ -330,57 +333,81 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	static int mid = 0;
 	private boolean match(DiGMState state) {
 		if (core1.size() == g1.vertexSet().size()) {
-//			log.debug("found: " + core1);
-			if (m_generateMappings) {
-				IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(core1);
-				m_isomorphisms.add(iso);
-				if (m_listener != null) {
-					m_listener.mapping(iso);
+			boolean valid = true;
+			for (String n1 : core1.keySet())
+				valid = m_checker.checkVertexCompatible(n1, core1.get(n1)) && valid; // lazy evaluation
+			if (valid) {
+				log.debug("found: " + core1);
+				if (m_generateMappings) {
+					IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(core1);
+					m_isomorphisms.add(iso);
+					if (m_listener != null)
+						m_listener.mapping(iso);
+//					try {
+//						NamedGraph<String,LabeledEdge<String>> mg = new NamedGraph<String,LabeledEdge<String>>("mapping" + mid, new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
+//						for (String x : core1.values()) {
+//							for (String y : core1.values()) {
+//								for (LabeledEdge<String> e : g2.getAllEdges(x, y)) {
+//									mg.addEdge(x, e.getLabel(), y);
+//								}
+//							}
+//						}
+//						Util.printDOT(mg);
+//						mid++;
+//					} catch (StorageException e) {
+//						e.printStackTrace();
+//					}
 				}
-				try {
-					NamedGraph<String,LabeledEdge<String>> mg = new NamedGraph<String,LabeledEdge<String>>("mapping" + mid, new ClassBasedEdgeFactory<String,LabeledEdge<String>>((Class<? extends LabeledEdge<String>>)LabeledEdge.class));
-					for (String x : core1.values()) {
-						for (String y : core1.values()) {
-							for (LabeledEdge<String> e : g2.getAllEdges(x, y)) {
-								mg.addEdge(x, e.getLabel(), y);
-							}
-						}
-					}
-					Util.printDOT(mg);
-					mid++;
-				} catch (StorageException e) {
-					e.printStackTrace();
-				}
+				return true;
 			}
-			return true;
+//			log.debug("invalid: " + core1);
+			return false;
 		} else {
 			boolean found = false;
 			Set<Pair> candidatePairs = getCandidatePairs();
 			// log.debug("cp: " + candidatePairs);
 			for (Pair p : candidatePairs) {
 				// log.debug("trying " + p);
-				if (isFeasible(p.n1, p.n2)) {// && isSemanticallyFeasible(p.n1,
-												// p.n2)) {
+				if (isFeasible(p.n1, p.n2)) {
 					DiGMState newState = new DiGMState(p.n1, p.n2);
 					if (match(newState)) {
 						found = true;
 						if (!m_generateMappings)
 							return true;
 					}
+					
 					newState.remove();
+					
+					if (isCurrentMappingInvalid())
+						return false;
 				}
 			}
 
 			return found;
 		}
 	}
+	
+	private boolean isCurrentMappingInvalid() {
+		for (String n1 : core1.keySet())
+			if (!m_checker.isVertexCompatible(n1, core1.get(n1)))
+				return true;
+		return false;
+	}
 
-	private SortedSet<String> getTerminalSet(DirectedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> inout) {
+	private SortedSet<String> getTerminalSet(NamedGraph<String,LabeledEdge<String>> g, Map<String,String> core, Map<String,Integer> inout) {
 		SortedSet<String> set = new TreeSet<String>();
-		for (String n : g.vertexSet()) {
-			if (inout.containsKey(n) && !core.containsKey(n))
-				set.add(n);
+		for (String label : m_labels) {
+			for (LabeledEdge<String> e : g.edgesByLabel(label)) {
+				if (inout.containsKey(e.getSrc()) && !core.containsKey(e.getSrc()))
+					set.add(e.getSrc());
+				if (inout.containsKey(e.getDst()) && !core.containsKey(e.getDst()))
+					set.add(e.getDst());
+			}
 		}
+//		for (String n : g.vertexSet()) {
+//			if (inout.containsKey(n) && !core.containsKey(n))
+//				set.add(n);
+//		}
 		return set;
 	}
 
@@ -389,32 +416,29 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 
 		SortedSet<String> t1out = getTerminalSet(g1, core1, out1);
 		SortedSet<String> t2out = getTerminalSet(g2, core2, out2);
-		// log.debug("core1: " + core1 + ", out1: " + out1 + ", t1out: " +
-		// t1out);
-		// log.debug("core2: " + core2 + ", out2: " + out2 + ", t2out: " +
-		// t2out);
-		// log.debug("t" + t1out + " " + t2out);
 
 		if (t1out.size() != 0 && t2out.size() != 0) {
-			String n1 = t1out.last();
+			String n1 = t1out.first();
 			for (String n2 : t2out)
 				if (m_checker.isVertexCompatible(n1, n2))
 					candidates.add(new Pair(n1, n2));
-		} else {// if (t1out.size() == 0 && t2out.size() == 0) {
+		} 
+		else {
 			SortedSet<String> t1in = getTerminalSet(g1, core1, in1);
 			SortedSet<String> t2in = getTerminalSet(g2, core2, in2);
 			// log.debug("t1in: " + t1in);
 			// log.debug("t2in: " + t2in);
 
 			if (t1in.size() != 0 && t2in.size() != 0) {
-				String n1 = t1in.last();
+				String n1 = t1in.first();
 				for (String n2 : t2in)
 					if (m_checker.isVertexCompatible(n1, n2))
 						candidates.add(new Pair(n1, n2));
-			} else if (t1in.size() == 0 && t2in.size() == 0) {
+			} 
+			else if (t1in.size() == 0 && t2in.size() == 0) {
 				TreeSet<String> diff = new TreeSet<String>(g1.vertexSet());
 				diff.removeAll(core1.keySet());
-				String n1 = diff.last();
+				String n1 = diff.first();
 				for (String n2 : g2.vertexSet())
 					if (!core2.containsKey(n2))
 						if (m_checker.isVertexCompatible(n1, n2))
@@ -557,10 +581,10 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		// }
 
 		// R_succ
-		for (String n1succ : successors(g1, n1)) {
+		for (String n1succ : g1.successors(n1)) {
 			if (core1.containsKey(n1succ)) {
 				Set<LabeledEdge<String>> g1edges = g1.getAllEdges(n1, n1succ);
-				Set<String> n2succs = successors(g2, n2);
+				Set<String> n2succs = g2.successors(n2);
 
 				if (g1edges.size() > 0) {
 					for (String n2succ : n2succs) {
@@ -602,35 +626,35 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 		// }
 
 		// R_termin
-		int num1 = count(predecessors(g1, n1), in1.keySet(), core1.keySet());
-		int num2 = count(predecessors(g2, n2), in2.keySet(), core2.keySet());
+		int num1 = count(g1.predecessors(n1), in1.keySet(), core1.keySet());
+		int num2 = count(g2.predecessors(n2), in2.keySet(), core2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
-		num1 = count(successors(g1, n1), in1.keySet(), core1.keySet());
-		num2 = count(successors(g2, n2), in2.keySet(), core2.keySet());
+		num1 = count(g1.successors(n1), in1.keySet(), core1.keySet());
+		num2 = count(g2.successors(n2), in2.keySet(), core2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
 		// R_termout
-		num1 = count(predecessors(g1, n1), out1.keySet(), core1.keySet());
-		num2 = count(predecessors(g2, n2), out2.keySet(), core2.keySet());
+		num1 = count(g1.predecessors(n1), out1.keySet(), core1.keySet());
+		num2 = count(g2.predecessors(n2), out2.keySet(), core2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
-		num1 = count(successors(g1, n1), out1.keySet(), core1.keySet());
-		num2 = count(successors(g2, n2), out2.keySet(), core2.keySet());
+		num1 = count(g1.successors(n1), out1.keySet(), core1.keySet());
+		num2 = count(g2.successors(n2), out2.keySet(), core2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
 		// R_new
-		num1 = count(predecessors(g1, n1), in1.keySet(), out1.keySet());
-		num2 = count(predecessors(g2, n2), in2.keySet(), out2.keySet());
+		num1 = count(g1.predecessors(n1), in1.keySet(), out1.keySet());
+		num2 = count(g2.predecessors(n2), in2.keySet(), out2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
-		num1 = count(successors(g1, n1), in1.keySet(), out1.keySet());
-		num2 = count(successors(g2, n2), in2.keySet(), out2.keySet());
+		num1 = count(g1.successors(n1), in1.keySet(), out1.keySet());
+		num2 = count(g2.successors(n2), in2.keySet(), out2.keySet());
 		if (!compareCount(num1, num2))
 			return false;
 
@@ -679,7 +703,8 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 				
 				if (!found)
 					return false;
-			} else {
+			} 
+			else {
 				if (in1.containsKey(n1pred))
 					termin1++;
 				if (out1.containsKey(n1pred))
@@ -730,7 +755,8 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 				
 				if (!found)
 					return false;
-			} else {
+			} 
+			else {
 				if (in1.containsKey(n1succ))
 					termin1++;
 				if (out1.containsKey(n1succ))
@@ -760,8 +786,15 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 	}
 
 	private boolean isFeasible(String n1, String n2) {
-//		if (!m_checker.isVertexCompatible(n1, n2))
-//			return false;
+		
+		if (core1.size() == 0) {
+			if (!m_checker.isVertexCompatible(n1, n2))
+				return false;
+		}
+		else {
+			if (!m_checker.checkVertexCompatible(n1, n2))
+				return false;
+		}
 
 		if (m_test == TEST_GRAPH)
 			return isFeasibleIso(n1, n2);

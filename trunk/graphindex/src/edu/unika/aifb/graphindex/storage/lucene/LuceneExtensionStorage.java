@@ -273,7 +273,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 					docIds.add(doc);
 				}
 			});
-//			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
+			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
 			return docIds.size() > 0;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);

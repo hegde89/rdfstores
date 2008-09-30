@@ -30,15 +30,21 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	private String m_name;
 	private GraphStorage m_gs;
 	
-	private HashMap<String,Set<String>> m_predecessors;
+	private Map<String,Set<String>> m_predecessors;
+	private Map<String,Set<String>> m_successors;
+	
+	private Map<String,Map<String,Set<String>>> m_labelPredecessors;
+	private Map<String,Map<String,Set<String>>> m_labelSuccessors;
 
-	HashMap<String,Set<String>> m_successors;
-	HashMap<String,Map<String,List<LabeledEdge<String>>>> m_predecessorEdges;
-
-	private HashMap<String,Map<String,List<LabeledEdge<String>>>> m_successorEdges;
-	HashMap<String,Set<String>> m_inEdgeLabels;
-
-	private HashMap<String,Set<String>> m_outEdgeLabels;
+	private Map<String,Map<String,List<LabeledEdge<String>>>> m_predecessorEdges;
+	private Map<String,Map<String,List<LabeledEdge<String>>>> m_successorEdges;
+	
+	private Map<String,Set<String>> m_inEdgeLabels;
+	private Map<String,Set<String>> m_outEdgeLabels;
+	
+	private Map<String,Set<LabeledEdge<String>>> m_label2Edges;
+	
+	
 	
 	public NamedGraph(String name, Class<? extends E> edgeClass) throws StorageException {
 		super(edgeClass);
@@ -80,6 +86,9 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 		m_successorEdges = new HashMap<String,Map<String,List<LabeledEdge<String>>>>();
 		m_inEdgeLabels = new HashMap<String,Set<String>>();
 		m_outEdgeLabels = new HashMap<String,Set<String>>();
+		m_label2Edges = new HashMap<String,Set<LabeledEdge<String>>>();
+		m_labelPredecessors = new HashMap<String,Map<String,Set<String>>>();
+		m_labelSuccessors = new HashMap<String,Map<String,Set<String>>>();
 		
 		for (String v : vertexSet()) {
 			for (LabeledEdge<String> in : incomingEdgesOf(v)) {
@@ -140,6 +149,46 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 				edges.add(out);
 			}
 		}
+		
+		for (LabeledEdge<String> e : edgeSet()) {
+			Set<LabeledEdge<String>> edges = m_label2Edges.get(e.getLabel());
+			if (edges == null) {
+				edges = new HashSet<LabeledEdge<String>>();
+				m_label2Edges.put(e.getLabel(), edges);
+			}
+			edges.add(e);
+		}
+		
+		for (String label : m_label2Edges.keySet()) {
+			Map<String,Set<String>> predecessors = new HashMap<String,Set<String>>();
+			m_labelPredecessors.put(label, predecessors);
+			
+			Map<String,Set<String>> successors = new HashMap<String,Set<String>>();
+			m_labelSuccessors.put(label, successors);
+			
+			for (String v : vertexSet()) {
+				Set<String> preds = new HashSet<String>();
+				predecessors.put(v, preds);
+
+				Set<String> succs = new HashSet<String>();
+				successors.put(v, succs);
+				
+				for (LabeledEdge<String> in : incomingEdgesOf(v))
+					if (in.getLabel().equals(label))
+						preds.add(in.getSrc());
+				
+				for (LabeledEdge<String> out : outgoingEdgesOf(v))
+					if (out.getLabel().equals(label))
+						preds.add(out.getDst());
+			}
+		}
+	}
+	
+	public Set<LabeledEdge<String>> edgesByLabel(String label) {
+		Set<LabeledEdge<String>> edges = m_label2Edges.get(label);
+		if (edges == null)
+			return new HashSet<LabeledEdge<String>>();
+		return edges;
 	}
 	
 	public Set<String> predecessors(V v) {
@@ -156,6 +205,14 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 		return vs;
 	}
 	
+	public Set<String> predecessors(V v, String label) {
+		return m_labelPredecessors.get(label).get(v);
+	}
+	
+	public Set<String> successors(V v, String label) {
+		return m_labelSuccessors.get(label).get(v);
+	}
+
 	public Map<String,List<LabeledEdge<String>>> predecessorEdges(V v) {
 		Map<String,List<LabeledEdge<String>>> map = m_predecessorEdges.get(v);
 		if (map == null)
@@ -183,6 +240,7 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 			return new HashSet<String>();
 		return labels;
 	}
+	
 	/**
 	 * Shortcut method to add an edge, without having to add the vertices beforehand.
 	 * 

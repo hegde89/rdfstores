@@ -47,7 +47,6 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		private int core_len, orig_core_len;
 		private int added_node1;
 		private int t1both_len, t2both_len, t1in_len, t1out_len, t2in_len, t2out_len;
-		private int depth;
 
 		public DiGMState() {
 			n1 = g1.nodeCount();
@@ -738,14 +737,14 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 
 	private boolean isFeasible(int n1, int n2, DiGMState state) {
 		
-		if (state.coreLength() == 0) {
+//		if (state.coreLength() == 0) {
 			if (!m_checker.isVertexCompatible(g1.getNodeLabel(n1), g2.getNodeLabel(n2)))
 				return false;
-		}
-		else {
-			if (!m_checker.checkVertexCompatible(g1.getNodeLabel(n1), g2.getNodeLabel(n2)))
-				return false;
-		}
+//		}
+//		else {
+//			if (!m_checker.checkVertexCompatible(g1.getNodeLabel(n1), g2.getNodeLabel(n2)))
+//				return false;
+//		}
 
 		return isFeasibleSubgraph(n1, n2);
 	}

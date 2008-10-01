@@ -43,12 +43,24 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,LabeledEdge<String>>> {
 
 	public class DiGMState {
+		private int[] core1, core2;
+		private int[] in1, in2, out1, out2;
+		
 		private int n1, n2;
 		private int core_len, orig_core_len;
 		private int added_node1;
 		private int t1both_len, t2both_len, t1in_len, t1out_len, t2in_len, t2out_len;
 
 		public DiGMState() {
+			core1 = m_core1;
+			core2 = m_core2;
+			
+			in1 = m_in1;
+			in2 = m_in2;
+			
+			out1 = m_out1;
+			out2 = m_out2;
+			
 			n1 = g1.nodeCount();
 			n2 = g2.nodeCount();
 			
@@ -88,6 +100,15 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			t2both_len = state.t2both_len;
 			
 			added_node1 = NULL_NODE;
+			
+			core1 = state.core1;
+			core2 = state.core2;
+			
+			in1 = state.in1;
+			in2 = state.in2;
+			
+			out1 = state.out1;
+			out2 = state.out2;
 		}
 		
 		public int coreLength() {
@@ -333,8 +354,8 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	private IndexGraph g1, g2;
 	private Set<String> m_labels;
 	
-	private int[] core1, core2;
-	private int[] in1, in2, out1, out2;
+	private int[] m_core1, m_core2;
+	private int[] m_in1, m_in2, m_out1, m_out2;
 	
 	
 	private DiGMState m_state;
@@ -369,12 +390,12 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		
 		m_labels = graph1.edgeSet();
 
-		core1 = new int[g1.nodeCount()];
-		in1 = new int[g1.nodeCount()];
-		out1 = new int[g1.nodeCount()];
-		core2 = new int[g2.nodeCount()];
-		in2 = new int[g2.nodeCount()];
-		out2 = new int[g2.nodeCount()];
+		m_core1 = new int[g1.nodeCount()];
+		m_in1 = new int[g1.nodeCount()];
+		m_out1 = new int[g1.nodeCount()];
+		m_core2 = new int[g2.nodeCount()];
+		m_in2 = new int[g2.nodeCount()];
+		m_out2 = new int[g2.nodeCount()];
 		
 		m_state = new DiGMState();
 
@@ -607,7 +628,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		Map<Integer,List<IndexEdge>> n1predMap = g1.predecessorEdges(n1);
 		Map<Integer,List<IndexEdge>> n2predMap = g2.predecessorEdges(n2);
 		for (int n1pred : n1predMap.keySet()) {
-			int n1mapped = core1[n1pred];
+			int n1mapped = m_core1[n1pred];
 			if (n1mapped != NULL_NODE) {
 				List<IndexEdge> n1predEdges = n1predMap.get(n1pred);
 
@@ -620,7 +641,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 
 				boolean found = false;
 				for (int n2pred : n2predMap.keySet()) {
-					if (core2[n2pred] != NULL_NODE) {
+					if (m_core2[n2pred] != NULL_NODE) {
 						List<IndexEdge> g2edges = n2predMap.get(n2pred);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
@@ -633,24 +654,24 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 					return false;
 			} 
 			else {
-				if (in1[n1pred] != 0)
+				if (m_in1[n1pred] != 0)
 					termin1++;
-				if (out1[n1pred] != 0)
+				if (m_out1[n1pred] != 0)
 					termout1++;
-				if (in1[n1pred] == 0 && out1[n1pred] == 0)
+				if (m_in1[n1pred] == 0 && m_out1[n1pred] == 0)
 					new1++;
 			}
 		}
 
 		for (int n2pred : n2predMap.keySet()) {
-			if (core2[n2pred] != NULL_NODE) {
+			if (m_core2[n2pred] != NULL_NODE) {
 				// monomorphism: do nothing
 			} else {
-				if (in2[n2pred] != 0)
+				if (m_in2[n2pred] != 0)
 					termin2++;
-				if (out2[n2pred] != 0)
+				if (m_out2[n2pred] != 0)
 					termout2++;
-				if (in2[n2pred] == 0 && out2[n2pred] == 0)
+				if (m_in2[n2pred] == 0 && m_out2[n2pred] == 0)
 					new2++;
 			}
 		}
@@ -659,7 +680,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		Map<Integer,List<IndexEdge>> n1succs = g1.successorEdges(n1);
 		Map<Integer,List<IndexEdge>> n2succs = g2.successorEdges(n2);
 		for (int n1succ : n1succs.keySet()) {
-			int n1mapped = core1[n1succ];
+			int n1mapped = m_core1[n1succ];
 			if (n1mapped != NULL_NODE) {
 				List<IndexEdge> n1succEdges = n1succs.get(n1succ);
 
@@ -672,7 +693,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 
 				boolean found = false;
 				for (int n2succ : n2succs.keySet()) {
-					if (core2[n2succ] != NULL_NODE) {
+					if (m_core2[n2succ] != NULL_NODE) {
 						List<IndexEdge> g2edges = n2succs.get(n2succ);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
@@ -685,25 +706,25 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 					return false;
 			} 
 			else {
-				if (in1[n1succ] != 0)
+				if (m_in1[n1succ] != 0)
 					termin1++;
-				if (out1[n1succ] != 0)
+				if (m_out1[n1succ] != 0)
 					termout1++;
-				if (in1[n1succ] == 0 && out1[n1succ] == 0)
+				if (m_in1[n1succ] == 0 && m_out1[n1succ] == 0)
 					new1++;
 
 			}
 		}
 
 		for (int n2succ : n2succs.keySet()) {
-			if (core2[n2succ] != NULL_NODE) {
+			if (m_core2[n2succ] != NULL_NODE) {
 				// monomorphism: do nothing
 			} else {
-				if (in2[n2succ] != 0)
+				if (m_in2[n2succ] != 0)
 					termin2++;
-				if (out2[n2succ] != 0)
+				if (m_out2[n2succ] != 0)
 					termout2++;
-				if (in2[n2succ] == 0 && out2[n2succ] == 0)
+				if (m_in2[n2succ] == 0 && m_out2[n2succ] == 0)
 					new2++;
 			}
 		}

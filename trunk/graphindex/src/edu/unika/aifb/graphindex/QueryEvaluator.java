@@ -25,6 +25,8 @@ import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.graph.Edge;
 import edu.unika.aifb.graphindex.graph.Graph;
+import edu.unika.aifb.graphindex.graph.IndexEdge;
+import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
@@ -32,6 +34,7 @@ import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher2;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher3;
 import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
+import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker3;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.query.Constant;
 import edu.unika.aifb.graphindex.query.Individual;
@@ -50,7 +53,7 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 public class QueryEvaluator {
 	private ExtensionManager m_em = StorageManager.getInstance().getExtensionManager();
 	private LuceneExtensionStorage m_les = (LuceneExtensionStorage)m_em.getExtensionStorage();
-	private final GroundTermCache m_gtc;
+	private final VCompatibilityCache m_vcc;
 	private final Set<String> m_invalidVertices;
 	private StructureIndex m_index;
 	private final StatisticsCollector m_collector = new StatisticsCollector();
@@ -60,7 +63,7 @@ public class QueryEvaluator {
 	
 	
 	public QueryEvaluator(StructureIndex index) {
-		m_gtc = new GroundTermCache();
+		m_vcc = new VCompatibilityCache();
 		m_invalidVertices = new HashSet<String>();
 		m_index = index;
 		
@@ -114,43 +117,97 @@ public class QueryEvaluator {
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
 			
-			DiGraphMatcher3 matcher = new DiGraphMatcher3(queryGraph, indexGraph, true, 
-					new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
-						public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+//			DiGraphMatcher3 matcher = new DiGraphMatcher3(queryGraph, indexGraph, true, 
+//					new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
+//						public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+//							return e1.getLabel().equals(e2.getLabel());
+//						}
+//		
+//						public boolean isVertexCompatible(String n1, String n2) {
+////							return checkVertexCompatible(n1, n2);
+//							if (!n1.startsWith("?")) {
+//								Boolean value = m_gtc.get(n1, n2);
+//								if (value != null)
+//									return value.booleanValue();
+//							}
+//							return true;
+//						}
+//						
+//						public boolean checkVertexCompatible(String n1, String n2) {
+//							if (!n1.startsWith("?")) { // not variable, ie. ground term
+//								m_timings.start(Timings.GT);
+//								Boolean value = m_gtc.get(n1, n2);
+//								if (value == null) {
+//									for (String label : queryGraph.inEdgeLabels(n1)) {
+//										try {
+//											if (m_les.hasDocs(n2, label, n1)) {
+//												value = true;
+//												break;
+//											}
+//											else {
+//												value = false;
+//												break;
+//											}
+//										} catch (StorageException e) {
+//											e.printStackTrace();
+//										}
+//									}
+//									m_gtc.put(n1, n2, value);
+//								}
+//								m_timings.end(Timings.GT);
+//								return value.booleanValue();
+//							}
+//							return true;
+//						}
+//					},
+//					new MappingListener<String,LabeledEdge<String>>() {
+//						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
+//							completionService.submit(new MappingValidator(queryGraph, iso, m_gtc, m_invalidVertices, m_collector));
+////							log.debug("mapping " + iso);
+//						}
+//			});
+			
+			final IndexGraph qg = new IndexGraph(queryGraph);
+			final IndexGraph ig = new IndexGraph(indexGraph);
+			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, ig, true, 
+					new FeasibilityChecker3() {
+						public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {
 							return e1.getLabel().equals(e2.getLabel());
 						}
 		
-						public boolean isVertexCompatible(String n1, String n2) {
+						public boolean isVertexCompatible(int n1, int n2) {
 //							return checkVertexCompatible(n1, n2);
-							if (!n1.startsWith("?")) {
-								Boolean value = m_gtc.get(n1, n2);
-								if (value != null)
-									return value.booleanValue();
-							}
+							Boolean value = m_vcc.get(n1, n2);
+							if (value != null)
+								return value;
+							
 							return true;
 						}
 						
-						public boolean checkVertexCompatible(String n1, String n2) {
-							if (!n1.startsWith("?")) { // not variable, ie. ground term
+						public boolean checkVertexCompatible(int n1, int n2) {
+							Boolean value = m_vcc.get(n1, n2);
+							if (value != null)
+								return value;
+							
+							String l1 = qg.getNodeLabel(n1);
+							if (!l1.startsWith("?")) { // not variable, ie. ground term
+								String l2 = ig.getNodeLabel(n2);
 								m_timings.start(Timings.GT);
-								Boolean value = m_gtc.get(n1, n2);
-								if (value == null) {
-									for (String label : queryGraph.inEdgeLabels(n1)) {
-										try {
-											if (m_les.hasDocs(n2, label, n1)) {
-												value = true;
-												break;
-											}
-											else {
-												value = false;
-												break;
-											}
-										} catch (StorageException e) {
-											e.printStackTrace();
+								for (String label : qg.inEdgeLabels(n1)) {
+									try {
+										if (m_les.hasDocs(l2, label, l1)) {
+											value = true;
+											break;
 										}
+										else {
+											value = false;
+											break;
+										}
+									} catch (StorageException e) {
+										e.printStackTrace();
 									}
-									m_gtc.put(n1, n2, value);
 								}
+								m_vcc.put(n1, n2, value);
 								m_timings.end(Timings.GT);
 								return value.booleanValue();
 							}
@@ -159,7 +216,7 @@ public class QueryEvaluator {
 					},
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-							completionService.submit(new MappingValidator(queryGraph, iso, m_gtc, m_invalidVertices, m_collector));
+							completionService.submit(new MappingValidator(queryGraph, iso, null, m_invalidVertices, m_collector));
 //							log.debug("mapping " + iso);
 						}
 			});
@@ -195,8 +252,8 @@ public class QueryEvaluator {
 		m_collector.addTimings(m_timings);
 		m_collector.logStats();
 		
-		log.debug("cache size: " + m_gtc.size());
-		m_gtc.clear();
+		log.debug("cache size: " + m_vcc.size());
+		m_vcc.clear();
 
 		return null;
 	}

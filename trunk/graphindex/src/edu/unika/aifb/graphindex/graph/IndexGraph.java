@@ -13,6 +13,7 @@ public class IndexGraph {
 	private NamedGraph<String,LabeledEdge<String>> m_graph;
 	
 	private int m_nodeCount;
+	private Set<String> m_edgeLabels;
 	private String[] m_labels;
 	private List<Integer>[] m_predecessors, m_successors;
 	private Map<String,List<Integer>>[] m_labelPredecessors, m_labelSuccessors;
@@ -48,6 +49,7 @@ public class IndexGraph {
 		}
 //		System.out.println();
 		
+		m_edgeLabels = new HashSet<String>();
 		m_predecessors = new List [m_nodeCount];
 		m_successors = new List [m_nodeCount];
 		m_labelPredecessors = new Map [m_nodeCount];
@@ -82,6 +84,8 @@ public class IndexGraph {
 				edges.add(new IndexEdge(e, this));
 				
 				inLabels.add(e.getLabel());
+				
+				m_edgeLabels.add(e.getLabel());
 			}
 			if (preds.size() > 0)
 				m_predecessors[i] = preds;
@@ -116,6 +120,8 @@ public class IndexGraph {
 				edges.add(new IndexEdge(e, this));
 				
 				outLabels.add(e.getLabel());
+
+				m_edgeLabels.add(e.getLabel());
 			}
 			if (succs.size() > 0)
 				m_successors[i] = succs;
@@ -222,5 +228,9 @@ public class IndexGraph {
 		if (map == null)
 			return m_emptyMap;
 		return map;
+	}
+
+	public Set<String> edgeSet() {
+		return m_edgeLabels;
 	}
 }

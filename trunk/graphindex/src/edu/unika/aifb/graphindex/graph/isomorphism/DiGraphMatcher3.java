@@ -94,14 +94,13 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			return core_len;
 		}
 		
-		public Map<String,String> getMapping() {
-			Map<String,String> map = new HashMap<String,String>();
+		public Map<Integer,Integer> getMapping() {
+			Map<Integer,Integer> map = new HashMap<Integer,Integer>();
 			for (int i = 0; i < n1; i++) {
 				if (core1[i] != NULL_NODE) {
-					map.put(g1.getNodeLabel(i), g2.getNodeLabel(core1[i]));
+					map.put(i, core1[i]);
 				}
 			}
-			
 			return map;
 		}
 		
@@ -160,7 +159,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 					}
 				}
 			}
-			while (prev_n1 < n1 && prev_n2 < n2 && !m_checker.isVertexCompatible(g1.getNodeLabel(prev_n1), g2.getNodeLabel(prev_n2)));
+			while (prev_n1 < n1 && prev_n2 < n2 && !m_checker.isVertexCompatible(prev_n1, prev_n2));
 			
 			if (prev_n1 < n1 && prev_n2 < n2) {
 				return new Pair(prev_n1, prev_n2);
@@ -342,7 +341,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	
 	private List<IsomorphismRelation<String,LabeledEdge<String>>> m_isomorphisms;
 
-	private FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> m_checker;
+	private FeasibilityChecker3 m_checker;
 	private MappingListener<String,LabeledEdge<String>> m_listener;
 	
 	private boolean m_generateMappings;
@@ -364,13 +363,11 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 * @param generateMappings
 	 *            whether to generate mappings or just check for isomorphisms
 	 */
-	public DiGraphMatcher3(NamedGraph<String,LabeledEdge<String>> graph1,
-			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings) {
-		g1 = new IndexGraph(graph1);
-		g2 = new IndexGraph(graph2);
-		m_labels = new HashSet<String>();
-		for (LabeledEdge<String> e : graph1.edgeSet())
-			m_labels.add(e.getLabel());
+	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings) {
+		g1 = graph1;
+		g2 = graph2;
+		
+		m_labels = graph1.edgeSet();
 
 		core1 = new int[g1.nodeCount()];
 		in1 = new int[g1.nodeCount()];
@@ -383,16 +380,16 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 
 		m_isomorphisms = new ArrayList<IsomorphismRelation<String,LabeledEdge<String>>>();
 		// default checker implementation, always true
-		m_checker = new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() { 
-			public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
+		m_checker = new FeasibilityChecker3() { 
+			public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {
 				return true;
 			}
 
-			public boolean isVertexCompatible(String n1, String n2) {
+			public boolean isVertexCompatible(int n1, int n2) {
 				return true;
 			}
 
-			public boolean checkVertexCompatible(String n1, String n2) {
+			public boolean checkVertexCompatible(int n1, int n2) {
 				return true;
 			}
 		};
@@ -415,24 +412,21 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 *            a FeasibilityChecker which is used to determine if the current
 	 *            mapping can be extended by the two nodes
 	 */
-	public DiGraphMatcher3(NamedGraph<String,LabeledEdge<String>> graph1,
-			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
-			FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> checker) {
+	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
+			FeasibilityChecker3 checker) {
 		this(graph1, graph2, generateMappings);
 		m_checker = checker;
 	}
 
-	public DiGraphMatcher3(NamedGraph<String,LabeledEdge<String>> graph1,
-			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
-			FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>> checker,
+	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
+			FeasibilityChecker3 checker,
 			MappingListener<String,LabeledEdge<String>> listener) {
 		this(graph1, graph2, generateMappings);
 		m_checker = checker;
 		m_listener = listener;
 	}
 
-	public DiGraphMatcher3(NamedGraph<String,LabeledEdge<String>> graph1,
-			NamedGraph<String,LabeledEdge<String>> graph2, boolean generateMappings,
+	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
 			MappingListener<String,LabeledEdge<String>> listener) {
 		this(graph1, graph2, generateMappings);
 		m_listener = listener;
@@ -464,22 +458,29 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 
 		return new IsomorphismRelation<String,LabeledEdge<String>>(g1list, g2list, g1.getNamedGraph(), g2.getNamedGraph());
 	}
+	
+	private Map<String,String> toStringMapping(Map<Integer,Integer> map) {
+		Map<String,String> smap = new HashMap<String,String>();
+		for (int k : map.keySet())
+			smap.put(g1.getNodeLabel(k), g2.getNodeLabel(map.get(k)));
+		return smap;
+	}
 
 	static int mid = 0;
 	public int pairs = 0;
 	private boolean match(DiGMState state) {
 		if (state.coreLength() == g1.nodeCount()) {
 			boolean valid = true;
-			Map<String,String> mapping = m_state.getMapping();
+			Map<Integer,Integer> mapping = m_state.getMapping();
 //			for (int n1 : core1)
 //				System.out.print(core2[n1] + "=" + n1 + " ");
 //			System.out.println();
-			for (String n1 : mapping.keySet())
+			for (int n1 : mapping.keySet())
 				valid = m_checker.checkVertexCompatible(n1, mapping.get(n1)) && valid; // lazy evaluation
 			if (valid) {
 				log.debug("found: " + mapping);
 				if (m_generateMappings) {
-					IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(mapping);
+					IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(toStringMapping(mapping));
 					m_isomorphisms.add(iso);
 					if (m_listener != null)
 						m_listener.mapping(iso);
@@ -515,26 +516,11 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		}
 	}
 	
-	private boolean isInvalidMapping(Map<String,String> map) {
-		for (String n1 : map.keySet())
+	private boolean isInvalidMapping(Map<Integer,Integer> map) {
+		for (int n1 : map.keySet())
 			if (!m_checker.isVertexCompatible(n1, map.get(n1)))
 				return true;
 		return false;
-	}
-
-	private boolean edgeSetsCompatible(Set<LabeledEdge<String>> g1edges, Set<LabeledEdge<String>> g2edges) {
-		for (LabeledEdge<String> e1 : g1edges) {
-			boolean found = false;
-			for (LabeledEdge<String> e2 : g2edges) {
-				if (m_checker.isEdgeCompatible(e1, e2)) {
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-				return false;
-		}
-		return true;
 	}
 
 	private class Tuple {
@@ -743,11 +729,11 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	private boolean isFeasible(int n1, int n2, DiGMState state) {
 		
 		if (state.coreLength() == 0) {
-			if (!m_checker.isVertexCompatible(g1.getNodeLabel(n1), g2.getNodeLabel(n2)))
+			if (!m_checker.isVertexCompatible(n1, n2))
 				return false;
 		}
 		else {
-			if (!m_checker.checkVertexCompatible(g1.getNodeLabel(n1), g2.getNodeLabel(n2)))
+			if (!m_checker.checkVertexCompatible(n1, n2))
 				return false;
 		}
 

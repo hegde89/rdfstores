@@ -171,57 +171,14 @@ public class QueryEvaluator {
 			final IndexGraph ig = new IndexGraph(indexGraph);
 			log.debug("index graphs created, " + Util.memory());
 			
-			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, ig, true, 
-					new FeasibilityChecker3() {
-						public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {
-							return e1.getLabel().equals(e2.getLabel());
-						}
-		
-						public boolean isVertexCompatible(int n1, int n2) {
-//							return checkVertexCompatible(n1, n2);
-							Boolean value = m_vcc.get(n1, n2);
-							if (value != null)
-								return value.booleanValue();
-							
-							return true;
-						}
-						
-						public boolean checkVertexCompatible(int n1, int n2) {
-							Boolean value = m_vcc.get(n1, n2);
-							if (value != null)
-								return value.booleanValue();
-							
-							String l1 = qg.getNodeLabel(n1);
-							if (!l1.startsWith("?")) { // not variable, ie. ground term
-								String l2 = ig.getNodeLabel(n2);
-								m_timings.start(Timings.GT);
-								for (String label : qg.inEdgeLabels(n1)) {
-									try {
-										if (m_les.hasDocs(l2, label, l1)) {
-											value = true;
-											break;
-										}
-										else {
-											value = false;
-											break;
-										}
-									} catch (StorageException e) {
-										e.printStackTrace();
-									}
-								}
-								m_vcc.put(n1, n2, value);
-								m_timings.end(Timings.GT);
-								return value.booleanValue();
-							}
-							return true;
-						}
-					},
+			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, ig, true, new QueryFeasibilityChecker(qg, ig, m_vcc, m_timings, m_les), 
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
 							completionService.submit(new MappingValidator(queryGraph, iso, null, m_invalidVertices, m_collector));
-//							log.debug("mapping " + iso);
 						}
-			});
+					});
+			
+			log.debug("matcher created");
 			
 			m_timings.start(Timings.MATCH);
 			if (!matcher.isSubgraphIsomorphic()) {

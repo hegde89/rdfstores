@@ -357,6 +357,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	private int[] m_core1, m_core2;
 	private int[] m_in1, m_in2, m_out1, m_out2;
 	
+	private int m_mappingLength;
 	
 	private DiGMState m_state;
 	
@@ -388,6 +389,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		g1 = graph1;
 		g2 = graph2;
 		
+		m_mappingLength = g1.nodeCount();
 		m_labels = graph1.edgeSet();
 
 		m_core1 = new int[g1.nodeCount()];
@@ -487,10 +489,9 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		return smap;
 	}
 
-	static int mid = 0;
 	public int pairs = 0;
 	private boolean match(DiGMState state) {
-		if (state.coreLength() == g1.nodeCount()) {
+		if (state.coreLength() == m_mappingLength) {
 			boolean valid = true;
 			Map<Integer,Integer> mapping = m_state.getMapping();
 //			for (int n1 : core1)

@@ -1,15 +1,13 @@
 package edu.unika.aifb.graphindex.graph;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
-import org.jgrapht.Graph;
 
 public class IndexGraph {
 	private NamedGraph<String,LabeledEdge<String>> m_graph;
@@ -17,6 +15,7 @@ public class IndexGraph {
 	private int m_nodeCount;
 	private String[] m_labels;
 	private List<Integer>[] m_predecessors, m_successors;
+	private Map<String,List<Integer>>[] m_labelPredecessors, m_labelSuccessors;
 	private Map<Integer,List<IndexEdge>>[] m_predecessorEdges, m_successorEdges;
 	private Set<String>[] m_outLabels, m_inLabels;
 
@@ -30,7 +29,12 @@ public class IndexGraph {
 		
 		m_nodeCount = graph.vertexSet().size();
 		
-		SortedSet<String> vertices = new TreeSet<String>(graph.vertexSet());
+		List<String> vertices = new ArrayList<String>(graph.vertexSet());
+		Collections.sort(vertices, new Comparator<String>() {
+			public int compare(String o1, String o2) {
+				return o1.compareTo(o2) * 1;
+			}
+		});
 		Map<String,Integer> v2i = new HashMap<String,Integer>();
 		
 		int i = 0;
@@ -46,6 +50,8 @@ public class IndexGraph {
 		
 		m_predecessors = new List [m_nodeCount];
 		m_successors = new List [m_nodeCount];
+		m_labelPredecessors = new Map [m_nodeCount];
+		m_labelSuccessors = new Map [m_nodeCount];
 		m_predecessorEdges = new Map [m_nodeCount];
 		m_successorEdges = new Map [m_nodeCount];
 		m_inLabels = new Set [m_nodeCount];
@@ -53,12 +59,20 @@ public class IndexGraph {
 		
 		for (i = 0; i < m_nodeCount; i++) {
 			List<Integer> preds = new ArrayList<Integer>();
+			Map<String,List<Integer>> labelPreds = new HashMap<String,List<Integer>>();
 			Map<Integer,List<IndexEdge>> predList = new HashMap<Integer,List<IndexEdge>>();
 			Set<String> inLabels = new HashSet<String>();
 			for (LabeledEdge<String> e : graph.incomingEdgesOf(m_labels[i])) {
 				int pred = v2i.get(e.getSrc());
 				
 				preds.add(pred);
+				
+				List<Integer> lpreds = labelPreds.get(e.getLabel());
+				if (lpreds == null) {
+					lpreds = new ArrayList<Integer>();
+					labelPreds.put(e.getLabel(), lpreds);
+				}
+				lpreds.add(pred);
 
 				List<IndexEdge> edges = predList.get(pred);
 				if (edges == null) {
@@ -71,18 +85,28 @@ public class IndexGraph {
 			}
 			if (preds.size() > 0)
 				m_predecessors[i] = preds;
+			if (labelPreds.size() > 0)
+				m_labelPredecessors[i] = labelPreds;
 			if (predList.size() > 0)
 				m_predecessorEdges[i] = predList;
 			if (inLabels.size() > 0)
 				m_inLabels[i] = inLabels;
 
 			List<Integer> succs = new ArrayList<Integer>();
+			Map<String,List<Integer>> labelSuccs = new HashMap<String,List<Integer>>();
 			Map<Integer,List<IndexEdge>> succList = new HashMap<Integer,List<IndexEdge>>();
 			Set<String> outLabels = new HashSet<String>();
 			for (LabeledEdge<String> e : graph.outgoingEdgesOf(m_labels[i])) {
 				int succ = v2i.get(e.getDst());
 				
 				succs.add(succ);
+
+				List<Integer> lsuccs = labelSuccs.get(e.getLabel());
+				if (lsuccs == null) {
+					lsuccs = new ArrayList<Integer>();
+					labelSuccs.put(e.getLabel(), lsuccs);
+				}
+				lsuccs.add(succ);
 
 				List<IndexEdge> edges = succList.get(succ);
 				if (edges == null) {
@@ -95,6 +119,8 @@ public class IndexGraph {
 			}
 			if (succs.size() > 0)
 				m_successors[i] = succs;
+			if (labelSuccs.size() > 0)
+				m_labelSuccessors[i] = labelSuccs;
 			if (succList.size() > 0)
 				m_successorEdges[i] = succList;
 			if (outLabels.size() > 0)
@@ -118,6 +144,40 @@ public class IndexGraph {
 		if (succs == null)
 			return m_emptyIntegerList ;
 		return succs;
+	}
+	
+	public List<Integer> predecessors(int node, String label) {
+		Map<String,List<Integer>> labels = m_labelPredecessors[node];
+		if (labels == null)
+			return m_emptyIntegerList;
+		List<Integer> nodes = labels.get(label);
+		if (nodes == null)
+			return m_emptyIntegerList;
+		return nodes;
+	}
+
+	public List<Integer> successors(int node, String label) {
+		Map<String,List<Integer>> labels = m_labelSuccessors[node];
+		if (labels == null)
+			return m_emptyIntegerList;
+		List<Integer> nodes = labels.get(label);
+		if (nodes == null)
+			return m_emptyIntegerList;
+		return nodes;
+	}
+	
+	public Set<Integer> predecessors(int node, Set<String> labels) {
+		Set<Integer> set = new HashSet<Integer>();
+		for (String label : labels)
+			set.addAll(predecessors(node, label));
+		return set;
+	}
+	
+	public Set<Integer> successors(int node, Set<String> labels) {
+		Set<Integer> set = new HashSet<Integer>();
+		for (String label : labels)
+			set.addAll(predecessors(node, label));
+		return set;
 	}
 
 	public NamedGraph<String,LabeledEdge<String>> getNamedGraph() {

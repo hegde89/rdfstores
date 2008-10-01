@@ -179,7 +179,7 @@ public class QueryEvaluator {
 //							return checkVertexCompatible(n1, n2);
 							Boolean value = m_vcc.get(n1, n2);
 							if (value != null)
-								return value;
+								return value.booleanValue();
 							
 							return true;
 						}
@@ -187,7 +187,7 @@ public class QueryEvaluator {
 						public boolean checkVertexCompatible(int n1, int n2) {
 							Boolean value = m_vcc.get(n1, n2);
 							if (value != null)
-								return value;
+								return value.booleanValue();
 							
 							String l1 = qg.getNodeLabel(n1);
 							if (!l1.startsWith("?")) { // not variable, ie. ground term

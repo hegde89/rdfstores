@@ -273,7 +273,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 					docIds.add(doc);
 				}
 			});
-			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
+//			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
 			return docIds.size() > 0;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
@@ -368,8 +368,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			es = null;
 		
 		long build = System.currentTimeMillis() - start - dr;
-//		if (docs.size() > 0)
-//			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
+		if (docs.size() > 0)
+			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
 		
 		return es;
 	}

@@ -29,6 +29,7 @@ import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
 import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher2;
+import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher3;
 import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
@@ -89,7 +90,7 @@ public class QueryEvaluator {
 	private void initialize() {
 		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
 			log.debug("index graph: " + indexGraph);
-			indexGraph.calc();
+//			indexGraph.calc();
 		}
 		log.info("evaluator initialized, " + Util.memory());
 	}
@@ -113,7 +114,7 @@ public class QueryEvaluator {
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
 			
-			DiGraphMatcher2 matcher = new DiGraphMatcher2(queryGraph, indexGraph, true, 
+			DiGraphMatcher3 matcher = new DiGraphMatcher3(queryGraph, indexGraph, true, 
 					new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
 						public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
 							return e1.getLabel().equals(e2.getLabel());

@@ -368,7 +368,7 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			Collection<Pair> candidatePairs = getCandidatePairs();
 			// log.debug("cp: " + candidatePairs);
 			for (Pair p : candidatePairs) {
-				// log.debug("trying " + p);
+				 log.debug("trying " + p + ", current mapping: " + core1);
 				if (isFeasible(p.n1, p.n2)) {
 					DiGMState newState = new DiGMState(p.n1, p.n2);
 					if (match(newState)) {
@@ -787,6 +787,8 @@ public class DiGraphMatcher2 implements Iterable<IsomorphismRelation<String,Labe
 			}
 		}
 
+		log.debug(in1 + " " + in2 + " " + out1 + " " + out2);
+		log.debug(termin1 + " " + termin2 + " " + termout1 + " " + termout2 + " " + new1 + " " + new2 + " " + core1);
 		return termin1 <= termin2 && termout1 <= termout2
 				&& (termin1 + termout1 + new1) <= (termin2 + termout2 + new2);
 	}

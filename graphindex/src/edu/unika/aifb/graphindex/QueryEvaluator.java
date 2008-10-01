@@ -169,6 +169,8 @@ public class QueryEvaluator {
 			
 			final IndexGraph qg = new IndexGraph(queryGraph);
 			final IndexGraph ig = new IndexGraph(indexGraph);
+			log.debug("index graphs created, " + Util.memory());
+			
 			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, ig, true, 
 					new FeasibilityChecker3() {
 						public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {

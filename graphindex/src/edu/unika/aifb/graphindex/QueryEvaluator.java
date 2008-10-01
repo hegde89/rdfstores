@@ -173,6 +173,7 @@ public class QueryEvaluator {
 			m_timings.end(Timings.MATCH);
 			
 			log.info("matches: " + matcher.numberOfMappings());
+			log.debug("pairs generated: " + matcher.pairs);
 
 			for (int i = 0; i < matcher.numberOfMappings(); i++) {
 				Future<Set<Map<String,String>>> f = completionService.take();

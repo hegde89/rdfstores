@@ -383,19 +383,25 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 * <code>graph1</code> should be the "smaller" graph. If
 	 * <code>generateMappings</code> is true, all possible mappings are
 	 * generated, which can take time. Otherwise, the algorithm stops as early
-	 * as possible and does not generate any mappings.
-	 * <p>
-	 * This class also implements the Iterable interface, which is used to
-	 * iterate over all mappings generated.
+	 * as possible and does not generate any mappings. The feasibility checker
+	 * is used to determine semantic feasibility.
 	 * 
 	 * @param graph1
 	 * @param graph2
 	 * @param generateMappings
-	 *            whether to generate mappings or just check for isomorphisms
+	 * @param checker
+	 *            a FeasibilityChecker which is used to determine if the current
+	 *            mapping can be extended by the two nodes
+	 * @param listener
 	 */
-	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings) {
+	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings, FeasibilityChecker3 checker,
+			MappingListener<String,LabeledEdge<String>> listener) {
 		m_g1 = graph1;
 		m_g2 = graph2;
+		m_listener = listener;
+		m_checker = checker;
+		m_generateMappings = generateMappings;
+		
 		
 		m_mappingLength = m_g1.nodeCount();
 		m_labels = graph1.edgeSet();
@@ -408,59 +414,8 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		m_out2 = new int[m_g2.nodeCount()];
 		
 		m_isomorphisms = new ArrayList<IsomorphismRelation<String,LabeledEdge<String>>>();
-		// default checker implementation, always true
-		m_checker = new FeasibilityChecker3() { 
-			public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {
-				return true;
-			}
-
-			public boolean isVertexCompatible(int n1, int n2) {
-				return true;
-			}
-
-			public boolean checkVertexCompatible(int n1, int n2) {
-				return true;
-			}
-		};
-		m_listener = null;
-		m_generateMappings = generateMappings;
 		
 		m_state = new DiGMState();
-	}
-
-	/**
-	 * Create a new matcher object. If testing for subgraph isomorphism,
-	 * <code>graph1</code> should be the "smaller" graph. If
-	 * <code>generateMappings</code> is true, all possible mappings are
-	 * generated, which can take time. Otherwise, the algorithm stops as early
-	 * as possible and does not generate any mappings. The feasibility checker
-	 * is used to determine semantic feasibility.
-	 * 
-	 * @param graph1
-	 * @param graph2
-	 * @param generateMappings
-	 * @param checker
-	 *            a FeasibilityChecker which is used to determine if the current
-	 *            mapping can be extended by the two nodes
-	 */
-	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
-			FeasibilityChecker3 checker) {
-		this(graph1, graph2, generateMappings);
-		m_checker = checker;
-	}
-
-	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
-			FeasibilityChecker3 checker,
-			MappingListener<String,LabeledEdge<String>> listener) {
-		this(graph1, graph2, generateMappings);
-		m_checker = checker;
-		m_listener = listener;
-	}
-
-	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings,
-			MappingListener<String,LabeledEdge<String>> listener) {
-		this(graph1, graph2, generateMappings);
-		m_listener = listener;
 	}
 
 	/**

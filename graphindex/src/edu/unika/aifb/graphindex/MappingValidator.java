@@ -38,7 +38,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 	public MappingValidator(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, IsomorphismRelation<String,LabeledEdge<String>> iso, GroundTermCache groundTermCache, Set<String> vertices, StatisticsCollector collector) {
 		m_iso = iso;
 		m_queryGraph = queryGraph;
-		m_gtc = groundTermCache;
+//		m_gtc = groundTermCache;
 		m_em = StorageManager.getInstance().getExtensionManager();
 		m_collector = collector;
 		m_invalidVertices = vertices;
@@ -144,99 +144,99 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 		
 		Map<String,TripleList> tripleMapping = new HashMap<String,TripleList>();
 		
-		boolean allFound = true;
-		for (String v : queryGraph.getGroundTerms()) {
-			Term term = queryGraph.getTerm(v);
-//			log.debug("ground term: " + term.toString());
-			
-			if (queryGraph.inDegreeOf(v) > 0) {
-				String cacheString = iso.getVertexCorrespondence(v, true).toString() + "__" + term.toString();
-				Boolean value = m_gtc.get(term.toString(), iso.getVertexCorrespondence(v, true).toString());
-				if (value != null) {
-					if (value == Boolean.FALSE) {
-//						log.debug("--> not found (cache)");
-//						return null;
-						allFound = false;
-						continue;
-					}
-					else {
-//						log.debug("--> found (cache)");
-						continue;
-					}
-				}
-
-				Set<String> labels = new HashSet<String>();
-				for (LabeledEdge<String> e : queryGraph.incomingEdgesOf(v)) {
-					labels.add(e.getLabel());
-				}
-				
-				List<Triple> triples = new ArrayList<Triple>();
-				for (String property : labels) {
-					t.start(Timings.DATA);
-					List<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(v, true)).getTriplesList(property, term.toString());
-					t.end(Timings.DATA);
-//					log.debug("  " + propTriples);
-					if (propTriples.size() == 0) {
-//						log.debug("not all ground terms found");
-						m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), false);
-						m_invalidVertices.add(v + "__" + iso.getVertexCorrespondence(v, true));
-						allFound = false;
-						break;
-//						return null;
-					}
-					if (allFound)
-						triples.addAll(propTriples);
-				}
-				if (allFound)
-					tripleMapping.put(v, new TripleList(triples));
-				if (allFound)
-					m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), true);
-				else
-					m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), false);
-			}
-			else {
-				if (m_invalidVertices.contains(v + "__" + iso.getVertexCorrespondence(v, true)))
-					continue;
-				
-				Set<Triple> triples = null;
-				for (LabeledEdge<String> edge : queryGraph.outgoingEdgesOf(v)) {
-					
-					t.start(Timings.DATA);
-					List<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(edge.getDst(), true)).getTriplesList(edge.getLabel());
-					t.end(Timings.DATA);
-					if (triples == null) {
-						triples = new HashSet<Triple>();
-						for (Triple t : propTriples) {
-							if (t.getSubject().equals(v))
-								triples.add(new Triple("", "", t.getSubject()));
-						}
-					}
-					else {
-						Set<Triple> newTriples = new HashSet<Triple>();
-						for (Triple t : propTriples) {
-							if (t.getSubject().equals(v)) {
-								Triple nt = new Triple("", "", t.getSubject());
-								newTriples.add(nt);
-							}
-						}
-						triples.retainAll(newTriples);
-					}
-				}
-				if (triples == null || triples.size() == 0) {
-//					log.debug("not all ground terms found 2");
-					m_invalidVertices.add(v + "__" + iso.getVertexCorrespondence(v, true));
-//					return null;
-					allFound = false;
-					break;
-				}
-				if (allFound)
-					tripleMapping.put(v, new TripleList(new ArrayList<Triple>(triples)));
-			}
-//			log.debug("--> found");
-		}
-		
-		if (!allFound)
-			return null;
+//		boolean allFound = true;
+//		for (String v : queryGraph.getGroundTerms()) {
+//			Term term = queryGraph.getTerm(v);
+////			log.debug("ground term: " + term.toString());
+//			
+//			if (queryGraph.inDegreeOf(v) > 0) {
+//				String cacheString = iso.getVertexCorrespondence(v, true).toString() + "__" + term.toString();
+//				Boolean value = m_gtc.get(term.toString(), iso.getVertexCorrespondence(v, true).toString());
+//				if (value != null) {
+//					if (value == Boolean.FALSE) {
+////						log.debug("--> not found (cache)");
+////						return null;
+//						allFound = false;
+//						continue;
+//					}
+//					else {
+////						log.debug("--> found (cache)");
+//						continue;
+//					}
+//				}
+//
+//				Set<String> labels = new HashSet<String>();
+//				for (LabeledEdge<String> e : queryGraph.incomingEdgesOf(v)) {
+//					labels.add(e.getLabel());
+//				}
+//				
+//				List<Triple> triples = new ArrayList<Triple>();
+//				for (String property : labels) {
+//					t.start(Timings.DATA);
+//					List<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(v, true)).getTriplesList(property, term.toString());
+//					t.end(Timings.DATA);
+////					log.debug("  " + propTriples);
+//					if (propTriples.size() == 0) {
+////						log.debug("not all ground terms found");
+//						m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), false);
+//						m_invalidVertices.add(v + "__" + iso.getVertexCorrespondence(v, true));
+//						allFound = false;
+//						break;
+////						return null;
+//					}
+//					if (allFound)
+//						triples.addAll(propTriples);
+//				}
+//				if (allFound)
+//					tripleMapping.put(v, new TripleList(triples));
+//				if (allFound)
+//					m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), true);
+//				else
+//					m_gtc.put(term.toString(), iso.getVertexCorrespondence(v, true).toString(), false);
+//			}
+//			else {
+//				if (m_invalidVertices.contains(v + "__" + iso.getVertexCorrespondence(v, true)))
+//					continue;
+//				
+//				Set<Triple> triples = null;
+//				for (LabeledEdge<String> edge : queryGraph.outgoingEdgesOf(v)) {
+//					
+//					t.start(Timings.DATA);
+//					List<Triple> propTriples = m_em.extension(iso.getVertexCorrespondence(edge.getDst(), true)).getTriplesList(edge.getLabel());
+//					t.end(Timings.DATA);
+//					if (triples == null) {
+//						triples = new HashSet<Triple>();
+//						for (Triple t : propTriples) {
+//							if (t.getSubject().equals(v))
+//								triples.add(new Triple("", "", t.getSubject()));
+//						}
+//					}
+//					else {
+//						Set<Triple> newTriples = new HashSet<Triple>();
+//						for (Triple t : propTriples) {
+//							if (t.getSubject().equals(v)) {
+//								Triple nt = new Triple("", "", t.getSubject());
+//								newTriples.add(nt);
+//							}
+//						}
+//						triples.retainAll(newTriples);
+//					}
+//				}
+//				if (triples == null || triples.size() == 0) {
+////					log.debug("not all ground terms found 2");
+//					m_invalidVertices.add(v + "__" + iso.getVertexCorrespondence(v, true));
+////					return null;
+//					allFound = false;
+//					break;
+//				}
+//				if (allFound)
+//					tripleMapping.put(v, new TripleList(new ArrayList<Triple>(triples)));
+//			}
+////			log.debug("--> found");
+//		}
+//		
+//		if (!allFound)
+//			return null;
 		
 		edges.addAll(queryGraph.edgeSet());
 		

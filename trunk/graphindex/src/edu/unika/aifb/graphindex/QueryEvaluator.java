@@ -66,8 +66,6 @@ public class QueryEvaluator {
 		m_vcc = new VCompatibilityCache();
 		m_invalidVertices = new HashSet<String>();
 		m_index = index;
-		
-		initialize();
 	}
 	
 	private ResultSet toResultSet(Set<Map<String,String>> mappings, Set<String> vars) {
@@ -90,88 +88,27 @@ public class QueryEvaluator {
 		return rs;
 	}
 	
-	private void initialize() {
-		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
-			log.debug("index graph: " + indexGraph);
-//			indexGraph.calc();
-		}
-		log.info("evaluator initialized, " + Util.memory());
-	}
-	
 	public ResultSet evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
 		log.info("evaluating...");
-		
 		long start = System.currentTimeMillis();
 		m_timings = new Timings();
 		
 		final NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph = query.toQueryGraph();
 		queryGraph.calc();
+		IndexGraph qg = new IndexGraph(queryGraph, 1);
+
 		log.debug("query graph: " + queryGraph);
 		Util.printDOT("query.dot", queryGraph);
 		
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		
-		final ExecutorService executor = Executors.newFixedThreadPool(1);
+		final ExecutorService executor = Executors.newFixedThreadPool(5);
 		final ExecutorCompletionService<Set<Map<String,String>>> completionService = new ExecutorCompletionService<Set<Map<String,String>>>(executor);
 		
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
-		for (NamedGraph<String,LabeledEdge<String>> indexGraph : m_index.getIndexGraphs()) {
+		for (IndexGraph indexGraph : m_index.getIndexGraphs()) {
 			
-//			DiGraphMatcher3 matcher = new DiGraphMatcher3(queryGraph, indexGraph, true, 
-//					new FeasibilityChecker<String,LabeledEdge<String>,DirectedGraph<String,LabeledEdge<String>>>() {
-//						public boolean isEdgeCompatible(LabeledEdge<String> e1, LabeledEdge<String> e2) {
-//							return e1.getLabel().equals(e2.getLabel());
-//						}
-//		
-//						public boolean isVertexCompatible(String n1, String n2) {
-////							return checkVertexCompatible(n1, n2);
-//							if (!n1.startsWith("?")) {
-//								Boolean value = m_gtc.get(n1, n2);
-//								if (value != null)
-//									return value.booleanValue();
-//							}
-//							return true;
-//						}
-//						
-//						public boolean checkVertexCompatible(String n1, String n2) {
-//							if (!n1.startsWith("?")) { // not variable, ie. ground term
-//								m_timings.start(Timings.GT);
-//								Boolean value = m_gtc.get(n1, n2);
-//								if (value == null) {
-//									for (String label : queryGraph.inEdgeLabels(n1)) {
-//										try {
-//											if (m_les.hasDocs(n2, label, n1)) {
-//												value = true;
-//												break;
-//											}
-//											else {
-//												value = false;
-//												break;
-//											}
-//										} catch (StorageException e) {
-//											e.printStackTrace();
-//										}
-//									}
-//									m_gtc.put(n1, n2, value);
-//								}
-//								m_timings.end(Timings.GT);
-//								return value.booleanValue();
-//							}
-//							return true;
-//						}
-//					},
-//					new MappingListener<String,LabeledEdge<String>>() {
-//						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-//							completionService.submit(new MappingValidator(queryGraph, iso, m_gtc, m_invalidVertices, m_collector));
-////							log.debug("mapping " + iso);
-//						}
-//			});
-			
-			final IndexGraph qg = new IndexGraph(queryGraph);
-			final IndexGraph ig = new IndexGraph(indexGraph);
-			log.debug("index graphs created, " + Util.memory());
-			
-			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, ig, true, new QueryFeasibilityChecker(qg, ig, m_vcc, m_timings, m_les), 
+			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, indexGraph, true, new QueryFeasibilityChecker(qg, indexGraph, m_vcc, m_timings, m_les), 
 					new MappingListener<String,LabeledEdge<String>>() {
 						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
 							completionService.submit(new MappingValidator(queryGraph, iso, null, m_invalidVertices, m_collector));
@@ -181,15 +118,14 @@ public class QueryEvaluator {
 			log.debug("matcher created");
 			
 			m_timings.start(Timings.MATCH);
-			if (!matcher.isSubgraphIsomorphic()) {
-				log.debug("matches: 0");
-				m_timings.end(Timings.MATCH);
-				continue;
-			}
+			boolean found = matcher.isSubgraphIsomorphic();
 			m_timings.end(Timings.MATCH);
 			
 			log.info("matches: " + matcher.numberOfMappings());
 			log.debug("pairs generated: " + matcher.pairs);
+			
+			if (!found)
+				continue;
 
 			for (int i = 0; i < matcher.numberOfMappings(); i++) {
 				Future<Set<Map<String,String>>> f = completionService.take();
@@ -202,7 +138,8 @@ public class QueryEvaluator {
 		log.debug("result maps: " + results.size());
 		
 		ResultSet rs = toResultSet(results, queryGraph.getVariables());
-		log.debug(rs);
+		if (rs.size() < 1000)
+			log.debug(rs);
 		log.debug("size: " + rs.size());
 		
 		long end = System.currentTimeMillis();
@@ -211,7 +148,7 @@ public class QueryEvaluator {
 		m_collector.addTimings(m_timings);
 		m_collector.logStats();
 		
-		log.debug("cache size: " + m_vcc.size());
+		log.debug("vcc size: " + m_vcc.size());
 		m_vcc.clear();
 
 		return null;

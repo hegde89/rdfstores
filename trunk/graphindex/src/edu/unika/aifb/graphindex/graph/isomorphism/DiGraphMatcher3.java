@@ -472,14 +472,18 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 				}
 				return true;
 			}
+			else
+				log.debug("discarding " + toStringMapping(mapping));
 			return false;
 		} else {
 			boolean found = false;
 			Pair p = new Pair(NULL_NODE, NULL_NODE);
 			while ((p = m_state.nextPair(p.n1, p.n2)) != null) {
 				pairs++;
-//				log.debug("trying " + p + ", current mapping: " + state.getMapping());
-				if (isFeasible(p.n1, p.n2, state)) {
+				if (pairs % 100000 == 0)
+					log.debug(" pairs generated: " + pairs);
+//				log.debug("trying " + p);
+				if (isFeasibleSubgraph(p.n1, p.n2, state)) {
 					DiGMState newState = new DiGMState(state);
 					newState.addPair(p.n1, p.n2);
 					if (match(newState)) {
@@ -574,7 +578,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		return val;
 	}
 	
-	private boolean isFeasibleSubgraph(int n1, int n2) {
+	private boolean isFeasibleSubgraph(int n1, int n2, DiGMState state) {
 		int termin1 = 0, termin2 = 0, termout1 = 0, termout2 = 0, new1 = 0, new2 = 0;
 		
 		if (m_g2.outDegreeOf(n2) < m_g1.outDegreeOf(n1) || m_g2.inDegreeOf(n2) < m_g1.inDegreeOf(n1))
@@ -696,8 +700,13 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 //		log.debug(atos(in1) + " " + atos(in2) + " " + atos(out1) + " " + atos(out2));
 //		log.debug(termin1 + " " + termin2 + " " + termout1 + " " + termout2 + " " + new1 + " " + new2);
 		
-		return termin1 <= termin2 && termout1 <= termout2
-				&& (termin1 + termout1 + new1) <= (termin2 + termout2 + new2);
+		if (!(termin1 <= termin2 && termout1 <= termout2 && (termin1 + termout1 + new1) <= (termin2 + termout2 + new2)))
+			return false;
+
+		if (!m_checker.checkVertexCompatible(n1, n2))
+			return false;
+		
+		return true;
 	}
 	
 	private String atos(int[] a) {
@@ -709,20 +718,6 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			comma = ",";
 		}
 		return s + "}";
-	}
-
-	private boolean isFeasible(int n1, int n2, DiGMState state) {
-		
-		if (state.coreLength() == 0) {
-			if (!m_checker.isVertexCompatible(n1, n2))
-				return false;
-		}
-		else {
-			if (!m_checker.checkVertexCompatible(n1, n2))
-				return false;
-		}
-
-		return isFeasibleSubgraph(n1, n2);
 	}
 
 	/**

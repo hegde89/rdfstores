@@ -26,6 +26,10 @@ public class IndexGraph {
 
 	@SuppressWarnings("unchecked")
 	public IndexGraph(NamedGraph<String,LabeledEdge<String>> graph) {
+		this(graph, 1);
+	}
+	
+	public IndexGraph(NamedGraph<String,LabeledEdge<String>> graph, final int order) {
 		m_graph = graph;
 		
 		m_nodeCount = graph.vertexSet().size();
@@ -33,7 +37,12 @@ public class IndexGraph {
 		List<String> vertices = new ArrayList<String>(graph.vertexSet());
 		Collections.sort(vertices, new Comparator<String>() {
 			public int compare(String o1, String o2) {
-				return o1.compareTo(o2) * 1;
+				if (o1.startsWith("?") && !o2.startsWith("?"))
+					return 1;
+				else if (!o1.startsWith("?") && o2.startsWith("?"))
+					return -1;
+				else
+					return o1.compareTo(o2) * order;
 			}
 		});
 		Map<String,Integer> v2i = new HashMap<String,Integer>();
@@ -43,11 +52,12 @@ public class IndexGraph {
 		for (String vertex : vertices) {
 			m_labels[i] = vertex;
 			v2i.put(vertex, i);
-//			System.out.print(i + "=" + vertex + " ");
+			if (vertices.size() < 10)
+				System.out.print(i + "=" + vertex + " ");
 
 			i++;
 		}
-//		System.out.println();
+		System.out.println();
 		
 		m_edgeLabels = new HashSet<String>();
 		m_predecessors = new List [m_nodeCount];

@@ -15,6 +15,7 @@ public class IndexGraph {
 	private int m_nodeCount;
 	private Set<String> m_edgeLabels;
 	private String[] m_labels;
+	private int[] m_inDegrees, m_outDegrees;
 	private List<Integer>[] m_predecessors, m_successors;
 	private Map<String,List<Integer>>[] m_labelPredecessors, m_labelSuccessors;
 	private Map<Integer,List<IndexEdge>>[] m_predecessorEdges, m_successorEdges;
@@ -59,6 +60,8 @@ public class IndexGraph {
 		}
 		System.out.println();
 		
+		m_inDegrees = new int [m_nodeCount];
+		m_outDegrees = new int [m_nodeCount];
 		m_edgeLabels = new HashSet<String>();
 		m_predecessors = new List [m_nodeCount];
 		m_successors = new List [m_nodeCount];
@@ -97,6 +100,7 @@ public class IndexGraph {
 				
 				m_edgeLabels.add(e.getLabel());
 			}
+			m_inDegrees[i] = preds.size();
 			if (preds.size() > 0)
 				m_predecessors[i] = preds;
 			if (labelPreds.size() > 0)
@@ -133,6 +137,7 @@ public class IndexGraph {
 
 				m_edgeLabels.add(e.getLabel());
 			}
+			m_outDegrees[i] = succs.size();
 			if (succs.size() > 0)
 				m_successors[i] = succs;
 			if (labelSuccs.size() > 0)

@@ -102,7 +102,7 @@ public class QueryEvaluator {
 		
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		
-		final ExecutorService executor = Executors.newFixedThreadPool(5);
+		final ExecutorService executor = Executors.newFixedThreadPool(1);
 		final ExecutorCompletionService<Set<Map<String,String>>> completionService = new ExecutorCompletionService<Set<Map<String,String>>>(executor);
 		
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();

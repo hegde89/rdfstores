@@ -76,7 +76,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			e.printStackTrace();
 		}
 		
-		BooleanQuery.setMaxClauseCount(65536);
+		BooleanQuery.setMaxClauseCount(1048576);
 	}
 	
 	public void close() {
@@ -368,8 +368,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			es = null;
 		
 		long build = System.currentTimeMillis() - start - dr;
-		if (docs.size() > 0)
-			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
+//		if (docs.size() > 0)
+//			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
 		
 		return es;
 	}

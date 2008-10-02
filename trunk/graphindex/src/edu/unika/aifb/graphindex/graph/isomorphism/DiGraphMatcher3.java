@@ -133,68 +133,70 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			return map;
 		}
 		
-		public Pair nextPair(int prev_n1, int prev_n2) {
-			do {
-				if (prev_n1 == NULL_NODE)
-					prev_n1 = 0;
-				if (prev_n2 == NULL_NODE)
+		public boolean nextPair(int[] p) {
+			int prev_n1 = p[0];
+			int prev_n2 = p[1];
+
+			if (prev_n1 == NULL_NODE)
+				prev_n1 = 0;
+			if (prev_n2 == NULL_NODE)
+				prev_n2 = 0;
+			else
+				prev_n2++;
+		
+			if (t1both_len > core_len && t2both_len > core_len) {
+				while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || out1[prev_n1] == 0 || in1[prev_n1] == 0)) {
+					prev_n1++;
 					prev_n2 = 0;
-				else
-					prev_n2++;
-			
-				if (t1both_len > core_len && t2both_len > core_len) {
-					while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || out1[prev_n1] == 0 || in1[prev_n1] == 0)) {
-						prev_n1++;
-						prev_n2 = 0;
-					}
-				}
-				else if (t1out_len > core_len && t2out_len > core_len) {
-					while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || out1[prev_n1] == 0)) {
-						prev_n1++;
-						prev_n2 = 0;
-					}
-				}
-				else if (t1in_len > core_len && t2in_len > core_len) {
-					while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || in1[prev_n1] == 0)) {
-						prev_n1++;
-						prev_n2 = 0;
-					}
-				}
-				else {
-					while (prev_n1 < n1 && core1[prev_n1] != NULL_NODE) {
-						prev_n1++;
-						prev_n2 = 0;
-					}
-				}
-				
-				if (t1both_len > core_len && t2both_len > core_len) { 
-					while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || out2[prev_n2] == 0 || in2[prev_n2] == 0)) { 
-						prev_n2++;    
-					}
-				}
-				else if (t1out_len > core_len && t2out_len > core_len) { 
-					while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || out2[prev_n2] == 0)) { 
-						prev_n2++;    
-					}
-				}
-			    else if (t1in_len > core_len && t2in_len > core_len) { 
-			    	while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || in2[prev_n2] == 0)) { 
-			    		prev_n2++;    
-			    	}
-			    }
-				else { 
-					while (prev_n2 < n2 && core2[prev_n2] != NULL_NODE) {
-						prev_n2++;    
-					}
 				}
 			}
-			while (prev_n1 < n1 && prev_n2 < n2 && !checker.isVertexCompatible(prev_n1, prev_n2));
+			else if (t1out_len > core_len && t2out_len > core_len) {
+				while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || out1[prev_n1] == 0)) {
+					prev_n1++;
+					prev_n2 = 0;
+				}
+			}
+			else if (t1in_len > core_len && t2in_len > core_len) {
+				while (prev_n1 < n1 && (core1[prev_n1] != NULL_NODE || in1[prev_n1] == 0)) {
+					prev_n1++;
+					prev_n2 = 0;
+				}
+			}
+			else {
+				while (prev_n1 < n1 && core1[prev_n1] != NULL_NODE) {
+					prev_n1++;
+					prev_n2 = 0;
+				}
+			}
+			
+			if (t1both_len > core_len && t2both_len > core_len) { 
+				while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || out2[prev_n2] == 0 || in2[prev_n2] == 0)) { 
+					prev_n2++;    
+				}
+			}
+			else if (t1out_len > core_len && t2out_len > core_len) { 
+				while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || out2[prev_n2] == 0)) { 
+					prev_n2++;    
+				}
+			}
+		    else if (t1in_len > core_len && t2in_len > core_len) { 
+		    	while (prev_n2 < n2 && (core2[prev_n2] != NULL_NODE || in2[prev_n2] == 0)) { 
+		    		prev_n2++;    
+		    	}
+		    }
+			else { 
+				while (prev_n2 < n2 && core2[prev_n2] != NULL_NODE) {
+					prev_n2++;    
+				}
+			}
 			
 			if (prev_n1 < n1 && prev_n2 < n2) {
-				return new Pair(prev_n1, prev_n2);
+				p[0] = prev_n1;
+				p[1] = prev_n2;
+				return true;
 			}
 			
-			return null;
+			return false;
 		}
 		
 		public void addPair(int node1, int node2) {
@@ -477,15 +479,16 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			return false;
 		} else {
 			boolean found = false;
-			Pair p = new Pair(NULL_NODE, NULL_NODE);
-			while ((p = m_state.nextPair(p.n1, p.n2)) != null) {
+//			Pair p = new Pair(NULL_NODE, NULL_NODE);
+			int p[] = new int [] { NULL_NODE, NULL_NODE };
+			while (m_state.nextPair(p)) {
 				pairs++;
 				if (pairs % 100000 == 0)
 					log.debug(" pairs generated: " + pairs);
 //				log.debug("trying " + p);
-				if (isFeasibleSubgraph(p.n1, p.n2, state)) {
+				if (isFeasibleSubgraph(p[0], p[1], state)) {
 					DiGMState newState = new DiGMState(state);
-					newState.addPair(p.n1, p.n2);
+					newState.addPair(p[0], p[1]);
 					if (match(newState)) {
 						found = true;
 						if (!m_generateMappings)
@@ -584,13 +587,11 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		if (m_g2.outDegreeOf(n2) < m_g1.outDegreeOf(n1) || m_g2.inDegreeOf(n2) < m_g1.inDegreeOf(n1))
 			return false;
 		
-		if (!m_g2.outEdgeLabels(n2).containsAll(m_g1.outEdgeLabels(n1))) {
+		if (!m_g2.outEdgeLabels(n2).containsAll(m_g1.outEdgeLabels(n1)))
 			return false;
-		}
 		
-		if (!m_g2.inEdgeLabels(n2).containsAll(m_g1.inEdgeLabels(n1))) {
+		if (!m_g2.inEdgeLabels(n2).containsAll(m_g1.inEdgeLabels(n1)))
 			return false;
-		}
 		
 		// R_pred
 		Map<Integer,List<IndexEdge>> n1predMap = m_g1.predecessorEdges(n1);

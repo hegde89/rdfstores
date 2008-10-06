@@ -1,15 +1,12 @@
 package edu.unika.aifb.graphindex.data;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.algorithm.rcp.Block;
-import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
 
 public abstract class AbstractVertex implements IVertex {
 	protected long m_id;
 	protected IVertex m_next, m_prev;
 	protected Block m_block;
 	protected int m_movedIn = -1;
-	protected int m_clearedIn = -1;
 
 	public AbstractVertex(long id) {
 		m_id = id;
@@ -21,14 +18,6 @@ public abstract class AbstractVertex implements IVertex {
 
 	public void setMovedIn(int in) {
 		m_movedIn = in;
-	}
-
-	public int getClearedIn() {
-		return m_clearedIn;
-	}
-
-	public void setClearedIn(int in) {
-		m_clearedIn = in;
 	}
 
 	public long getId() {

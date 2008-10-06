@@ -5,12 +5,12 @@ import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 import edu.unika.aifb.graphindex.graph.IndexEdge;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker3;
+import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 
-public class QueryFeasibilityChecker implements FeasibilityChecker3 {
+public class QueryFeasibilityChecker implements FeasibilityChecker {
 
 	private VCompatibilityCache m_vcc;
 	private Timings m_timings;

@@ -9,6 +9,11 @@ import org.jgrapht.EdgeFactory;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Predicate;
+import edu.unika.aifb.graphindex.query.model.Term;
+import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class NamedQueryGraph<V extends String, E extends LabeledEdge<String>> extends NamedGraph<String,LabeledEdge<String>> {

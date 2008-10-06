@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.query;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.query.model.Predicate;
 
 public class LabeledQueryEdge<V extends String> extends LabeledEdge<String> {
 

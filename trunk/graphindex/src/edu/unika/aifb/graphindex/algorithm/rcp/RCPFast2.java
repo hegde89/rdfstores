@@ -21,8 +21,10 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.graph.QueryGraph;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -111,7 +113,7 @@ public class RCPFast2 {
 		return image;
 	}
 	
-	public NamedGraph<String,LabeledEdge<String>> createIndex(List<IVertex> vertices, String partitionFile) throws StorageException, IOException, InterruptedException {
+	private Partition createPartition(List<IVertex> vertices) {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Partition p = new Partition();
@@ -234,43 +236,10 @@ public class RCPFast2 {
 		log.info("steps: " + steps);
 
 		purgeSelfloops(p);
-//		log.debug(p.stable());
 		
-		NamedGraph<String,LabeledEdge<String>> g = createIndexGraph(p);
-		
-		writePartition(p, partitionFile);
-		
-		return g;
+		return p;
 	}
 	
-	private void writePartition(Partition p, String partitionFile) throws IOException, InterruptedException {
-		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
-	
-		log.info("writing partition file...");
-		int blocks = 0;
-		for (Block b : p.getBlocks()) {
-			for (IVertex v : b) {
-				for (Long label : v.getEdgeLabels()) {
-					for (IVertex y : v.getImage(label)) {
-						out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId());
-					}
-				}
-			}
-			
-			blocks++;
-
-			if (blocks % 5000 == 0)
-				log.debug(" blocks processed: " + blocks);
-		}
-		
-		out.close();
-		
-		// sort partition file by extension uri, property uri, object
-		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
-		process.waitFor();
-		log.debug("sorted");
-	}
-
 	private void purgeSelfloops(Partition p) {
 		List<Block> newBlocks = new LinkedList<Block>();
 		for (Block b : p.getBlocks()) {
@@ -278,7 +247,6 @@ public class RCPFast2 {
 			boolean hasSelfloop = false;
 			for (IVertex v2 : b) {
 				if (v != v2) {
-//					for (long label : v.getImage().keySet()) {
 					for (long label : v.getEdgeLabels()) {
 						if (v.getImage(label).contains(v2)) {
 							hasSelfloop = true;
@@ -306,7 +274,49 @@ public class RCPFast2 {
 			p.add(nb);
 	}
 	
-	private NamedGraph<String,LabeledEdge<String>> createIndexGraph(Partition p) throws StorageException, FileNotFoundException {
+	public IndexGraph createIndexGraph(List<IVertex> vertices, String partitionFile) throws StorageException, IOException, InterruptedException {
+		Partition p = createPartition(vertices);
+		
+		IndexGraph g = createIndexGraph(p);
+
+		writePartition(p, partitionFile);
+		
+		return g;
+	}
+	
+	public QueryGraph createQueryGraph(List<IVertex> vertices) throws StorageException {
+		Partition p = createPartition(vertices);
+		
+		QueryGraph g = createQueryGraph(p);
+		
+		return g;
+	}
+	
+	private QueryGraph createQueryGraph(Partition p) throws StorageException {
+		Map<String,List<String>> b2l = new HashMap<String,List<String>>();
+		NamedGraph<String,LabeledEdge<String>> g = m_gm.graph();
+		for (Block b : p.getBlocks()) {
+			g.addVertex(b.getName());
+
+			List<String> vertices = new ArrayList<String>();
+			for (IVertex v : b) {
+				String vl = m_hashes.getValue(v.getId());
+				for (Long label : v.getEdgeLabels()) {
+					for (IVertex y : v.getImage(label)) {
+						g.addVertex(y.getBlock().getName());
+						g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), vl));
+					}
+				}
+				vertices.add(vl);
+			}
+			if (vertices.size() > 0)
+				b2l.put(b.getName(), vertices);
+		}
+		
+		return new QueryGraph(g, b2l);
+	}
+	
+	private IndexGraph createIndexGraph(Partition p) throws StorageException, FileNotFoundException {
 		log.info("creating index graph...");
 		int blocks = 0;
 		NamedGraph<String,LabeledEdge<String>> g = m_gm.graph();
@@ -328,6 +338,34 @@ public class RCPFast2 {
 				log.debug(" blocks processed: " + blocks);
 		}
 		
-		return g;
+		return new IndexGraph(g);
+	}
+
+	private void writePartition(Partition p, String partitionFile) throws IOException, InterruptedException {
+		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
+	
+		log.info("writing partition file...");
+		int blocks = 0;
+		for (Block b : p.getBlocks()) {
+			for (IVertex v : b) {
+				for (Long label : v.getEdgeLabels()) {
+					for (IVertex y : v.getImage(label)) {
+						out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId());
+					}
+				}
+			}
+			
+			blocks++;
+
+			if (blocks % 5000 == 0)
+				log.debug(" blocks processed: " + blocks);
+		}
+		
+		out.close();
+		
+		// sort partition file by extension uri, property uri, object
+		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
+		process.waitFor();
+		log.debug("sorted");
 	}
 }

@@ -332,24 +332,38 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		long start = System.currentTimeMillis();
 		
 		PrefixQuery pq = new PrefixQuery(getTerm(extUri, property));
-		BooleanQuery bq = (BooleanQuery)pq.rewrite(m_reader);
+		List<Document> docs = getDocuments(pq);
 		
-		long rewrite = System.currentTimeMillis() - start;
+		long dr = System.currentTimeMillis() - start;
 		
-		List<ExtensionSegment> segments = new ArrayList<ExtensionSegment>(bq.getClauses().length);
-		for (BooleanClause clause : bq.getClauses()) {
-			Term t = ((TermQuery)clause.getQuery()).getTerm();
-			if (t.field().equals(FIELD_EXT)) {
-				String[] path = getPathFromTerm(t);
-				ExtensionSegment es = loadExtensionSegment(extUri, property, path[2]);
-				if (es != null)
-					segments.add(es);
-			}
+		List<ExtensionSegment> segments = new ArrayList<ExtensionSegment>(docs.size());
+		int triples = 0;
+		for (Document doc : docs) {
+			ExtensionSegment es = documentToSegment(doc, extUri, property);
+			triples += es.size();
+			segments.add(es);
 		}
 		
-		long duration = System.currentTimeMillis() - start;
+//		BooleanQuery bq = (BooleanQuery)pq.rewrite(m_reader);
+//		
+//		long rewrite = System.currentTimeMillis() - start;
+//		
+//		List<ExtensionSegment> segments = new ArrayList<ExtensionSegment>(bq.getClauses().length);
+//		for (BooleanClause clause : bq.getClauses()) {
+//			Term t = ((TermQuery)clause.getQuery()).getTerm();
+//			if (t.field().equals(FIELD_EXT)) {
+//				String[] path = getPathFromTerm(t);
+//				ExtensionSegment es = loadExtensionSegment(extUri, property, path[2]);
+//				if (es != null)
+//					segments.add(es);
+//			}
+//		}
+
+		long build = System.currentTimeMillis() - start - dr;
 		
-//		log.debug(" duration: " + duration + ", rewrite: " + rewrite);
+		if (docs.size() > 0)
+			log.debug("meq: " + pq + " (" + docs.size() + " docs, " + triples + " triples) {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
+		
 		return segments;
 	}
 	
@@ -368,8 +382,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			es = null;
 		
 		long build = System.currentTimeMillis() - start - dr;
-//		if (docs.size() > 0)
-//			log.debug("q: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
+		if (docs.size() > 0)
+			log.debug("seq: " + tq + " (" + docs.size() + " docs" + (es != null ? ", " + es.getSubjects().size() + " triples" : "") + ") {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", b: " + build + "}");
 		
 		return es;
 	}

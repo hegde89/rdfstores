@@ -1,50 +1,24 @@
 package edu.unika.aifb.graphindex.graph.isomorphism;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
-import org.jgrapht.graph.ClassBasedEdgeFactory;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.graph.IndexEdge;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.storage.StorageException;
 
-/**
- * Implementation of the VF2 graph isomorphism algorithm, published in:
- * <p>
- * Luigi P. Cordella, Pasquale Foggia, Carlo Sansone, Mario Vento,
- * "A (Sub)Graph Isomorphism Algorithm for Matching Large Graphs," IEEE
- * Transactions on Pattern Analysis and Machine Intelligence, vol. 26, no. 10,
- * pp. 1367-1372, Oct., 2004.
- * <p>
- * Inspired by the implementation in the NetworkX graph library for Python:
- * {@link https://networkx.lanl.gov/wiki}
- * 
- * @author gl
- * 
- * @param <String>
- * @param <LabeledEdge<String>>
- */
-public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,LabeledEdge<String>>> {
-
+public class GraphMatcher implements Iterable<VertexMapping>{
 	public class DiGMState {
 		private IndexGraph g1, g2;
-		private FeasibilityChecker3 checker;
+		private FeasibilityChecker checker;
 		
 		private int[] core1, core2;
 		private int[] in1, in2, out1, out2;
@@ -234,7 +208,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			core1[node1] = node2;
 			core2[node2] = node1;
 			
-			for (int pred : g1.predecessors(node1, m_labels)) {
+			for (int pred : g1.predecessors(node1)) {
 				if (in1[pred] == 0) {
 					in1[pred] = core_len;
 					t1in_len++;
@@ -243,7 +217,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 				}
 			}
 
-			for (int succ : g1.successors(node1, m_labels)) {
+			for (int succ : g1.successors(node1)) {
 				if (out1[succ] == 0) {
 					out1[succ] = core_len;
 					t1out_len++;
@@ -251,8 +225,10 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 						t1both_len++;
 				}
 			}
+			
+			Set<String> labels = g1.edgeLabels(node1);
 
-			for (int pred : g2.predecessors(node2, m_labels)) {
+			for (int pred : g2.predecessors(node2, labels)) {
 				if (in2[pred] == 0) {
 					in2[pred] = core_len;
 					t2in_len++;
@@ -261,7 +237,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 				}
 			}
 
-			for (int succ : g2.successors(node2, m_labels)) {
+			for (int succ : g2.successors(node2, labels)) {
 				if (out2[succ] == 0) {
 					out2[succ] = core_len;
 					t2out_len++;
@@ -371,14 +347,14 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	
 	private DiGMState m_state;
 	
-	private List<IsomorphismRelation<String,LabeledEdge<String>>> m_isomorphisms;
+	private List<VertexMapping> m_vertexMappings;
 
-	private FeasibilityChecker3 m_checker;
-	private MappingListener<String,LabeledEdge<String>> m_listener;
+	private FeasibilityChecker m_checker;
+	private MappingListener m_listener;
 	
 	private boolean m_generateMappings;
 	
-	private final static Logger log = Logger.getLogger(DiGraphMatcher3.class);
+	private final static Logger log = Logger.getLogger(SubgraphMatcher.class);
 
 	/**
 	 * Create a new matcher object. If testing for subgraph isomorphism,
@@ -396,8 +372,8 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 *            mapping can be extended by the two nodes
 	 * @param listener
 	 */
-	public DiGraphMatcher3(IndexGraph graph1, IndexGraph graph2, boolean generateMappings, FeasibilityChecker3 checker,
-			MappingListener<String,LabeledEdge<String>> listener) {
+	public GraphMatcher(IndexGraph graph1, IndexGraph graph2, boolean generateMappings, FeasibilityChecker checker,
+			MappingListener listener) {
 		m_g1 = graph1;
 		m_g2 = graph2;
 		m_listener = listener;
@@ -415,9 +391,13 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		m_in2 = new int[m_g2.nodeCount()];
 		m_out2 = new int[m_g2.nodeCount()];
 		
-		m_isomorphisms = new ArrayList<IsomorphismRelation<String,LabeledEdge<String>>>();
+		m_vertexMappings = new ArrayList<VertexMapping>();
 		
 		m_state = new DiGMState();
+	}
+	
+	public GraphMatcher(IndexGraph graph1, IndexGraph graph2, boolean generateMappings, FeasibilityChecker checker) {
+		this(graph1, graph2, generateMappings, checker, null);
 	}
 
 	/**
@@ -427,26 +407,14 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 * @return true, if <code>graph1</code> is isomorphic to a subgraph of
 	 *         <code>graph2</code>, false otherwise
 	 */
-	public boolean isSubgraphIsomorphic() {
-		m_isomorphisms.clear();
+	public boolean isIsomorphic() {
+		m_vertexMappings.clear();
 
 		boolean found = match(m_state);
 
 		return found;
 	}
 
-	private IsomorphismRelation<String,LabeledEdge<String>> createIsomorphismRelation(Map<String,String> map) {
-		List<String> g1list = new LinkedList<String>();
-		List<String> g2list = new LinkedList<String>();
-
-		for (String v : map.keySet()) {
-			g1list.add(v);
-			g2list.add(map.get(v));
-		}
-
-		return new IsomorphismRelation<String,LabeledEdge<String>>(g1list, g2list, m_g1.getNamedGraph(), m_g2.getNamedGraph());
-	}
-	
 	private Map<String,String> toStringMapping(Map<Integer,Integer> map) {
 		Map<String,String> smap = new HashMap<String,String>();
 		for (int k : map.keySet())
@@ -467,10 +435,10 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			if (valid) {
 				log.debug("found: " + mapping);
 				if (m_generateMappings) {
-					IsomorphismRelation<String,LabeledEdge<String>> iso = createIsomorphismRelation(toStringMapping(mapping));
-					m_isomorphisms.add(iso);
+					VertexMapping vm = new VertexMapping(toStringMapping(mapping));
+					m_vertexMappings.add(vm);
 					if (m_listener != null)
-						m_listener.mapping(iso);
+						m_listener.mapping(vm);
 				}
 				return true;
 			}
@@ -483,10 +451,10 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 			int p[] = new int [] { NULL_NODE, NULL_NODE };
 			while (m_state.nextPair(p)) {
 				pairs++;
-				if (pairs % 100000 == 0)
+				if (pairs % 10000000 == 0)
 					log.debug(" pairs generated: " + pairs);
 //				log.debug("trying " + p);
-				if (isFeasibleSubgraph(p[0], p[1], state)) {
+				if (isFeasible(p[0], p[1], state)) {
 					DiGMState newState = new DiGMState(state);
 					newState.addPair(p[0], p[1]);
 					if (match(newState)) {
@@ -581,7 +549,7 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 		return val;
 	}
 	
-	private boolean isFeasibleSubgraph(int n1, int n2, DiGMState state) {
+	private boolean isFeasible(int n1, int n2, DiGMState state) {
 		int termin1 = 0, termin2 = 0, termout1 = 0, termout2 = 0, new1 = 0, new2 = 0;
 		
 		if (m_g2.outDegreeOf(n2) < m_g1.outDegreeOf(n1) || m_g2.inDegreeOf(n2) < m_g1.inDegreeOf(n1))
@@ -729,10 +697,11 @@ public class DiGraphMatcher3 implements Iterable<IsomorphismRelation<String,Labe
 	 * @return the number of mappings
 	 */
 	public int numberOfMappings() {
-		return m_isomorphisms.size();
+		return m_vertexMappings.size();
 	}
 
-	public Iterator<IsomorphismRelation<String,LabeledEdge<String>>> iterator() {
-		return m_isomorphisms.iterator();
+	public Iterator<VertexMapping> iterator() {
+		return m_vertexMappings.iterator();
 	}
+
 }

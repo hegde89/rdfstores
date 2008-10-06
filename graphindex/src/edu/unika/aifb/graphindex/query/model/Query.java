@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.query;
+package edu.unika.aifb.graphindex.query.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,6 +7,8 @@ import java.util.List;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.graphindex.query.LabeledQueryEdge;
+import edu.unika.aifb.graphindex.query.NamedQueryGraph;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class Query {

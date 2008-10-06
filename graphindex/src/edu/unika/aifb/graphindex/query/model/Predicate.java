@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.query;
+package edu.unika.aifb.graphindex.query.model;
 
 public class Predicate {
 	private String m_uri;

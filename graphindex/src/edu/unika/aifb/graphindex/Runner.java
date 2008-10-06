@@ -8,10 +8,10 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.data.FileHashValueProvider;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.data.LVertexM;
-import edu.unika.aifb.graphindex.data.LVertexM2;
 import edu.unika.aifb.graphindex.data.ListVertexCollection;
 import edu.unika.aifb.graphindex.data.MapVertexCollection;
 import edu.unika.aifb.graphindex.data.SortedVertexListBuilder;
@@ -30,11 +30,11 @@ import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
 import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
-import edu.unika.aifb.graphindex.query.Individual;
-import edu.unika.aifb.graphindex.query.Literal;
-import edu.unika.aifb.graphindex.query.Predicate;
-import edu.unika.aifb.graphindex.query.Query;
-import edu.unika.aifb.graphindex.query.Variable;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Literal;
+import edu.unika.aifb.graphindex.query.model.Predicate;
+import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -168,7 +168,9 @@ public class Runner {
 			
 			String q17 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://lsdis.cs.uga.edu/projects/semdis/opus#Article\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?z http://xmlns.com/foaf/0.1/name ?n";
 			
-			return q17; 
+			String q18 = "http://dblp.uni-trier.de/rec/bibtex/journals/iandc/CaprettaUV06 http://lsdis.cs.uga.edu/projects/semdis/opus#author ?x";
+			
+			return q18; 
 		}
 		
 		return null;
@@ -322,7 +324,7 @@ public class Runner {
 			gm.initialize(true, false);
 			
 			VertexListProvider vlp = new VertexListProvider(outputDirectory + "/components/");
-			HashValueProvider hvp = new HashValueProvider(outputDirectory + "/hashes", outputDirectory + "/propertyhashes");
+			HashValueProvider hvp = new FileHashValueProvider(outputDirectory + "/hashes", outputDirectory + "/propertyhashes");
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();

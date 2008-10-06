@@ -14,12 +14,13 @@ import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.query.Constant;
-import edu.unika.aifb.graphindex.query.Individual;
+import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
 import edu.unika.aifb.graphindex.query.LabeledQueryEdge;
 import edu.unika.aifb.graphindex.query.NamedQueryGraph;
-import edu.unika.aifb.graphindex.query.Term;
-import edu.unika.aifb.graphindex.query.Variable;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Term;
+import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -27,7 +28,7 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 public class MappingValidator implements Callable<Set<Map<String,String>>> {
 
 	private NamedQueryGraph<String,LabeledQueryEdge<String>> m_queryGraph;
-	private IsomorphismRelation<String,LabeledEdge<String>> m_iso;
+	private VertexMapping m_mapping;
 	private GroundTermCache m_gtc;
 	private Set<String> m_invalidVertices;
 	private ExtensionManager m_em;
@@ -35,8 +36,8 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 	private Timings t;
 	private static final Logger log = Logger.getLogger(MappingValidator.class);
 	
-	public MappingValidator(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, IsomorphismRelation<String,LabeledEdge<String>> iso, GroundTermCache groundTermCache, Set<String> vertices, StatisticsCollector collector) {
-		m_iso = iso;
+	public MappingValidator(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, VertexMapping iso, GroundTermCache groundTermCache, Set<String> vertices, StatisticsCollector collector) {
+		m_mapping = iso;
 		m_queryGraph = queryGraph;
 //		m_gtc = groundTermCache;
 		m_em = StorageManager.getInstance().getExtensionManager();
@@ -139,7 +140,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 		return result;
 	}
 	
-	private Set<Map<String,String>> validateMapping2(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, IsomorphismRelation<String,LabeledEdge<String>> iso) throws StorageException {
+	private Set<Map<String,String>> validateMapping2(NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph, VertexMapping vm) throws StorageException {
 		List<LabeledEdge<String>> edges = new ArrayList<LabeledEdge<String>>();
 		
 		Map<String,TripleList> tripleMapping = new HashMap<String,TripleList>();
@@ -152,8 +153,8 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 			LabeledQueryEdge<String> queryEdge = (LabeledQueryEdge<String>)edges.get(x);
 			String source = queryEdge.getSrc();
 			String target = queryEdge.getDst();
-			String sourceUri = iso.getVertexCorrespondence(source, true);
-			String targetUri = iso.getVertexCorrespondence(target, true);
+			String sourceUri = vm.getVertexCorrespondence(source, true);
+			String targetUri = vm.getVertexCorrespondence(target, true);
 			String propertyUri = queryEdge.getLabel();
 
 			Term sourceTerm = queryGraph.getTerm(source);
@@ -321,7 +322,7 @@ public class MappingValidator implements Callable<Set<Map<String,String>>> {
 	
 	public Set<Map<String,String>> call() throws Exception {
 //		System.out.println(m_iso);
-		Set<Map<String,String>> set = validateMapping2(m_queryGraph, m_iso);
+		Set<Map<String,String>> set = validateMapping2(m_queryGraph, m_mapping);
 		m_collector.addTimings(t);
 		return set;
 	}

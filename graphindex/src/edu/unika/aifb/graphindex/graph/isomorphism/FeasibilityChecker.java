@@ -1,15 +1,11 @@
 package edu.unika.aifb.graphindex.graph.isomorphism;
 
-import java.util.Map;
+import edu.unika.aifb.graphindex.graph.IndexEdge;
 
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.Graph;
-
-public interface FeasibilityChecker<V,E,G extends DirectedGraph<V,E>> {
+public interface FeasibilityChecker {
+	public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2);
 	
-	public boolean isEdgeCompatible(E e1, E e2);
+	public boolean isVertexCompatible(int n1, int n2);
 	
-	public boolean isVertexCompatible(V n1, V n2);
-	
-	public boolean checkVertexCompatible(V n1, V n2);
+	public boolean checkVertexCompatible(int n1, int n2);
 }

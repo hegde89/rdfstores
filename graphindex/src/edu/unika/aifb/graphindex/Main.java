@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
 
+import edu.unika.aifb.graphindex.data.FileHashValueProvider;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.SortedVertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexFactory;
@@ -27,7 +28,7 @@ import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
 import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
-import edu.unika.aifb.graphindex.query.Query;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -211,7 +212,7 @@ public class Main {
 			gm.initialize(true, false);
 			
 			VertexListProvider vlp = new VertexListProvider(componentDirectory);
-			HashValueProvider hvp = new HashValueProvider(hashesFile, propertyHashesFile);
+			HashValueProvider hvp = new FileHashValueProvider(hashesFile, propertyHashesFile);
 			
 			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
 			ib.buildIndex();

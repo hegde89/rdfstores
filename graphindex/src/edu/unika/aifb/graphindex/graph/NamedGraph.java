@@ -12,6 +12,8 @@ import java.util.TreeSet;
 import org.jgrapht.EdgeFactory;
 import org.jgrapht.graph.DirectedMultigraph;
 
+import edu.unika.aifb.graphindex.data.VertexCollection;
+import edu.unika.aifb.graphindex.data.VertexFactory;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -257,5 +259,10 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	
 	public String toString() {
 		return m_name + "(" + vertexSet().size() + "," + edgeSet().size() + ")";
+	}
+	
+	public VertexCollection toVertexCollection() {
+		VertexCollection vc = VertexFactory.collection();
+		
 	}
 }

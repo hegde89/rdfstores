@@ -5,12 +5,31 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class IndexGraph {
-	private NamedGraph<String,LabeledEdge<String>> m_graph;
+	private class ArrayValueIterator<E> implements Iterator<E> {
+		private int pos = 0;
+		private E[] array;
+		
+		public ArrayValueIterator(E[] array) {
+			this.array = array;
+		}
+		public boolean hasNext() {
+			return pos < array.length;
+		}
+
+		public E next() {
+			return array[pos];
+		}
+
+		public void remove() {
+			throw new UnsupportedOperationException("remove not supported");
+		}
+	}
 	
 	private int m_nodeCount;
 	private Set<String> m_edgeLabels;
@@ -19,20 +38,18 @@ public class IndexGraph {
 	private List<Integer>[] m_predecessors, m_successors;
 	private Map<String,List<Integer>>[] m_labelPredecessors, m_labelSuccessors;
 	private Map<Integer,List<IndexEdge>>[] m_predecessorEdges, m_successorEdges;
-	private Set<String>[] m_outLabels, m_inLabels;
+	private Set<String>[] m_outLabels, m_inLabels, m_allLabels;
 
 	private List<Integer> m_emptyIntegerList = new ArrayList<Integer>();
 	private Map<Integer,List<IndexEdge>> m_emptyMap = new HashMap<Integer,List<IndexEdge>>();
 	private Set<String> m_emptyStringSet = new HashSet<String>();
 
-	@SuppressWarnings("unchecked")
 	public IndexGraph(NamedGraph<String,LabeledEdge<String>> graph) {
 		this(graph, 1);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public IndexGraph(NamedGraph<String,LabeledEdge<String>> graph, final int order) {
-		m_graph = graph;
-		
 		m_nodeCount = graph.vertexSet().size();
 		
 		List<String> vertices = new ArrayList<String>(graph.vertexSet());
@@ -58,7 +75,8 @@ public class IndexGraph {
 
 			i++;
 		}
-		System.out.println();
+		if (vertices.size() < 10)
+			System.out.println();
 		
 		m_inDegrees = new int [m_nodeCount];
 		m_outDegrees = new int [m_nodeCount];
@@ -69,6 +87,7 @@ public class IndexGraph {
 		m_labelSuccessors = new Map [m_nodeCount];
 		m_predecessorEdges = new Map [m_nodeCount];
 		m_successorEdges = new Map [m_nodeCount];
+		m_allLabels = new Set [m_nodeCount];
 		m_inLabels = new Set [m_nodeCount];
 		m_outLabels = new Set [m_nodeCount];
 		
@@ -146,11 +165,20 @@ public class IndexGraph {
 				m_successorEdges[i] = succList;
 			if (outLabels.size() > 0)
 				m_outLabels[i] = outLabels;
+			
+			Set<String> allLabels = new HashSet<String>(inLabels);
+			allLabels.addAll(outLabels);
+			if (allLabels.size() > 0)
+				m_allLabels[i] = allLabels;
 		}
 	}
-
+	
 	public int nodeCount() {
 		return m_nodeCount;
+	}
+	
+	public String[] nodeLabels() {
+		return m_labels;
 	}
 
 	public List<Integer> predecessors(int node) {
@@ -201,10 +229,6 @@ public class IndexGraph {
 		return set;
 	}
 
-	public NamedGraph<String,LabeledEdge<String>> getNamedGraph() {
-		return m_graph;
-	}
-
 	public String getNodeLabel(int node) {
 		return m_labels[node];
 	}
@@ -215,6 +239,13 @@ public class IndexGraph {
 
 	public int inDegreeOf(int node) {
 		return m_predecessors[node] == null ? 0 : m_predecessors[node].size();
+	}
+
+	public Set<String> edgeLabels(int node) {
+		Set<String> labels = m_allLabels[node];
+		if (labels == null)
+			return m_emptyStringSet;
+		return labels;
 	}
 
 	public Set<String> outEdgeLabels(int node) {
@@ -247,5 +278,10 @@ public class IndexGraph {
 
 	public Set<String> edgeSet() {
 		return m_edgeLabels;
+	}
+
+	public void store() {
+		// TODO Auto-generated method stub
+		
 	}
 }

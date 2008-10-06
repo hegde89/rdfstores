@@ -20,8 +20,6 @@ import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
 
-import edu.unika.aifb.graphindex.graph.Graph;
-import edu.unika.aifb.graphindex.graph.GraphFactory;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
 
@@ -69,23 +67,23 @@ public class Util {
 		return uri.substring(idx + 1);
 	}
 	
-	public static void printDOT(Writer out, Graph graph) {
-		try {
-			out.write(graph.toDot());
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static void printDOT(String file, Graph graph) {
-		try {
-			printDOT(new FileWriter(file), graph);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
+//	public static void printDOT(Writer out, Graph graph) {
+//		try {
+//			out.write(graph.toDot());
+//			out.close();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
+//	
+//	public static void printDOT(String file, Graph graph) {
+//		try {
+//			printDOT(new FileWriter(file), graph);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
+//	
 	public static void printDOT(Writer out, NamedGraph<String,LabeledEdge<String>> graph) {
 		try {
 			DOTExporter<String,LabeledEdge<String>> exporter = new DOTExporter<String,LabeledEdge<String>>(
@@ -129,9 +127,9 @@ public class Util {
 		}
 	}
 	
-	public static void printDOT(Graph graph) {
-		printDOT(new PrintWriter(System.out), graph);
-	}
+//	public static void printDOT(Graph graph) {
+//		printDOT(new PrintWriter(System.out), graph);
+//	}
 	
 	public static void writeObject(String file, Object object) throws FileNotFoundException, IOException {
 		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
@@ -194,17 +192,17 @@ public class Util {
 	        return n * factorial( n - 1 );
 	}
 	
-	public static Graph loadGT(String file) throws IOException {
-		Graph g = GraphFactory.graph();
-		
-		BufferedReader in = new BufferedReader(new FileReader(file));
-		String input;
-		while ((input = in.readLine()) != null) {
-			String[] t = input.split("\t");
-			g.addEdge(t[0], t[1], t[2]);
-		}
-		return g;
-	}
+//	public static Graph loadGT(String file) throws IOException {
+//		Graph g = GraphFactory.graph();
+//		
+//		BufferedReader in = new BufferedReader(new FileReader(file));
+//		String input;
+//		while ((input = in.readLine()) != null) {
+//			String[] t = input.split("\t");
+//			g.addEdge(t[0], t[1], t[2]);
+//		}
+//		return g;
+//	}
 
 	public static void sortFile(String file, String fileOut) throws IOException, InterruptedException {
 		Process p = Runtime.getRuntime().exec("sort -o " + fileOut + " " + file);

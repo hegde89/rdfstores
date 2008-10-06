@@ -23,28 +23,21 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.data.Triple;
-import edu.unika.aifb.graphindex.graph.Edge;
-import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.IndexEdge;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher;
-import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher2;
-import edu.unika.aifb.graphindex.graph.isomorphism.DiGraphMatcher3;
-import edu.unika.aifb.graphindex.graph.isomorphism.EdgeLabelFeasibilityChecker;
+import edu.unika.aifb.graphindex.graph.isomorphism.SubgraphMatcher;
 import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
-import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker3;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
-import edu.unika.aifb.graphindex.query.Constant;
-import edu.unika.aifb.graphindex.query.Individual;
+import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
 import edu.unika.aifb.graphindex.query.LabeledQueryEdge;
 import edu.unika.aifb.graphindex.query.NamedQueryGraph;
-import edu.unika.aifb.graphindex.query.Query;
-import edu.unika.aifb.graphindex.query.QueryGraph;
-import edu.unika.aifb.graphindex.query.QueryVertex;
-import edu.unika.aifb.graphindex.query.Term;
-import edu.unika.aifb.graphindex.query.Variable;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.query.model.Term;
+import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -108,10 +101,10 @@ public class QueryEvaluator {
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		for (IndexGraph indexGraph : m_index.getIndexGraphs()) {
 			
-			DiGraphMatcher3 matcher = new DiGraphMatcher3(qg, indexGraph, true, new QueryFeasibilityChecker(qg, indexGraph, m_vcc, m_timings, m_les), 
-					new MappingListener<String,LabeledEdge<String>>() {
-						public void mapping(IsomorphismRelation<String,LabeledEdge<String>> iso) {
-							completionService.submit(new MappingValidator(queryGraph, iso, null, m_invalidVertices, m_collector));
+			SubgraphMatcher matcher = new SubgraphMatcher(qg, indexGraph, true, new QueryFeasibilityChecker(qg, indexGraph, m_vcc, m_timings, m_les), 
+					new MappingListener() {
+						public void mapping(VertexMapping mapping) {
+							completionService.submit(new MappingValidator(queryGraph, mapping, null, m_invalidVertices, m_collector));
 						}
 					});
 			

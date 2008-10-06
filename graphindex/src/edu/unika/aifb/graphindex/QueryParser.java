@@ -10,13 +10,13 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.query.Constant;
-import edu.unika.aifb.graphindex.query.Individual;
-import edu.unika.aifb.graphindex.query.Literal;
-import edu.unika.aifb.graphindex.query.Predicate;
-import edu.unika.aifb.graphindex.query.Query;
-import edu.unika.aifb.graphindex.query.Term;
-import edu.unika.aifb.graphindex.query.Variable;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Literal;
+import edu.unika.aifb.graphindex.query.model.Predicate;
+import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.query.model.Term;
+import edu.unika.aifb.graphindex.query.model.Variable;
 
 public class QueryParser {
 	private static final Logger log = Logger.getLogger(QueryParser.class);

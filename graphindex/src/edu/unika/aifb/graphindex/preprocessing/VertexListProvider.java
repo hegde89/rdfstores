@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.data;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,6 +16,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+
+import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.data.VertexCollection;
+import edu.unika.aifb.graphindex.data.VertexFactory;
 
 
 public class VertexListProvider {

@@ -15,82 +15,39 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
-import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast2;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
-import edu.unika.aifb.graphindex.data.VertexListProvider;
-import edu.unika.aifb.graphindex.graph.IndexEdge;
+import edu.unika.aifb.graphindex.data.Subject;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
-import edu.unika.aifb.graphindex.graph.isomorphism.GraphMatcher;
-import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class FastIndexBuilder {
 
-	/**
-	 * An implementation of IndexMerger for 1-index graphs.
-	 * 
-	 * @author gl
-	 *
-	 */
-	private class OneIndexMerger implements IndexGraphMerger<IndexGraph> {
-
-		public boolean merge(IndexGraph small, IndexGraph large) throws StorageException {
-			GraphMatcher matcher = new GraphMatcher(small, large, false, new FeasibilityChecker() {
-				public boolean checkVertexCompatible(int n1, int n2) {
-					return true;
-				}
-
-				public boolean isEdgeCompatible(IndexEdge e1, IndexEdge e2) {
-					return e1.getLabel().equals(e2.getLabel());
-				}
-
-				public boolean isVertexCompatible(int n1, int n2) {
-					return true;
-				}
-			
-			});
-			
-			if (!matcher.isIsomorphic())
-				return false;
-
-			log.debug(small + " isomorphic to " + large);
-			
-			for (VertexMapping vm : matcher) {
-				for (String v : large.nodeLabels()) {
-					// TODO verify true or false (DiGraphMatcher constructor parameter order may have changed)
-//					m_em.extension(v).mergeExtension(m_em.extension(iso.getVertexCorrespondence(v, false)));
-					m_mergeMap.put(vm.getVertexCorrespondence(v, false), v);
-				}
-				break;
-			}
-			
-			return true;
-		}
-	}
-	
 	private ExtensionManager m_em;
 	private VertexListProvider m_vlp;
 	private HashValueProvider m_hashProvider;
 	private List<File> m_componentFiles;
-	private final Map<String,String> m_mergeMap = new HashMap<String,String>();
-	private static final Logger log = Logger.getLogger(FastIndexBuilder.class);
+	private StructureIndex m_index;
+	static final Logger log = Logger.getLogger(FastIndexBuilder.class);
 
-	public FastIndexBuilder(VertexListProvider vb, HashValueProvider hashProvider) {
+	public FastIndexBuilder(StructureIndex index, VertexListProvider vb, HashValueProvider hashProvider) {
 		m_vlp = vb;
-		m_em = StorageManager.getInstance().getExtensionManager();
+		m_index = index;
+		m_em = index.getExtensionManager();
 		m_hashProvider = hashProvider;
 		m_componentFiles = new ArrayList<File>();
 	}
 	
-	private void createExtensions() throws StorageException, IOException {
+	private void createExtensions(Map<String,String> mergeMap) throws StorageException, IOException {
 		m_em.setMode(ExtensionManager.MODE_NOCACHE);
 		m_em.startBulkUpdate();
 		log.info("creating extensions... (" + Util.memory() + ")");
@@ -100,31 +57,32 @@ public class FastIndexBuilder {
 			
 			String currentExt = null;
 			Long currentProperty = null, currentObject = null;
-			Set<String> currentSubjects = new HashSet<String>();
+			Set<Subject> currentSubjects = new HashSet<Subject>();
 			
 			BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath() + ".partition"));
 			String input;
 			while ((input = in.readLine()) != null) {
 				input = input.trim();
 				String[] t = input.split("\t");
-				if (m_mergeMap.containsKey(t[0])) {
-					t[0] = m_mergeMap.get(t[0]);
+				if (mergeMap.containsKey(t[0])) {
+					t[0] = mergeMap.get(t[0]);
 				}
 				
 				long s = Long.parseLong(t[1]);
 				long p = Long.parseLong(t[2]);
 				long o = Long.parseLong(t[3]);
+				String subjectExtension = t[4];
 				
 				if (!t[0].equals(currentExt) || currentProperty == null || currentProperty.longValue() != p || currentObject == null || currentObject.longValue() != o) {
 					if (currentSubjects.size() > 0) {
 						Extension ext = m_em.extension(currentExt);
 						ext.addTriples(currentSubjects, m_hashProvider.getValue(currentProperty.longValue()), m_hashProvider.getValue(currentObject.longValue()));
 					}
-					currentSubjects = new HashSet<String>();
+					currentSubjects = new HashSet<Subject>();
 				}
 				
 				currentExt = t[0];
-				currentSubjects.add(m_hashProvider.getValue(s));
+				currentSubjects.add(new Subject(m_hashProvider.getValue(s), subjectExtension));
 				currentProperty = p;
 				currentObject = o;
 				
@@ -148,10 +106,9 @@ public class FastIndexBuilder {
 	public void buildIndex() throws StorageException, NumberFormatException, IOException, InterruptedException {
 		long start = System.currentTimeMillis();
 		
-		RCPFast2 rcp = new RCPFast2(m_hashProvider);
-
-		MergedIndexList<IndexGraph> list = new MergedIndexList<IndexGraph>(
-				new OneIndexMerger(), new Comparator<IndexGraph>() {
+		RCPFast2 rcp = new RCPFast2(m_index, m_hashProvider);
+		OneIndexMerger merger = new OneIndexMerger();
+		MergedIndexList<IndexGraph> list = new MergedIndexList<IndexGraph>(merger, new Comparator<IndexGraph>() {
 					public int compare(IndexGraph g1, IndexGraph g2) {
 						return ((Integer)g1.nodeCount()).compareTo(g2.nodeCount()) * -1;
 					}
@@ -165,7 +122,7 @@ public class FastIndexBuilder {
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
 			IndexGraph g = rcp.createIndexGraph(component, m_vlp.getComponentFile().getAbsolutePath() + ".partition");
-			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeSet().size());
+			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
 			list.add(g);
 			cnr++;
 
@@ -177,28 +134,26 @@ public class FastIndexBuilder {
 			log.info("------------------------------------------------------------");
 		}
 		
-		log.debug(m_mergeMap);
-		
 		rcp = null;
 		System.gc();
 		
-		createExtensions();
+		createExtensions(merger.getMergeMap());
 		
 		int vmin = Integer.MAX_VALUE, vmax = 0, vavg = 0, emin = Integer.MAX_VALUE, emax = 0, eavg = 0;
 		
 		for (IndexGraph g : list.getList()) {
-			g.store();
+			g.store(m_index.getGraphManager());
 			if (g.nodeCount() > vmax)
 				vmax = g.nodeCount();
 			if (g.nodeCount() < vmin)
 				vmin = g.nodeCount();
 			vavg += g.nodeCount();
 
-			if (g.edgeSet().size() > emax)
-				emax = g.edgeSet().size();
-			if (g.edgeSet().size() < emin)
-				emin = g.edgeSet().size();
-			eavg += g.edgeSet().size();
+			if (g.edgeCount() > emax)
+				emax = g.edgeCount();
+			if (g.edgeCount() < emin)
+				emin = g.edgeCount();
+			eavg += g.edgeCount();
 //			Util.printDOT(g);
 		}
 		

@@ -1,6 +1,6 @@
 package edu.unika.aifb.graphindex.importer;
 
-import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class HashingTripleConverter extends AbstractTripleConverter {
 

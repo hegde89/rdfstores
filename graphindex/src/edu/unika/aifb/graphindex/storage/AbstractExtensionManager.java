@@ -7,10 +7,13 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.StructureIndex;
+
 public abstract class AbstractExtensionManager implements ExtensionManager {
 	protected Set<String> m_extensionUris;
 	protected Map<String,Extension> m_handlers;
 	protected ExtensionStorage m_storage;
+	protected StructureIndex m_index;
 	protected boolean m_readonly;
 	protected boolean m_bulk = false;
 	protected int m_mode = ExtensionManager.MODE_NOCACHE;
@@ -33,6 +36,14 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 		if (getMode() != ExtensionManager.MODE_READONLY)
 			m_storage.saveExtensionList(m_extensionUris);
 		m_storage.close();
+	}
+	
+	public void setIndex(StructureIndex index) {
+		m_index = index;
+	}
+	
+	public StructureIndex getIndex() {
+		return m_index;
 	}
 
 	public void setMode(int mode) {

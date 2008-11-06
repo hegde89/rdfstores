@@ -11,25 +11,28 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.CorruptIndexException;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.data.ExtensionSegment;
 import edu.unika.aifb.graphindex.data.SetExtensionSegment;
+import edu.unika.aifb.graphindex.data.Subject;
 import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.storage.AbstractExtension;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class LuceneExtension extends AbstractExtension {
 
 	private LuceneExtensionStorage m_les;
+	private Map<String,List<Triple>> m_tripleCache;
 	
 	private final static Logger log = Logger.getLogger(LuceneExtension.class);
 	
 	public LuceneExtension(String uri, ExtensionManager manager) throws StorageException {
 		super(uri, manager);
 		
+		m_tripleCache = new HashMap<String,List<Triple>>();
 		m_les = (LuceneExtensionStorage)manager.getExtensionStorage();
 	
 		if (m_manager.extensionExists(getUri())) {
@@ -65,11 +68,16 @@ public class LuceneExtension extends AbstractExtension {
 	
 	public List<Triple> getTriplesList(String propertyUri, String object) throws StorageException {
 		try {
-			ExtensionSegment es = m_les.loadExtensionSegment(getUri(), propertyUri, object);
-			if (es != null)
-				return es.toTriples();
-			else
-				return new ArrayList<Triple>();
+			String cacheKey = propertyUri + "__" + object;
+			List<Triple> triples = m_tripleCache.get(cacheKey);
+			if (triples == null) {
+				ExtensionSegment es = m_les.loadExtensionSegment(getUri(), propertyUri, object);
+				if (es != null)
+					triples = es.toTriples();
+				else
+					return new ArrayList<Triple>();
+			}
+			return triples;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
@@ -99,7 +107,7 @@ public class LuceneExtension extends AbstractExtension {
 		}
 	}
 	
-	public void addTriples(Set<String> subjects, String property, String object) throws StorageException {
+	public void addTriples(Set<Subject> subjects, String property, String object) throws StorageException {
 		try {
 			switch (getMode()) {
 			case ExtensionManager.MODE_NOCACHE:

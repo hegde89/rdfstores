@@ -13,7 +13,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class ListVertexCollection implements VertexCollection {
 	List<IVertex> m_vertexList;

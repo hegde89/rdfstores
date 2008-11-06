@@ -1,8 +1,10 @@
-package edu.unika.aifb.graphindex.data;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.Set;
+
+import edu.unika.aifb.graphindex.data.HashValueProvider;
 
 public class MemoryHashValueProvider implements HashValueProvider {
 

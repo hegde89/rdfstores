@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.data;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -9,7 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class FileHashValueProvider implements HashValueProvider {
 	private String m_hashFile;

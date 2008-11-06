@@ -1,7 +1,7 @@
 /**
  * 
  */
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,7 +13,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.Triple;
 
 public class TripleSet {
 		private Set<Triple> m_triples;

@@ -382,7 +382,7 @@ public class GraphMatcher implements Iterable<VertexMapping>{
 		
 		
 		m_mappingLength = m_g1.nodeCount();
-		m_labels = graph1.edgeSet();
+		m_labels = graph1.edgeLabelSet();
 
 		m_core1 = new int[m_g1.nodeCount()];
 		m_in1 = new int[m_g1.nodeCount()];

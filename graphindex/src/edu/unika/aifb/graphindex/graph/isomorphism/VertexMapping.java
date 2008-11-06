@@ -21,4 +21,12 @@ public class VertexMapping {
 		else
 			return m_r2l.get(vertex);
 	}
+	
+	public Map<String,String> getMap() {
+		return m_l2r;
+	}
+	
+	public String toString() {
+		return m_l2r.toString();
+	}
 }

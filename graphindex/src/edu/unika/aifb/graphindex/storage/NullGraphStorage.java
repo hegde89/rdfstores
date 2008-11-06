@@ -28,7 +28,10 @@ public class NullGraphStorage extends AbstractGraphStorage {
 	}
 
 	public void optimize() throws StorageException {
-		// TODO Auto-generated method stub
 		
+	}
+
+	public void addEdge(String graphName, String source, String edge, String target)
+			throws StorageException {
 	}
 }

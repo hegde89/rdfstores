@@ -1,10 +1,12 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.util;
 
 public class Timings {
 	private long[] starts = new long[10];
 	private long[] timings = new long[10];
-	public static final  int DATA = 0, JOIN = 1, MAPPING = 2, RS = 3, MATCH = 4;
-	public static final int REFINE = 5, GT = 6;
+	public static final  int DATA = 0, JOIN = 1, RS = 3, MATCH = 4;
+	public static final int GT = 6;
+	public static final int RCP = 7;
+	public static final int MAPGEN = 8;
 	
 	public Timings() {
 		
@@ -20,5 +22,10 @@ public class Timings {
 
 	public long[] getTimings() {
 		return timings;
+	}
+
+	public void reset() {
+		for (int i = 0; i < starts.length; i++)
+			starts[i] = timings[i] = 0;
 	}
 }

@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.preprocessing;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

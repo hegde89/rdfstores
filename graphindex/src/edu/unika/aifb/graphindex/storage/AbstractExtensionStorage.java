@@ -18,4 +18,9 @@ public abstract class AbstractExtensionStorage implements ExtensionStorage {
 	public boolean bulkUpdating() {
 		return m_manager.bulkUpdating();
 	}
+
+	public boolean hasTriples(String ext, String propertyUri, String object)
+			throws StorageException {
+		return false;
+	}
 }

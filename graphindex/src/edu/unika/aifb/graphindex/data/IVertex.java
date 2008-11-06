@@ -7,23 +7,23 @@ import edu.unika.aifb.graphindex.algorithm.rcp.Block;
 
 public interface IVertex {
 
-	public abstract long getId();
+	public long getId();
 
-	public abstract int getMovedIn();
-	public abstract void setMovedIn(int in);
+	public int getMovedIn();
+	public void setMovedIn(int in);
 
 	public Set<Long> getEdgeLabels();
 
-	public abstract IVertex getNext();
-	public abstract IVertex getPrev();
-	public abstract void setNext(IVertex next);
-	public abstract void setPrev(IVertex prev);
+	public IVertex getNext();
+	public IVertex getPrev();
+	public void setNext(IVertex next);
+	public void setPrev(IVertex prev);
 
-	public abstract Block getBlock();
-	public abstract void setBlock(Block b);
+	public Block getBlock();
+	public void setBlock(Block b);
 
-	public abstract List<IVertex> getImage(long label);
-	public abstract void addToImage(long label, IVertex v);
+	public List<IVertex> getImage(long label);
+	public void addToImage(long label, IVertex v);
 	public void setImage(long label, List<IVertex> image);
 
 }

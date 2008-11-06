@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.graph;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,6 +10,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import edu.unika.aifb.graphindex.storage.GraphManager;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.StorageManager;
 
 public class IndexGraph {
 	private class ArrayValueIterator<E> implements Iterator<E> {
@@ -31,7 +36,9 @@ public class IndexGraph {
 		}
 	}
 	
+	private String m_name;
 	private int m_nodeCount;
+	private int m_edgeCount;
 	private Set<String> m_edgeLabels;
 	private String[] m_labels;
 	private int[] m_inDegrees, m_outDegrees;
@@ -40,9 +47,12 @@ public class IndexGraph {
 	private Map<Integer,List<IndexEdge>>[] m_predecessorEdges, m_successorEdges;
 	private Set<String>[] m_outLabels, m_inLabels, m_allLabels;
 
-	private List<Integer> m_emptyIntegerList = new ArrayList<Integer>();
-	private Map<Integer,List<IndexEdge>> m_emptyMap = new HashMap<Integer,List<IndexEdge>>();
-	private Set<String> m_emptyStringSet = new HashSet<String>();
+	private final List<Integer> m_emptyIntegerList = new ArrayList<Integer>();
+	private final Map<Integer,List<IndexEdge>> m_emptyMap = new HashMap<Integer,List<IndexEdge>>();
+	private final Set<String> m_emptyStringSet = new HashSet<String>();
+	private final List<IndexEdge> m_emptyEdgeList = new ArrayList<IndexEdge>();
+	
+	private static int m_id = 0;
 
 	public IndexGraph(NamedGraph<String,LabeledEdge<String>> graph) {
 		this(graph, 1);
@@ -65,6 +75,8 @@ public class IndexGraph {
 		});
 		Map<String,Integer> v2i = new HashMap<String,Integer>();
 		
+		m_name = "igraph" + ++m_id;
+		
 		int i = 0;
 		m_labels = new String [m_nodeCount];
 		for (String vertex : vertices) {
@@ -77,7 +89,8 @@ public class IndexGraph {
 		}
 		if (vertices.size() < 10)
 			System.out.println();
-		
+		System.out.println("order: " + order);
+
 		m_inDegrees = new int [m_nodeCount];
 		m_outDegrees = new int [m_nodeCount];
 		m_edgeLabels = new HashSet<String>();
@@ -113,11 +126,13 @@ public class IndexGraph {
 					edges = new ArrayList<IndexEdge>();
 					predList.put(pred, edges);
 				}
-				edges.add(new IndexEdge(e, this));
+				edges.add(new IndexEdge(e, pred, i, this));
 				
 				inLabels.add(e.getLabel());
 				
 				m_edgeLabels.add(e.getLabel());
+				m_edgeCount++;
+				processInEdge(i, m_labels[i], e);
 			}
 			m_inDegrees[i] = preds.size();
 			if (preds.size() > 0)
@@ -150,11 +165,12 @@ public class IndexGraph {
 					edges = new ArrayList<IndexEdge>();
 					succList.put(succ, edges);
 				}
-				edges.add(new IndexEdge(e, this));
+				edges.add(new IndexEdge(e, i, succ, this));
 				
 				outLabels.add(e.getLabel());
 
 				m_edgeLabels.add(e.getLabel());
+				processOutEdge(i, m_labels[i], e);
 			}
 			m_outDegrees[i] = succs.size();
 			if (succs.size() > 0)
@@ -171,6 +187,16 @@ public class IndexGraph {
 			if (allLabels.size() > 0)
 				m_allLabels[i] = allLabels;
 		}
+	}
+	
+	protected void processOutEdge(int node, String label, LabeledEdge<String> e) {
+	}
+
+	protected void processInEdge(int node, String label, LabeledEdge<String> e) {
+	}
+
+	public int edgeCount() {
+		return m_edgeCount;
 	}
 	
 	public int nodeCount() {
@@ -225,7 +251,7 @@ public class IndexGraph {
 	public Set<Integer> successors(int node, Set<String> labels) {
 		Set<Integer> set = new HashSet<Integer>();
 		for (String label : labels)
-			set.addAll(predecessors(node, label));
+			set.addAll(successors(node, label));
 		return set;
 	}
 
@@ -275,13 +301,39 @@ public class IndexGraph {
 			return m_emptyMap;
 		return map;
 	}
+	
+	public List<IndexEdge> incomingEdges(int node) {
+		Map<Integer,List<IndexEdge>> predEdges = m_predecessorEdges[node];
+		if (predEdges == null)
+			return m_emptyEdgeList;
+		List<IndexEdge> edges = new ArrayList<IndexEdge>();
+		for (List<IndexEdge> es : predEdges.values())
+			edges.addAll(es);
+		return edges;
+	}
+	
+	public List<IndexEdge> outgoingEdges(int node) {
+		Map<Integer,List<IndexEdge>> succEdges = m_successorEdges[node];
+		if (succEdges == null)
+			return m_emptyEdgeList;
+		List<IndexEdge> edges = new ArrayList<IndexEdge>();
+		for (List<IndexEdge> es : succEdges.values())
+			edges.addAll(es);
+		return edges;
+	}
 
-	public Set<String> edgeSet() {
+	public Set<String> edgeLabelSet() {
 		return m_edgeLabels;
 	}
 
-	public void store() {
-		// TODO Auto-generated method stub
-		
+	public void store(GraphManager gm) throws StorageException {
+		for (int i = 0; i < m_nodeCount; i++) {
+			for (IndexEdge e : outgoingEdges(i))
+				gm.getGraphStorage().addEdge(m_name, getNodeLabel(i), e.getLabel(), getNodeLabel(e.getDst()));
+		}
+	}
+	
+	public String toString() {
+		return "IndexGraph(" + m_nodeCount + "," + m_edgeCount + ")";
 	}
 }

@@ -10,8 +10,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.importer.TripleSink;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class TripleConverter implements TripleSink {
 

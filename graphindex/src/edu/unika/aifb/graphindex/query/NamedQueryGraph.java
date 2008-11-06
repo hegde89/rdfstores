@@ -23,12 +23,12 @@ public class NamedQueryGraph<V extends String, E extends LabeledEdge<String>> ex
 	private Map<String,Term> m_terms;
 
 	public NamedQueryGraph(String name, Class<? extends E> edgeClass) throws StorageException {
-		super(name, edgeClass);
+		super(name, null, edgeClass);
 		m_terms = new HashMap<String,Term>();
 	}
 
 	public NamedQueryGraph(String name, EdgeFactory<String,LabeledEdge<String>> ef) throws StorageException {
-		super(name, ef);
+		super(name, null, ef);
 		m_terms = new HashMap<String,Term>();
 	}
 	

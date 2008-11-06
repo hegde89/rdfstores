@@ -133,12 +133,12 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		return edges;
 	}
 	
-	private Document createDocument(String graphName, LabeledEdge<String> edge) {
+	private Document createDocument(String graphName, String source, String edge, String target) {
 		Document doc = new Document();
 		doc.add(new Field(FIELD_GRAPH, graphName, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
-		doc.add(new Field(FIELD_SRC, edge.getSrc(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
-		doc.add(new Field(FIELD_EDGE, edge.getLabel(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
-		doc.add(new Field(FIELD_DST, edge.getDst(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+		doc.add(new Field(FIELD_SRC, source, Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+		doc.add(new Field(FIELD_EDGE, edge, Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
+		doc.add(new Field(FIELD_DST, target, Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
 		return doc;
 	}
 
@@ -146,7 +146,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		try {
 			m_writer.deleteDocuments(new Term(FIELD_GRAPH, graphName));
 			for (LabeledEdge<String> edge : edges) {
-				Document doc = createDocument(graphName, edge);
+				Document doc = createDocument(graphName, edge.getSrc(), edge.getLabel(), edge.getDst());
 				m_writer.addDocument(doc);
 			}
 			
@@ -159,4 +159,14 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		}
 	}
 
+	public void addEdge(String graphName, String source, String edge, String target) throws StorageException {
+		try {
+			Document doc = createDocument(graphName, source, edge, target);
+			m_writer.addDocument(doc);
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
 }

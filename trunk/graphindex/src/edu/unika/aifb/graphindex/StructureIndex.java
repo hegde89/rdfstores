@@ -1,31 +1,61 @@
 package edu.unika.aifb.graphindex;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import edu.unika.aifb.graphindex.graph.IndexGraph;
-import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.storage.ExtensionManager;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
+import edu.unika.aifb.graphindex.storage.GraphManagerImpl;
+import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.StorageManager;
+
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 
 public class StructureIndex {
+	private String m_directory;
+	private ExtensionManager m_em;
 	private GraphManager m_gm;
-	private List<IndexGraph> m_graphs;
+	private StatisticsCollector m_collector;
 	
-	public StructureIndex() {
-		m_gm = StorageManager.getInstance().getGraphManager();
-		m_graphs = new ArrayList<IndexGraph>();
+	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
+		m_directory = dir;
+		m_collector = new StatisticsCollector();
+		
+		initialize(clean, readonly);
 	}
 	
-	public void load() throws StorageException {
-		for (String name : m_gm.getStoredGraphs()) {
-			m_graphs.add(new IndexGraph(m_gm.graph(name), 1));
-		}
+	private void initialize(boolean clean, boolean readonly) throws StorageException {
+		ExtensionStorage es = new LuceneExtensionStorage(m_directory + "/index");
+		m_em = new LuceneExtensionManager();
+		m_em.setExtensionStorage(es);
+		m_em.setIndex(this);
+		m_em.initialize(clean, readonly);
+		
+		GraphStorage gs = new LuceneGraphStorage(m_directory + "/graph");
+		m_gm = new GraphManagerImpl();
+		m_gm.setGraphStorage(gs);
+		m_gm.setIndex(this);
+		m_gm.initialize(clean, readonly);
 	}
 	
-	public List<IndexGraph> getIndexGraphs() {
-		return m_graphs;
+	public StatisticsCollector getCollector() {
+		return m_collector;
+	}
+	
+	public ExtensionManager getExtensionManager() {
+		return m_em;
+	}
+	
+	public GraphManager getGraphManager() {
+		return m_gm;
+	}
+	
+	public void optimize() {
+	}
+
+	public void close() throws StorageException {
+		m_em.close();
+		m_gm.close();
 	}
 }

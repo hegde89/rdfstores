@@ -6,18 +6,18 @@ import java.util.Set;
 
 
 public class SetExtensionSegment extends AbstractExtensionSegment {
-	private Set<String> m_subjects;
+	private Set<Subject> m_subjects;
 	
 	public SetExtensionSegment(String ext, String property, String object) {
 		super(ext, property, object);
-		m_subjects = new HashSet<String>();
+		m_subjects = new HashSet<Subject>();
 	}
 	
-	public void addSubject(String subject) {
+	public void addSubject(Subject subject) {
 		m_subjects.add(subject);
 	}
 
-	public Collection<String> getSubjects() {
+	public Collection<Subject> getSubjects() {
 		return m_subjects;
 	}
 
@@ -25,7 +25,7 @@ public class SetExtensionSegment extends AbstractExtensionSegment {
 		return m_subjects.size();
 	}
 
-	public void setSubjects(Set<String> subjects) {
+	public void setSubjects(Set<Subject> subjects) {
 		m_subjects = subjects;
 	}
 

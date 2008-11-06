@@ -1,11 +1,13 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.query;
 
 import java.io.IOException;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -20,9 +22,23 @@ import edu.unika.aifb.graphindex.query.model.Variable;
 
 public class QueryParser {
 	private static final Logger log = Logger.getLogger(QueryParser.class);
+	private Map<String,String> m_namespaces;
 
-	public void QueryParser() {
-		
+	public QueryParser() {
+		m_namespaces = new HashMap<String,String>();
+	}
+	
+	public QueryParser(Map<String,String> namespaces) {
+		m_namespaces = namespaces;
+	}
+	
+	public String resolveNamespace(String uri) {
+		for (String ns : m_namespaces.keySet()) {
+			if (uri.startsWith(ns + ":")) {
+				return uri.replaceFirst(ns + ":", m_namespaces.get(ns));
+			}
+		}
+		return uri;
 	}
 	
 	public Query parseQuery(String queryString) throws IOException {
@@ -50,18 +66,18 @@ public class QueryParser {
 						vars.add(tokenizer.sval);
 					}
 					else
-						subject = new Individual(tokenizer.sval);
+						subject = new Individual(resolveNamespace(tokenizer.sval));
 				}
 				else if (i == 1) {
-					property = new Predicate(tokenizer.sval);
+					property = new Predicate(resolveNamespace(tokenizer.sval));
 				}
 				else if (i == 2) {
 					if (tokenizer.sval.startsWith("?")) {
 						object = new Variable(tokenizer.sval);
 						vars.add(tokenizer.sval);
 					}
-					else if (tokenizer.sval.startsWith("http"))
-						object = new Individual(tokenizer.sval);
+					else if (tokenizer.sval.startsWith("http") || tokenizer.sval.contains(":"))
+						object = new Individual(resolveNamespace(tokenizer.sval));
 					else 
 						object = new Constant(tokenizer.sval);
 				}

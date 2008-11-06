@@ -12,12 +12,8 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
 
-import edu.unika.aifb.graphindex.data.FileHashValueProvider;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
-import edu.unika.aifb.graphindex.data.SortedVertexListBuilder;
 import edu.unika.aifb.graphindex.data.VertexFactory;
-import edu.unika.aifb.graphindex.data.VertexListBuilder;
-import edu.unika.aifb.graphindex.data.VertexListProvider;
 import edu.unika.aifb.graphindex.importer.CompositeImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
@@ -26,8 +22,14 @@ import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
 import edu.unika.aifb.graphindex.importer.TriplesImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
+import edu.unika.aifb.graphindex.preprocessing.FileHashValueProvider;
+import edu.unika.aifb.graphindex.preprocessing.SortedVertexListBuilder;
 import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
 import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
+import edu.unika.aifb.graphindex.preprocessing.VertexListBuilder;
+import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
+import edu.unika.aifb.graphindex.query.QueryEvaluator;
+import edu.unika.aifb.graphindex.query.QueryParser;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
@@ -39,6 +41,8 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
+import edu.unika.aifb.graphindex.util.QueryLoader;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class Main {
 
@@ -91,7 +95,8 @@ public class Main {
 		String outputDirectory = (String)config.get("output_directory") + "/" + indexName;
 		String inputDirectory = (String)config.get("input_directory");
 		
-		String query = (String)config.get("query");
+		String queryfile = (String)config.get("queryfile");
+		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
 		
 		String indexDirectory = new File(outputDirectory + "/index").getAbsolutePath(); 
 		String graphDirectory = new File(outputDirectory + "/graph").getAbsolutePath();
@@ -140,114 +145,41 @@ public class Main {
 		for (String file : owlFiles)
 			log.info("  (owl) " + file);
 		
-		if (stages.contains("analyze") || stages.contains("analyse")) {
-			DatasetAnalyzer da = new DatasetAnalyzer();
-
-			Importer importer = getImporter(ntFiles, owlFiles);
-			importer.setTripleSink(da);
-			importer.doImport();
-			
-			da.printAnalysis();
+		long start = System.currentTimeMillis();
+		
+		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
+			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
+			iw.setImporter(getImporter(ntFiles, owlFiles));
+			iw.create(stages);
+//			iw.removeTemporaryFiles();
+			iw.close();
 		}
 		
-		if (stages.contains("convert")) {
-			log.info("stage: CONVERT");
-
-			TripleConverter tc = new TripleConverter(outputDirectory);
-			
-			Importer importer = getImporter(ntFiles, owlFiles);
-			importer.setTripleSink(tc);
-			importer.doImport();
-			
-			tc.write();
-			
-			log.info("sorting...");
-			Util.sortFile(outputDirectory + "/input.ht", outputDirectory + "/input_sorted.ht");
-			log.info("sorting complete");
-		}
-		
-		if (stages.contains("partition")) {
-			log.info("stage: PARTITION");
-
-			TriplesPartitioner tp = new TriplesPartitioner(componentDirectory);
-			
-			Importer importer = new TriplesImporter();
-			importer.addImport(outputDirectory + "/input_sorted.ht");
-			importer.setTripleSink(new ParsingTripleConverter(tp));
-			importer.doImport();
-			
-			tp.write();
-		}
-		
-		if (stages.contains("transform")) {
-			log.info("stage: TRANSFORM");
-			
-			VertexFactory.setCollectionClass(Class.forName(pCollectionClass));
-			VertexFactory.setVertexClass(Class.forName(pVertexClass));
-
-			Importer importer = new TriplesImporter();
-			importer.addImport(outputDirectory + "/input_sorted.ht");
-			
-			SortedVertexListBuilder vb = new SortedVertexListBuilder(importer, componentDirectory);
-			vb.write();
-		}
-		
-		if (stages.contains("index")) {
-			log.info("stage: INDEX");
-			
-			VertexFactory.setCollectionClass(Class.forName(iCollectionClass));
-			VertexFactory.setVertexClass(Class.forName(iVertexClass));
-
-			ExtensionStorage es = new LuceneExtensionStorage(indexDirectory);
-			ExtensionManager em = new LuceneExtensionManager();
-			em.setExtensionStorage(es);
-			
-			GraphStorage gs = new LuceneGraphStorage(graphDirectory);
-			GraphManager gm = new GraphManagerImpl();
-			gm.setGraphStorage(gs);
-			
-			StorageManager.getInstance().setExtensionManager(em);
-			StorageManager.getInstance().setGraphManager(gm);
-			em.initialize(true, false);
-			gm.initialize(true, false);
-			
-			VertexListProvider vlp = new VertexListProvider(componentDirectory);
-			HashValueProvider hvp = new FileHashValueProvider(hashesFile, propertyHashesFile);
-			
-			FastIndexBuilder ib = new FastIndexBuilder(vlp, hvp);
-			ib.buildIndex();
-			
-			((LuceneExtensionStorage)es).mergeExtensions();
-			
-			em.close();
-			gm.close();
+		if (stages.contains("temp")) {
+			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, false);
+			iw.removeTemporaryFiles();
 		}
 		
 		if (stages.contains("query")) {
-			ExtensionStorage es = new LuceneExtensionStorage(indexDirectory);
-			ExtensionManager em = new LuceneExtensionManager();
-			em.setExtensionStorage(es);
+			StructureIndexReader index = new StructureIndexReader(outputDirectory);
+			index.setNumEvalThreads(evalThreads);
 			
-			GraphStorage gs = new LuceneGraphStorage(graphDirectory);
-			GraphManager gm = new GraphManagerImpl();
-			gm.setGraphStorage(gs);
+			QueryEvaluator qe = index.getQueryEvaluator();
 			
-			StorageManager.getInstance().setExtensionManager(em);
-			StorageManager.getInstance().setGraphManager(gm);
-			em.initialize(false, true);
-			gm.initialize(false, true);
+			QueryLoader ql = new QueryLoader();
+			List<Query> queries = ql.loadQueryFile(queryfile);
 			
-			StructureIndex index = new StructureIndex();
-			index.load();
+			start = System.currentTimeMillis();
+			for (Query q : queries) {
+				log.debug("--------------------------------------------");
+				log.debug("query: " + q.getName());
+				log.debug(q);
+				qe.evaluate(q);
+			}
 			
-			QueryParser qp = new QueryParser();
-			Query q = qp.parseQuery(query);
-			
-			QueryEvaluator qe = new QueryEvaluator(index);
-			qe.evaluate(q);
-			
-			em.close();
-			gm.close();
+			index.close();
 		}
+		
+		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");
 	}
 }

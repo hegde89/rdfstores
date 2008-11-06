@@ -16,10 +16,10 @@ import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.Pseudograph;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.importer.HashedTripleSink;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class TriplesPartitioner implements HashedTripleSink {
 	

@@ -8,9 +8,9 @@ public interface ExtensionSegment {
 	public String getExtensionUri();
 	public String getObject();
 	public String getProperty();
-	public Collection<String> getSubjects();
+	public Collection<Subject> getSubjects();
 
-	public void addSubject(String subject);
+	public void addSubject(Subject subject);
 	
 	public int size();
 	

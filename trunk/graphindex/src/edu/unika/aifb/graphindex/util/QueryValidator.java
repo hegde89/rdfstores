@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex;
+package edu.unika.aifb.graphindex.util;
 
 import java.io.File;
 import java.io.StringReader;

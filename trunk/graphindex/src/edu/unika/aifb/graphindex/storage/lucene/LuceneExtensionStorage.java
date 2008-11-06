@@ -31,34 +31,44 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
 
 import edu.unika.aifb.graphindex.data.ExtensionSegment;
+import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.data.ListExtensionSegment;
 import edu.unika.aifb.graphindex.data.SetExtensionSegment;
+import edu.unika.aifb.graphindex.data.Subject;
 import edu.unika.aifb.graphindex.data.Triple;
+import edu.unika.aifb.graphindex.query.Table;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Timings;
 
 public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	private String m_directory;
-	private IndexWriter m_writer;
-	private IndexReader m_reader;
-	private IndexSearcher m_searcher;
+	public IndexWriter m_writer;
+	public IndexReader m_reader;
+	public IndexSearcher m_searcher;
 	private LRUCache<Integer,Document> m_docCache;
+	private LRUCache<String,List<Triple>> m_tripleCache;
+	private LRUCache<String,GTable<String>> m_tableCache;
+	private Timings m_timings;
 	
 	private final String FIELD_EXT = "ext";
-	private final String FIELD_SUBJECT = "subject";
+	public final String FIELD_SUBJECT = "subject";
 	private final String FIELD_PROPERTY = "property";
 	private final String FIELD_OBJECT = "object";
 	private final String FIELD_TYPE = "type";
 	private final String FIELD_VAL = "value";
 	private final String TYPE_EXTLIST = "extension_list";
 	private final String EXT_PATH_SEP = "__";
-	private final static Logger log = Logger.getLogger(LuceneExtensionStorage.class);
+	public final static Logger log = Logger.getLogger(LuceneExtensionStorage.class);
 	
 	public LuceneExtensionStorage(String directory) {
 		m_directory = directory;
-		m_docCache = new LRUCache<Integer,Document>(1024);
+		m_docCache = new LRUCache<Integer,Document>(1);
+		m_tripleCache = new LRUCache<String,List<Triple>>(5);
+		m_tableCache = new LRUCache<String,GTable<String>>(1);
+		m_timings = new Timings();
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -76,6 +86,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			e.printStackTrace();
 		}
 		
+		m_manager.getIndex().getCollector().addTimings(m_timings);
 		BooleanQuery.setMaxClauseCount(1048576);
 	}
 	
@@ -104,7 +115,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
-	private void checkReadOnly() {
+	public void checkReadOnly() {
 		if (m_readonly)
 			throw new UnsupportedOperationException("no updates while readonly");
 	}
@@ -164,7 +175,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		reopen();
 	}
 	
-	private void reopen() throws CorruptIndexException, IOException {
+	public void reopen() throws CorruptIndexException, IOException {
 		m_reader = m_reader.reopen();
 		m_searcher = new IndexSearcher(m_reader);
 	}
@@ -233,48 +244,82 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //		return triples;
 	}
 	
-	private List<Document> getDocuments(Query q) throws CorruptIndexException, IOException {
-		long start = System.currentTimeMillis();
-		
+	public List<Integer> getDocumentIds(Query q) throws StorageException {
 		final List<Integer> docIds = new ArrayList<Integer>();
-		m_searcher.search(q, new HitCollector() {
-			public void collect(int docId, float score) {
-				docIds.add(docId);
-			}
-		});
-		
-		long search = System.currentTimeMillis() - start;
+		try {
+			m_searcher.search(q, new HitCollector() {
+				public void collect(int docId, float score) {
+					docIds.add(docId);
+				}
+			});
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+//		log.debug("  " + docIds.size() + " docs");
 		
 		Collections.sort(docIds);
-		List<Document> docs = new ArrayList<Document>(docIds.size());
-		for (int docId : docIds) {
+		
+		return docIds;
+	}
+	
+	public Document getDocument(int docId) throws StorageException {
+		try {
 			Document doc = m_docCache.get(docId);
 			if (doc == null) {
 				doc = m_reader.document(docId);
 				m_docCache.put(docId, doc);
 			}
-			docs.add(doc);
+			return doc;
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
 		}
-
-		long retrieval = System.currentTimeMillis() - start - search;
-
-//		log.debug("query: " + q + " (" + docIds.size() + " docs) {" + (System.currentTimeMillis() - start) + " ms, s: " + search + " ms, r: " + retrieval + " ms}");
-		
-		return docs;
 	}
 	
-	public boolean hasDocs(String ext, String propertyUri, String object) throws StorageException  {
+	public List<Document> getDocuments(Query q) throws StorageException {
+		long start = System.currentTimeMillis();
+		
+		try {
+			final List<Integer> docIds = new ArrayList<Integer>();
+			m_searcher.search(q, new HitCollector() {
+				public void collect(int docId, float score) {
+					docIds.add(docId);
+				}
+			});
+			log.debug("  " + docIds.size() + " docs");
+			long search = System.currentTimeMillis() - start;
+			
+			Collections.sort(docIds);
+			List<Document> docs = new ArrayList<Document>(docIds.size());
+			for (int docId : docIds) {
+				Document doc = m_docCache.get(docId);
+				if (doc == null) {
+					doc = m_reader.document(docId);
+					m_docCache.put(docId, doc);
+				}
+				docs.add(doc);
+			}
+	
+			long retrieval = System.currentTimeMillis() - start - search;
+
+//			log.debug("query: " + q + " (" + docIds.size() + " docs) {" + (System.currentTimeMillis() - start) + " ms, s: " + search + " ms, r: " + retrieval + " ms}");
+			
+			return docs;
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public boolean hasTriples(String ext, String propertyUri, String object) throws StorageException  {
 		try {
 			long start = System.currentTimeMillis();
 			Query q = new TermQuery(getTerm(ext, propertyUri, object));
-			final List<Integer> docIds = new ArrayList<Integer>();
-			m_searcher.search(q, new HitCollector() {
-				public void collect(int doc, float score) {
-					docIds.add(doc);
-				}
-			});
+			Hits hits = m_searcher.search(q);
 //			log.debug("hasDocs q: " + q + " (" + docIds.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
-			return docIds.size() > 0;
+			return hits.length() > 0;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
@@ -297,7 +342,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return es.getExtensionUri() + EXT_PATH_SEP + es.getProperty() + EXT_PATH_SEP + es.getObject() + EXT_PATH_SEP;
 	}
 	
-	private Document segmentToDocument(ExtensionSegment es) {
+	public Document segmentToDocument(ExtensionSegment es) {
 		Document doc = new Document();
 		doc.add(new Field(FIELD_EXT, getPath(es), Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 		doc.add(new Field(FIELD_OBJECT, es.getObject(), Field.Store.YES, Field.Index.NO));
@@ -305,10 +350,15 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return doc;
 	}
 	
-	private ExtensionSegment documentToSegment(Document doc, String extUri, String propertyUri) {
+	public ExtensionSegment documentToSegment(Document doc, String extUri, String propertyUri) {
 		ListExtensionSegment es = new ListExtensionSegment(extUri, propertyUri, doc.getField(FIELD_OBJECT).stringValue());
-		String[] subjects = doc.getField(FIELD_SUBJECT).stringValue().split("\n");
-		es.setSubjects(Arrays.asList(subjects));
+		String[] subjectStrings = doc.getField(FIELD_SUBJECT).stringValue().split("\n");
+		List<Subject> list = new ArrayList<Subject>();
+		for (String s : subjectStrings) {
+			String[] t = s.split("\t");
+			list.add(new Subject(t[0], t[1]));
+		}
+		es.setSubjects(list);
 		return es;
 	}
 	
@@ -328,7 +378,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return path;
 	}
 	
-	public List<ExtensionSegment> loadExtensionSegments(String extUri, String property) throws IOException {
+	public List<ExtensionSegment> loadExtensionSegments(String extUri, String property) throws StorageException {
 		long start = System.currentTimeMillis();
 		
 		PrefixQuery pq = new PrefixQuery(getTerm(extUri, property));
@@ -344,21 +394,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			segments.add(es);
 		}
 		
-//		BooleanQuery bq = (BooleanQuery)pq.rewrite(m_reader);
-//		
-//		long rewrite = System.currentTimeMillis() - start;
-//		
-//		List<ExtensionSegment> segments = new ArrayList<ExtensionSegment>(bq.getClauses().length);
-//		for (BooleanClause clause : bq.getClauses()) {
-//			Term t = ((TermQuery)clause.getQuery()).getTerm();
-//			if (t.field().equals(FIELD_EXT)) {
-//				String[] path = getPathFromTerm(t);
-//				ExtensionSegment es = loadExtensionSegment(extUri, property, path[2]);
-//				if (es != null)
-//					segments.add(es);
-//			}
-//		}
-
 		long build = System.currentTimeMillis() - start - dr;
 		
 		if (docs.size() > 0)
@@ -367,7 +402,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return segments;
 	}
 	
-	public ExtensionSegment loadExtensionSegment(String extUri, String property, String object) throws CorruptIndexException, IOException {
+	public ExtensionSegment loadExtensionSegment(String extUri, String property, String object) throws StorageException {
 		long start = System.currentTimeMillis();
 		
 		TermQuery tq = new TermQuery(getTerm(extUri, property, object));
@@ -388,7 +423,92 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return es;
 	}
 	
-	public void mergeExtensions() throws IOException {
+	private void addToTable(GTable<String> table, Document doc, String allowedSubject) {
+		String[] subjectStrings = doc.getField(FIELD_SUBJECT).stringValue().split("\n");
+		String object = doc.getField(FIELD_OBJECT).stringValue();
+
+//		for (String s : subjectStrings) {
+//			String[] t = s.split("\t");
+//			table.addRow(new String [] { t[0], object });
+//		}
+//		log.debug(object);
+		for (String s : subjectStrings) {
+//			log.debug(s);
+//			if (allowedSubject != null)
+//				log.debug(s);
+			if (allowedSubject == null || s.equals(allowedSubject))
+				table.addRow(new String [] { s, object });
+		}
+	}
+	
+	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException {
+		m_timings.start(Timings.DATA);
+		long start = System.currentTimeMillis();
+
+		GTable<String> table = m_tableCache.get(object == null ? getPath(extUri, property) : getPath(extUri, property, object));
+		
+		if (table != null) {
+			log.debug("q: " + getTerm(extUri, property, object) + " (from cache) {" + (System.currentTimeMillis() - start) + " ms}");
+			return table;
+		}
+
+		table = new GTable<String>("source", "target");
+		
+		Query tq;
+		if (object != null)
+			tq = new TermQuery(getTerm(extUri, property, object));
+		else
+			tq = new PrefixQuery(getTerm(extUri, property));
+		log.debug("q: " + tq + " (as: " + allowedSubject + ")");
+		
+		List<Integer> docIds = getDocumentIds(tq);
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+			addToTable(table, doc, allowedSubject);
+		}
+		
+		m_tableCache.put(object == null ? getPath(extUri, property) : getPath(extUri, property, object), table);
+
+		log.debug("  " + docIds.size() + " docs, " + table.rowCount() + " triples {" + (System.currentTimeMillis() - start) + " ms}");
+		m_timings.end(Timings.DATA);
+		
+		return table;
+	}
+	
+	public List<Triple> getTriples(String extUri, String property, String object) throws StorageException {
+		List<Triple> triples = m_tripleCache.get(getPath(extUri, property, object));
+		if (triples == null) {
+			ExtensionSegment es = loadExtensionSegment(extUri, property, object);
+			if (es != null)
+				triples = es.toTriples();
+			else
+				triples = new ArrayList<Triple>();
+			m_tripleCache.put(getPath(extUri, property, object), triples);
+		}
+		return triples;
+	}
+	
+	public List<Triple> getTriples(String extUri, String property) throws StorageException {
+		List<Triple> triples = m_tripleCache.get(getPath(extUri, property));
+		if (triples == null) {
+			triples = new ArrayList<Triple>();
+			List<ExtensionSegment> ess = loadExtensionSegments(extUri, property);
+
+			long start = System.currentTimeMillis();
+			
+			if (ess.size() == 1)
+				triples = ess.get(0).toTriples();
+			else 
+				for (ExtensionSegment es : ess)
+					triples.addAll(es.toTriples());
+			
+//			log.debug(System.currentTimeMillis() - start);
+			m_tripleCache.put(getPath(extUri, property), triples);
+		}
+		return triples;
+	}
+	
+	public void mergeExtensions() throws StorageException, IOException {
 		TermEnum te = m_reader.terms();
 		while (te.next()) {
 			if (te.docFreq() > 1) {
@@ -396,10 +516,12 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //				log.debug("term " + t + " docfreq > 1");
 				String[] path = getPathFromTerm(t);
 				List<Document> docs = getDocuments(new TermQuery(t));
-				Set<String> subjects = new HashSet<String>();
+				Set<Subject> subjects = new HashSet<Subject>();
 				for (Document doc : docs) {
-					for (String subject : doc.getField(FIELD_SUBJECT).stringValue().split("\n"))
-						subjects.add(subject);
+					for (String s : doc.getField(FIELD_SUBJECT).stringValue().split("\n")) {
+						String[] sp = s.split("\t");
+						subjects.add(new Subject(sp[0], sp[1]));
+					}
 				}
 				SetExtensionSegment es = new SetExtensionSegment(path[0], path[1], path[2]);
 				es.setSubjects(subjects);

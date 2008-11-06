@@ -14,7 +14,6 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.Util;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.data.LVertex;
@@ -27,6 +26,7 @@ import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class RCPFast {
 	private GraphManager m_gm;

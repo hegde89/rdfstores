@@ -9,6 +9,7 @@ import java.util.List;
  */
 public class Triple {
 	private String m_subject, m_property, m_object;
+	private String m_subjectExtension;
 	
 	/**
 	 * Triples whose subjects equal the object of this triple.
@@ -28,6 +29,11 @@ public class Triple {
 		m_subject = subject;
 		m_next = new ArrayList<Triple>();
 		m_prev = new ArrayList<Triple>();
+	}
+	
+	public Triple(String subject, String property, String object, String subjectExtension) {
+		this(subject, property, object);
+		m_subjectExtension = subjectExtension;
 	}
 	
 	/**
@@ -64,6 +70,14 @@ public class Triple {
 
 	public void setSubject(String m_subject) {
 		this.m_subject = m_subject;
+	}
+	
+	public String getSubjectExtension() {
+		return m_subjectExtension;
+	}
+	
+	public void setSubjectExtension(String ext) {
+		m_subjectExtension = ext;
 	}
 
 	public String getProperty() {

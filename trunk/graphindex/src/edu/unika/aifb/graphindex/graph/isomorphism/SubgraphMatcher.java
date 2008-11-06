@@ -17,12 +17,15 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 
-import edu.unika.aifb.graphindex.Util;
+import edu.unika.aifb.graphindex.graph.Graph;
+import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.IndexEdge;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * Implementation of the VF2 graph isomorphism algorithm, published in:
@@ -43,7 +46,8 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class SubgraphMatcher implements Iterable<VertexMapping> {
 
 	public class DiGMState {
-		private IndexGraph g1, g2;
+		private Graph<QueryNode> g1;
+		private Graph<String> g2;
 		private FeasibilityChecker checker;
 		
 		private int[] core1, core2;
@@ -203,6 +207,8 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 			core_len++;
 			added_node1 = node1;
 			
+//			log.debug("add added_node1: " + node1 + ", node2: " + node2 + ", core_len: " + core_len);
+			
 			if (in1[node1] == 0) {
 				in1[node1] = core_len;
 				t1in_len++;
@@ -252,7 +258,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 				}
 			}
 			
-			Set<String> labels = g1.edgeLabels(node1);
+			Set<String> labels = g1.allEdgeLabels(node1);
 
 			for (int pred : g2.predecessors(node2, labels)) {
 				if (in2[pred] == 0) {
@@ -278,6 +284,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 				throw new Error("error");
 			
 //			log.debug(" core_len: " + core_len + ", added_node1: " + added_node1);
+//			log.debug("rm added_node1: " + added_node1 + ", core_len: " + core_len);
 			
 			if (orig_core_len < core_len) { // check that the state wasn't already removed
 				if (in1[added_node1] == core_len) 
@@ -332,7 +339,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 		}
 
 		public String toString() {
-			return "(" + n1 + "," + n2 + ") (" + m_g1.getNodeLabel(n1) + "," + m_g2.getNodeLabel(n2) + ")";
+			return "(" + n1 + "," + n2 + ") (" + m_g1.getNode(n1) + "," + m_g2.getNode(n2) + ")";
 		}
 
 		@Override
@@ -363,7 +370,8 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 
 	private final int NULL_NODE = -1;
 	
-	private IndexGraph m_g1, m_g2;
+	private Graph<QueryNode> m_g1;
+	private Graph<String> m_g2;
 	private Set<String> m_labels;
 	
 	private int[] m_core1, m_core2;
@@ -398,7 +406,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 	 *            mapping can be extended by the two nodes
 	 * @param listener
 	 */
-	public SubgraphMatcher(IndexGraph graph1, IndexGraph graph2, boolean generateMappings, FeasibilityChecker checker,
+	public SubgraphMatcher(Graph<QueryNode> graph1, Graph<String> graph2, boolean generateMappings, FeasibilityChecker checker,
 			MappingListener listener) {
 		m_g1 = graph1;
 		m_g2 = graph2;
@@ -408,7 +416,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 		
 		
 		m_mappingLength = m_g1.nodeCount();
-		m_labels = graph1.edgeSet();
+		m_labels = graph1.edgeLabelSet();
 
 		m_core1 = new int[m_g1.nodeCount()];
 		m_in1 = new int[m_g1.nodeCount()];
@@ -431,6 +439,9 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 	 */
 	public boolean isSubgraphIsomorphic() {
 		m_vertexMappings.clear();
+		
+		if (m_g1.nodeCount() > m_g2.nodeCount() || m_g1.edgeCount() > m_g2.edgeCount())
+			return false;
 
 		boolean found = match(m_state);
 
@@ -440,7 +451,7 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 	private Map<String,String> toStringMapping(Map<Integer,Integer> map) {
 		Map<String,String> smap = new HashMap<String,String>();
 		for (int k : map.keySet())
-			smap.put(m_g1.getNodeLabel(k), m_g2.getNodeLabel(map.get(k)));
+			smap.put(m_g1.getNode(k).getName(), m_g2.getNode(map.get(k)));
 		return smap;
 	}
 
@@ -455,9 +466,9 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 			for (int n1 : mapping.keySet())
 				valid = m_checker.checkVertexCompatible(n1, mapping.get(n1)) && valid; // lazy evaluation
 			if (valid) {
-				log.debug("found: " + mapping);
 				if (m_generateMappings) {
 					VertexMapping vm = new VertexMapping(toStringMapping(mapping));
+					log.debug("found: " + vm);
 					m_vertexMappings.add(vm);
 					if (m_listener != null)
 						m_listener.mapping(vm);
@@ -475,19 +486,21 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 				pairs++;
 				if (pairs % 10000000 == 0)
 					log.debug(" pairs generated: " + pairs);
-//				log.debug("trying " + p);
+//				log.debug("trying " + m_g1.getNodeLabel(p[0]) + "," + m_g2.getNodeLabel(p[1]));
 				if (isFeasibleSubgraph(p[0], p[1], state)) {
 					DiGMState newState = new DiGMState(state);
+//					log.debug("bfadd:  " + atos(m_in1) + " " + atos(m_in2) + " " + atos(m_out1) + " " + atos(m_out2));
 					newState.addPair(p[0], p[1]);
+//					log.debug("apadd:  " + atos(m_in1) + " " + atos(m_in2) + " " + atos(m_out1) + " " + atos(m_out2));
 					if (match(newState)) {
 						found = true;
 						if (!m_generateMappings)
 							return true;
 					}
 					
-//					log.debug("before: " + atos(in1) + " " + atos(in2) + " " + atos(out1) + " " + atos(out2));
+//					log.debug("before: " + atos(m_in1) + " " + atos(m_in2) + " " + atos(m_out1) + " " + atos(m_out2));
 					newState.remove();
-//					log.debug("after:  " + atos(in1) + " " + atos(in2) + " " + atos(out1) + " " + atos(out2));
+//					log.debug("after:  " + atos(m_in1) + " " + atos(m_in2) + " " + atos(m_out1) + " " + atos(m_out2));
 					
 					if (isInvalidMapping(state.getMapping()))
 						return false;
@@ -506,9 +519,10 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 	}
 
 	private class Tuple {
-		List<IndexEdge> l1, l2;
+		List<GraphEdge<QueryNode>> l1;
+		List<GraphEdge<String>> l2;
 
-		public Tuple(List<IndexEdge> l1, List<IndexEdge> l2) {
+		public Tuple(List<GraphEdge<QueryNode>> l1, List<GraphEdge<String>> l2) {
 			this.l1 = l1;
 			this.l2 = l2;
 		}
@@ -547,13 +561,13 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 
 	Map<Tuple,Boolean> edgeSetCache = new HashMap<Tuple,Boolean>();
 
-	private boolean edgeSetsCompatible(List<IndexEdge> g1edges, List<IndexEdge> g2edges) {
+	private boolean edgeSetsCompatible(List<GraphEdge<QueryNode>> g1edges, List<GraphEdge<String>> g2edges) {
 		Tuple t = new Tuple(g1edges, g2edges);
 		Boolean val = edgeSetCache.get(t);
 		if (val == null) {
-			for (IndexEdge e1 : g1edges) {
+			for (GraphEdge<QueryNode> e1 : g1edges) {
 				boolean found = false;
-				for (IndexEdge e2 : g2edges) {
+				for (GraphEdge<String> e2 : g2edges) {
 					if (e1.getLabel().equals(e2.getLabel())) {
 						found = true;
 						break;
@@ -584,24 +598,24 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 			return false;
 		
 		// R_pred
-		Map<Integer,List<IndexEdge>> n1predMap = m_g1.predecessorEdges(n1);
-		Map<Integer,List<IndexEdge>> n2predMap = m_g2.predecessorEdges(n2);
+		Map<Integer,List<GraphEdge<QueryNode>>> n1predMap = m_g1.predecessorEdges(n1);
+		Map<Integer,List<GraphEdge<String>>> n2predMap = m_g2.predecessorEdges(n2);
 		for (int n1pred : n1predMap.keySet()) {
 			int n1mapped = m_core1[n1pred];
 			if (n1mapped != NULL_NODE) {
-				List<IndexEdge> n1predEdges = n1predMap.get(n1pred);
+				List<GraphEdge<QueryNode>> n1predEdges = n1predMap.get(n1pred);
 
 				if (!n2predMap.keySet().contains(n1mapped))
 					return false;
 				else if (n1predEdges.size() > n2predMap.get(n1mapped).size())
 					return false;
 
-				List<IndexEdge> g1edges = n1predEdges;
+				List<GraphEdge<QueryNode>> g1edges = n1predEdges;
 
 				boolean found = false;
 				for (int n2pred : n2predMap.keySet()) {
 					if (m_core2[n2pred] != NULL_NODE) {
-						List<IndexEdge> g2edges = n2predMap.get(n2pred);
+						List<GraphEdge<String>> g2edges = n2predMap.get(n2pred);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
 							break;
@@ -636,24 +650,24 @@ public class SubgraphMatcher implements Iterable<VertexMapping> {
 		}
 
 		// R_succ
-		Map<Integer,List<IndexEdge>> n1succs = m_g1.successorEdges(n1);
-		Map<Integer,List<IndexEdge>> n2succs = m_g2.successorEdges(n2);
+		Map<Integer,List<GraphEdge<QueryNode>>> n1succs = m_g1.successorEdges(n1);
+		Map<Integer,List<GraphEdge<String>>> n2succs = m_g2.successorEdges(n2);
 		for (int n1succ : n1succs.keySet()) {
 			int n1mapped = m_core1[n1succ];
 			if (n1mapped != NULL_NODE) {
-				List<IndexEdge> n1succEdges = n1succs.get(n1succ);
+				List<GraphEdge<QueryNode>> n1succEdges = n1succs.get(n1succ);
 
 				if (!n2succs.keySet().contains(n1mapped))
 					return false;
 				else if (n1succEdges.size() > n2succs.get(n1mapped).size())
 					return false;
 
-				List<IndexEdge> g1edges = n1succEdges;
+				List<GraphEdge<QueryNode>> g1edges = n1succEdges;
 
 				boolean found = false;
 				for (int n2succ : n2succs.keySet()) {
 					if (m_core2[n2succ] != NULL_NODE) {
-						List<IndexEdge> g2edges = n2succs.get(n2succ);
+						List<GraphEdge<String>> g2edges = n2succs.get(n2succ);
 						if (edgeSetsCompatible(g1edges, g2edges)) {
 							found = true;
 							break;

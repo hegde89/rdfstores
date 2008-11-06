@@ -31,15 +31,15 @@ public abstract class AbstractExtensionSegment implements ExtensionSegment {
 	
 	public String toSubjectString() {
 		StringBuilder sb = new StringBuilder();
-		for (String subject : getSubjects())
-			sb.append(subject).append("\n");
+		for (Subject subject : getSubjects())
+			sb.append(subject.toDataString()).append("\n");
 		return sb.toString();
 	}
 
 	public List<Triple> toTriples() {
 		List<Triple> triples = new ArrayList<Triple>();
-		for (String subject : getSubjects()) {
-			triples.add(new Triple(subject, getProperty(), getObject()));
+		for (Subject subject : getSubjects()) {
+			triples.add(new Triple(subject.getSubject(), getProperty(), getObject(), subject.getExtension()));
 		}
 		return triples;
 	}

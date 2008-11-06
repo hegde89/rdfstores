@@ -14,6 +14,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.VertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;
+import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -51,21 +52,21 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	private SortedSet<String> m_sortedVertices;
 	
 	
-	public NamedGraph(String name, Class<? extends E> edgeClass) throws StorageException {
+	public NamedGraph(String name, GraphManager gm, Class<? extends E> edgeClass) throws StorageException {
 		super(edgeClass);
 		m_name = name;
-		initialize();
+		initialize(gm);
 	}
 
-	public NamedGraph(String name, EdgeFactory<String,LabeledEdge<String>> ef) throws StorageException {
+	public NamedGraph(String name, GraphManager gm, EdgeFactory<String,LabeledEdge<String>> ef) throws StorageException {
 		super(ef);
 		m_name = name;
-		initialize();
+		initialize(gm);
 	}
 	
-	private void initialize() throws StorageException {
-		if (StorageManager.getInstance().getGraphManager() != null) {
-			m_gs = StorageManager.getInstance().getGraphManager().getGraphStorage();
+	private void initialize(GraphManager gm) throws StorageException {
+		if (gm != null) {
+			m_gs = gm.getGraphStorage();
 			
 			Set<LabeledEdge<String>> edges = m_gs.loadEdges(m_name);
 			for (LabeledEdge<String> edge : edges) {
@@ -259,10 +260,5 @@ public class NamedGraph<V extends String, E extends LabeledEdge<String>> extends
 	
 	public String toString() {
 		return m_name + "(" + vertexSet().size() + "," + edgeSet().size() + ")";
-	}
-	
-	public VertexCollection toVertexCollection() {
-		VertexCollection vc = VertexFactory.collection();
-		
 	}
 }

@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -72,9 +73,16 @@ public class Main {
 			return;
 		}
 		
+		Set<String> _stages = new HashSet<String>(Arrays.asList("preprocess", "index", "query", "convert", "partition", "transform"));
+		
 		Set<String> stages = new HashSet<String>();
-		for (int i = 1; i < args.length; i++)
-			stages.add(args[i]);
+		Set<String> queryNames = new HashSet<String>();
+		for (int i = 1; i < args.length; i++) {
+			if (_stages.contains(args[i]))
+				stages.add(args[i]);
+			else
+				queryNames.add(args[i]);
+		}
 		
 		if (stages.contains("preprocess")) {
 			stages.add("convert");
@@ -97,6 +105,7 @@ public class Main {
 		
 		String queryfile = (String)config.get("queryfile");
 		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
+		int tableCacheSize = config.get("table_cache_size") != null ? (Integer)config.get("table_cache_size") : 100;
 		
 		String indexDirectory = new File(outputDirectory + "/index").getAbsolutePath(); 
 		String graphDirectory = new File(outputDirectory + "/graph").getAbsolutePath();
@@ -163,6 +172,7 @@ public class Main {
 		if (stages.contains("query")) {
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
 			index.setNumEvalThreads(evalThreads);
+			index.getIndex().setTableCacheSize(tableCacheSize);
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
 			
@@ -174,7 +184,8 @@ public class Main {
 				log.debug("--------------------------------------------");
 				log.debug("query: " + q.getName());
 				log.debug(q);
-				qe.evaluate(q);
+				if (queryNames.size() == 0 || queryNames.contains(q.getName()))
+					qe.evaluate(q);
 			}
 			
 			index.close();

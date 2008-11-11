@@ -13,8 +13,9 @@ import edu.unika.aifb.graphindex.data.GTable;
 public class EvaluationClass {
 	private Map<String,String> m_matches;
 	private List<Map<String,String>> m_mappings;
-	private GTable<String> m_result;
+//	private GTable<String> m_result;
 	private List<GTable<String>> m_results;
+	private boolean m_empty = false;
 	
 	public EvaluationClass() {
 		this(new HashMap<String,String>());
@@ -23,11 +24,21 @@ public class EvaluationClass {
 	public EvaluationClass(Map<String,String> matches) {
 		m_matches = matches;
 		m_mappings = new ArrayList<Map<String,String>>();
+		m_results = new ArrayList<GTable<String>>();
 	}
 	
 	public EvaluationClass(List<Map<String,String>> mappings) {
 		m_mappings = mappings;
 		m_matches = new HashMap<String,String>();
+		m_results = new ArrayList<GTable<String>>();
+	}
+	
+	public void setEmpty(boolean empty) {
+		m_empty = empty;
+	}
+	
+	public boolean isEmpty() {
+		return m_empty;
 	}
 	
 	public void addMapping(Map<String,String> mapping) {
@@ -46,13 +57,13 @@ public class EvaluationClass {
 		m_results = results;
 	}
 	
-	public GTable<String> getResult() {
-		return m_result;
-	}
-
-	public void setResult(GTable<String> result) {
-		m_result = result;
-	}
+//	public GTable<String> getResult() {
+//		return m_result;
+//	}
+//
+//	public void setResult(GTable<String> result) {
+//		m_result = result;
+//	}
 	
 	public String getMinUniqueValuesKey() {
 		String maxKey = null;
@@ -109,7 +120,7 @@ public class EvaluationClass {
 					Map<String,String> newMatches = new HashMap<String,String>(m_matches);
 					newMatches.put(key, val);
 					ec = new EvaluationClass(newMatches);
-					ec.setResult(getResult());
+					ec.setResults(new ArrayList<GTable<String>>(getResults()));
 					newClasses.add(ec);
 					val2class.put(mapping.get(key), ec);
 				}

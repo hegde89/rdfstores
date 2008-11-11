@@ -26,4 +26,6 @@ public interface ExtensionStorage {
 	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException;
 	
 	public void mergeExtensions() throws IOException, StorageException;
+	
+	public void clearCaches() throws StorageException;
 }

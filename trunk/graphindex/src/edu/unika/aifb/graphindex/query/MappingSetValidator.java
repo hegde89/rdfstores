@@ -49,7 +49,7 @@ import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
 
-public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
+public class MappingSetValidator implements Callable<List<String[]>> {
 	
 	private class ClassEvaluator implements Callable<EvaluationClass> {
 		private EvaluationClass m_ec;
@@ -64,51 +64,89 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 			this.currentEdge = currentEdge;
 		}
 		
+		private GTable<String> getTable(String src, String dst, String ext, String edge, String object) throws StorageException {
+			if (dst.startsWith("?"))
+				return m_es.getTable(ext, edge, null, src.startsWith("?") ? null : src);
+			else
+				return m_es.getTable(ext, edge, object, src.startsWith("?") ? null : src);
+		}
+		
 		private EvaluationClass evaluate(EvaluationClass ec) throws StorageException {
-			GTable<String> result = ec.getResult();
 			String srcExt = ec.getMatch(srcLabel);
 			String dstExt = ec.getMatch(dstLabel);
+
+			GTable<String> left = null, right = null;
+			for (GTable<String> table : ec.getResults()) {
+				if (table.hasColumn(srcLabel))
+					left = table;
+				if (table.hasColumn(dstLabel))
+					right = table;
+			}
 			
-			GTable<String> otherTable;
-			if (dstLabel.startsWith("?"))
-				otherTable = m_es.getTable(dstExt, currentEdge.getLabel(), null, srcLabel.startsWith("?") ? null : srcLabel);
-			else
-				otherTable = m_es.getTable(dstExt, currentEdge.getLabel(), dstLabel, srcLabel.startsWith("?") ? null : srcLabel);
+			GTable<String> result;
 			
-			otherTable.setColumnName(0, srcLabel);
-			otherTable.setColumnName(1, dstLabel);
-			
-//			log.debug("resultTable: " + result + ", otherTable: " + otherTable);
-			if (result == null) {
-				if (m_queryGraph.inDegreeOf(currentEdge.getSrc()) > 0) {
-					GraphEdge<QueryNode> ine = m_queryGraph.incomingEdges(currentEdge.getSrc()).get(0);
-					GTable<String> nodeTable;
-					if (srcLabel.startsWith("?"))
-						nodeTable = m_es.getTable(srcExt, ine.getLabel(), null, null);
-					else
-						nodeTable = m_es.getTable(srcExt, ine.getLabel(), srcLabel, null);
-					
-					nodeTable.setColumnName(0, m_queryGraph.getNode(ine.getSrc()).getSingleMember());
-					nodeTable.setColumnName(1, srcLabel);
-					
-					result = join(nodeTable, otherTable, Arrays.asList(srcLabel));
-				}
-				else {
-					result = new GTable<String>(Arrays.asList(srcLabel, dstLabel));
-					for (String[] t : otherTable)
-						result.addRow(new String [] { t[0], t[1] });
-				}
+			if (left == null && right == null) {
+				// very first edge
+				result = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				result.setColumnName(0, srcLabel);
+				result.setColumnName(1, dstLabel);
+			}
+			else if (left == null) {
+				// current edge points into a result area
+				// load triples from dst ext with label of current edge and map subjects to src node
+				left = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				left.setColumnName(0, srcLabel);
+				left.setColumnName(1, dstLabel);
+				
+				result = join(left, right, Arrays.asList(dstLabel));
+			}
+			else if (right == null) {
+				// current edge points out of a result table
+				right = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				right.setColumnName(0, srcLabel);
+				right.setColumnName(1, dstLabel);
+				
+				result = join(left, right, Arrays.asList(srcLabel));
 			}
 			else {
-				if (result.hasColumn(srcLabel) && result.hasColumn(dstLabel))
-					result = join(result, otherTable, Arrays.asList(srcLabel, dstLabel));
-				else if (result.hasColumn(srcLabel))
-					result = join(result, otherTable, Arrays.asList(srcLabel));
-				else
-					result = join(result, otherTable, Arrays.asList(dstLabel));
+				// edge is between two intermediary results
+				// we need to load triples from the dst ext with the label of the current edge
+				// probably use the objects already mapped there
+
+				Set<String> objects = new HashSet<String>();
+				int col = right.getColumn(dstLabel);
+				for (String[] t : right) {
+					objects.add(t[col]);
+				}
+				
+				GTable<String> middle = new GTable<String>(Arrays.asList(srcLabel, dstLabel));
+				for (String object : objects) {
+//					log.debug(object);
+					GTable<String> table = m_es.getTable(dstExt, currentEdge.getLabel(), object, null);
+					for (String[] t : table)
+						middle.addRow(t);
+				}
+				
+				if (left.rowCount() < right.rowCount()) {
+					result = join(left, middle, Arrays.asList(srcLabel));
+					result = join(result, right, Arrays.asList(dstLabel));
+				}
+				else {
+					result = join(middle, right, Arrays.asList(dstLabel));
+					result = join(left, result, Arrays.asList(srcLabel));
+				}
 			}
+
+			ec.getResults().remove(left);
+			ec.getResults().remove(right);
 			
-			ec.setResult(result);
+			if (result.rowCount() > 0)
+				ec.getResults().add(result);
+			else
+				ec.setEmpty(true);
+			
+//			log.debug("a: " + ec.getResults().size() + " " + ec.isEmpty());
+//			ec.setResult(result);
 			
 			return ec;
 		}
@@ -209,15 +247,11 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 					int s = 0, d = leftRow.length;
 					for (int i = 0; i < src.length; i++) {
 						System.arraycopy(row, s, resultRow, d, src[i] - s);
+						d += src[i] - s;
 						s = src[i] + 1;
-						d += src[i] - s + 1;
 					}
 					if (s < row.length)
 						System.arraycopy(row, s, resultRow, d, resultRow.length - d);
-//					System.arraycopy(row, 0, resultRow, leftRow.length, rc);
-//					System.arraycopy(row, rc + 1, resultRow, leftRow.length + rc, row.length - rc - 1);
-//					System.arraycopy(leftRow, 0, resultRow, 0, leftRow.length);
-//					System.arraycopy(row, 0, resultRow, leftRow.length, row.length);
 					result.addRow(resultRow);
 					count++;
 //					if (count % 100000 == 0)
@@ -225,7 +259,7 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 				}
 			}
 		}
-//		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		t.end(Timings.JOIN);
 		return result;
 	}
@@ -244,7 +278,7 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 		classes.addAll(newClasses);
 	}
 	
-	private Set<Map<String,String>> validateMappings(final Graph<QueryNode> queryGraph, List<Map<String,String>> mappings) throws StorageException, InterruptedException, ExecutionException {
+	private List<String[]> validateMappings(final Graph<QueryNode> queryGraph, List<Map<String,String>> mappings) throws StorageException, InterruptedException, ExecutionException {
 		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
 		EvaluationClass evc = new EvaluationClass(mappings);
 		classes.add(evc);
@@ -277,48 +311,53 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 //				log.debug(" " + matchedNodes);
 				
 				// if both edges sources and destinations are all matched, make an arbitrary choice
-				if (matchedNodes.contains(s1) && matchedNodes.contains(s2) && matchedNodes.contains(d1) && matchedNodes.contains(d2))
-					return 1;
+//				if (matchedNodes.contains(s1) && matchedNodes.contains(s2) && matchedNodes.contains(d1) && matchedNodes.contains(d2))
+//					return 1;
 				
 				// if all nodes of both edges are not matched, prefer the edge where the product 
 				// of the cardinalities of source and destination is the lowest
-				if (!matchedNodes.contains(s1) && !matchedNodes.contains(s2) && !matchedNodes.contains(d1) && !matchedNodes.contains(d2)) {
+//				if (!matchedNodes.contains(s1) && !matchedNodes.contains(s2) && !matchedNodes.contains(d1) && !matchedNodes.contains(d2)) {
 					int c1 = cardinality.get(s1) * cardinality.get(d1);
 					int c2 = cardinality.get(s2) * cardinality.get(d2);
+//					log.debug(e1 + " " + e2 + " " + c1 + " " + c2);
 					
 					if (c1 == c2) {
-						if (queryGraph.inDegreeOf(e1.getSrc()) < queryGraph.inDegreeOf(e2.getSrc()))
-							return -1;
-						else
+//						if (queryGraph.inDegreeOf(e1.getSrc()) < queryGraph.inDegreeOf(e2.getSrc()))
+//							return -1;
+//						else
+//							return 1;
+						if (cardinality.get(d1) < cardinality.get(d2))
 							return 1;
+						else
+							return -1;
 					}
 					
 					return c1 < c2 ? -1 : 1;
-				}
+//				}
 
 				// evaluate edges between already matched nodes first
-				if (matchedNodes.contains(s1) && matchedNodes.contains(d1))
-					return -1;
-				else if (matchedNodes.contains(s2) && matchedNodes.contains(d2))
-					return 1;
+//				if (matchedNodes.contains(s1) && matchedNodes.contains(d1))
+//					return -1;
+//				else if (matchedNodes.contains(s2) && matchedNodes.contains(d2))
+//					return 1;
 
 				// otherwise, prefer the edge were the unmapped node has the lowest cardinality				
-				String e1unmatched;
-				if (matchedNodes.contains(s1))
-					e1unmatched = d1;
-				else
-					e1unmatched = s1;
-				
-				String e2unmatched;
-				if (matchedNodes.contains(s2))
-					e2unmatched = d2;
-				else
-					e2unmatched = s2;
-				
-				if (cardinality.get(e1unmatched) < cardinality.get(e2unmatched))
-					return -1;
-				else
-					return 1;
+//				String e1unmatched;
+//				if (matchedNodes.contains(s1))
+//					e1unmatched = d1;
+//				else
+//					e1unmatched = s1;
+//				
+//				String e2unmatched;
+//				if (matchedNodes.contains(s2))
+//					e2unmatched = d2;
+//				else
+//					e2unmatched = s2;
+//				
+//				if (cardinality.get(e1unmatched) < cardinality.get(e2unmatched))
+//					return -1;
+//				else
+//					return 1;
 			}
 		});
 		
@@ -327,7 +366,8 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 		toVisit.addAll(queryGraph.edges());
 		GraphEdge<QueryNode> startEdge = toVisit.peek();
 		toVisit.clear();
-		toVisit.offer(startEdge);
+//		toVisit.offer(startEdge);
+		toVisit.addAll(queryGraph.edges());
 		
 		// TODO for start edge prefer edge where the src node has no incoming edges
 		
@@ -359,7 +399,7 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 				matchedNodes.add(dstLabel);
 			}
 			
-//			log.debug(" " + classes.size());
+			log.debug(" classes before eval: " + classes.size() + " (matched nodes: " + matchedNodes + ")");
 			
 			for (EvaluationClass ec : classes)
 				completionService.submit(new ClassEvaluator(ec, srcLabel, dstLabel, currentEdge));
@@ -369,48 +409,58 @@ public class MappingSetValidator implements Callable<Set<Map<String,String>>> {
 				Future<EvaluationClass> f = completionService.take();
 				EvaluationClass ec = f.get();
 				
-				if (ec.getResult().rowCount() > 0)
+				if (!ec.isEmpty())
 					nonEmptyClasses.add(ec);
 			}
 			
 			classes = nonEmptyClasses;
 			
-			log.debug(" " + classes.size());
+			log.debug(" classes after eval: " + classes.size());
 			
-			for (GraphEdge<QueryNode> e : queryGraph.outgoingEdges(currentEdge.getSrc()))
-				if (!visited.contains(e))
-					toVisit.add(e);
-			for (GraphEdge<QueryNode> e : queryGraph.incomingEdges(currentEdge.getSrc()))
-				if (!visited.contains(e))
-					toVisit.add(e);
+			Map<String,Integer> resCardinality = new HashMap<String,Integer>();
 			
-			for (GraphEdge<QueryNode> e : queryGraph.outgoingEdges(currentEdge.getDst()))
-				if (!visited.contains(e))
-					toVisit.add(e);
-			for (GraphEdge<QueryNode> e : queryGraph.incomingEdges(currentEdge.getDst()))
-				if (!visited.contains(e))
-					toVisit.add(e);
+			int x = 0;
+			for (EvaluationClass ec : classes) {
+				for (GTable<String> table : ec.getResults()) {
+					x += table.rowCount();
+					for (String col : table.getColumnNames()) {
+						if (resCardinality.containsKey(col))
+							resCardinality.put(col, resCardinality.get(col) + table.rowCount());
+						else
+							resCardinality.put(col, table.rowCount());
+					}
+				}
+			}
+			log.debug(resCardinality);
+			if (classes.size() > 0 && classes.get(0).getResults().size() > 0)
+				log.debug(" x: " + x + " " + classes.get(0).getResults().size() + " " + classes.get(0).getResults());
 		}
 		
 		executor.shutdown();
 
 		log.debug("classes: " + classes.size());
+		List<String[]> result = new ArrayList<String[]>();
 		Set<Map<String,String>> resultMappings = new HashSet<Map<String,String>>();
 		for (EvaluationClass ec : classes) {
-			for (String[] row : ec.getResult()) {
-				Map<String,String> map = new HashMap<String,String>();
-				for (int i = 0; i < row.length; i++) {
-					map.put(ec.getResult().getColumnNames()[i], row[i]);
-				}
-				resultMappings.add(map);
-	 		}
+			if (ec.getResults().size() == 0)
+				continue;
+
+			result.addAll(ec.getResults().get(0).getTable());
+//			for (String[] row : ec.getResults().get(0)) {
+//				Map<String,String> map = new HashMap<String,String>();
+//				for (int i = 0; i < row.length; i++) {
+//					map.put(ec.getResults().get(0).getColumnNames()[i], row[i]);
+//				}
+//				resultMappings.add(map);
+//	 		}
 		}
-		log.debug("results: " + resultMappings.size());
-		return resultMappings;
+//		log.debug("results: " + resultMappings.size());
+		
+		return result;
 	}
 	
-	public Set<Map<String,String>> call() throws Exception {
-		Set<Map<String,String>> set = validateMappings(m_queryGraph, m_mappings);
+	public List<String[]> call() throws Exception {
+		List<String[]> set = validateMappings(m_queryGraph, m_mappings);
 		m_collector.addTimings(t);
 		return set;
 	}

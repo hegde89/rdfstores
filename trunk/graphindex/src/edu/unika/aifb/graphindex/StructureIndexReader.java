@@ -12,7 +12,7 @@ public class StructureIndexReader {
 	private List<Graph<String>> m_graphs;
 	private QueryEvaluator m_evaluator;
 	
-	private int m_configEvalThreads = 10;
+	private int m_configEvalThreads = 15;
 	
 	public StructureIndexReader(String directory) throws StorageException {
 		m_index = new StructureIndex(directory, false, true);

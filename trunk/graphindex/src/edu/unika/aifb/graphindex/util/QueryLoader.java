@@ -56,6 +56,10 @@ public class QueryLoader {
 			}
 		}
 		
+		Query q = m_parser.parseQuery(currentQuery);
+		q.setName(currentQueryName);
+		queries.add(q);
+		
 		return queries;
 	}
 }

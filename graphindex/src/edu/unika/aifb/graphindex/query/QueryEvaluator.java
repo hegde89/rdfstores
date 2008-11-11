@@ -49,6 +49,7 @@ import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -124,9 +125,10 @@ public class QueryEvaluator {
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		
 		final ExecutorService executor = Executors.newFixedThreadPool(1);
-		final ExecutorCompletionService<Set<Map<String,String>>> completionService = new ExecutorCompletionService<Set<Map<String,String>>>(executor);
+		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
 		
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
+		List<String[]> result = new ArrayList<String[]>();
 		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
 			if (indexGraph.nodeCount() < 10)
 				continue;
@@ -152,19 +154,21 @@ public class QueryEvaluator {
 			listener = null;
 
 			for (int i = 0; i < mappingsCount; i++) {
-				Future<Set<Map<String,String>>> f = completionService.take();
-				Set<Map<String,String>> r = f.get();
+				Future<List<String[]>> f = completionService.take();
+				List<String[]> r = f.get();
 				if (r != null)
-					results.addAll(r);
+					result.addAll(r);
 			}
 		}
 		executor.shutdown();
 //		log.debug("result maps: " + results.size());
 		
-		ResultSet rs = toResultSet(results, query.getVariables());
-		if (rs.size() < 50)
-			log.debug(rs);
-		log.debug("size: " + rs.size());
+//		ResultSet rs = toResultSet(results, query.getVariables());
+//		if (rs.size() < 50)
+//			log.debug(rs);
+		if (result.size() < 50)
+			log.debug(result);
+		log.debug("size: " + result.size());
 		
 		long end = System.currentTimeMillis();
 		log.info("duration: " + (end - start) / 1000.0);
@@ -174,6 +178,8 @@ public class QueryEvaluator {
 		
 		log.debug("vcc size: " + vcc.size());
 		vcc.clear();
+		
+		((LuceneExtensionStorage)m_es).logStats(log);
 
 		return null;
 	}

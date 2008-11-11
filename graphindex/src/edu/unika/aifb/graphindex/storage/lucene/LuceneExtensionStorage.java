@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -52,6 +54,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private LRUCache<String,List<Triple>> m_tripleCache;
 	private LRUCache<String,GTable<String>> m_tableCache;
 	private Timings m_timings;
+	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
 	
 	private final String FIELD_EXT = "ext";
 	public final String FIELD_SUBJECT = "subject";
@@ -67,8 +70,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		m_directory = directory;
 		m_docCache = new LRUCache<Integer,Document>(1);
 		m_tripleCache = new LRUCache<String,List<Triple>>(5);
-		m_tableCache = new LRUCache<String,GTable<String>>(1);
 		m_timings = new Timings();
+		
+		m_queriesFromCache = new HashMap<String,Integer>();
+		m_queriesFromDisk = new HashMap<String,Integer>();
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -80,6 +85,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
+			
+			m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -133,6 +140,15 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			log.debug("flushed and reopened");
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public void clearCaches() throws StorageException {
+		m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
+		try {
+			m_reader.flush();
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -444,14 +460,29 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException {
 		m_timings.start(Timings.DATA);
 		long start = System.currentTimeMillis();
+		
+		String q = getTerm(extUri, property, object).toString();
 
 		GTable<String> table = m_tableCache.get(object == null ? getPath(extUri, property) : getPath(extUri, property, object));
 		
 		if (table != null) {
+			synchronized (m_queriesFromCache) {
+				if (m_queriesFromCache.containsKey(q))
+					m_queriesFromCache.put(q, m_queriesFromCache.get(q) + 1);
+				else
+					m_queriesFromCache.put(q, 1);
+			}
 			log.debug("q: " + getTerm(extUri, property, object) + " (from cache) {" + (System.currentTimeMillis() - start) + " ms}");
 			return table;
 		}
 
+		synchronized (m_queriesFromDisk) {
+			if (m_queriesFromDisk.containsKey(q))
+				m_queriesFromDisk.put(q, m_queriesFromDisk.get(q) + 1);
+			else
+				m_queriesFromDisk.put(q, 1);
+		}
+		
 		table = new GTable<String>("source", "target");
 		
 		Query tq;
@@ -467,7 +498,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			addToTable(table, doc, allowedSubject);
 		}
 		
-		m_tableCache.put(object == null ? getPath(extUri, property) : getPath(extUri, property, object), table);
+		if (allowedSubject == null)
+			m_tableCache.put(object == null ? getPath(extUri, property) : getPath(extUri, property, object), table);
 
 		log.debug("  " + docIds.size() + " docs, " + table.rowCount() + " triples {" + (System.currentTimeMillis() - start) + " ms}");
 		m_timings.end(Timings.DATA);
@@ -551,5 +583,18 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public void deleteData(String extUri) throws IOException {
 		checkReadOnly();
 		deleteDataByPath(getPath(extUri));
+	}
+	
+	public void logStats(Logger logger) {
+		logger.debug("queries from cache:");
+		for (String q : m_queriesFromCache.keySet())
+			if (m_queriesFromCache.get(q) > 1)
+				logger.debug(" " + q + " " + m_queriesFromCache.get(q));
+		logger.debug("queries from disk:");
+		for (String q : m_queriesFromDisk.keySet())
+			if (m_queriesFromDisk.get(q) > 1)
+				logger.debug(" " + q + " " + m_queriesFromDisk.get(q));
+		m_queriesFromCache.clear();
+		m_queriesFromDisk.clear();
 	}
 }

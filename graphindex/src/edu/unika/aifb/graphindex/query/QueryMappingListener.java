@@ -33,7 +33,7 @@ public class QueryMappingListener implements MappingListener {
 	private Graph<QueryNode> m_condensedQueryGraph;
 	private Graph<String> m_indexGraph;
 	private StatisticsCollector m_collector;
-	private ExecutorCompletionService<Set<Map<String,String>>> m_completionService;
+	private ExecutorCompletionService<List<String[]>> m_completionService;
 	private List<List<VertexMapping>> m_relatedMappings;
 	private int m_numberOfMappings;
 	private VCompatibilityCache m_vcc;
@@ -49,7 +49,7 @@ public class QueryMappingListener implements MappingListener {
 	
 	private static final Logger log = Logger.getLogger(QueryMappingListener.class);
 
-	public QueryMappingListener(Graph<QueryNode> orig, Graph<QueryNode> queryGraph, Graph<String> indexGraph, StructureIndexReader indexReader, VCompatibilityCache vcc, ExecutorCompletionService<Set<Map<String,String>>> completionService) {
+	public QueryMappingListener(Graph<QueryNode> orig, Graph<QueryNode> queryGraph, Graph<String> indexGraph, StructureIndexReader indexReader, VCompatibilityCache vcc, ExecutorCompletionService<List<String[]>> completionService) {
 		m_indexReader = indexReader;
 		m_index = m_indexReader.getIndex();
 		

@@ -312,7 +312,7 @@ public class Runner {
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					if (q.getName().equals("q12a"))
+					if (q.getName().equals("q10"))
 						qe.evaluate(q);
 //					break;
 				}
@@ -325,7 +325,7 @@ public class Runner {
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-//					if (q.getName().equals("lq11"))
+					if (q.getName().equals("lq7"))
 						qe.evaluate(q);
 //					break;
 				}

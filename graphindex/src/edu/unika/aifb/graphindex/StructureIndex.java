@@ -17,6 +17,7 @@ public class StructureIndex {
 	private ExtensionManager m_em;
 	private GraphManager m_gm;
 	private StatisticsCollector m_collector;
+	private int m_configTableCacheSize;
 	
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
@@ -57,5 +58,17 @@ public class StructureIndex {
 	public void close() throws StorageException {
 		m_em.close();
 		m_gm.close();
+	}
+	
+	public int getTableCacheSize() {
+		return m_configTableCacheSize;
+	}
+	
+	public void setTableCacheSize(int n) {
+		m_configTableCacheSize = n;
+	}
+	
+	public void clearCaches() throws StorageException {
+		m_em.getExtensionStorage().clearCaches();
 	}
 }

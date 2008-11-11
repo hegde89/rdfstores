@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -104,5 +105,9 @@ public class GTable<T> implements Iterable<T[]>, Cloneable {
 			comma = ",";
 		}
 		return s + ")";
+	}
+
+	public List<T[]> getTable() {
+		return m_rows;
 	}
 }

@@ -106,6 +106,7 @@ public class Main {
 		String queryfile = (String)config.get("queryfile");
 		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
 		int tableCacheSize = config.get("table_cache_size") != null ? (Integer)config.get("table_cache_size") : 100;
+		int docCacheSize = config.get("doc_cache_size") != null ? (Integer)config.get("doc_cache_size") : 1000;
 		
 		String indexDirectory = new File(outputDirectory + "/index").getAbsolutePath(); 
 		String graphDirectory = new File(outputDirectory + "/graph").getAbsolutePath();
@@ -173,6 +174,7 @@ public class Main {
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
 			index.setNumEvalThreads(evalThreads);
 			index.getIndex().setTableCacheSize(tableCacheSize);
+			index.getIndex().setDocumentCacheSize(docCacheSize);
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
 			

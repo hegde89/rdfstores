@@ -1,6 +1,8 @@
 package edu.unika.aifb.graphindex.storage.lucene;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
@@ -42,6 +45,7 @@ import edu.unika.aifb.graphindex.query.Table;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public class LuceneExtensionStorage extends AbstractExtensionStorage {
@@ -64,11 +68,12 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private final String FIELD_VAL = "value";
 	private final String TYPE_EXTLIST = "extension_list";
 	private final String EXT_PATH_SEP = "__";
+	private int m_docCacheHits;
+	private int m_docCacheMisses;
 	public final static Logger log = Logger.getLogger(LuceneExtensionStorage.class);
 	
 	public LuceneExtensionStorage(String directory) {
 		m_directory = directory;
-		m_docCache = new LRUCache<Integer,Document>(1);
 		m_tripleCache = new LRUCache<String,List<Triple>>(5);
 		m_timings = new Timings();
 		
@@ -87,6 +92,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			m_searcher = new IndexSearcher(m_reader);
 			
 			m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
+			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -95,6 +101,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		
 		m_manager.getIndex().getCollector().addTimings(m_timings);
 		BooleanQuery.setMaxClauseCount(1048576);
+		log.debug("gzip: " + m_manager.getIndex().isGZip());
 	}
 	
 	public void close() {
@@ -280,8 +287,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public Document getDocument(int docId) throws StorageException {
 		try {
+			m_docCacheHits++;
 			Document doc = m_docCache.get(docId);
 			if (doc == null) {
+				m_docCacheMisses++;
 				doc = m_reader.document(docId);
 				m_docCache.put(docId, doc);
 			}
@@ -439,8 +448,37 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return es;
 	}
 	
+	private byte[] deflate(String input) {
+		return null;
+	}
+	
+	private String inflate(byte[] input) {
+		try {
+			InputStreamReader isr = new InputStreamReader(new GZIPInputStream(new ByteArrayInputStream(input)));
+			StringBuffer output = new StringBuffer();
+			char[] buf = new char [2048];
+			
+			int x;
+			while ((x = isr.read(buf)) != -1)
+				output.append(buf);
+			
+			return output.toString();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	 
 	private void addToTable(GTable<String> table, Document doc, String allowedSubject) {
-		String[] subjectStrings = doc.getField(FIELD_SUBJECT).stringValue().split("\n");
+		String[] subjectStrings;
+		String subjectString;
+		if (m_manager.getIndex().isGZip())
+			subjectString = inflate(doc.getField(FIELD_SUBJECT).binaryValue());
+		else
+			subjectString = doc.getField(FIELD_SUBJECT).stringValue();
+		
+		StringSplitter splitter = new StringSplitter(subjectString, "\n");
+		
 		String object = doc.getField(FIELD_OBJECT).stringValue();
 
 //		for (String s : subjectStrings) {
@@ -448,7 +486,9 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //			table.addRow(new String [] { t[0], object });
 //		}
 //		log.debug(object);
-		for (String s : subjectStrings) {
+//		for (String s : subjectStrings) {
+		String s;
+		while ((s = splitter.next()) != null) {
 //			log.debug(s);
 //			if (allowedSubject != null)
 //				log.debug(s);
@@ -492,16 +532,24 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			tq = new PrefixQuery(getTerm(extUri, property));
 		log.debug("q: " + tq + " (as: " + allowedSubject + ")");
 		
+		long dr = 0;
+		long db = 0;
+		
 		List<Integer> docIds = getDocumentIds(tq);
 		for (int docId : docIds) {
+			long di = System.currentTimeMillis();
 			Document doc = getDocument(docId);
+			dr += System.currentTimeMillis() - di;
+			
+			di = System.currentTimeMillis();
 			addToTable(table, doc, allowedSubject);
+			db += System.currentTimeMillis() - di;
 		}
 		
 		if (allowedSubject == null)
 			m_tableCache.put(object == null ? getPath(extUri, property) : getPath(extUri, property, object), table);
 
-		log.debug("  " + docIds.size() + " docs, " + table.rowCount() + " triples {" + (System.currentTimeMillis() - start) + " ms}");
+		log.debug("  " + docIds.size() + " docs, " + table.rowCount() + " triples {" + (System.currentTimeMillis() - start) + " ms, dr: " + dr + ", db: " + db + "}");
 		m_timings.end(Timings.DATA);
 		
 		return table;
@@ -586,15 +634,24 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void logStats(Logger logger) {
-		logger.debug("queries from cache:");
+//		logger.debug("queries from cache:");
+		int cache = 0;
 		for (String q : m_queriesFromCache.keySet())
 			if (m_queriesFromCache.get(q) > 1)
-				logger.debug(" " + q + " " + m_queriesFromCache.get(q));
-		logger.debug("queries from disk:");
+				cache += m_queriesFromCache.get(q) - 1;
+//				logger.debug(" " + q + " " + m_queriesFromCache.get(q));
+//		logger.debug("queries from disk:");
+		int disk = 0;
 		for (String q : m_queriesFromDisk.keySet())
 			if (m_queriesFromDisk.get(q) > 1)
-				logger.debug(" " + q + " " + m_queriesFromDisk.get(q));
+				cache += m_queriesFromDisk.get(q) - 1;
+//				logger.debug(" " + q + " " + m_queriesFromDisk.get(q));
+		logger.debug("doccache: " + m_docCacheMisses + "/" + m_docCacheHits);
+		logger.debug("dup cache: " + cache);
+		logger.debug("dup disk: " + disk);
+		
 		m_queriesFromCache.clear();
 		m_queriesFromDisk.clear();
+		m_docCacheHits = m_docCacheMisses = 0;
 	}
 }

@@ -1,5 +1,7 @@
 package edu.unika.aifb.graphindex;
 
+import java.io.File;
+
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -18,6 +20,8 @@ public class StructureIndex {
 	private GraphManager m_gm;
 	private StatisticsCollector m_collector;
 	private int m_configTableCacheSize;
+	private boolean m_gzip = false;
+	private int m_configDocCacheSize = 100;
 	
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
@@ -27,6 +31,9 @@ public class StructureIndex {
 	}
 	
 	private void initialize(boolean clean, boolean readonly) throws StorageException {
+		if (new File(m_directory + "/gzip").exists())
+			m_gzip = true;
+
 		ExtensionStorage es = new LuceneExtensionStorage(m_directory + "/index");
 		m_em = new LuceneExtensionManager();
 		m_em.setExtensionStorage(es);
@@ -38,6 +45,7 @@ public class StructureIndex {
 		m_gm.setGraphStorage(gs);
 		m_gm.setIndex(this);
 		m_gm.initialize(clean, readonly);
+		
 	}
 	
 	public StatisticsCollector getCollector() {
@@ -70,5 +78,17 @@ public class StructureIndex {
 	
 	public void clearCaches() throws StorageException {
 		m_em.getExtensionStorage().clearCaches();
+	}
+
+	public boolean isGZip() {
+		return m_gzip;
+	}
+
+	public int getDocumentCacheSize() {
+		return m_configDocCacheSize ;
+	}
+
+	public void setDocumentCacheSize(int docCacheSize) {
+		m_configDocCacheSize = docCacheSize;
 	}
 }

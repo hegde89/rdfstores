@@ -147,7 +147,7 @@ public class JoinMatcher {
 				}
 			}
 		}
-		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		return result;
 	}
 	private Table join(Table left, Table right, String leftCol, String rightCol) {
@@ -208,7 +208,7 @@ public class JoinMatcher {
 				}
 			}
 		}
-		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		return result;
 	}
 	
@@ -297,7 +297,7 @@ public class JoinMatcher {
 				}
 			}
 		}
-		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		return result;
 	}
 
@@ -465,7 +465,7 @@ public class JoinMatcher {
 			String targetCol = getTargetColumn(currentEdge);
 			List<GraphEdge<String>> currentEdges = queryEdge2IndexEdges.get(currentEdge);
 			
-			log.debug(m_queryGraph.getNode(currentEdge.getSrc()).getSingleMember() + " -> " + m_queryGraph.getNode(currentEdge.getDst()).getSingleMember() + " (" + currentEdges.size() + " rows)");
+//			log.debug(m_queryGraph.getNode(currentEdge.getSrc()).getSingleMember() + " -> " + m_queryGraph.getNode(currentEdge.getDst()).getSingleMember() + " (" + currentEdges.size() + " rows)");
 			
 			if (result == null) {
 				result = toTable(sourceCol, targetCol, currentEdges);

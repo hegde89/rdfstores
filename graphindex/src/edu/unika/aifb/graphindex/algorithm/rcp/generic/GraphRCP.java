@@ -127,8 +127,8 @@ public class GraphRCP<V extends Comparable<V>,E> {
 		int movedIn = 0;
 		
 //		System.gc();
-		log.debug("setup complete, " + Util.memory());
-		log.debug("starting refinement process...");
+//		log.debug("setup complete, " + Util.memory());
+//		log.debug("starting refinement process...");
 		
 		long start = System.currentTimeMillis();
 		int steps = 0;
@@ -225,12 +225,12 @@ public class GraphRCP<V extends Comparable<V>,E> {
 			steps++;
 			
 			long duration = (System.currentTimeMillis() - start) / 1000;
-			if (steps % 500 == 0)
-				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
+//			if (steps % 500 == 0)
+//				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
 //		log.debug(p.stable());
-		log.info("partition size: " + p.m_blocks.size());
-		log.info("steps: " + steps);
+//		log.info("partition size: " + p.m_blocks.size());
+//		log.info("steps: " + steps);
 
 		purgeSelfloops(p);
 		
@@ -469,7 +469,7 @@ public class GraphRCP<V extends Comparable<V>,E> {
 				qn.addMember(vl);
 			}
 		}
-		log.debug("b2l: " + b2l);
+//		log.debug("b2l: " + b2l);
 		
 		return g;
 	}

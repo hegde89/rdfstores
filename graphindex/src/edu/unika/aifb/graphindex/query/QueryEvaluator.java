@@ -115,8 +115,8 @@ public class QueryEvaluator {
 		Graph<QueryNode> qg = rcp.createQueryGraph(queryGraph);
 		m_timings.end(Timings.RCP);
 
-		log.debug("orig query graph: " + origGraph);
-		log.debug("query graph: " + qg);
+//		log.debug("orig query graph: " + origGraph);
+//		log.debug("query graph: " + qg);
 //		Util.printDOT("query_orig.dot", origGraph);
 //		Util.printDOT("query.dot", qg);
 		
@@ -134,8 +134,8 @@ public class QueryEvaluator {
 				continue;
 			vcc.setCurrentIndexGraph(indexGraph);
 			
-			Util.printDOT(query.getName() + ".dot", origGraph);
-			Util.printDOT(query.getName() + "_m.dot", qg);
+//			Util.printDOT(query.getName() + ".dot", origGraph);
+//			Util.printDOT(query.getName() + "_m.dot", qg);
 
 			QueryMappingListener listener = new QueryMappingListener(origGraph, qg, indexGraph, m_indexReader, vcc, completionService);
 			JoinMatcher jm = new JoinMatcher(qg, indexGraph, listener, vcc, m_timings);
@@ -166,8 +166,15 @@ public class QueryEvaluator {
 //		ResultSet rs = toResultSet(results, query.getVariables());
 //		if (rs.size() < 50)
 //			log.debug(rs);
-		if (result.size() < 50)
+		if (result.size() < 50) {
 			log.debug(result);
+			for (String[] res : result) {
+				String s = "";
+				for (String r : res)
+					s += ">" + r + "< ";
+				log.info("\t" + s);
+			}
+		}
 		log.debug("size: " + result.size());
 		
 		long end = System.currentTimeMillis();

@@ -301,6 +301,9 @@ public class Runner {
 		
 		if (stages.contains("query")) {
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
+			index.setNumEvalThreads(10);
+			index.getIndex().setTableCacheSize(5);
+			index.getIndex().setDocumentCacheSize(1000);
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
 			
@@ -325,7 +328,7 @@ public class Runner {
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					if (q.getName().equals("lq7"))
+					if (q.getName().equals("lq2"))
 						qe.evaluate(q);
 //					break;
 				}

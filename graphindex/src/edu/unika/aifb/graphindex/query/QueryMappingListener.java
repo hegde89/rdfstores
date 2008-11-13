@@ -124,7 +124,7 @@ public class QueryMappingListener implements MappingListener {
 			if (i.next().size() == 0)
 				i.remove();
 		
-		log.debug(m_nodeGroups);
+//		log.debug(m_nodeGroups);
 
 		m_nonCompoundNodes = new ArrayList<Integer>();
 		m_compoundNodes = new ArrayList<Integer>();

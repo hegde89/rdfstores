@@ -24,6 +24,7 @@ import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
@@ -113,41 +114,40 @@ public class RCPFast2 {
 		return image;
 	}
 	
-	private Partition createPartition(List<IVertex> vertices) {
+	private Partition createPartition(Partition p, List<IVertex> vertices) {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
-		Partition p = new Partition();
-		Block startBlock = new Block();
 		Set<XBlock> cbs = new HashSet<XBlock>();
 		Set<Long> labels = new TreeSet<Long>();
 
 		labels.addAll(m_hashes.getEdges());
-
-		for (IVertex v : vertices)
-			startBlock.add(v);
 		
-		p.add(startBlock);
-		startXB.addBlock(startBlock);
+		for (Block b : p.getBlocks())
+			startXB.addBlock(b);
+		
 		w.add(startXB);
 		
 		int movedIn = 0;
 		
 		System.gc();
+		log.debug("blocks: " + p.getBlocks().size());
 		log.debug("setup complete, " + Util.memory());
-		log.debug("starting refinement process...");
 		
 		long start = System.currentTimeMillis();
 		int steps = 0;
 		
 		startXB.calcInfo();
 		
-		List<IVertex> b_ = new ArrayList<IVertex>(startBlock.size());
-		for (Iterator<IVertex> i = startBlock.iterator(); i.hasNext(); )
-			b_.add(i.next());
-		
-		for (long label : labels) {
-			refinePartition(p, imageOf(b_, label), w, movedIn);
-			movedIn++;
+		List<IVertex> b_;
+		if (p.getBlocks().size() == 1) {
+			b_ = new ArrayList<IVertex>(p.getBlocks().get(0).size());
+			for (Iterator<IVertex> i = p.getBlocks().get(0).iterator(); i.hasNext(); )
+				b_.add(i.next());
+			
+			for (long label : labels) {
+				refinePartition(p, imageOf(b_, label), w, movedIn);
+				movedIn++;
+			}
 		}
 		
 		steps++;
@@ -232,7 +232,8 @@ public class RCPFast2 {
 				log.info(" steps: " + steps + ", psize: " + p.getBlocks().size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
 //		log.debug(p.stable());
-		log.info("partition size: " + p.m_blocks.size());
+//		log.debug(p);
+		log.info("partition size: " + p.getBlocks().size());
 		log.info("steps: " + steps);
 
 //		purgeSelfloops(p);
@@ -274,11 +275,44 @@ public class RCPFast2 {
 			p.add(nb);
 	}
 	
-	public IndexGraph createIndexGraph(List<IVertex> vertices, String partitionFile) throws StorageException, IOException, InterruptedException {
-		Partition p = createPartition(vertices);
+	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile) throws StorageException, IOException, InterruptedException {
+		List<IVertex> vertices = vlp.getList();
+		if (vertices.size() < 20)
+			return null;
 		
-		IndexGraph g = createIndexGraph(p);
+		Block startBlock = new Block();
+		for (IVertex v : vertices)
+			startBlock.add(v);
 
+		Partition p = new Partition();
+		p.add(startBlock);
+		
+		p = createPartition(p, vertices);
+
+		Map<Long,Block> id2block = new HashMap<Long,Block>();
+		for (Block b : p.getBlocks()) {
+			Block nb = new Block();
+			for (IVertex v : b) {
+				id2block.put(v.getId(), nb);
+			}
+		}
+		
+		vertices = null;
+		p = null;
+		System.gc();
+		log.debug(Util.memory());
+		
+		vertices = vlp.getInverted();
+		for (IVertex v : vertices)
+			id2block.get(v.getId()).add(v);
+		
+		p = new Partition();
+		p.addAll(new HashSet<Block>(id2block.values()));
+		
+		p = createPartition(p, vertices);
+		
+
+		IndexGraph g = createIndexGraph(p);
 		writePartition(p, partitionFile);
 		
 		return g;

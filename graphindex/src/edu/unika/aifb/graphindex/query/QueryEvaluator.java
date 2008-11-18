@@ -186,6 +186,7 @@ public class QueryEvaluator {
 		log.debug("vcc size: " + vcc.size());
 		vcc.clear();
 		
+		m_es.clearCaches();
 		((LuceneExtensionStorage)m_es).logStats(log);
 
 		return null;

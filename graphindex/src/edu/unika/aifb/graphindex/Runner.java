@@ -224,18 +224,18 @@ public class Runner {
 		}
 		else if (dataset.equals("lubm")) {
 			importer = new OntologyImporter();
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/").listFiles()) {
+			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm1/").listFiles()) {
 				if (f.getName().startsWith("University")) {
 					importer.addImport(f.getAbsolutePath());
 //					break;
 				}
 			}
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
-				if (f.getName().startsWith("University"))
-					importer.addImport(f.getAbsolutePath());
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more/muchmore").listFiles())
-				if (f.getName().startsWith("University"))
-					importer.addImport(f.getAbsolutePath());
+//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more").listFiles())
+//				if (f.getName().startsWith("University"))
+//					importer.addImport(f.getAbsolutePath());
+//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm/more/muchmore").listFiles())
+//				if (f.getName().startsWith("University"))
+//					importer.addImport(f.getAbsolutePath());
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
@@ -301,8 +301,8 @@ public class Runner {
 		
 		if (stages.contains("query")) {
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
-			index.setNumEvalThreads(10);
-			index.getIndex().setTableCacheSize(5);
+			index.setNumEvalThreads(2);
+			index.getIndex().setTableCacheSize(1);
 			index.getIndex().setDocumentCacheSize(1000);
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
@@ -328,7 +328,7 @@ public class Runner {
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					if (q.getName().equals("lq2"))
+					if (q.getName().equals("lq11"))
 						qe.evaluate(q);
 //					break;
 				}

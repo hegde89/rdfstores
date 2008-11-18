@@ -23,6 +23,7 @@ import edu.unika.aifb.graphindex.data.Subject;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
+import edu.unika.aifb.graphindex.preprocessing.IVertexListProvider;
 import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
@@ -116,12 +117,14 @@ public class FastIndexBuilder {
 		
 		int cnr = 0;
 		List<IVertex> component;
-		while ((component = m_vlp.nextComponent()) != null) {
-			log.info("component size: " + component.size() + " vertices");
+		while (m_vlp.nextComponent()) {
+//			log.info("component size: " + component.size() + " vertices");
 			log.info("unique edges: " + m_hashProvider.getEdges().size());
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
-			IndexGraph g = rcp.createIndexGraph(component, m_vlp.getComponentFile().getAbsolutePath() + ".partition");
+			IndexGraph g = rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition");
+			if (g == null)
+				continue;
 			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
 			list.add(g);
 			cnr++;

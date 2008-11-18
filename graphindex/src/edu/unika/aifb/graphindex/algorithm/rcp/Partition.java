@@ -4,12 +4,13 @@
 package edu.unika.aifb.graphindex.algorithm.rcp;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import edu.unika.aifb.graphindex.data.IVertex;
 
 public class Partition {
-	List<Block> m_blocks;
+	private List<Block> m_blocks;
 	
 	public Partition() {
 		m_blocks = new ArrayList<Block>();
@@ -17,6 +18,10 @@ public class Partition {
 	
 	public void add(Block block) {
 		m_blocks.add(block);
+	}
+	
+	public void addAll(Collection<Block> blocks) {
+		m_blocks.addAll(blocks);
 	}
 	
 	public void remove(Block block) {

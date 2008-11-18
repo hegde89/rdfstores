@@ -56,12 +56,14 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 		private GraphEdge<QueryNode> currentEdge;
 		private String dstLabel;
 		private String srcLabel;
+		private GTable<String> dstTable;
 
-		public ClassEvaluator(EvaluationClass ec, String srcLabel, String dstLabel, GraphEdge<QueryNode> currentEdge) {
+		public ClassEvaluator(EvaluationClass ec, String srcLabel, String dstLabel, GraphEdge<QueryNode> currentEdge, GTable<String> dstTable) {
 			m_ec = ec;
 			this.srcLabel = srcLabel;
 			this.dstLabel = dstLabel;
 			this.currentEdge = currentEdge;
+			this.dstTable = dstTable;
 		}
 		
 		private GTable<String> getTable(String src, String dst, String ext, String edge, String object) throws StorageException {
@@ -87,14 +89,16 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 			
 			if (left == null && right == null) {
 				// very first edge
-				result = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+//				result = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				result = dstTable;
 				result.setColumnName(0, srcLabel);
 				result.setColumnName(1, dstLabel);
 			}
 			else if (left == null) {
 				// current edge points into a result area
 				// load triples from dst ext with label of current edge and map subjects to src node
-				left = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+//				left = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				left = dstTable;
 				left.setColumnName(0, srcLabel);
 				left.setColumnName(1, dstLabel);
 				
@@ -102,7 +106,8 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 			}
 			else if (right == null) {
 				// current edge points out of a result table
-				right = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+//				right = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+				right = dstTable;
 				right.setColumnName(0, srcLabel);
 				right.setColumnName(1, dstLabel);
 				
@@ -120,12 +125,17 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 				}
 				
 				GTable<String> middle = new GTable<String>(Arrays.asList(srcLabel, dstLabel));
-				for (String object : objects) {
-//					log.debug(object);
-					GTable<String> table = m_es.getTable(dstExt, currentEdge.getLabel(), object, null);
-					for (String[] t : table)
-						middle.addRow(t);
+//				for (String object : objects) {
+//					GTable<String> table = m_es.getTable(dstExt, currentEdge.getLabel(), object, null);
+//					for (String[] t : table)
+//						middle.addRow(t);
+//				}
+				
+				for (String[] row : dstTable) {
+					if (objects.contains(row[1]))
+						middle.addRow(row);
 				}
+				
 				
 				if (left.rowCount() < right.rowCount()) {
 					result = join(left, middle, Arrays.asList(srcLabel));
@@ -153,6 +163,72 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 		
 		public EvaluationClass call() throws Exception {
 			return evaluate(m_ec);
+		}
+		
+	}
+	
+	private class ClassGroupEvaluator implements Callable<List<EvaluationClass>> {
+
+		private List<EvaluationClass> classes;
+		private GraphEdge<QueryNode> currentEdge;
+		private String dstLabel;
+		private String srcLabel;
+		private ExecutorCompletionService<EvaluationClass> completionService;
+		
+		public ClassGroupEvaluator(List<EvaluationClass> classes, String srcLabel, String dstLabel, GraphEdge<QueryNode> currentEdge, ExecutorCompletionService<EvaluationClass> completionService) {
+			this.classes = classes;
+			this.srcLabel = srcLabel;
+			this.dstLabel = dstLabel;
+			this.currentEdge = currentEdge;
+			this.completionService = completionService;
+		}
+		
+		private GTable<String> getTable(String src, String dst, String ext, String edge, String object) throws StorageException {
+			if (dst.startsWith("?"))
+				return m_es.getTable(ext, edge, null, src.startsWith("?") ? null : src);
+			else
+				return m_es.getTable(ext, edge, object, src.startsWith("?") ? null : src);
+		}
+
+		private int evaluate() throws StorageException, InterruptedException, ExecutionException {
+			if (classes.size() == 0)
+				return 0;
+			
+			String dstExt = classes.get(0).getMatch(dstLabel);
+			
+			GTable<String> table = getTable(srcLabel, dstLabel, dstExt, currentEdge.getLabel(), dstLabel);
+			log.debug(" cge.evaluate: " + classes.size() + " " + dstExt + " " + table.rowCount());
+			
+			if (table.rowCount() == 0) {
+				log.debug(" " + dstExt + " table empty");
+				return 0;
+			}
+			
+			
+			for (EvaluationClass ec : classes) {
+				completionService.submit(new ClassEvaluator(ec, srcLabel, dstLabel, currentEdge, table));
+			}
+			
+//			log.debug(" submitted " + classes.size() + " tasks");
+			
+//			List<EvaluationClass> nonEmptyClasses = new ArrayList<EvaluationClass>();
+//			for (int i = 0; i < classes.size(); i++) {
+//				Future<EvaluationClass> f = completionService.take();
+//				EvaluationClass ec = f.get();
+//				
+//				if (!ec.isEmpty())
+//					nonEmptyClasses.add(ec);
+//			}
+			
+//			log.debug(" all returned");
+//			log.debug(" " + dstExt + " done");
+			
+			return classes.size();
+		}
+		
+		public List<EvaluationClass> call() throws Exception {
+//			return evaluate();
+			return null;
 		}
 		
 	}
@@ -192,13 +268,9 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 		if (left.rowCount() >= right.rowCount()) {
 //			log.debug("should swap");
 
-//			List<String> tmp = leftCols;
-//			leftCols = rightCols;
-//			rightCols = tmp;
-//			
-//			Table tmpTable = left;
-//			left = right;
-//			right = tmpTable;
+			GTable<String> tmpTable = left;
+			left = right;
+			right = tmpTable;
 		}
 		
 //		log.debug(left + " " + right + " " + cols);
@@ -374,6 +446,7 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 //		log.debug(toVisit);
 		
 		ExecutorService executor = Executors.newFixedThreadPool(m_indexReader.getNumEvalThreads());
+//		ExecutorCompletionService<EvaluationClass> completionService = new ExecutorCompletionService<EvaluationClass>(executor);
 		ExecutorCompletionService<EvaluationClass> completionService = new ExecutorCompletionService<EvaluationClass>(executor);
 		
 		while (toVisit.size() > 0) {
@@ -401,11 +474,24 @@ public class MappingSetValidator implements Callable<List<String[]>> {
 			
 			log.debug(" classes before eval: " + classes.size() + " (matched nodes: " + matchedNodes + ")");
 			
-			for (EvaluationClass ec : classes)
-				completionService.submit(new ClassEvaluator(ec, srcLabel, dstLabel, currentEdge));
+			Map<String,List<EvaluationClass>> val2ec = new HashMap<String,List<EvaluationClass>>();
+			for (EvaluationClass ec : classes) {
+				String val = ec.getMatch(dstLabel);
+				if (!val2ec.containsKey(val))
+					val2ec.put(val, new ArrayList<EvaluationClass>());
+				val2ec.get(val).add(ec);
+			}
+			log.debug(" distinct values: " + val2ec.keySet());
+			
+			int tasks = 0;
+			for (String val : val2ec.keySet()) {
+				ClassGroupEvaluator cge = new ClassGroupEvaluator(val2ec.get(val), srcLabel, dstLabel, currentEdge, completionService);
+				tasks += cge.evaluate();
+			}
+			log.debug(" tasks: " + tasks);
 			
 			List<EvaluationClass> nonEmptyClasses = new ArrayList<EvaluationClass>();
-			for (int i = 0; i < classes.size(); i++) {
+			for (int i = 0; i < tasks; i++) {
 				Future<EvaluationClass> f = completionService.take();
 				EvaluationClass ec = f.get();
 				

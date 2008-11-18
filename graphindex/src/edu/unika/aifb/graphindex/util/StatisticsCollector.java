@@ -20,7 +20,7 @@ public class StatisticsCollector {
 	}
 	
 	public void logStats() {
-		long[] timings = new long[10];
+		long[] timings = new long[20];
 		for (Timings t : m_timings) {
 			for (int i = 0; i < t.getTimings().length; i++)
 				timings[i] += t.getTimings()[i];
@@ -31,6 +31,7 @@ public class StatisticsCollector {
 		log.debug(" mapgen: " + (timings[Timings.MAPGEN] / 1000.0));
 		log.debug(" ground terms: " + (timings[Timings.GT] / 1000.0));
 		log.debug(" retrieving data: " + (timings[Timings.DATA] / 1000.0));
+		log.debug(" subject filter: " + (timings[Timings.SUBJECT_FILTER] / 1000.0));
 		log.debug(" result joining: " + (timings[Timings.JOIN] / 1000.0));
 		log.debug(" building result set: " + (timings[Timings.RS] / 1000.0));
 	}

@@ -28,6 +28,10 @@ import edu.unika.aifb.graphindex.graph.NamedGraph;
 import edu.unika.aifb.graphindex.graph.QueryGraph;
 
 public class Util {
+	public static class Counter {
+		public int val = 0;
+	}
+
 	private static MessageDigest m_md;
 	
 	static {

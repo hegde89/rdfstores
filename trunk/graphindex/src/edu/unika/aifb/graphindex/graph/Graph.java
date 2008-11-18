@@ -83,13 +83,9 @@ public class Graph<V extends Comparable<V>> {
 		for (V vertex : vertices) {
 			m_nodeObjects[i] = vertex;
 			v2i.put(vertex, i);
-			if (vertices.size() < 10)
-				System.out.print(i + "=" + vertex + " ");
 
 			i++;
 		}
-		if (vertices.size() < 10)
-			System.out.println();
 
 		m_inDegrees = new int [m_nodeCount];
 		m_outDegrees = new int [m_nodeCount];

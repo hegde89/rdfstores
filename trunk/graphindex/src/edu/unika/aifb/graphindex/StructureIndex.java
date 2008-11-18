@@ -74,6 +74,7 @@ public class StructureIndex {
 	
 	public void setTableCacheSize(int n) {
 		m_configTableCacheSize = n;
+		m_em.getExtensionStorage().updateCacheSizes();
 	}
 	
 	public void clearCaches() throws StorageException {
@@ -90,5 +91,6 @@ public class StructureIndex {
 
 	public void setDocumentCacheSize(int docCacheSize) {
 		m_configDocCacheSize = docCacheSize;
+		m_em.getExtensionStorage().updateCacheSizes();
 	}
 }

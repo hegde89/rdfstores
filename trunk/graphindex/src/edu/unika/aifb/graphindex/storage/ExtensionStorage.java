@@ -23,9 +23,11 @@ public interface ExtensionStorage {
 	public boolean hasTriples(String ext, String propertyUri, String object) throws StorageException;
 //	public List<Triple> getTriples(String extUri, String property, String object) throws StorageException;
 //	public List<Triple> getTriples(String extUri, String property) throws StorageException;
-//	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException;
+	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException;
 	
 	public void mergeExtensions() throws IOException, StorageException;
 	
 	public void clearCaches() throws StorageException;
+	
+	public void updateCacheSizes();
 }

@@ -107,6 +107,9 @@ public class Main {
 		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
 		int tableCacheSize = config.get("table_cache_size") != null ? (Integer)config.get("table_cache_size") : 100;
 		int docCacheSize = config.get("doc_cache_size") != null ? (Integer)config.get("doc_cache_size") : 1000;
+		System.out.println(config);
+		
+		System.out.println(evalThreads + " " + tableCacheSize + " " + docCacheSize);
 		
 		String indexDirectory = new File(outputDirectory + "/index").getAbsolutePath(); 
 		String graphDirectory = new File(outputDirectory + "/graph").getAbsolutePath();
@@ -183,11 +186,12 @@ public class Main {
 			
 			start = System.currentTimeMillis();
 			for (Query q : queries) {
-				log.debug("--------------------------------------------");
-				log.debug("query: " + q.getName());
-				log.debug(q);
-				if (queryNames.size() == 0 || queryNames.contains(q.getName()))
+				if (queryNames.size() == 0 || queryNames.contains(q.getName())) {
+					log.debug("--------------------------------------------");
+					log.debug("query: " + q.getName());
+					log.debug(q);
 					qe.evaluate(q);
+				}
 			}
 			
 			index.close();

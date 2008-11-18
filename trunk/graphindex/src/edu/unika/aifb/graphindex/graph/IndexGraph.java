@@ -82,14 +82,9 @@ public class IndexGraph {
 		for (String vertex : vertices) {
 			m_labels[i] = vertex;
 			v2i.put(vertex, i);
-			if (vertices.size() < 10)
-				System.out.print(i + "=" + vertex + " ");
 
 			i++;
 		}
-		if (vertices.size() < 10)
-			System.out.println();
-		System.out.println("order: " + order);
 
 		m_inDegrees = new int [m_nodeCount];
 		m_outDegrees = new int [m_nodeCount];

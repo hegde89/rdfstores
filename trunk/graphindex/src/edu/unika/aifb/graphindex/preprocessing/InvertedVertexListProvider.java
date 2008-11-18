@@ -22,13 +22,13 @@ import edu.unika.aifb.graphindex.data.VertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;
 
 
-public class VertexListProvider{
+public class InvertedVertexListProvider implements IVertexListProvider {
 	private Iterator<File> m_componentFiles;
 	private File m_componentFile;
 	private Set<String> m_edges;
-	private static final Logger log = Logger.getLogger(VertexListProvider.class);
+	private static final Logger log = Logger.getLogger(InvertedVertexListProvider.class);
 
-	public VertexListProvider(String componentDirectory) {
+	public InvertedVertexListProvider(String componentDirectory) {
 		File componentDir = new File(componentDirectory);
 		
 		List<File> componentFiles = new ArrayList<File>();
@@ -44,8 +44,13 @@ public class VertexListProvider{
 		
 		m_componentFiles = componentFiles.iterator();
 	}
-
-	public List<IVertex> getInverted() throws IOException {
+	
+	public List<IVertex> nextComponent() throws IOException {
+		if (!m_componentFiles.hasNext())
+			return null;
+		
+		m_componentFile = m_componentFiles.next();
+		
 		m_edges = new HashSet<String>();
 		VertexCollection vc = VertexFactory.collection();
 		vc.loadFromComponentFile(m_componentFile.getAbsolutePath());
@@ -60,7 +65,7 @@ public class VertexListProvider{
 		boolean inImage = false;
 		int vertices = 0, triples = 0;
 		
-		log.info("loading inverted vertex list");
+		log.info("loading vertex list");
 		while ((input = in.readLine()) != null) {
 			input = input.trim();
 			
@@ -96,85 +101,6 @@ public class VertexListProvider{
 			}
 			
 			if ((triples % 1000000 == 0 && triples > 0))
-				log.debug(" inverted loaded " + triples + " triples");
-		}
-		
-		log.info("inverted vertex list loaded: " + vertices + " vertices, " + triples + " triples");
-		
-		return vc.toList();
-	}
-	
-	public boolean nextComponent() throws IOException {
-		if (!m_componentFiles.hasNext())
-			return false;
-		
-		m_componentFile = m_componentFiles.next();
-		return true;
-	}
-	
-	public List<IVertex> getList() throws IOException {
-		
-		m_edges = new HashSet<String>();
-		VertexCollection vc = VertexFactory.collection();
-		vc.loadFromComponentFile(m_componentFile.getAbsolutePath());
-
-		BufferedReader in = new BufferedReader(new FileReader(m_componentFile.getAbsolutePath() + ".vertexlist"));
-		String input;
-		
-		IVertex currentVertex = null;
-		long currentLabel = 0;
-		Map<Long,List<IVertex>> currentImage = null;
-		
-		boolean inEdgeList = false;
-		boolean inImage = false;
-		int vertices = 0, triples = 0;
-		
-		log.info("loading vertex list");
-		while ((input = in.readLine()) != null) {
-			input = input.trim();
-			
-			if (input.equals("edges")) {
-				inEdgeList = true;
-				continue;
-			}
-			
-			if (input.startsWith("v")) {
-				inEdgeList = false;
-				inImage = true;
-				
-				if (currentImage != null) {
-					for (long label : currentImage.keySet()) {
-						currentVertex.setImage(label, currentImage.get(label));
-					}
-				}
-				
-				currentImage = new HashMap<Long,List<IVertex>>();
-				currentVertex = vc.getVertex(Long.parseLong(input.substring(input.lastIndexOf(" ") + 1)));
-				vertices++;
-				continue;
-			}
-			
-			if (input.startsWith("e") && inImage) {
-				String[] t = input.split(" ");
-				long edgeLabel = Long.parseLong(t[1]);
-				int size = Integer.parseInt(t[2]);
-				currentImage.put(edgeLabel, new ArrayList<IVertex>(size));
-				currentLabel = edgeLabel;
-				continue;
-			}
-			
-			if (inEdgeList) {
-				m_edges.add(input);
-			}
-			else if (inImage) {
-				IVertex target = vc.getVertex(Long.parseLong(input));
-				
-				currentImage.get(currentLabel).add(target);
-				
-				triples++;
-			}
-			
-			if ((triples % 1000000 == 0 && triples > 0))
 				log.debug(" loaded " + vertices + " vertices, " + triples + " triples");
 		}
 		
@@ -183,16 +109,10 @@ public class VertexListProvider{
 		return vc.toList();
 	}
 	
-	/* (non-Javadoc)
-	 * @see edu.unika.aifb.graphindex.preprocessing.IVertexListProvider#getComponentFile()
-	 */
 	public File getComponentFile() {
 		return m_componentFile;
 	}
 	
-	/* (non-Javadoc)
-	 * @see edu.unika.aifb.graphindex.preprocessing.IVertexListProvider#getEdges()
-	 */
 	public Set<String> getEdges() {
 		return m_edges;
 	}

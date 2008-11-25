@@ -32,6 +32,7 @@ public class StatisticsCollector {
 		log.debug(" ground terms: " + (timings[Timings.GT] / 1000.0));
 		log.debug(" retrieving data: " + (timings[Timings.DATA] / 1000.0));
 		log.debug(" subject filter: " + (timings[Timings.SUBJECT_FILTER] / 1000.0));
+		log.debug(" sorting: " + (timings[Timings.SORT] / 1000.0));
 		log.debug(" result joining: " + (timings[Timings.JOIN] / 1000.0));
 		log.debug(" building result set: " + (timings[Timings.RS] / 1000.0));
 	}

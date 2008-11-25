@@ -28,6 +28,8 @@ import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.StructureIndexReader;
 import edu.unika.aifb.graphindex.algorithm.rcp.generic.GraphRCP;
 import edu.unika.aifb.graphindex.algorithm.rcp.generic.LabelProvider;
+import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.IndexEdge;
@@ -53,7 +55,7 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
-public class QueryEvaluator {
+public class QueryEvaluator implements IQueryEvaluator {
 	private StructureIndexReader m_indexReader;
 	private StructureIndex m_index;
 	private ExtensionManager m_em;
@@ -70,63 +72,23 @@ public class QueryEvaluator {
 		m_es = m_em.getExtensionStorage();
 	}
 	
-	private ResultSet toResultSet(Set<Map<String,String>> mappings, Set<String> vars) {
-		m_timings.start(Timings.RS);
-		ResultSet rs = new ResultSet(vars.toArray(new String[]{}));
-		Set<String> toRemove = null;
-		
-		for (Map<String,String> map : mappings) {
-			if (toRemove == null) {
-				toRemove = new HashSet<String>();
-				for (String key : map.keySet())
-					if (!vars.contains(key))
-						toRemove.add(key);
-			}
-			
-			for (String key : toRemove)
-				map.remove(key);
-			rs.addResult(new Result(map));
-		}
-		m_timings.end(Timings.RS);
-		return rs;
-	}
-	
-	public ResultSet evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
-		System.gc();
+	public void evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
 		log.info("evaluating...");
 		
 		m_index.getCollector().reset();
 		m_timings = new Timings();
 		long start = System.currentTimeMillis();
 		
-		m_timings.start(Timings.RCP);
-		GraphRCP<String,String> rcp = new GraphRCP<String,String>(new LabelProvider<String,String>() {
-			public String getEdgeLabel(String edge) {
-				return edge;
-			}
-
-			public String getVertexLabel(String vertex) {
-				return vertex;
-			}
-		});
-		NamedQueryGraph<String,LabeledQueryEdge<String>> queryGraph = query.toQueryGraph();
-		
 		Graph<QueryNode> origGraph = query.toGraph();
-		Graph<QueryNode> qg = rcp.createQueryGraph(queryGraph);
-		m_timings.end(Timings.RCP);
 
-//		log.debug("orig query graph: " + origGraph);
-//		log.debug("query graph: " + qg);
-//		Util.printDOT("query_orig.dot", origGraph);
-//		Util.printDOT("query.dot", qg);
-		
 		VCompatibilityCache vcc = new VCompatibilityCache(origGraph, m_index);
 		
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		
 		final ExecutorService executor = Executors.newFixedThreadPool(1);
 		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
-		
+		GTable.timings = m_timings;
+		Tables.timings = m_timings;
 		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
 		List<String[]> result = new ArrayList<String[]>();
 		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
@@ -137,44 +99,38 @@ public class QueryEvaluator {
 //			Util.printDOT(query.getName() + ".dot", origGraph);
 //			Util.printDOT(query.getName() + "_m.dot", qg);
 
-			QueryMappingListener listener = new QueryMappingListener(origGraph, qg, indexGraph, m_indexReader, vcc, completionService);
-			JoinMatcher jm = new JoinMatcher(qg, indexGraph, listener, vcc, m_timings);
+			QueryMappingListener listener = new QueryMappingListener(origGraph, indexGraph, m_indexReader, vcc, completionService);
+			JoinMatcher jm = new JoinMatcher(origGraph, indexGraph, listener, m_index, m_timings);
 
 			m_timings.start(Timings.MATCH);
-			jm.match2();
+			jm.match();
 			m_timings.end(Timings.MATCH);
 
 			m_timings.start(Timings.MAPGEN);
-			int mappingsCount = listener.generateMappings();
+			List<Map<String,String>> mappings = listener.generateMappings();
 			m_timings.end(Timings.MAPGEN);
 			
-			if (mappingsCount == 0)
+			if (mappings.size() == 0)
 				continue;
 			
 			listener = null;
 
-			for (int i = 0; i < mappingsCount; i++) {
-				Future<List<String[]>> f = completionService.take();
-				List<String[]> r = f.get();
-				if (r != null)
-					result.addAll(r);
-			}
+			MappingListValidator mlv = new MappingListValidator(m_indexReader, origGraph, mappings, m_index.getCollector());
+			List<String[]> res = mlv.validateMappings(origGraph, mappings, query.getEvalOrder());
+			if (res.size() > 0)
+				result.addAll(res);
 		}
 		executor.shutdown();
 //		log.debug("result maps: " + results.size());
 		
-//		ResultSet rs = toResultSet(results, query.getVariables());
-//		if (rs.size() < 50)
-//			log.debug(rs);
-		if (result.size() < 50) {
-			log.debug(result);
-			for (String[] res : result) {
-				String s = "";
-				for (String r : res)
-					s += ">" + r + "< ";
-				log.info("\t" + s);
-			}
-		}
+//		if (result.size() < 50) {
+//			for (String[] res : result) {
+//				String s = "";
+//				for (String r : res)
+//					s += ">" + r + "< ";
+//				log.info("\t" + s);
+//			}
+//		}
 		log.debug("size: " + result.size());
 		
 		long end = System.currentTimeMillis();
@@ -183,12 +139,10 @@ public class QueryEvaluator {
 		m_index.getCollector().addTimings(m_timings);
 		m_index.getCollector().logStats();
 		
-		log.debug("vcc size: " + vcc.size());
+//		log.debug("vcc size: " + vcc.size());
 		vcc.clear();
 		
 		m_es.clearCaches();
 		((LuceneExtensionStorage)m_es).logStats(log);
-
-		return null;
 	}
 }

@@ -44,8 +44,10 @@ public class QueryParser {
 	public Query parseQuery(String queryString) throws IOException {
 		Set<String> vars = new HashSet<String>();
 		List<Literal> lits = new ArrayList<Literal>();
+		Map<String,Integer> e2s = new HashMap<String,Integer>();
 		
 		String[] lines = queryString.split("\n");
+		int x = 0;
 		for (String line : lines) {
 			StreamTokenizer tokenizer = new StreamTokenizer(new StringReader(line));
 			tokenizer.wordChars('(', '~');
@@ -87,11 +89,14 @@ public class QueryParser {
 			
 //			log.debug(subject + " " + property + " " + object);
 			lits.add(new Literal(property, subject, object));
+			e2s.put(subject + " " + property + " " + object, x);
+			x++;
 		}
 		
 		Query q = new Query(vars.toArray(new String[] {}));
 		for (Literal l : lits)
 			q.addLiteral(l);
+		q.setEvalOrder(e2s);
 		
 		return q;
 	}

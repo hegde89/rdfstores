@@ -65,16 +65,16 @@ public class VPRunner {
 			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/freebase/freebase_1m.nt");
 		}
 		else if (dataset.equals("lubm")) {
-//			String dir = "/Users/gl/Studium/diplomarbeit/datasets/lubm50/hashed_triples";
-//			importer = new HashedTriplesImporter(dir + "/hashes", dir + "/propertyhashes"); 
-//			importer.addImport(dir + "/input.ht");
+			String dir = "/Users/gl/Studium/diplomarbeit/datasets/lubm50/hashed_triples";
+			importer = new HashedTriplesImporter(dir + "/hashes", dir + "/propertyhashes"); 
+			importer.addImport(dir + "/input.ht");
 
-			importer = new OntologyImporter();
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm1/").listFiles()) {
-				if (f.getName().startsWith("University")) {
-					importer.addImport(f.getAbsolutePath());
-				}
-			}
+//			importer = new OntologyImporter();
+//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm1/").listFiles()) {
+//				if (f.getName().startsWith("University")) {
+//					importer.addImport(f.getAbsolutePath());
+//				}
+//			}
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
@@ -103,13 +103,24 @@ public class VPRunner {
 		String dir = "/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/vp/" + args[1];
 		String dataset = args[2];
 		
-		final LuceneStorage ls = new LuceneStorage(dir);
+//		String dir = args[1];
+		String htDir = args[2];
 		
-		if (args[0].equals("import")) {
+		if (args[0].equals("merge")) {
+//			final LuceneStorage ls = new LuceneStorage(dir);
+//			ls.initialize(false, true);
+//			ls.merge();
+//			
+//			ls.close();
+		}
+		else if (args[0].equals("import")) {
+			final LuceneStorage ls = new LuceneStorage(dir);
 			ls.initialize(true, false);
 			
 			final Util.Counter c = new Util.Counter();
-			Importer importer = getImporter(args[2]);
+//			Importer importer = getImporter(args[2]);
+			Importer importer = new HashedTriplesImporter(htDir + "/hashes", htDir + "/propertyhashes"); 
+			importer.addImport(htDir + "/input.ht");
 			importer.setTripleSink(new TripleSink() {
 				public void triple(String s, String p, String o) {
 					ls.addTriple(s, p, o);
@@ -120,10 +131,18 @@ public class VPRunner {
 			});
 			importer.doImport();
 			ls.flush();
-			ls.merge();
 			ls.optimize();
+			
+			importer = null;
+			System.gc();
+			log.debug(Util.memory());
+			
+			ls.merge();
+			
+			ls.close();
 		}
 		else if (args[0].equals("query")) {
+			final LuceneStorage ls = new LuceneStorage(dir + "_merged");
 			ls.initialize(false, true);
 			VPQueryEvaluator qe = new VPQueryEvaluator(ls);
 			
@@ -137,7 +156,7 @@ public class VPRunner {
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					qe.evaluate(q);
+					qe.evaluateQuad(q);
 //					break;
 				}
 			}
@@ -146,12 +165,12 @@ public class VPRunner {
 				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubm queries.txt");
 				
 				for (Query q : queries) {
-//					if (!q.getName().equals("lq4"))
-//						continue;
+					if (!q.getName().equals("lq8"))
+						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					qe.evaluate(q);
+					qe.evaluateQuad(q);
 //					break;
 				}
 			}
@@ -162,8 +181,8 @@ public class VPRunner {
 //					System.out.print(s + " ");
 //				System.out.println();
 //			}
+			
+			ls.close();
 		}
-		
-		ls.close();
 	}
 }

@@ -57,6 +57,13 @@ public class EvaluationClass {
 		m_results = results;
 	}
 	
+	public GTable<String> findResult(String column) {
+		for (GTable<String> result : m_results)
+			if (result.hasColumn(column))
+				return result;
+		return null;
+	}
+	
 //	public GTable<String> getResult() {
 //		return m_result;
 //	}

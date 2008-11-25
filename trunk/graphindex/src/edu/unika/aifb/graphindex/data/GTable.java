@@ -1,17 +1,28 @@
 package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class GTable<T> implements Iterable<T[]>, Cloneable {
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.graphindex.util.Timings;
+
+public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
 	private int m_colCount;
 	private String[] m_colNames;
 	private Map<String,Integer> m_name2col;
 	private List<T[]> m_rows;
+	private int m_sortedCol = -1;
+	
+	public static Timings timings;
+	private static final Logger log = Logger.getLogger(GTable.class);
 	
 	public GTable(int cols) {
 		m_colCount = cols;
@@ -45,10 +56,41 @@ public class GTable<T> implements Iterable<T[]>, Cloneable {
 		return m_colNames;
 	}
 	
+	public String getSortedColumn() {
+		if (m_sortedCol == -1)
+			return null;
+		
+		return m_colNames[m_sortedCol];
+	}
+	
+	public void setSortedColumn(int i) {
+		m_sortedCol = i;
+	}
+	
+	public void setSortedColumn(String colName) {
+		m_sortedCol = getColumn(colName);
+	}
+	
+	public void setUnsorted() {
+		m_sortedCol = -1;
+	}
+	
+	public boolean isSorted() {
+		return m_sortedCol >= 0;
+	}
+	
+	public boolean isSortedBy(String col) {
+		if (m_sortedCol < 0)
+			return false;
+		// getColumn returns -1 if column unknown, but not a problem here,
+		// because that case is already handled above
+		return m_sortedCol == getColumn(col); 
+	}
+	
 	public int getColumn(String colName) {
 		try {
-		int col = m_name2col.get(colName);
-		return col;
+			int col = m_name2col.get(colName);
+			return col;
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -64,8 +106,16 @@ public class GTable<T> implements Iterable<T[]>, Cloneable {
 		m_rows.add(row);
 	}
 	
+	public void addRows(List<T[]> rows) {
+		m_rows.addAll(rows);
+	}
+	
 	public T[] getRow(int row) {
 		return m_rows.get(row);
+	}
+	
+	public List<T[]> getRows() {
+		return m_rows;
 	}
 	
 	public int rowCount() {
@@ -76,21 +126,53 @@ public class GTable<T> implements Iterable<T[]>, Cloneable {
 		return m_rows.iterator();
 	}
 	
+	public List<String> getColumnNamesSorted() {
+		List<String> sorted = new ArrayList<String>(Arrays.asList(m_colNames));
+		Collections.sort(sorted);
+		return sorted;
+	}
+	
+	public void sort(String col) {
+		sort(getColumn(col));
+	}
+	
+	public void sort(final int col) {
+		if (timings != null)
+			timings.start(Timings.TABLESORT);
+		long start = System.currentTimeMillis();
+		String s = this.toString();
+		Collections.sort(m_rows, new Comparator<T[]>() {
+			public int compare(T[] r1, T[] r2) {
+				return r1[col].compareTo(r2[col]);
+			}
+		});
+		setSortedColumn(col);
+		if (log.isDebugEnabled())
+			log.debug(" sorted " + s + " by " + getColumnName(col) + " in " + (System.currentTimeMillis() - start) + " ms");
+		if (timings != null)
+			timings.end(Timings.TABLESORT);
+	}
+	
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		return super.clone(); // shallow copy
 	}
 	
 	public String toDataString() {
+		return toDataString(rowCount());
+	}
+	
+	public String toDataString(int rows) {
 		StringBuilder sb = new StringBuilder();
-		for (String col : m_colNames) {
+		List<String> sorted = getColumnNamesSorted();
+		for (String col : sorted) {
 			sb.append(col).append("\t");
 		}
 		sb.append("\n");
 		
-		for (T[] row : m_rows) {
-			for (T val : row)
-				sb.append(val).append("\t");
+		for (int i = 0; i < Math.min(rows, m_rows.size()); i++) {
+			for (String col : sorted)
+				sb.append(m_rows.get(i)[getColumn(col)]).append("\t");
 			sb.append("\n");
 		}
 		
@@ -100,14 +182,18 @@ public class GTable<T> implements Iterable<T[]>, Cloneable {
 	public String toString() {
 		String s = "Table(";
 		String comma = "";
-		for (String colName : m_colNames) {
-			s += comma + colName;
+		for (int i = 0; i < m_colCount; i++) {
+			s += comma + m_colNames[i] + (i == m_sortedCol ? "*" : "");
 			comma = ",";
 		}
-		return s + ")";
+		return s + "|" + rowCount() + ")";
 	}
 
 	public List<T[]> getTable() {
 		return m_rows;
+	}
+
+	public String getColumnName(int col) {
+		return m_colNames[col];
 	}
 }

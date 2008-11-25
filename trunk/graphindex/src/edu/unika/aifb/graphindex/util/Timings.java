@@ -8,6 +8,9 @@ public class Timings {
 	public static final int RCP = 7;
 	public static final int MAPGEN = 8;
 	public static final int SUBJECT_FILTER = 9;
+	public static final int SORT = 10;
+	public static final int TABLEMERGE = 11;
+	public static final int TABLESORT = 12;
 	
 	public Timings() {
 		

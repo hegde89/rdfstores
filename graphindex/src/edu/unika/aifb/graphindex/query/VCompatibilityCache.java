@@ -9,6 +9,7 @@ import edu.unika.aifb.graphindex.graph.QueryGraph;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public class VCompatibilityCache {
@@ -94,7 +95,7 @@ public class VCompatibilityCache {
 		if (m_orig.inDegreeOf(node1) > 0) {
 			for (String label : m_orig.inEdgeLabels(node1)) {
 				try {
-					if (!m_es.hasTriples(v2, label, v1)) {
+					if (!m_es.hasTriples(Index.EPO, v2, label, v1)) {
 						value = false;
 						break;
 					}
@@ -112,7 +113,7 @@ public class VCompatibilityCache {
 			if (m_curIndexGraph.inDegreeOf(node2) > 0) {
 				for (String label : m_curIndexGraph.inEdgeLabels(node2)) {
 					try {
-						if (!m_es.hasTriples(v2, label, v1)) {
+						if (!m_es.hasTriples(Index.EPO, v2, label, v1)) {
 							value = false;
 							break;
 						}

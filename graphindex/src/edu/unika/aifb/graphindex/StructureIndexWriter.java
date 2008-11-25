@@ -102,7 +102,8 @@ public class StructureIndexWriter {
 		FastIndexBuilder ib = new FastIndexBuilder(m_index, vlp, hvp);
 		ib.buildIndex();
 		
-		m_index.getExtensionManager().getExtensionStorage().mergeExtensions();
+//		m_index.getExtensionManager().getExtensionStorage().mergeExtensions();
+		m_index.getExtensionManager().getExtensionStorage().optimize();
 
 	}
 	

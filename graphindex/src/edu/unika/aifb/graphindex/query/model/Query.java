@@ -23,6 +23,7 @@ public class Query {
 	private List<Literal> m_literals;
 	private List<String> m_selectVariables;
 	private String m_name;
+	private Map<String,Integer> m_e2s;
 	
 	public Query(String[] vars) {
 		m_literals = new ArrayList<Literal>();
@@ -47,6 +48,14 @@ public class Query {
 
 	public boolean addLiteral(Literal o) {
 		return m_literals.add(o);
+	}
+	
+	public Map<String,Integer> getEvalOrder() {
+		return m_e2s;
+	}
+	
+	public void setEvalOrder(Map<String,Integer> e2s) {
+		m_e2s = e2s;
 	}
 
 	public NamedQueryGraph<String,LabeledQueryEdge<String>> toQueryGraph() throws StorageException {

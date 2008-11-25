@@ -27,8 +27,10 @@ import edu.unika.aifb.graphindex.preprocessing.IVertexListProvider;
 import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class FastIndexBuilder {
@@ -38,12 +40,14 @@ public class FastIndexBuilder {
 	private HashValueProvider m_hashProvider;
 	private List<File> m_componentFiles;
 	private StructureIndex m_index;
+	private ExtensionStorage m_es;
 	static final Logger log = Logger.getLogger(FastIndexBuilder.class);
 
 	public FastIndexBuilder(StructureIndex index, VertexListProvider vb, HashValueProvider hashProvider) {
 		m_vlp = vb;
 		m_index = index;
 		m_em = index.getExtensionManager();
+		m_es = m_em.getExtensionStorage();
 		m_hashProvider = hashProvider;
 		m_componentFiles = new ArrayList<File>();
 	}
@@ -51,14 +55,21 @@ public class FastIndexBuilder {
 	private void createExtensions(Map<String,String> mergeMap) throws StorageException, IOException {
 		m_em.setMode(ExtensionManager.MODE_NOCACHE);
 		m_em.startBulkUpdate();
+		
 		log.info("creating extensions... (" + Util.memory() + ")");
 		int triples = 0;
 		for (File componentFile : m_componentFiles) {
 			log.info(" " + componentFile + ".partition");
 			
 			String currentExt = null;
-			Long currentProperty = null, currentObject = null;
-			Set<Subject> currentSubjects = new HashSet<Subject>();
+			Long currentProperty = null;
+			Map<String,List<String>> s2o = new HashMap<String,List<String>>();
+			Map<String,List<String>> o2s = new HashMap<String,List<String>>();
+			
+			if (!new File(componentFile.getAbsolutePath() + ".partition").exists()) {
+				log.debug(" ...not found");
+				continue;
+			}
 			
 			BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath() + ".partition"));
 			String input;
@@ -72,21 +83,41 @@ public class FastIndexBuilder {
 				long s = Long.parseLong(t[1]);
 				long p = Long.parseLong(t[2]);
 				long o = Long.parseLong(t[3]);
-				String subjectExtension = t[4];
+//				String subjectExtension = t[4];
 				
-				if (!t[0].equals(currentExt) || currentProperty == null || currentProperty.longValue() != p || currentObject == null || currentObject.longValue() != o) {
-					if (currentSubjects.size() > 0) {
-						Extension ext = m_em.extension(currentExt);
-						ext.addTriples(currentSubjects, m_hashProvider.getValue(currentProperty.longValue()), m_hashProvider.getValue(currentObject.longValue()));
+				if (!t[0].equals(currentExt) || currentProperty == null || currentProperty.longValue() != p) {
+					if (s2o.size() > 0) {
+						for (String subject : s2o.keySet())
+							m_es.addTriples(Index.EPS, currentExt, m_hashProvider.getValue(currentProperty), subject, s2o.get(subject));
+
+						for (String object : o2s.keySet())
+							m_es.addTriples(Index.EPO, currentExt, m_hashProvider.getValue(currentProperty), object, o2s.get(object));
+						
 					}
-					currentSubjects = new HashSet<Subject>();
+					s2o = new HashMap<String,List<String>>();
+					o2s = new HashMap<String,List<String>>();
 				}
 				
 				currentExt = t[0];
-				currentSubjects.add(new Subject(m_hashProvider.getValue(s), subjectExtension));
 				currentProperty = p;
-				currentObject = o;
 				
+				String subject = m_hashProvider.getValue(s);
+				String object = m_hashProvider.getValue(o);
+				
+				List<String> objects = s2o.get(subject);
+				if (objects == null) {
+					objects = new ArrayList<String>();
+					s2o.put(subject, objects);
+				}
+				objects.add(object);
+				
+				List<String> subjects = o2s.get(object);
+				if (subjects == null) {
+					subjects = new ArrayList<String>();
+					o2s.put(object, subjects);
+				}
+				subjects.add(subject);
+
 				if (Util.belowMemoryLimit(20)) {
 					m_em.flushAllCaches();
 					log.info("caches flushed, " + Util.memory());
@@ -96,8 +127,12 @@ public class FastIndexBuilder {
 				if (triples % 1000000 == 0)
 					log.debug(" triples: " + triples);
 			}
-			Extension ext = m_em.extension(currentExt);
-			ext.addTriples(currentSubjects, m_hashProvider.getValue(currentProperty.longValue()), m_hashProvider.getValue(currentObject.longValue()));
+			
+			for (String subject : s2o.keySet())
+				m_es.addTriples(Index.EPS, currentExt, m_hashProvider.getValue(currentProperty), subject, s2o.get(subject));
+
+			for (String object : o2s.keySet())
+				m_es.addTriples(Index.EPO, currentExt, m_hashProvider.getValue(currentProperty), object, o2s.get(object));
 		}
 		
 //		m_em.flushAllCaches();

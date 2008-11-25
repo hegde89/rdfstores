@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -116,7 +117,7 @@ public class Runner {
 			
 			String q3 = "?x http://example.org/simple#subClassOf ?z\n ?y http://example.org/simple#subClassOf ?z";
 			
-			String q4 = "?x http://example.org/simple#f ?y";
+			String q4 = "?x http://example.org/simple#f http://example.org/simple#A1";
 
 			String q5 = "?x http://example.org/simple#f ?y\n?y http://example.org/simple#f ?z";
 
@@ -126,7 +127,7 @@ public class Runner {
 			
 			String q8 = "?x http://example.org/simple#f http://example.org/simple#A2\n?x http://example.org/simple#f ?y\n?y http://example.org/simple#a ?z";
 			
-			return q7;
+			return q4;
 		}
 		else if (dataset.equals("lubm")) {
 			String q1 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y";
@@ -312,11 +313,12 @@ public class Runner {
 				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblp queries.txt");
 				
 				for (Query q : queries) {
+					if (!(new HashSet<String>(Arrays.asList("q14")).contains(q.getName())))
+						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					if (q.getName().equals("q10"))
-						qe.evaluate(q);
+					qe.evaluate(q);
 //					break;
 				}
 			}
@@ -325,11 +327,12 @@ public class Runner {
 				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubm queries.txt");
 				
 				for (Query q : queries) {
+					if (!(new HashSet<String>(Arrays.asList("lq13")).contains(q.getName())))
+						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					if (q.getName().equals("lq11"))
-						qe.evaluate(q);
+					qe.evaluate(q);
 //					break;
 				}
 			}

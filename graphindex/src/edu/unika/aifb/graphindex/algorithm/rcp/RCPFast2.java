@@ -289,27 +289,27 @@ public class RCPFast2 {
 		
 		p = createPartition(p, vertices);
 
-		Map<Long,Block> id2block = new HashMap<Long,Block>();
-		for (Block b : p.getBlocks()) {
-			Block nb = new Block();
-			for (IVertex v : b) {
-				id2block.put(v.getId(), nb);
-			}
-		}
-		
-		vertices = null;
-		p = null;
-		System.gc();
-		log.debug(Util.memory());
-		
-		vertices = vlp.getInverted();
-		for (IVertex v : vertices)
-			id2block.get(v.getId()).add(v);
-		
-		p = new Partition();
-		p.addAll(new HashSet<Block>(id2block.values()));
-		
-		p = createPartition(p, vertices);
+//		Map<Long,Block> id2block = new HashMap<Long,Block>();
+//		for (Block b : p.getBlocks()) {
+//			Block nb = new Block();
+//			for (IVertex v : b) {
+//				id2block.put(v.getId(), nb);
+//			}
+//		}
+//		
+//		vertices = null;
+//		p = null;
+//		System.gc();
+//		log.debug(Util.memory());
+//		
+//		vertices = vlp.getInverted();
+//		for (IVertex v : vertices)
+//			id2block.get(v.getId()).add(v);
+//		
+//		p = new Partition();
+//		p.addAll(new HashSet<Block>(id2block.values()));
+//		
+//		p = createPartition(p, vertices);
 		
 
 		IndexGraph g = createIndexGraph(p);

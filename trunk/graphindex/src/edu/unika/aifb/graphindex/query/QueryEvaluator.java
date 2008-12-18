@@ -21,6 +21,7 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
+import org.semanticweb.kaon2.saturation.indexes.UnaryTermIndex.Results;
 
 import edu.unika.aifb.graphindex.Result;
 import edu.unika.aifb.graphindex.ResultSet;
@@ -60,67 +61,80 @@ public class QueryEvaluator implements IQueryEvaluator {
 	private StructureIndex m_index;
 	private ExtensionManager m_em;
 	private ExtensionStorage m_es;
+	private QueryMappingListener m_listener;
 	private Timings m_timings;
-	
+	private Map<Graph<String>,JoinMatcher> m_matchers;
+	private MappingListValidator m_mlv;
 	static final Logger log = Logger.getLogger(QueryEvaluator.class);
 	
+	public static List<String> removeNodes = new ArrayList<String>();
 	
 	public QueryEvaluator(StructureIndexReader indexReader) {
 		m_indexReader = indexReader;
 		m_index = indexReader.getIndex();
 		m_em = m_index.getExtensionManager();
+		m_em.setMode(ExtensionManager.MODE_READONLY);
 		m_es = m_em.getExtensionStorage();
+		m_matchers = new HashMap<Graph<String>,JoinMatcher>();
+		m_listener = new QueryMappingListener(m_indexReader);
+		m_mlv = new MappingListValidator(m_indexReader, m_index.getCollector());
+		for (Graph<String> ig : m_indexReader.getIndexGraphs()) {
+			m_matchers.put(ig, new JoinMatcher(ig, m_listener, m_index));
+		}
+		
 	}
 	
-	public void evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
+	public int evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
 		log.info("evaluating...");
-		
+		removeNodes = new ArrayList<String>(query.getRemoveNodes());
+		log.debug("remove nodes: " + removeNodes);
+
 		m_index.getCollector().reset();
 		m_timings = new Timings();
+		
 		long start = System.currentTimeMillis();
 		
 		Graph<QueryNode> origGraph = query.toGraph();
-
-		VCompatibilityCache vcc = new VCompatibilityCache(origGraph, m_index);
 		
-		m_em.setMode(ExtensionManager.MODE_READONLY);
-		
-		final ExecutorService executor = Executors.newFixedThreadPool(1);
-		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
-		GTable.timings = m_timings;
-		Tables.timings = m_timings;
-		Set<Map<String,String>> results = new HashSet<Map<String,String>>();
+//		final ExecutorService executor = Executors.newFixedThreadPool(1);
+//		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
 		List<String[]> result = new ArrayList<String[]>();
 		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
-			if (indexGraph.nodeCount() < 10)
-				continue;
-			vcc.setCurrentIndexGraph(indexGraph);
+			m_timings.start(Timings.SETUP);
 			
 //			Util.printDOT(query.getName() + ".dot", origGraph);
 //			Util.printDOT(query.getName() + "_m.dot", qg);
 
-			QueryMappingListener listener = new QueryMappingListener(origGraph, indexGraph, m_indexReader, vcc, completionService);
-			JoinMatcher jm = new JoinMatcher(origGraph, indexGraph, listener, m_index, m_timings);
+			JoinMatcher matcher = m_matchers.get(indexGraph);
+			
+			matcher.setTimings(m_timings);
+			matcher.setQueryGraph(origGraph);
+			m_listener.setQueryGraph(origGraph);
 
+			GTable.timings = null;
+			Tables.timings = null;
+			
+			m_timings.end(Timings.SETUP);
+			
 			m_timings.start(Timings.MATCH);
-			jm.match();
+			matcher.match();
 			m_timings.end(Timings.MATCH);
 
-			m_timings.start(Timings.MAPGEN);
-			List<Map<String,String>> mappings = listener.generateMappings();
-			m_timings.end(Timings.MAPGEN);
+			List<Map<String,String>> mappings = m_listener.generateMappings();
 			
 			if (mappings.size() == 0)
 				continue;
 			
-			listener = null;
-
-			MappingListValidator mlv = new MappingListValidator(m_indexReader, origGraph, mappings, m_index.getCollector());
-			List<String[]> res = mlv.validateMappings(origGraph, mappings, query.getEvalOrder());
+			GTable.timings = m_timings;
+			Tables.timings = m_timings;
+			
+			long vt = System.currentTimeMillis();
+			List<String[]> res = m_mlv.validateMappings(origGraph, mappings, query.getEvalOrder());
+			log.debug(System.currentTimeMillis() - vt);
 			if (res.size() > 0)
 				result.addAll(res);
 		}
-		executor.shutdown();
+//		executor.shutdown();
 //		log.debug("result maps: " + results.size());
 		
 //		if (result.size() < 50) {
@@ -135,14 +149,44 @@ public class QueryEvaluator implements IQueryEvaluator {
 		
 		long end = System.currentTimeMillis();
 		log.info("duration: " + (end - start) / 1000.0);
-
+		
 		m_index.getCollector().addTimings(m_timings);
-		m_index.getCollector().logStats();
+
+//		if (result.size() > 0) {
+//			Set<Map<String,String>> maps = new HashSet<Map<String,String>>();
+//			for (String[] row : result) {
+//				Map<String,String> map = new HashMap<String,String>();
+//				for (int i = 0; i < row.length; i++)
+//					map.put("" + i, row[i]);
+//				maps.add(map);
+//			}
+//			for (Map<String,String> map : maps)
+//				log.debug(map);
+//			log.debug(maps.size());
+//		}
 		
-//		log.debug("vcc size: " + vcc.size());
-		vcc.clear();
+//		if (result.size() > 0) {
+//			for (int i = 0; i < result.get(0).length; i++) {
+//				Set<String> vals = new HashSet<String>();
+//				for (String[] row : result)
+//					vals.add(row[i]);
+//				log.debug(vals.size());
+//			}
+//		}
 		
-		m_es.clearCaches();
 		((LuceneExtensionStorage)m_es).logStats(log);
+		
+		return result.size();
+	}
+	
+	public void clearCaches() throws StorageException {
+		m_mlv.clearCaches();
+		m_es.clearCaches();
+		((LuceneExtensionStorage)m_es).reopenAndWarmUp();
+	}
+
+	public long[] getTimings() {
+		m_index.getCollector().logStats();
+		return m_index.getCollector().getConsolidated();
 	}
 }

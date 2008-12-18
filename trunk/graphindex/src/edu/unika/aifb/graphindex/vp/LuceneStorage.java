@@ -34,6 +34,8 @@ import org.apache.lucene.store.FSDirectory;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
+import edu.unika.aifb.graphindex.storage.lucene.LRUCache;
 import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.Timings;
 
@@ -76,82 +78,6 @@ public class LuceneStorage {
 	
 	private static final Logger log = Logger.getLogger(LuceneStorage.class);
 
-	private class QueryExecutor implements Callable<List<Integer>> {
-		private Query q;
-		
-		public QueryExecutor(Query q) {
-			this.q = q;
-		}
-		
-		public List<Integer> call() {
-			try {
-				List<Integer> docIds = getDocumentIds(q);
-				return docIds;
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
-			
-			return new ArrayList<Integer>();
-		}
-	}
-	
-	private class DocumentLoader implements Callable<GTable<String>> {
-		private List<Integer> docIds;
-		private Index index;
-		private String so;
-		
-		public DocumentLoader(List<Integer> docIds, Index index, String val) {
-			this.docIds = docIds;
-			this.index = index;
-			this.so = val;
-		}
-		
-		public GTable<String> call() throws Exception {
-			GTable<String> table = new GTable<String>("source", "target");
-			try {
-				for (int docId : docIds) {
-					Document doc = getDocument(docId);
-					
-					if (m_merged) {
-						if (index == Index.PS || index == Index.SP) {
-							String objects = doc.getField(FIELD_OBJECT).stringValue();
-							StringSplitter splitter = new StringSplitter(objects, "\n");
-							
-							String s;
-							while ((s = splitter.next()) != null)
-								table.addRow(new String[] { so, s });
-						}
-						else {
-							String subjects = doc.getField(FIELD_SUBJECT).stringValue();
-							StringSplitter splitter = new StringSplitter(subjects, "\n");
-							
-							String s;
-							while ((s = splitter.next()) != null)
-								table.addRow(new String[] { s, so });
-						}
-					}
-					else {
-						String subject, object;
-						if (index == Index.PS) {
-							subject = so;
-							object = doc.getField(FIELD_OBJECT).stringValue();
-						}
-						else {
-							subject = doc.getField(FIELD_SUBJECT).stringValue();
-							object = so;
-						}
-						table.addRow(new String[] { subject, object });
-					}
-				}
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
-			
-			return table;
-		}
-		
-	}
-	
 	public LuceneStorage(String directory) {
 		m_directory = directory;
 		
@@ -182,6 +108,40 @@ public class LuceneStorage {
 		BooleanQuery.setMaxClauseCount(1048576);
 	}
 	
+	public void warmup() throws StorageException {
+		long start = System.currentTimeMillis();
+
+		// LUBM warmup
+		getDocumentIds(new TermQuery(new Term(Index.PO.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse__http://www.Department6.University29.edu/Course10")));
+		getDocumentIds(new TermQuery(new Term(Index.PS.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#memberOf__http://www.Department3.University0.edu/GraduateStudent38")));
+
+		// DBLP warmup
+//		getDocumentIds(new TermQuery(new Term(Index.PO.getIndexField(), "http://lsdis.cs.uga.edu/projects/semdis/opus#isIncludedIn__http://dblp.uni-trier.de/rec/bibtex/conf/www/2004")));
+//		getDocumentIds(new TermQuery(new Term(Index.PS.getIndexField(), "http://lsdis.cs.uga.edu/projects/semdis/opus#editor__http://dblp.uni-trier.de/rec/bibtex/conf/www/2004")));
+		
+		log.debug("warmup in " + (System.currentTimeMillis() - start) + " ms");
+	}
+	
+	public void reopenAndWarmup() throws StorageException {
+		try {
+			m_searcher.close();
+			m_reader.close();
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		
+		try {
+			m_reader = IndexReader.open(m_directory);
+			m_searcher = new IndexSearcher(m_reader);
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		
+		warmup();
+	}
+	
 	public List<Integer> getDocumentIds(Query q) throws StorageException {
 		final List<Integer> docIds = new ArrayList<Integer>();
 		try {
@@ -199,10 +159,16 @@ public class LuceneStorage {
 		
 		return docIds;
 	}
+	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(10000);
 	
 	private Document getDocument(int docId) throws StorageException {
 		try {
-			return  m_reader.document(docId);
+			Document doc = m_docCache.get(docId);
+			if (doc == null) {
+				doc = m_reader.document(docId);
+				m_docCache.put(docId, doc);
+			}
+			return doc;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
@@ -278,7 +244,31 @@ public class LuceneStorage {
 		}
 	}
 	
-	public List<GTable<String>> getIndexTables(Index index, String property) throws IOException {
+	private void loadDocuments(GTable<String> table, List<Integer> docIds, Index index, String so) throws StorageException {
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+			
+			if (index == Index.PS || index == Index.SP) {
+				String objects = doc.getField(index.getValField()).stringValue();
+				StringSplitter splitter = new StringSplitter(objects, "\n");
+				
+				String s;
+				while ((s = splitter.next()) != null)
+					table.addRow(new String[] { so, s });
+			}
+			else {
+				String subjects = doc.getField(index.getValField()).stringValue();
+				StringSplitter splitter = new StringSplitter(subjects, "\n");
+				
+				String s;
+				while ((s = splitter.next()) != null)
+					table.addRow(new String[] { s, so });
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<GTable<String>> getIndexTables(Index index, String property) throws IOException, StorageException {
 		if (index == Index.OP || index == Index.SP)
 			throw new UnsupportedOperationException("querying OP and SP indexes with only a property is not supported");
 		
@@ -292,12 +282,7 @@ public class LuceneStorage {
 		for (BooleanClause bc : bq.getClauses())
 			queries.add((TermQuery)bc.getQuery());
 		
-		long dq = System.currentTimeMillis() - start;
-
-		List<GTable<String>> tables = new ArrayList<GTable<String>>();
-		long ds = 0, dr = 0;
-		int docs = 0;
-		int rows = 0;
+		List<Object[]> dis = new ArrayList<Object[]>();
 		for (TermQuery q : queries) {
 			String term = q.getTerm().text();
 			String so;
@@ -305,34 +290,29 @@ public class LuceneStorage {
 				so = term.substring(0, term.indexOf("__"));
 			else
 				so = term.substring(term.lastIndexOf("__") + 2);
-
-			try {
-				long s2 = System.currentTimeMillis();
-				Future<List<Integer>> future1 = m_queryExecutor.submit(new QueryExecutor(q));
-				List<Integer> docIds = future1.get();
-				ds += System.currentTimeMillis() - s2;
-				
-				docs += docIds.size();
-				
-				s2 = System.currentTimeMillis();
-				Future<GTable<String>> future2 = m_documentLoader.submit(new DocumentLoader(docIds, index, so));
-				GTable<String> table = future2.get();
-				tables.add(table);
-				dr += System.currentTimeMillis() - s2;
-				
-				rows += table.rowCount();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				e.printStackTrace();
-			}
+			dis.add(new Object[] { so, getDocumentIds(q) });
 		}
 		
-		log.debug("q: " + query + " (" + docs + "/" + rows + ") {" + (System.currentTimeMillis() - start) + " ms, " + dq + ", " + ds + ", " + dr + "}");
+		List<GTable<String>> tables = new ArrayList<GTable<String>>();
+		int docs = 0;
+		int rows = 0;
+		for (Object[] o : dis) {
+			String so = (String)o[0];
+			List<Integer> docIds = (List<Integer>)o[1];
+			GTable<String> table = new GTable<String>("source", "target");
+			loadDocuments(table, docIds, index, so);
+			
+			docs += docIds.size();
+			rows += table.rowCount();
+			
+			tables.add(table);
+		}
+
+//		log.debug("q: " + query + " (" + docs + "/" + rows + ") {" + (System.currentTimeMillis() - start) + " ms}");
 		return tables;
 	}
 	
-	public GTable<String> getIndexTable(Index index, String property, String so) throws IOException {
+	public GTable<String> getIndexTable(Index index, String property, String so) throws IOException, StorageException {
 		long start = System.currentTimeMillis();
 
 		String indexString;
@@ -344,103 +324,21 @@ public class LuceneStorage {
 		TermQuery tq = new TermQuery(new Term(index.getIndexField(), indexString));
 			
 		GTable<String> table = new GTable<String>("source", "target");
-		int docs = 0;
 		
 		long ds = System.currentTimeMillis();
-		try {
-			
-			Future<List<Integer>> future1 = m_queryExecutor.submit(new QueryExecutor(tq));
-			List<Integer> docIds = future1.get();
-			ds = System.currentTimeMillis() - ds;
-			
-			docs += docIds.size();
-			
-			long dr = System.currentTimeMillis();
-			Future<GTable<String>> future2 = m_documentLoader.submit(new DocumentLoader(docIds, index, so));
-			table = future2.get();
-			dr = System.currentTimeMillis() - dr;
-			
-			if (index == Index.OP || index == Index.PO)
-				table.setSortedColumn(0);
-			else
-				table.setSortedColumn(1);
-			
-			log.debug("q: " + tq + " (" + docs + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + ds + ", " + dr + "}");
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
+		List<Integer> docIds = getDocumentIds(tq);
+		ds = System.currentTimeMillis() - ds;
 		
-		return table;
-	}
-	
-	public GTable<String> getTable(String subject, String property, String object) throws IOException {
-		long start = System.currentTimeMillis();
+		long dr = System.currentTimeMillis();
+		loadDocuments(table, docIds, index, so);
+		dr = System.currentTimeMillis() - dr;
 		
-		List<TermQuery> queries = new ArrayList<TermQuery>();
-		Query origQuery = null;
-		Index index = null;
+		if (index == Index.OP || index == Index.PO)
+			table.setSortedColumn(0);
+		else
+			table.setSortedColumn(1);
 		
-		long dq = System.currentTimeMillis();
-		String query = property;
-		if (object == null && subject == null) {
-			index = Index.PO;
-			origQuery = new PrefixQuery(new Term(Index.PO.getIndexField(), query));
-			BooleanQuery bq = (BooleanQuery)origQuery.rewrite(m_reader);
-			for (BooleanClause bc : bq.getClauses())
-				queries.add((TermQuery)bc.getQuery());
-		}
-		else if (object == null) {
-			index = Index.PS;
-			query += "__" + subject;
-			origQuery = new TermQuery(new Term(Index.PS.getIndexField(), query));
-			queries.add((TermQuery)origQuery);
-		}
-		else if (subject == null) {
-			index = Index.PO;
-			query += "__" + object;
-			origQuery = new TermQuery(new Term(Index.PO.getIndexField(), query));
-			queries.add((TermQuery)origQuery);
-		}
-		dq = System.currentTimeMillis() - dq;
-		
-		GTable<String> table = new GTable<String>("source", "target");
-		try {
-			
-			long ds = 0, dr = 0;
-			int docs = 0;
-			for (TermQuery q : queries) {
-				long s2 = System.currentTimeMillis();
-				String val = null;
-				if (subject == null && object == null) {
-					String term = q.getTerm().text();
-					val = term.substring(term.lastIndexOf("__") + 2);
-				}
-				else if (object == null) {
-					val = subject;
-				}
-				else if (subject == null) {
-					val = object;
-				}
-				Future<List<Integer>> f1 = m_queryExecutor.submit(new QueryExecutor(q));
-				List<Integer> docIds = f1.get();
-				ds += System.currentTimeMillis() - s2;
-				
-				docs += docIds.size();
-				
-				s2 = System.currentTimeMillis();
-				Future<GTable<String>> f2 = m_documentLoader.submit(new DocumentLoader(docIds, index, val));
-				table.addRows(f2.get().getRows());
-				dr += System.currentTimeMillis() - s2;
-			}
-			
-			log.debug("q: " + origQuery + " (" + docs + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + dq + ", " + ds + ", " + dr + "}");
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
+//		log.debug("q: " + tq + " (" + docIds.size() + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + ds + ", " + dr + "}");
 		
 		return table;
 	}
@@ -498,12 +396,12 @@ public class LuceneStorage {
 			Document doc = new Document();
 			if (t.field().equals(Index.PO.getIndexField())) {
 				doc.add(new Field(Index.PO.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
-				doc.add(new Field(Index.OP.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+//				doc.add(new Field(Index.OP.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 				doc.add(new Field(FIELD_SUBJECT, sb.toString(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
 			}
 			else {
 				doc.add(new Field(Index.PS.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
-				doc.add(new Field(Index.SP.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+//				doc.add(new Field(Index.SP.getIndexField(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 				doc.add(new Field(FIELD_OBJECT, sb.toString(), Field.Store.YES, Field.Index.NO, Field.TermVector.NO));
 			}
 			iw.addDocument(doc);
@@ -522,5 +420,9 @@ public class LuceneStorage {
 		
 		iw.close();
 		log.debug("done");
+	}
+
+	public void clearCaches() {
+		m_docCache.clear();
 	}
 }

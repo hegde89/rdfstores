@@ -62,111 +62,17 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public IndexReader m_reader;
 	public IndexSearcher m_searcher;
 	private LRUCache<Integer,Document> m_docCache;
-	private LRUCache<String,GTable<String>> m_tableCache;
 	private Timings m_timings;
 	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
 	private int m_docCacheHits;
 	private int m_docCacheMisses;
-	private int m_tableCacheHits, m_tableCacheMisses;
-	
-	private ExecutorService m_queryExecutor;
-	private ExecutorService m_documentLoader;
 	
 	private final String EXT_PATH_SEP = "__";
 	public final static Logger log = Logger.getLogger(LuceneExtensionStorage.class);
 	
-	private class QueryExecutor implements Callable<List<Integer>> {
-		private Query q;
-		
-		public QueryExecutor(Query q) {
-			this.q = q;
-		}
-		
-		public List<Integer> call() {
-			try {
-				
-				List<Integer> docIds = getDocumentIds(q);
-				return docIds;
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
-			
-			return new ArrayList<Integer>();
-		}
-	}
-	
-	private class DocumentLoader implements Callable<GTable<String>> {
-		private List<Integer> docIds;
-		private Index index;
-		private String so;
-		
-		public DocumentLoader(List<Integer> docIds, Index index, String val) {
-			this.docIds = docIds;
-			this.index = index;
-			this.so = val;
-		}
-		
-		public GTable<String> call() throws Exception {
-			GTable<String> table = new GTable<String>("source", "target");
-			try {
-				for (int docId : docIds) {
-					Document doc = getDocument(docId);
-					
-					if (index == Index.EPS) {
-						String objects = doc.getField(index.getValField()).stringValue();
-						StringSplitter splitter = new StringSplitter(objects, "\n");
-						
-						String s;
-						while ((s = splitter.next()) != null)
-							table.addRow(new String[] { so, s });
-					}
-					else {
-						String subjects = doc.getField(index.getValField()).stringValue();
-						StringSplitter splitter = new StringSplitter(subjects, "\n");
-						
-						String s;
-						while ((s = splitter.next()) != null)
-							table.addRow(new String[] { s, so });
-					}
-				}
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
-			
-			return table;
-		}
-//		private List<Integer> docIds;
-//		private String allowedSubject;
-//		
-//		public DocumentLoader(List<Integer> docIds, String allowedSubject) {
-//			this.docIds = docIds;
-//			this.allowedSubject = allowedSubject;
-//		}
-//		
-//		public GTable<String> call() throws Exception {
-//			GTable<String> table = new GTable<String>("source", "target");
-//			try {
-//				for (int docId : docIds) {
-//					Document doc = getDocument(docId);
-//					addToTable(table, doc, allowedSubject);
-//				}
-//			} catch (StorageException e) {
-//				e.printStackTrace();
-//			}
-//			
-//			return table;
-//		}
-	}
-	
 	public LuceneExtensionStorage(String directory) {
 		m_directory = directory;
 		m_timings = new Timings();
-		
-		m_queriesFromCache = new HashMap<String,Integer>();
-		m_queriesFromDisk = new HashMap<String,Integer>();
-		
-		m_queryExecutor = Executors.newFixedThreadPool(20);
-		m_documentLoader = Executors.newFixedThreadPool(10);
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -178,9 +84,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
-			
-			log.info("table cache size: " + m_manager.getIndex().getTableCacheSize());
-			m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
 			
 			log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
 			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
@@ -201,8 +104,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 				m_writer.close();
 			if (m_searcher != null)
 				m_searcher.close();
-			m_queryExecutor.shutdown();
-			m_documentLoader.shutdown();
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -211,12 +112,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void updateCacheSizes() {
-		if (m_manager.getIndex().getTableCacheSize() != m_tableCache.cacheSize()) {
-			log.info("table cache size: " + m_manager.getIndex().getTableCacheSize());
-			m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
-		}
-		
-		if (m_manager.getIndex().getDocumentCacheSize() != m_tableCache.cacheSize()) {
+		if (m_manager.getIndex().getDocumentCacheSize() != m_docCache.cacheSize()) {
 			log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
 			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
 		}
@@ -258,8 +154,17 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public void clearCaches() throws StorageException {
-		m_tableCache = new LRUCache<String,GTable<String>>(m_manager.getIndex().getTableCacheSize());
+//		m_queriesFromCache.clear();
+//		m_queriesFromDisk.clear();
+		htcache.clear();
+		m_subjectExtCache.clear();
+		m_objectExtCache.clear();
+		m_extCacheHits = 0;
+		m_timings.reset();
+		m_o2e.clear();
+		m_docCacheHits = m_docCacheMisses = 0;
 		m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
+		
 		try {
 			m_reader.flush();
 		} catch (IOException e) {
@@ -360,10 +265,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	private Map<String,Boolean> htcache = new HashMap<String,Boolean>();
-	
+
 	public boolean hasTriples(Index index, String ext, String property, String so) throws StorageException  {
 		try {
-			String s = ext + "__" + property + "__" + so;
+			String s = new StringBuilder().append(ext).append("__").append(property).append("__").append(so).toString();
 			Boolean value = htcache.get(s);
 			if (value != null)
 				return value.booleanValue();
@@ -371,7 +276,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			Query q = new TermQuery(getTerm(index, ext, property, so));
 			Hits hits = m_searcher.search(q);
 			boolean has = hits.length() > 0;
-			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
+//			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
 			htcache.put(s, has);
 			return has;
 		} catch (CorruptIndexException e) {
@@ -401,8 +306,31 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
+	private void loadDocuments(GTable<String> table, List<Integer> docIds, Index index, String so) throws StorageException {
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+			
+			if (index == Index.EPS) {
+				String objects = doc.getField(index.getValField()).stringValue();
+				StringSplitter splitter = new StringSplitter(objects, "\n");
+				
+				String s;
+				while ((s = splitter.next()) != null)
+					table.addRow(new String[] { so, s });
+			}
+			else {
+				String subjects = doc.getField(index.getValField()).stringValue();
+				StringSplitter splitter = new StringSplitter(subjects, "\n");
+				
+				String s;
+				while ((s = splitter.next()) != null)
+					table.addRow(new String[] { s, so });
+			}
+		}
+	}
+	
 	public List<GTable<String>> getIndexTables(Index index, String ext, String property) throws StorageException {
-		m_timings.start(Timings.DATA);
+//		m_timings.start(Timings.DATA);
 		long start = System.currentTimeMillis();
 	
 		PrefixQuery pq = new PrefixQuery(getTerm(index, ext, property));
@@ -452,13 +380,13 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			x+= table.rowCount();
 			tables.add(table);
 		}
-		log.debug("q: " + query + " (" + x + ") {" + (System.currentTimeMillis() - start) + " ms}");
-		m_timings.end(Timings.DATA);
+//		log.debug("q: " + query + " (" + x + ") {" + (System.currentTimeMillis() - start) + " ms}");
+//		m_timings.end(Timings.DATA);
 		return tables;
 	}
 	
 	public GTable<String> getIndexTable(Index index, String ext, String property, String so) throws StorageException {
-		m_timings.start(Timings.DATA);
+//		m_timings.start(Timings.DATA);
 		long start = System.currentTimeMillis();
 
 		TermQuery tq = new TermQuery(getTerm(index, ext, property, so));
@@ -467,36 +395,121 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		int docs = 0;
 		
 		long ds = System.currentTimeMillis();
-		try {
+		
+		List<Integer> docIds = getDocumentIds(tq);
+		ds = System.currentTimeMillis() - ds;
+		
+		long dr = 0;
+		if (docIds.size() > 0) {
+			docs += docIds.size();
 			
-			Future<List<Integer>> future1 = m_queryExecutor.submit(new QueryExecutor(tq));
-			List<Integer> docIds = future1.get();
-			ds = System.currentTimeMillis() - ds;
+			loadDocuments(table, docIds, index, so);
 			
-			long dr = 0;
-			if (docIds.size() > 0) {
-				docs += docIds.size();
-				
-				dr = System.currentTimeMillis();
-				Future<GTable<String>> future2 = m_documentLoader.submit(new DocumentLoader(docIds, index, so));
-				table = future2.get();
-				dr = System.currentTimeMillis() - dr;
-				
-				if (index == Index.EPO)
-					table.setSortedColumn(0);
-				else
-					table.setSortedColumn(1);
-			}
+			if (index == Index.EPO)
+				table.setSortedColumn(0);
+			else
+				table.setSortedColumn(1);
+		}
 			
-			log.debug("q: " + tq + " (" + docs + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + ds + ", " + dr + "}");
-		} catch (InterruptedException e) {
-			throw new StorageException(e);
-		} catch (ExecutionException e) {
-			throw new StorageException(e);
+//		log.debug("q: " + tq + " (" + docs + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + ds + ", " + dr + "}");
+		
+//		m_timings.end(Timings.DATA);
+		return table;
+	}
+	
+	private LRUCache<String,Set<String>> m_subjectExtCache = new LRUCache<String,Set<String>>(400000);
+	private LRUCache<String,Set<String>> m_objectExtCache = new LRUCache<String,Set<String>>(400000);
+	private long m_extCacheHits = 0;
+	
+	private Map<String,String> m_o2e = new HashMap<String,String>(100000);
+	
+	public String getExtension(String object) throws StorageException {
+		m_timings.start(Timings.DATA);
+		String ext = m_o2e.get(object);
+		if (ext != null) {
+			m_timings.end(Timings.DATA);
+			return ext;
 		}
 		
+		PrefixQuery pq = new PrefixQuery(new Term(Index.OE.getIndexField(), object + "__"));
+		
+		BooleanQuery bq = null;
+		try {
+			bq = (BooleanQuery)pq.rewrite(m_reader);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		if (bq.getClauses().length == 0) {
+			m_o2e.put(object, "");
+			m_timings.end(Timings.DATA);
+			return "";
+		}
+		
+		TermQuery tq = (TermQuery)(bq.getClauses()[0].getQuery());
+		String term = tq.getTerm().text();
+		ext = term.substring(term.indexOf("__") + 2);
+		
+		m_o2e.put(object, ext);
 		m_timings.end(Timings.DATA);
-		return table;
+		
+//		log.debug("eq: " + tq);
+		
+		return ext;
+	}
+	
+	public boolean isValidObjectExtension(String object, String ext) throws StorageException {
+		String term = object + "__" + ext;
+		TermQuery tq = new TermQuery(new Term(Index.OE.getIndexField(), term));
+		try {
+			Hits hits = m_searcher.search(tq);
+			return hits.length() > 0;
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public static int extLoaded = 0;
+	public Set<String> getExtensions(Index index, String so) throws StorageException {
+		long start = System.currentTimeMillis();
+		m_timings.start(Timings.DATA);
+		
+		Set<String> exts;
+//		if (index == Index.SE)
+//			exts = m_subjectExtCache.get(so);
+//		else
+//			exts = m_objectExtCache.get(so);
+//		
+//		if (exts != null) {
+//			m_extCacheHits++;
+//			m_timings.end(Timings.DATA);
+//			return exts;
+//		}
+		
+		TermQuery tq = new TermQuery(new Term(index.getIndexField(), so));
+
+		exts = new HashSet<String>();	
+		List<Integer> docIds = getDocumentIds(tq);
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+			String sos = doc.getField(index.getValField()).stringValue();
+			StringSplitter splitter = new StringSplitter(sos, "\n");
+			String s;
+			while ((s = splitter.next()) != null) {
+				exts.add(s);
+			}
+		}
+		
+//		if (index == Index.SE)
+//			m_subjectExtCache.put(so, exts);
+//		else
+//			m_objectExtCache.put(so, exts);
+//		extLoaded += docIds.size();
+		
+//		log.debug("eq: " + tq + " (" + exts.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
+		
+		m_timings.end(Timings.DATA);
+		
+		return exts;
 	}
 	
 	public void mergeExtensions() throws StorageException, IOException {
@@ -543,27 +556,62 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //		deleteDataByPath(getPath(extUri));
 	}
 	
-	public void logStats(Logger logger) {
-//		logger.debug("queries from cache:");
-		int cache = 0;
-		for (String q : m_queriesFromCache.keySet())
-			if (m_queriesFromCache.get(q) > 1)
-				cache += m_queriesFromCache.get(q) - 1;
-//				logger.debug(" " + q + " " + m_queriesFromCache.get(q));
-//		logger.debug("queries from disk:");
-		int disk = 0;
-		for (String q : m_queriesFromDisk.keySet())
-			if (m_queriesFromDisk.get(q) > 1)
-				disk += m_queriesFromDisk.get(q) - 1;
-//				logger.debug(" " + q + " " + m_queriesFromDisk.get(q));
-		logger.debug("doccache: " + m_docCacheMisses + "/" + m_docCacheHits);
-		logger.debug("tablecache: " + m_tableCacheMisses + "/" + m_tableCacheHits);
-		logger.debug("dup cache: " + cache);
-		logger.debug("dup disk: " + disk);
-		logger.debug("htcache: " + htcache.keySet().size());
+	public void reopenAndWarmUp() throws StorageException {
+		try {
+			m_searcher.close();
+			m_reader.close();
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
 		
-		m_queriesFromCache.clear();
-		m_queriesFromDisk.clear();
-		m_docCacheHits = m_docCacheMisses = 0;
+		try {
+			m_reader = IndexReader.open(m_directory);
+			m_searcher = new IndexSearcher(m_reader);
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		
+		warmup();
+	}
+	
+	public void warmup() throws StorageException {
+		long start = System.currentTimeMillis();
+
+		// LUBM warmup
+		getDocumentIds(new TermQuery(new Term(Index.EPO.getIndexField(), "b1186__http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name__University1__")));
+		getDocumentIds(new TermQuery(new Term(Index.EPS.getIndexField(), "b1904__http://www.w3.org/1999/02/22-rdf-syntax-ns#type__http://www.University1.edu__")));
+		getDocumentIds(new TermQuery(new Term(Index.OE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University__b1904")));
+		getDocumentIds(new TermQuery(new Term(Index.SE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University")));
+
+		// DBLP warmup
+//		getDocumentIds(new TermQuery(new Term(Index.EPO.getIndexField(), "b257774__http://lsdis.cs.uga.edu/projects/semdis/opus#book_title__WWW__")));
+//		getDocumentIds(new TermQuery(new Term(Index.EPS.getIndexField(), "b261911__http://lsdis.cs.uga.edu/projects/semdis/opus#editor__http://dblp.uni-trier.de/rec/bibtex/conf/www/2006__")));
+//		getDocumentIds(new TermQuery(new Term(Index.OE.getIndexField(), "http://dblp.uni-trier.de/rec/bibtex/conf/www/2004__b48179")));
+//		getDocumentIds(new TermQuery(new Term(Index.SE.getIndexField(), "http://dblp.uni-trier.de/rec/bibtex/conf/www/2005")));
+		
+		log.debug("warmup in " + (System.currentTimeMillis() - start) + " ms");
+	}
+	
+	public void logStats(Logger logger) {
+//		int cache = 0;
+//		for (String q : m_queriesFromCache.keySet())
+//			if (m_queriesFromCache.get(q) > 1)
+//				cache += m_queriesFromCache.get(q) - 1;
+		
+//		int disk = 0;
+//		for (String q : m_queriesFromDisk.keySet())
+//			if (m_queriesFromDisk.get(q) > 1)
+//				disk += m_queriesFromDisk.get(q) - 1;
+		
+		logger.debug("doccache: " + m_docCacheMisses + "/" + m_docCacheHits);
+//		logger.debug("dup cache: " + cache);
+//		logger.debug("dup disk: " + disk);
+//		logger.debug("htcache: " + htcache.keySet().size());
+//		logger.debug("subcache: " + m_subjectExtCache.usedEntries());
+//		logger.debug("objcache: " + m_objectExtCache.usedEntries());
+//		logger.debug("extcachehits: " + m_extCacheHits);
+		logger.debug("o2e: " + m_o2e.keySet().size());
 	}
 }

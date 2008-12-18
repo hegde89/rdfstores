@@ -191,6 +191,7 @@ public class Main {
 					log.debug("query: " + q.getName());
 					log.debug(q);
 					qe.evaluate(q);
+					qe.clearCaches();
 				}
 			}
 			

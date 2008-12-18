@@ -1,7 +1,9 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -57,7 +59,7 @@ public class Runner {
 	private static final Logger log = Logger.getLogger(Runner.class);
 
 	private static Query getQuery(String dataset) {
-		Query q = new Query(new String[] {"?x", "?y", "?z"});
+		Query q = new Query(new HashSet<String>(Arrays.asList("?x", "?y", "?z")));
 		
 		if (dataset.equals("simple")) {
 			Individual p1 = new Individual("http://example.org/simple#P1");
@@ -301,6 +303,28 @@ public class Runner {
 		}
 		
 		if (stages.contains("query")) {
+			if (dataset.equals("sweto")) {
+				QueryLoader ql = new QueryLoader();
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
+				
+				for (Query q : queries) {
+					PrintWriter out = new PrintWriter(new FileWriter("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpqueries/" + q.getName() + ".txt"));
+					out.print(q.toSPARQL());
+					out.close();
+				}
+			}
+			
+			if (dataset.equals("lubm")) {
+				QueryLoader ql = new QueryLoader();
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
+				
+				for (Query q : queries) {
+					PrintWriter out = new PrintWriter(new FileWriter("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/" + q.getName() + ".txt"));
+					out.print(q.toSPARQL());
+					out.close();
+				}
+			}
+
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
 			index.setNumEvalThreads(2);
 			index.getIndex().setTableCacheSize(1);
@@ -310,29 +334,31 @@ public class Runner {
 			
 			if (dataset.equals("sweto")) {
 				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblp queries.txt");
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
 				
 				for (Query q : queries) {
-					if (!(new HashSet<String>(Arrays.asList("q14")).contains(q.getName())))
+					if (!(new HashSet<String>(Arrays.asList("q7")).contains(q.getName())))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
 					qe.evaluate(q);
+					qe.clearCaches();
 //					break;
 				}
 			}
 			else if (dataset.equals("lubm")) {
 				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubm queries.txt");
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
 				
 				for (Query q : queries) {
-					if (!(new HashSet<String>(Arrays.asList("lq13")).contains(q.getName())))
+					if (!(new HashSet<String>(Arrays.asList("lq11")).contains(q.getName())))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
 					qe.evaluate(q);
+					qe.clearCaches();
 //					break;
 				}
 			}

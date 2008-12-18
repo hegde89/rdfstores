@@ -21,13 +21,15 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class Query {
 	private List<Literal> m_literals;
-	private List<String> m_selectVariables;
+	private Set<String> m_selectVariables;
 	private String m_name;
 	private Map<String,Integer> m_e2s;
+	private Set<String> m_removeNodes;
 	
-	public Query(String[] vars) {
+	public Query(Set<String> vars) {
 		m_literals = new ArrayList<Literal>();
-		m_selectVariables = Arrays.asList(vars);
+		m_selectVariables = vars;
+		m_removeNodes = new HashSet<String>();
 	}
 	
 	public String getName() {
@@ -38,7 +40,19 @@ public class Query {
 		m_name = name;
 	}
 	
-	public List<String> getSelectVariables() {
+	public Set<String> getRemoveNodes() {
+		return m_removeNodes;
+	}
+	
+	public void setRemoveNodes(Set<String> rn) {
+		m_removeNodes = rn;
+	}
+	
+	public void setSelectVariables(Set<String> vars) {
+		m_selectVariables = vars;
+	}
+	
+	public Set<String> getSelectVariables() {
 		return m_selectVariables;
 	}
 	
@@ -56,6 +70,30 @@ public class Query {
 	
 	public void setEvalOrder(Map<String,Integer> e2s) {
 		m_e2s = e2s;
+	}
+	
+	public String toSPARQL() {
+		String s = "SELECT ";
+		for (String sv : m_selectVariables)
+			s += sv + " ";
+		s += " WHERE {\n";
+		for (Literal l : m_literals) {
+			String sub = l.getSubject().toString();
+			String p = "<" + l.getPredicate().toString() + ">";
+			String obj = l.getObject().toString();
+			
+			if (sub.startsWith("http"))
+				sub = "<" + sub + ">";
+			
+			if (obj.startsWith("http"))
+				obj = "<" + obj + ">";
+			else if (!obj.startsWith("?"))
+				obj = "'" + obj + "'";
+			
+			s += sub + " " + p + " " + obj + " . \n";
+		}
+		s += "}";
+		return s;
 	}
 
 	public NamedQueryGraph<String,LabeledQueryEdge<String>> toQueryGraph() throws StorageException {
@@ -95,7 +133,7 @@ public class Query {
 	}
 	
 	public String toString() {
-		String s = "";
+		String s = "(select: " + m_selectVariables + ", remove: " + m_removeNodes + ")\n";
 		String nl = "";
 		for (Literal l : m_literals) {
 			s += nl + l.getSubject() + " " + l.getPredicate() + " " + l.getObject();

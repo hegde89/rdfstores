@@ -47,7 +47,7 @@ public class Tables {
 					queue.add(min);
 			}
 		
-			log.debug(" merged " + tables.size() + " tables with " + result.rowCount() + " rows in " + (System.currentTimeMillis() - start) + " ms");
+//			log.debug(" merged " + tables.size() + " tables with " + result.rowCount() + " rows in " + (System.currentTimeMillis() - start) + " ms");
 		}
 		else if (tables.size() == 1)
 			result = tables.get(0);
@@ -76,6 +76,29 @@ public class Tables {
 			s += row[i] + "_";
 		return s;
 	}
+	
+	public static String getJoinAttribute(Integer[] row, int[] cols) {
+		String s = "";
+		for (int i : cols)
+			s += row[i] + "_";
+		return s;
+	}
+
+	private static Integer[] combineRow(Integer[] lrow, Integer[] rrow, int rc) {
+		Integer[] resultRow = new Integer[lrow.length + rrow.length - 1];
+		System.arraycopy(lrow, 0, resultRow, 0, lrow.length);
+		//		int s = 0, d = lrow.length;
+		//		for (int i = 0; i < src.length; i++) {
+		//			System.arraycopy(rrow, s, resultRow, d, src[i] - s);
+		//			d += src[i] - s;
+		//			s = src[i] + 1;
+		//		}
+		//		if (s < rrow.length)
+		//			System.arraycopy(row, s, resultRow, d, resultRow.length - d);
+		System.arraycopy(rrow, 0, resultRow, lrow.length, rc);
+		System.arraycopy(rrow, rc + 1, resultRow, lrow.length + rc, rrow.length - rc - 1);
+		return resultRow;
+	}
 
 	private static String[] combineRow(String[] lrow, String[] rrow, int rc) {
 		String[] resultRow = new String[lrow.length + rrow.length - 1];
@@ -91,6 +114,65 @@ public class Tables {
 		System.arraycopy(rrow, 0, resultRow, lrow.length, rc);
 		System.arraycopy(rrow, rc + 1, resultRow, lrow.length + rc, rrow.length - rc - 1);
 		return resultRow;
+	}
+
+	public static GTable<Integer> mergeJoinInteger(GTable<Integer> left, GTable<Integer> right, String col) {
+		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
+			throw new UnsupportedOperationException("merge join with unsorted tables");
+		if (timings != null)
+			timings.start(Timings.JOIN);
+		long start = System.currentTimeMillis();
+	
+		List<String> resultColumns = new ArrayList<String>();
+		for (String s : left.getColumnNames())
+			resultColumns.add(s);
+		for (String s : right.getColumnNames())
+			if (!s.equals(col))
+				resultColumns.add(s);
+	
+		int lc = left.getColumn(col);
+		int rc = right.getColumn(col);
+	
+		GTable<Integer> result = new GTable<Integer>(resultColumns);
+	
+		int l = 0, r = 0;
+		while (l < left.rowCount() && r < right.rowCount()) {
+			Integer[] lrow = left.getRow(l);
+			Integer[] rrow = right.getRow(r);
+	
+			if (lrow[lc].compareTo(rrow[rc]) < 0)
+				l++;
+			else if (lrow[lc].compareTo(rrow[rc]) > 0)
+				r++;
+			else {
+				result.addRow(combineRow(lrow, rrow, rc));
+	
+				Integer[] row;
+				int i = l + 1;
+				while (i < left.rowCount() && left.getRow(i)[lc].compareTo(rrow[rc]) == 0) {
+					row = left.getRow(i);
+					result.addRow(combineRow(row, rrow, rc));
+					i++;
+				}
+	
+				int j = r + 1;
+				while (j < right.rowCount() && lrow[lc].compareTo(right.getRow(j)[rc]) == 0) {
+					row = right.getRow(j);
+					result.addRow(combineRow(lrow, row, rc));
+					j++;
+				}
+	
+				l++;
+				r++;
+			}
+		}
+	
+		result.setSortedColumn(lc);
+	
+//		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+		if (timings != null)
+			timings.end(Timings.JOIN);
+		return result;
 	}
 
 	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, String col) {
@@ -146,9 +228,82 @@ public class Tables {
 	
 		result.setSortedColumn(lc);
 	
-		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
 			timings.end(Timings.JOIN);
+		return result;
+	}
+
+	public static GTable<Integer> hashJoinInteger(GTable<Integer> left, GTable<Integer> right, List<String> cols) {
+		if (timings != null)
+			timings.start(Timings.JOIN);
+		long start = System.currentTimeMillis();
+	
+		if (left.rowCount() >= right.rowCount()) {
+			GTable<Integer> tmpTable = left;
+			left = right;
+			right = tmpTable;
+		}
+	
+		int[] lc = new int[cols.size()];
+		for (int i = 0; i < lc.length; i++) {
+			lc[i] = left.getColumn(cols.get(i));
+		}
+	
+		int[] rc = new int[cols.size()];
+		int[] src = new int[cols.size()];
+		for (int i = 0; i < rc.length; i++) {
+			rc[i] = right.getColumn(cols.get(i));
+			src[i] = right.getColumn(cols.get(i));
+		}
+	
+		Arrays.sort(src);
+	
+		List<String> resultColumns = new ArrayList<String>();
+		for (String s : left.getColumnNames())
+			resultColumns.add(s);
+		for (String s : right.getColumnNames())
+			if (!cols.contains(s))
+				resultColumns.add(s);
+	
+		GTable<Integer> result = new GTable<Integer>(resultColumns);
+	
+		Map<String,List<Integer[]>> leftVal2Rows = new HashMap<String,List<Integer[]>>();
+		for (Integer[] row : left) {
+			String joinAttribute = getJoinAttribute(row, lc);
+			List<Integer[]> rows = leftVal2Rows.get(joinAttribute);
+			if (rows == null) {
+				rows = new ArrayList<Integer[]>();
+				leftVal2Rows.put(joinAttribute, rows);
+			}
+			rows.add(row);
+		}
+	
+		int count = 0;
+		for (Integer[] row : right) {
+			List<Integer[]> leftRows = leftVal2Rows.get(getJoinAttribute(row, rc));
+			if (leftRows != null && leftRows.size() > 0) {
+				for (Integer[] leftRow : leftRows) {
+					Integer[] resultRow = new Integer[result.columnCount()];
+					System.arraycopy(leftRow, 0, resultRow, 0, leftRow.length);
+					int s = 0, d = leftRow.length;
+					for (int i = 0; i < src.length; i++) {
+						System.arraycopy(row, s, resultRow, d, src[i] - s);
+						d += src[i] - s;
+						s = src[i] + 1;
+					}
+					if (s < row.length)
+						System.arraycopy(row, s, resultRow, d, resultRow.length - d);
+					result.addRow(resultRow);
+					count++;
+				}
+			}
+		}
+	
+//		log.debug(" joined (hash) " + left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+		if (timings != null)
+			timings.end(Timings.JOIN);
+	
 		return result;
 	}
 
@@ -218,7 +373,7 @@ public class Tables {
 			}
 		}
 	
-		log.debug(" joined (hash) " + left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+//		log.debug(" joined (hash) " + left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
 			timings.end(Timings.JOIN);
 	

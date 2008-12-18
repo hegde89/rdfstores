@@ -119,7 +119,7 @@ public class EvaluationClass {
 				val2class.put(val, this);
 			}
 			else {
-				EvaluationClass ec = val2class.get(mapping.get(key));
+				EvaluationClass ec = val2class.get(val);
 				if (ec == this) // to avoid concurrent modification exception
 					continue;
 				
@@ -129,7 +129,7 @@ public class EvaluationClass {
 					ec = new EvaluationClass(newMatches);
 					ec.setResults(new ArrayList<GTable<String>>(getResults()));
 					newClasses.add(ec);
-					val2class.put(mapping.get(key), ec);
+					val2class.put(val, ec);
 				}
 				
 				ec.addMapping(mapping);

@@ -25,73 +25,84 @@ import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
+import edu.unika.aifb.graphindex.util.Timings;
 
 public class QueryMappingListener implements MappingListener {
 	private StructureIndex m_index;
 	private Graph<QueryNode> m_origQueryGraph;
 	private StatisticsCollector m_collector;
 	private ExecutorCompletionService<List<String[]>> m_completionService;
-	private Set<String> m_noIncoming;
+	private List<String> m_signatureNodes;
 	private List<Map<String,String>> m_mappings;
 	private StructureIndexReader m_indexReader;
 	private Set<String> m_signatures;
+	private Timings t;
 	
 	private static final Logger log = Logger.getLogger(QueryMappingListener.class);
 
-	public QueryMappingListener(Graph<QueryNode> orig, Graph<String> indexGraph, StructureIndexReader indexReader, VCompatibilityCache vcc, ExecutorCompletionService<List<String[]>> completionService) {
+	public QueryMappingListener(StructureIndexReader indexReader) {
 		m_indexReader = indexReader;
 		m_index = m_indexReader.getIndex();
-		
-		m_origQueryGraph = orig;
-		m_completionService = completionService;
+//		m_completionService = completionService;
 		m_collector = m_index.getCollector();
+		t = new Timings();
+		m_index.getCollector().addTimings(t);
+	}
+	
+	public void setQueryGraph(Graph<QueryNode> queryGraph) {
+		m_origQueryGraph = queryGraph;
+		
 		m_mappings = new ArrayList<Map<String,String>>();
 		m_signatures = new HashSet<String>();
+		m_signatureNodes = new ArrayList<String>();
 		
-		m_noIncoming = new HashSet<String>();
 		for (int i = 0; i < m_origQueryGraph.nodeCount(); i++) {
-			QueryNode qn = m_origQueryGraph.getNode(i);
-		
-			if (m_origQueryGraph.inDegreeOf(i) == 0)
-				for (String member : qn.getMembers())
-					m_noIncoming.add(member);
-			
+			if (m_origQueryGraph.inDegreeOf(i) > 0)
+				m_signatureNodes.add(m_origQueryGraph.getNode(i).getSingleMember());
 		}
 		
+		if (QueryEvaluator.removeNodes.size() > 0) {
+			for (String node : QueryEvaluator.removeNodes) {
+				if (!m_signatureNodes.contains(node))
+					m_signatureNodes.remove(node);
+			}
+			log.debug("sig nodes: " + m_signatureNodes);
+		}
 	}
 	
 	private String getSignature(Map<String,String> map) {
-		String sig = "";
-		for (int i = 0; i < m_origQueryGraph.nodeCount(); i++) {
-			String k = m_origQueryGraph.getNode(i).getSingleMember();
-			if (m_noIncoming.contains(k))
-				continue;
-			sig += map.get(k) + "__";
-		}
-		return sig;
+		StringBuilder sig = new StringBuilder();
+		for (String k : m_signatureNodes)
+			sig.append(map.get(k)).append("__");
+		return sig.toString();
 	}
 
-	public void mapping(VertexMapping mapping) {
-		Map<String,String> map = new HashMap<String,String>();
-		for (int node = 0; node < m_origQueryGraph.nodeCount(); node++) {
-			QueryNode qn = m_origQueryGraph.getNode(node);
-//			if (!m_vcc.get(qn.getSingleMember(), mapping.getVertexCorrespondence(qn.getName(), true)))
-//				return;
-			map.put(qn.getSingleMember(), mapping.getVertexCorrespondence(qn.getName(), true));
-		}
-		
+	public void mapping(Map<String,String> map) {
+		t.start(Timings.ML);
 		String sig = getSignature(map);
 		
-		if (m_signatures.contains(sig))
+		if (m_signatures.contains(sig)) {
+			t.end(Timings.ML);
 			return;
+		}
 			
 		m_mappings.add(map);
 		m_signatures.add(sig);
+		t.end(Timings.ML);
 	}
 
 	public List<Map<String,String>> generateMappings() throws StorageException {
 		log.debug("mappings: " + m_mappings.size());
 
+		if (QueryEvaluator.removeNodes.size() > 0) {
+			for (Map<String,String> map : m_mappings) {
+//				log.debug(map);
+				for (String node : QueryEvaluator.removeNodes)
+					map.remove(node);
+			}
+//			log.debug("removed nodes");
+		}
+		
 		return m_mappings;
 	}
 }

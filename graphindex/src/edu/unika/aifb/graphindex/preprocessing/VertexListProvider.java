@@ -22,7 +22,7 @@ import edu.unika.aifb.graphindex.data.VertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;
 
 
-public class VertexListProvider{
+public class VertexListProvider {
 	private Iterator<File> m_componentFiles;
 	private File m_componentFile;
 	private Set<String> m_edges;

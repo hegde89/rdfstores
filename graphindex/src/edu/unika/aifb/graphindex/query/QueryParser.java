@@ -93,7 +93,7 @@ public class QueryParser {
 			x++;
 		}
 		
-		Query q = new Query(vars.toArray(new String[] {}));
+		Query q = new Query(vars);
 		for (Literal l : lits)
 			q.addLiteral(l);
 		q.setEvalOrder(e2s);

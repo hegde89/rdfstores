@@ -12,9 +12,12 @@ public interface ExtensionStorage {
 	public static final class Index {
 		public static final String FIELD_S = "s";
 		public static final String FIELD_O = "o";
+		public static final String FIELD_E = "e";
 		
 		public static final Index EPO = new Index("epo", FIELD_S);
 		public static final Index EPS = new Index("eps", FIELD_O);
+		public static final Index OE = new Index("oe", FIELD_E);
+		public static final Index SE = new Index("se", FIELD_E);
 		
 		private String m_indexField;
 		private String m_valField;
@@ -57,7 +60,9 @@ public interface ExtensionStorage {
 //	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException;
 	public GTable<String> getIndexTable(Index index, String ext, String property, String so) throws StorageException;
 	public List<GTable<String>> getIndexTables(Index index, String ext, String property) throws StorageException;
-	
+	public Set<String> getExtensions(Index index, String so) throws StorageException;
+	public String getExtension(String object) throws StorageException;
+
 	public void mergeExtensions() throws IOException, StorageException;
 	public void clearCaches() throws StorageException;
 	

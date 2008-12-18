@@ -21,20 +21,43 @@ public class StatisticsCollector {
 	
 	public void logStats() {
 		long[] timings = new long[20];
+		int[] counts = new int[20];
 		for (Timings t : m_timings) {
-			for (int i = 0; i < t.getTimings().length; i++)
+			for (int i = 0; i < t.getTimings().length; i++) {
 				timings[i] += t.getTimings()[i];
+				counts[i] += t.getCounts()[i];
+			}
+			
 		}
 		log.debug("time spent");
-		log.debug(" rcp: " + (timings[Timings.RCP] / 1000.0));
-		log.debug(" join matching: " + (timings[Timings.MATCH] / 1000.0));
-		log.debug(" mapgen: " + (timings[Timings.MAPGEN] / 1000.0));
-		log.debug(" ground terms: " + (timings[Timings.GT] / 1000.0));
-		log.debug(" retrieving data: " + (timings[Timings.DATA] / 1000.0));
-		log.debug(" subject filter: " + (timings[Timings.SUBJECT_FILTER] / 1000.0));
-		log.debug(" sorting: " + (timings[Timings.SORT] / 1000.0));
-		log.debug(" result joining: " + (timings[Timings.JOIN] / 1000.0));
-		log.debug(" building result set: " + (timings[Timings.RS] / 1000.0));
+//		log.debug(" rcp: " + (timings[Timings.RCP]));
+//		log.debug(" setup: " + timings[Timings.SETUP] + " " + counts[Timings.SETUP]);
+		log.debug(" join matching: " + (timings[Timings.MATCH]) + " " + counts[Timings.MATCH]);
+//		log.debug(" ml: " + (timings[Timings.ML]) + " " + counts[Timings.ML]);
+//		log.debug(" mapgen: " + (timings[Timings.MAPGEN]));
+		log.debug(" ground terms: " + (timings[Timings.GT]) + " " + counts[Timings.GT]);
+		log.debug(" extsetup: " + timings[Timings.EXTSETUP] + " " + counts[Timings.EXTSETUP]);
+		log.debug(" retrieving data: " + (timings[Timings.DATA]) + " " + counts[Timings.DATA]);
+//		log.debug(" retrieving extension data: " + (timings[Timings.DATA_E]) + " " + counts[Timings.DATA_E]);
+//		log.debug(" subject filter: " + (timings[Timings.SUBJECT_FILTER]));
+//		log.debug(" sorting: " + (timings[Timings.TABLESORT]) + " " + counts[Timings.TABLESORT]);
+		log.debug(" result joining: " + (timings[Timings.JOIN]) + " " + counts[Timings.JOIN]);
+		log.debug(" uc: " + (timings[Timings.UC]) + " " + counts[Timings.UC]);
+//		log.debug(" building result set: " + (timings[Timings.RS]) + " " + counts[Timings.RS]);
+	}
+	
+	public long[] getConsolidated() {
+		long[] timings = new long[20];
+		int[] counts = new int[20];
+		for (Timings t : m_timings) {
+			for (int i = 0; i < t.getTimings().length; i++) {
+				timings[i] += t.getTimings()[i];
+				counts[i] += t.getCounts()[i];
+			}
+			
+		}
+		
+		return timings;
 	}
 	
 	public void reset() {

@@ -87,6 +87,14 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		return m_sortedCol == getColumn(col); 
 	}
 	
+	public boolean isSortedBy(int col) {
+		if (m_sortedCol < 0)
+			return false;
+		// getColumn returns -1 if column unknown, but not a problem here,
+		// because that case is already handled above
+		return m_sortedCol == col; 
+	}
+
 	public int getColumn(String colName) {
 		try {
 			int col = m_name2col.get(colName);
@@ -132,25 +140,41 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		return sorted;
 	}
 	
+	public void sort(String col, boolean conditional) {
+		if (conditional)
+			if (!isSortedBy(col))
+				sort(col);
+		else
+			sort(col);
+	}
+	
+	public void sort(int col, boolean conditional) {
+		if (conditional)
+			if (!isSortedBy(col))
+				sort(col);
+		else
+			sort(col);
+	}
+
 	public void sort(String col) {
 		sort(getColumn(col));
 	}
 	
 	public void sort(final int col) {
 		if (timings != null)
-			timings.start(Timings.TABLESORT);
-		long start = System.currentTimeMillis();
-		String s = this.toString();
+			timings.start(Timings.JOIN);
+//		long start = System.currentTimeMillis();
+//		String s = this.toString();
 		Collections.sort(m_rows, new Comparator<T[]>() {
 			public int compare(T[] r1, T[] r2) {
 				return r1[col].compareTo(r2[col]);
 			}
 		});
 		setSortedColumn(col);
-		if (log.isDebugEnabled())
-			log.debug(" sorted " + s + " by " + getColumnName(col) + " in " + (System.currentTimeMillis() - start) + " ms");
+//		if (log.isDebugEnabled())
+//			log.debug(" sorted " + s + " by " + getColumnName(col) + " in " + (System.currentTimeMillis() - start) + " ms");
 		if (timings != null)
-			timings.end(Timings.TABLESORT);
+			timings.end(Timings.JOIN);
 	}
 	
 	@Override

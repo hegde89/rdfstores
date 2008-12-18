@@ -7,5 +7,7 @@ import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public interface IQueryEvaluator {
-	public void evaluate(Query q) throws StorageException, IOException, InterruptedException, ExecutionException;
+	public int evaluate(Query q) throws StorageException, IOException, InterruptedException, ExecutionException;
+	public void clearCaches() throws StorageException;
+	public long[] getTimings();
 }

@@ -125,7 +125,7 @@ public class VPRunner {
 				public void triple(String s, String p, String o) {
 					ls.addTriple(s, p, o);
 					c.val++;
-					if (c.val % 50000 == 0)
+					if (c.val % 100000 == 0)
 						log.debug(c.val);
 				}
 			});
@@ -151,12 +151,12 @@ public class VPRunner {
 				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblp queries.txt");
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("q10"))
+					if (!q.getName().equals("q18"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					qe.evaluateQuad(q);
+					qe.evaluate(q);
 //					break;
 				}
 			}
@@ -165,12 +165,12 @@ public class VPRunner {
 				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubm queries.txt");
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("lq8"))
+					if (!q.getName().equals("lq9"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
 					log.debug(q);
-					qe.evaluateQuad(q);
+					qe.evaluate(q);
 //					break;
 				}
 			}

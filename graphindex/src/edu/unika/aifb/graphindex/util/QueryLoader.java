@@ -6,8 +6,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import edu.unika.aifb.graphindex.query.QueryParser;
 import edu.unika.aifb.graphindex.query.model.Query;
@@ -27,11 +29,15 @@ public class QueryLoader {
 		BufferedReader in = new BufferedReader(new FileReader(filename));
 		
 		String currentQueryName = null, currentQuery = "";
-		
+		Set<String> removeNodes = new HashSet<String>();
+		Set<String> selectNodes = new HashSet<String>();
 		String input;
 		while ((input = in.readLine()) != null) {
 			input = input.trim();
-			
+		
+			if (input.startsWith("#"))
+				continue;
+		
 			if (input.startsWith("ns:")) {
 				String[] t = input.split(" ");
 				m_namespaces.put(t[1], t[2]);
@@ -42,6 +48,8 @@ public class QueryLoader {
 				if (currentQuery.length() > 0) {
 					Query q = m_parser.parseQuery(currentQuery);
 					q.setName(currentQueryName);
+					q.setRemoveNodes(removeNodes);
+					q.setSelectVariables(selectNodes);
 					queries.add(q);
 				}
 
@@ -49,15 +57,30 @@ public class QueryLoader {
 				currentQueryName = t[1].trim();
 				
 				currentQuery = "";
+				removeNodes = new HashSet<String>();
+				selectNodes = new HashSet<String>();
 			}
 			else {
-				if (!input.equals(""))
+				if (input.startsWith("select:")) {
+					String[] t = input.split(" ");
+					for (int i = 1; i < t.length; i++)
+						selectNodes.add(t[i]);
+				}
+				else if (input.startsWith("remove:")) {
+					String[] t = input.split(" ");
+					for (int i = 1; i < t.length; i++)
+						removeNodes.add(t[i]);
+				}
+				else if (!input.equals(""))
 					currentQuery += input + "\n";
 			}
+			
 		}
 		
 		Query q = m_parser.parseQuery(currentQuery);
 		q.setName(currentQueryName);
+		q.setRemoveNodes(removeNodes);
+		q.setSelectVariables(selectNodes);
 		queries.add(q);
 		
 		return queries;

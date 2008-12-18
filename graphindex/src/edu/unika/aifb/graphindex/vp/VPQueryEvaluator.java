@@ -25,10 +25,12 @@ import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.vp.LuceneStorage.Index;
 
 public class VPQueryEvaluator implements IQueryEvaluator {
 	private LuceneStorage m_ls;
+	private Timings t;
 
 	private final static Logger log = Logger.getLogger(VPQueryEvaluator.class);
 
@@ -36,23 +38,8 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		m_ls = ls;
 	}
 
-	private void sortTable(GTable<String> table, final int col) {
-		long start = System.currentTimeMillis();
-		String s = table.toString();
-		Collections.sort(table.getRows(), new Comparator<String[]>() {
-			public int compare(String[] r1, String[] r2) {
-				return r1[col].compareTo(r2[col]);
-			}
-		});
-		table.setSortedColumn(col);
-		log.debug(" sorted " + s + " by " + table.getColumnName(col) + " in " + (System.currentTimeMillis() - start) + " ms");
-	}
-
-	private void sortTable(GTable<String> table, String col) {
-		sortTable(table, table.getColumn(col));
-	}
-
-	private GTable<String> getTable(String subject, String property, String object) throws IOException {
+	private GTable<String> getTable(String subject, String property, String object) throws IOException, StorageException {
+		t.start(Timings.DATA);
 		GTable<String> table;
 		if (isVariable(subject) && isVariable(object)) {
 			List<GTable<String>> tables = m_ls.getIndexTables(LuceneStorage.Index.PO, property);
@@ -68,11 +55,13 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 		table.setColumnName(0, subject);
 		table.setColumnName(1, object);
-
+		t.end(Timings.DATA);
 		return table;
 	}
 
-	private GTable<String> getTable(Index index, String p, String so, String col1, String col2) throws IOException {
+	int loaded = 0;
+	private GTable<String> getTable(Index index, String p, String so, String col1, String col2) throws IOException, StorageException {
+		t.start(Timings.DATA);
 		GTable<String> table;
 		if (isVariable(so)) {
 			List<GTable<String>> tables = m_ls.getIndexTables(index, p);
@@ -81,10 +70,10 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		} else {
 			table = m_ls.getIndexTable(index, p, so);
 		}
-
+		loaded += table.rowCount();
 		table.setColumnName(0, col1);
 		table.setColumnName(1, col2);
-
+		t.end(Timings.DATA);
 		return table;
 	}
 
@@ -146,7 +135,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		}
 	}
 
-	public GTable<String> joinEdges(Graph<QueryNode> queryGraph, GraphEdge<QueryNode> currentEdge, GraphEdge<QueryNode> other) throws IOException {
+	public GTable<String> joinEdges(Graph<QueryNode> queryGraph, GraphEdge<QueryNode> currentEdge, GraphEdge<QueryNode> other) throws IOException, StorageException {
 		log.debug("joinEdges " + currentEdge + " " + other);
 		String srcNode = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
 		String dstNode = queryGraph.getNode(currentEdge.getDst()).getSingleMember();
@@ -164,10 +153,10 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			// TODO join on second field
 
 			if (!left.isSorted())
-				sortTable(left, 0);
+				left.sort(0);
 
 			if (!right.isSorted())
-				sortTable(right, 0);
+				right.sort(0);
 
 			result = Tables.mergeJoin(left, right, srcNode);
 		} else if (currentEdge.getDst() == other.getDst()) { // edges have the dest in common
@@ -193,52 +182,91 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		return result;
 	}
 
-	public GTable<String> joinEdgeWithTable(GraphEdge<QueryNode> e, String src, String dst, GTable<String> table) throws IOException {
+	public GTable<String> joinEdgeWithTable(GraphEdge<QueryNode> e, String src, String dst, GTable<String> table) throws IOException, StorageException {
 		// TODO what if table contains both source and dest
 		log.debug("joinEdgeWithTable " + e + " " + table);
 		if (table.hasColumn(dst)) { // current edge points into result
 			// join on dst node of current edge
 			if (!table.isSortedBy(dst))
-				sortTable(table, table.getColumn(dst));
+				table.sort(dst);
 
 			GTable<String> left = new GTable<String>(src, dst);
-			if (isVariable(src)) {
+//			if (isVariable(src)) {
 				int col = table.getColumn(dst);
+				
+				Set<String> objects = new HashSet<String>();
+				for (String[] row : table)
+					objects.add(row[col]);
+				log.debug(objects.size() + " unique o");
+				
 				Set<String> values = new HashSet<String>();
-				for (String[] row : table) {
-					GTable<String> t = getTable(Index.PO, e.getLabel(), row[col], src, dst);
-					for (String[] r : t.getRows())
-						if (!values.contains(r[0])) {
-							left.addRow(r);
-							values.add(r[0]);
-						}
-//					left.addRows(t.getRows());
+//				for (String[] row : table) {
+//					GTable<String> t = getTable(Index.PO, e.getLabel(), row[col], src, dst);
+				for (String o : objects) {
+					GTable<String> t = getTable(Index.PO, e.getLabel(), o, src, dst);
+//					for (String[] r : t.getRows())
+//						if (!values.contains(r[0])) {
+//							left.addRow(r);
+//							values.add(r[0]);
+//						}
+					if (isVariable(src))
+						left.addRows(t.getRows());
+					else {
+						int st = t.getColumn(src);
+						for (String[] row : t.getRows())
+							if (row[st].equals(dst)) {
+								left.addRow(row);
+								break;
+							}
+					}
 				}
+				left.sort(1);
 				left.setSortedColumn(1);
-//				Tables.verifySorted(left);
-			}
-			else
-				left = getTable(Index.PS, e.getLabel(), src, src, dst);
+//			}
+//			else
+//				left = getTable(Index.PS, e.getLabel(), src, src, dst);
 			
 			return Tables.mergeJoin(left, table, dst);
 		} else { // current edges points out of result
 			// join on src node of current edge
 			if (!table.isSortedBy(src))
-				sortTable(table, table.getColumn(src));
+				table.sort(src);
 
 			GTable<String> right = new GTable<String>(src, dst);
 			
-			if (isVariable(dst)) {
+//			if (isVariable(dst)) {
 				int col = table.getColumn(src);
-				for (String[] row : table) {
-					GTable<String> t = getTable(Index.PS, e.getLabel(), row[col], src, dst);
-					right.addRows(t.getRows());
+				
+				Set<String> subjects = new HashSet<String>();
+				for (String[] row : table)
+					subjects.add(row[col]);
+				log.debug(subjects.size() + " unique s");
+				Set<String> values = new HashSet<String>();
+//				for (String[] row : table) {
+//					GTable<String> t = getTable(Index.PS, e.getLabel(), row[col], src, dst);
+				for (String s : subjects) {
+					GTable<String> t = getTable(Index.PS, e.getLabel(), s, src, dst);
+//					for (String[] r : t.getRows()) {
+//						if (!values.contains(r[1])) {
+//							right.addRow(r);
+//							values.add(r[1]);
+//						}
+//					}
+					if (isVariable(dst))
+						right.addRows(t.getRows());
+					else {
+						int dt = t.getColumn(dst);
+						for (String[] row : t.getRows())
+							if (row[dt].equals(dst))
+								right.addRow(row);
+					}
 				}
+				right.sort(0);
 				right.setSortedColumn(0);
 //				Tables.verifySorted(right);
-			}
-			else
-				right = getTable(Index.PO, e.getLabel(), dst, src, dst);
+//			}
+//			else
+//				right = getTable(Index.PO, e.getLabel(), dst, src, dst);
 
 			return Tables.mergeJoin(table, right, src);
 		}
@@ -297,7 +325,10 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		return scores;
 	}
 
-	public void evaluateQuad(Query q) throws StorageException, IOException {
+	public int evaluate(Query q) throws StorageException, IOException {
+		t = new Timings();
+		GTable.timings = t;
+		Tables.timings = t;
 		long start = System.currentTimeMillis();
 		final Graph<QueryNode> queryGraph = q.toGraph();
 
@@ -341,8 +372,9 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 		List<ResultArea> results = new ArrayList<ResultArea>();
 		boolean empty = false;
-		;
+
 		while (toVisit.size() > 0) {
+			long edgeStart = System.currentTimeMillis();
 			GraphEdge<QueryNode> currentEdge = toVisit.poll();
 
 			String srcNode = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
@@ -368,8 +400,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				ra = new ResultArea();
 				ra.addEdge(currentEdge, srcNode, dstNode);
 
-				if (toVisit.size() == 0) { // special case: query graph contains
-					// only one edge
+				if (toVisit.size() == 0) { // special case: query graph contains only one edge
 					if (isVariable(srcNode))
 						ra.setResult(getTable(Index.PO, property, dstNode, srcNode, dstNode));
 					else
@@ -422,28 +453,28 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 					if (re.getDst() == currentEdge.getDst()) {
 						if (!isVariable(rdst)) {
 							right = getTable(Index.PO, re.getLabel(), rdst, rsrc, rdst);
-							sortTable(right, 1);
+							right.sort(1);
 						} else {
 							if (!isVariable(rsrc))
 								right = getTable(Index.PS, re.getLabel(), rsrc, rsrc, rdst);
 							else
 								right = getTable(Index.PO, re.getLabel(), rdst, rsrc, rdst); // depends on property  which is faster
 							if (!right.isSorted())
-								sortTable(right, 1);
+								right.sort(1);
 						}
 
 						if (!left.isSortedBy(rdst))
-							sortTable(left, left.getColumn(rdst));
+							left.sort(rdst);
 
 						ra.setResult(Tables.mergeJoin(left, right, rdst));
 					} else {
 						right = getTable(Index.PO, re.getLabel(), rdst, rsrc, rdst);
 
 						if (!right.isSorted())
-							sortTable(right, 0);
+							right.sort(0);
 
 						if (!left.isSortedBy(rsrc))
-							sortTable(left, left.getColumn(rsrc));
+							left.sort(rsrc);
 
 						ra.setResult(Tables.mergeJoin(left, right, rsrc));
 					}
@@ -463,41 +494,50 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 					GTable<String> right = rightArea.getResult();
 					
 					GTable<String> middle = new GTable<String>(srcNode, dstNode);
-					if (left.rowCount() < right.rowCount()) {
-						if (!left.isSortedBy(srcNode))
-							sortTable(left, srcNode);
-						
+					if (left == right) {
 						int col = left.getColumn(srcNode);
 						for (String[] row : left) {
 							middle.addRows(getTable(Index.PS, property, row[col], srcNode, dstNode).getRows());
 						}
-						middle.setSortedColumn(0);
-						
-						middle = Tables.mergeJoin(left, middle, srcNode);
-						
-						sortTable(middle, dstNode);
-						if (!right.isSortedBy(dstNode))
-							sortTable(right, dstNode);
-						
-						ra.setResult(Tables.mergeJoin(middle, right, dstNode));
+						ra.setResult(Tables.hashJoin(left, middle, Arrays.asList(srcNode, dstNode)));
 					}
 					else {
-						if (!right.isSortedBy(dstNode))
-							sortTable(right, dstNode);
-						
-						int col = right.getColumn(dstNode);
-						for (String[] row : right) {
-							middle.addRows(getTable(Index.PO, property, row[col], srcNode, dstNode).getRows());
+						if (left.rowCount() < right.rowCount()) {
+							if (!left.isSortedBy(srcNode))
+								left.sort(srcNode);
+							
+							int col = left.getColumn(srcNode);
+							for (String[] row : left) {
+								middle.addRows(getTable(Index.PS, property, row[col], srcNode, dstNode).getRows());
+							}
+							middle.setSortedColumn(0);
+							
+							middle = Tables.mergeJoin(left, middle, srcNode);
+	
+							middle.sort(dstNode);
+							if (!right.isSortedBy(dstNode))
+								right.sort(dstNode);
+							
+							ra.setResult(Tables.mergeJoin(middle, right, dstNode));
 						}
-						middle.setSortedColumn(1);
-						
-						middle = Tables.mergeJoin(middle, right, dstNode);
-						
-						sortTable(middle, srcNode);
-						if (!left.isSortedBy(srcNode))
-							sortTable(left, srcNode);
-						
-						ra.setResult(Tables.mergeJoin(left, middle, srcNode));
+						else {
+							if (!right.isSortedBy(dstNode))
+								right.sort(dstNode);
+							
+							int col = right.getColumn(dstNode);
+							for (String[] row : right) {
+								middle.addRows(getTable(Index.PO, property, row[col], srcNode, dstNode).getRows());
+							}
+							middle.setSortedColumn(1);
+							
+							middle = Tables.mergeJoin(middle, right, dstNode);
+							
+							middle.sort(srcNode);
+							if (!left.isSortedBy(srcNode))
+								left.sort(srcNode);
+							
+							ra.setResult(Tables.mergeJoin(left, middle, srcNode));
+						}
 					}
 				}
 			}
@@ -511,19 +551,46 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				empty = true;
 				break;
 			}
+			
+			log.debug(System.currentTimeMillis() - edgeStart);
 		}
-
+		log.debug("loaded: " + loaded);
+		loaded = 0;
+		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
 		if (empty) {
 			log.debug("size: 0");
+			return 0;
 		} else {
 			log.debug("size: " + results.get(0).getResult().rowCount());
-			if (results.get(0).getResult().rowCount() < 30)
-				log.debug(results.get(0).getResult().toDataString());
+//			if (results.get(0).getResult().rowCount() > 0) {
+//				for (int i = 0; i < results.get(0).getResult().columnCount(); i++) {
+//					Set<String> vals = new HashSet<String>();
+//					for (String[] row : results.get(0).getResult())
+//						vals.add(row[i]);
+//					log.debug(vals.size());
+//				}
+//			}
+			
+//			Set<Map<String,String>> maps = new HashSet<Map<String,String>>();
+//			for (String[] row : results.get(0).getResult()) {
+//				Map<String,String> map = new HashMap<String,String>();
+//				for (int i = 0; i < row.length; i++)
+//					map.put("" + i, row[i]);
+//				maps.add(map);
+//			}
+//			for (Map<String,String> map : maps)
+//				log.debug(map);
+//			log.debug(maps.size());
+			return results.get(0).getResult().rowCount();
 		}
-		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
+	}
+	
+	public void clearCaches() throws StorageException {
+		m_ls.clearCaches();
+		m_ls.reopenAndWarmup();
 	}
 
-	public void evaluate(Query q) throws StorageException, IOException {
+	public void evaluateOld(Query q) throws StorageException, IOException {
 		long start = System.currentTimeMillis();
 		Graph<QueryNode> queryGraph = q.toGraph();
 
@@ -620,6 +687,10 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			log.debug("size: " + results.get(0).rowCount());
 		}
 		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
+	}
+
+	public long[] getTimings() {
+		return t.getTimings();
 	}
 
 	// public static void main(String[] args) {

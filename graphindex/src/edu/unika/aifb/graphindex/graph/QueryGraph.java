@@ -5,7 +5,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
+
+import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.query.model.Term;
 
@@ -14,10 +18,12 @@ public class QueryGraph extends IndexGraph {
 	private QueryNode[] m_queryNodes;
 	private Set<String> m_vars;
 	private Set<Integer> m_varNodes;
+	private Set<String> m_selectVars;
 	private Term[] m_terms;
 	private Map<String,Integer> m_label2node;
 	
 	private final List<String> m_emptyList = new ArrayList<String>();
+	private static final Logger log = Logger.getLogger(QueryGraph.class);
 	
 	public QueryGraph(NamedGraph<String,LabeledEdge<String>> graph, Map<String,List<String>> members, Map<String,Term> terms, int order) {
 		super(graph, order);
@@ -55,6 +61,10 @@ public class QueryGraph extends IndexGraph {
 		for (int i = 0; i < nodeCount(); i++)
 			if (m_vars.contains(getNodeLabel(i)))
 				m_varNodes.add(i);
+	}
+	
+	public void setSelectVariables(Set<String> selectVars) {
+		m_selectVars = selectVars;
 	}
 	
 	public Set<Integer> getVariableNodes() {
@@ -112,4 +122,5 @@ public class QueryGraph extends IndexGraph {
 	public int getNode(String label) {
 		return m_label2node.get(label);
 	}
+	
 }

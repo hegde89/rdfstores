@@ -313,7 +313,7 @@ public class LuceneStorage {
 	}
 	
 	public GTable<String> getIndexTable(Index index, String property, String so) throws IOException, StorageException {
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 
 		String indexString;
 		if (index == Index.SP || index == Index.OP)
@@ -325,13 +325,13 @@ public class LuceneStorage {
 			
 		GTable<String> table = new GTable<String>("source", "target");
 		
-		long ds = System.currentTimeMillis();
+//		long ds = System.currentTimeMillis();
 		List<Integer> docIds = getDocumentIds(tq);
-		ds = System.currentTimeMillis() - ds;
+//		ds = System.currentTimeMillis() - ds;
 		
-		long dr = System.currentTimeMillis();
+//		long dr = System.currentTimeMillis();
 		loadDocuments(table, docIds, index, so);
-		dr = System.currentTimeMillis() - dr;
+//		dr = System.currentTimeMillis() - dr;
 		
 		if (index == Index.OP || index == Index.PO)
 			table.setSortedColumn(0);

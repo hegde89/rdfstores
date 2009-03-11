@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import edu.unika.aifb.graphindex.data.GTable;
 
@@ -110,7 +111,10 @@ public class EvaluationClass {
 		List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 		Map<String,EvaluationClass> val2class = new HashMap<String,EvaluationClass>();
 
-		for (Iterator<Map<String,String>> i = m_mappings.iterator(); i.hasNext(); ) {
+		int j = 0;
+		List<Map<String,String>> mappings = m_mappings;
+		m_mappings = new ArrayList<Map<String,String>>();
+		for (Iterator<Map<String,String>> i = mappings.iterator(); i.hasNext(); ) {
 			Map<String,String> mapping = i.next();
 			String val = mapping.get(key);
 			if (val2class.size() == 0) {
@@ -120,8 +124,8 @@ public class EvaluationClass {
 			}
 			else {
 				EvaluationClass ec = val2class.get(val);
-				if (ec == this) // to avoid concurrent modification exception
-					continue;
+//				if (ec == this) // to avoid concurrent modification exception
+//					continue;
 				
 				if (ec == null) {
 					Map<String,String> newMatches = new HashMap<String,String>(m_matches);
@@ -133,7 +137,11 @@ public class EvaluationClass {
 				}
 				
 				ec.addMapping(mapping);
-				i.remove();
+			}
+			
+			j++;
+			if (j % 10000 == 0) {
+				System.out.println(j + " " + val2class.keySet().size() + " " + newClasses.size());
 			}
 		}
 		

@@ -5,10 +5,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
 
 import org.apache.log4j.Logger;
 
@@ -59,7 +63,7 @@ public class Runner {
 	private static final Logger log = Logger.getLogger(Runner.class);
 
 	private static Query getQuery(String dataset) {
-		Query q = new Query(new HashSet<String>(Arrays.asList("?x", "?y", "?z")));
+		Query q = new Query(Arrays.asList("?x", "?y", "?z"));
 		
 		if (dataset.equals("simple")) {
 			Individual p1 = new Individual("http://example.org/simple#P1");
@@ -270,27 +274,42 @@ public class Runner {
 	 * @throws InterruptedException 
 	 * @throws ExecutionException 
 	 */
+	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws StorageException, IOException, InterruptedException, ExecutionException {
-		if (args.length < 3) {
-			System.out.println("Usage:\nRunner [convert|partition|transform|index]+ <prefix> <dataset>");
+		OptionParser op = new OptionParser();
+		op.accepts("a", "action to perform, comma separated list of: convert, partition, transform, index or query")
+			.withRequiredArg().ofType(String.class).describedAs("action").withValuesSeparatedBy(',');
+		op.accepts("p", "prefix, determines index directory")
+			.withRequiredArg().ofType(String.class).describedAs("prefix");
+		op.accepts("d", "dataset, either lubm or dblp, determines queries")
+			.withRequiredArg().ofType(String.class).describedAs("dataset");
+		op.accepts("q", "optional, name of query")
+			.withRequiredArg().ofType(String.class).describedAs("query name");
+		
+		OptionSet os = op.parse(args);
+		
+		if (!os.has("a") || !os.has("p") || !os.has("d")) {
+			op.printHelpOn(System.out);
 			return;
 		}
 		
-		Set<String> stages = new HashSet<String>();
-		for (int i = 0; i < args.length - 2; i++)
-			stages.add(args[i]);
-		String prefix = args[args.length - 2];
-		String dataset = args[args.length - 1];
-		
+		Set<String> stages = new HashSet<String>((Collection<? extends String>)os.valuesOf("a"));
+		String prefix = (String)os.valueOf("p");
+		String dataset = (String)os.valueOf("d");
+		String queryName = (String)os.valueOf("q");
+
 		log.info("stages: " + stages);
 		log.info("prefix: " + prefix);
 		log.info("dataset: " + dataset);
+		log.info("query name: " + queryName);
 		
 		String outputDirectory = "/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + prefix;
 		
 		long start = System.currentTimeMillis();
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
+			iw.setForwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".fw.txt"));
+			iw.setBackwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".bw.txt"));
 			iw.setImporter(getImporter(dataset));
 			iw.create(stages);
 //			iw.removeTemporaryFiles();
@@ -303,26 +322,30 @@ public class Runner {
 		}
 		
 		if (stages.contains("query")) {
+			String queriesFile, queryOutputDirectory;
 			if (dataset.equals("sweto")) {
-				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
-				
-				for (Query q : queries) {
-					PrintWriter out = new PrintWriter(new FileWriter("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpqueries/" + q.getName() + ".txt"));
-					out.print(q.toSPARQL());
-					out.close();
-				}
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt";
+				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpqueries/";
+			}
+			else if (dataset.equals("lubm")) {
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
+				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/";
+			}
+			else {
+				log.error("unknown dataset");
+				return;
 			}
 			
-			if (dataset.equals("lubm")) {
-				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
-				
-				for (Query q : queries) {
-					PrintWriter out = new PrintWriter(new FileWriter("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/" + q.getName() + ".txt"));
-					out.print(q.toSPARQL());
-					out.close();
-				}
+			QueryLoader ql = new QueryLoader();
+			List<Query> queries = ql.loadQueryFile(queriesFile);
+			
+			log.debug("bw: " + ql.getBackwardEdgeSet().size() + " " + ql.getBackwardEdgeSet());
+			log.debug("fw: " + ql.getForwardEdgeSet().size() + " " +ql.getForwardEdgeSet());
+			
+			for (Query q : queries) {
+				PrintWriter out = new PrintWriter(new FileWriter(queryOutputDirectory + q.getName() + ".txt"));
+				out.print(q.toSPARQL());
+				out.close();
 			}
 
 			StructureIndexReader index = new StructureIndexReader(outputDirectory);
@@ -332,43 +355,18 @@ public class Runner {
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
 			
-			if (dataset.equals("sweto")) {
-				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
-				
-				for (Query q : queries) {
-					if (!(new HashSet<String>(Arrays.asList("q7")).contains(q.getName())))
-						continue;
-					log.debug("--------------------------------------------");
-					log.debug("query: " + q.getName());
-					log.debug(q);
-					qe.evaluate(q);
-					qe.clearCaches();
-//					break;
-				}
+			String sizes = "";
+			for (Query q : queries) {
+				if (queryName != null && !queryName.equals(q.getName()))
+					continue;
+				log.debug("--------------------------------------------");
+				log.debug("query: " + q.getName());
+				log.debug(q);
+				sizes += q.getName() + "\t" + qe.evaluate(q) + "\n";
+				qe.clearCaches();
+//				break;
 			}
-			else if (dataset.equals("lubm")) {
-				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
-				
-				for (Query q : queries) {
-					if (!(new HashSet<String>(Arrays.asList("lq11")).contains(q.getName())))
-						continue;
-					log.debug("--------------------------------------------");
-					log.debug("query: " + q.getName());
-					log.debug(q);
-					qe.evaluate(q);
-					qe.clearCaches();
-//					break;
-				}
-			}
-			else {
-				QueryParser qp = new QueryParser();
-				Query q = qp.parseQuery(getQueryString(args[2]));
-				
-				qe.evaluate(q);
-			}
-			
+			System.out.println(sizes);
 			index.close();
 		}
 		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");

@@ -1,9 +1,12 @@
 package edu.unika.aifb.graphindex.indexing;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -28,6 +31,7 @@ import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
+import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
@@ -70,6 +74,9 @@ public class FastIndexBuilder {
 				log.debug(" ...not found");
 				continue;
 			}
+			
+			Set<String> oe = new HashSet<String>();
+			Map<String,Set<String>> se = new HashMap<String,Set<String>>();
 			
 			BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath() + ".partition"));
 			String input;
@@ -117,6 +124,11 @@ public class FastIndexBuilder {
 					o2s.put(object, subjects);
 				}
 				subjects.add(subject);
+				
+				oe.add(object + "__" + currentExt);
+				if (!se.containsKey(subject))
+					se.put(subject, new HashSet<String>());
+				se.get(subject).add(currentExt);
 
 				if (Util.belowMemoryLimit(20)) {
 					m_em.flushAllCaches();
@@ -133,10 +145,28 @@ public class FastIndexBuilder {
 
 			for (String object : o2s.keySet())
 				m_es.addTriples(Index.EPO, currentExt, m_hashProvider.getValue(currentProperty), object, o2s.get(object));
+			
+			m_es.createSEOE(se, oe);
 		}
 		
 //		m_em.flushAllCaches();
 		m_em.finishBulkUpdate();
+	}
+	
+	public void createGraph(String graphFile) throws StorageException, IOException {
+		GraphStorage gs = m_index.getGraphManager().getGraphStorage();
+		BufferedReader in = new BufferedReader(new FileReader(graphFile));
+		String input;
+		int edges = 0;
+		while ((input = in.readLine()) != null) {
+			input = input.trim();
+			String[] t = input.split("\t");
+			gs.addEdge("graph1", t[0], t[1], t[2]);
+			edges++;
+		}
+		in.close();
+		gs.optimize();
+		log.info("index graph edges: " + edges);
 	}
 	
 	public void buildIndex() throws StorageException, NumberFormatException, IOException, InterruptedException {
@@ -157,11 +187,11 @@ public class FastIndexBuilder {
 			log.info("unique edges: " + m_hashProvider.getEdges().size());
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
-			IndexGraph g = rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition");
-			if (g == null)
-				continue;
-			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
-			list.add(g);
+			IndexGraph g = rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph");
+//			if (g == null)
+//				continue;
+//			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
+//			list.add(g);
 			cnr++;
 
 			if (Util.freeMemory() < 100000) {
@@ -176,29 +206,32 @@ public class FastIndexBuilder {
 		System.gc();
 		
 		createExtensions(merger.getMergeMap());
+		createGraph(m_vlp.getComponentFile().getAbsolutePath() + ".graph");
 		
-		int vmin = Integer.MAX_VALUE, vmax = 0, vavg = 0, emin = Integer.MAX_VALUE, emax = 0, eavg = 0;
+		writeEdgeSet(m_index.getForwardEdges(), m_index.getDirectory() + "/forward_edgeset");
+		writeEdgeSet(m_index.getBackwardEdges(), m_index.getDirectory() + "/backward_edgeset");
 		
-		for (IndexGraph g : list.getList()) {
-			g.store(m_index.getGraphManager());
-			if (g.nodeCount() > vmax)
-				vmax = g.nodeCount();
-			if (g.nodeCount() < vmin)
-				vmin = g.nodeCount();
-			vavg += g.nodeCount();
-
-			if (g.edgeCount() > emax)
-				emax = g.edgeCount();
-			if (g.edgeCount() < emin)
-				emin = g.edgeCount();
-			eavg += g.edgeCount();
-//			Util.printDOT(g);
-		}
-		
-		int vtotal = vavg, etotal = eavg;
-		
-		vavg /= list.getList().size();
-		eavg /= list.getList().size();
+//		int vmin = Integer.MAX_VALUE, vmax = 0, vavg = 0, emin = Integer.MAX_VALUE, emax = 0, eavg = 0;
+//		
+//		for (IndexGraph g : list.getList()) {
+//			g.store(m_index.getGraphManager());
+//			if (g.nodeCount() > vmax)
+//				vmax = g.nodeCount();
+//			if (g.nodeCount() < vmin)
+//				vmin = g.nodeCount();
+//			vavg += g.nodeCount();
+//
+//			if (g.edgeCount() > emax)
+//				emax = g.edgeCount();
+//			if (g.edgeCount() < emin)
+//				emin = g.edgeCount();
+//			eavg += g.edgeCount();
+//		}
+//		
+//		int vtotal = vavg, etotal = eavg;
+//		
+//		vavg /= list.getList().size();
+//		eavg /= list.getList().size();
 		
 		double duration = (System.currentTimeMillis() - start) / 1000;
 		
@@ -208,9 +241,16 @@ public class FastIndexBuilder {
 		log.info("components: " + cnr);
 //		log.info("component size (min/max/avg): " + idx.ps_min + "/" + idx.ps_max + "/" + (idx.ps_avg / (double)cnr));
 		log.info("structure index graphs: " + list.getList().size());
-		log.info("  vertices (min/max/avg/total): " + vmin + "/" + vmax + "/" + vavg + "/" + vtotal);
-		log.info("  edges (min/max/avg/vtotal): " + emin + "/" + emax + "/" + eavg + "/" + etotal);
+//		log.info("  vertices (min/max/avg/total): " + vmin + "/" + vmax + "/" + vavg + "/" + vtotal);
+//		log.info("  edges (min/max/avg/vtotal): " + emin + "/" + emax + "/" + eavg + "/" + etotal);
 		log.info("duration: " + duration + " seconds");
 		log.info(Util.memory());
+	}
+
+	private void writeEdgeSet(Set<String> edges, String file) throws IOException {
+		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file)));
+		for (String s : edges)
+			out.println(s);
+		out.close();
 	}
 }

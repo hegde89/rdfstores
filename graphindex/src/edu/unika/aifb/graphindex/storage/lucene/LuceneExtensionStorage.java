@@ -28,6 +28,7 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -306,6 +307,34 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
+	public void createSEOE(Map<String,Set<String>> se, Set<String> oe) throws StorageException {
+		try {
+			for (String o : oe) {
+				Document doc = new Document();
+				doc.add(new Field("oe", o, Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				
+				m_writer.addDocument(doc);
+			}
+			
+			for (String s : se.keySet()) {
+				Set<String> exts = se.get(s);
+				StringBuilder sb = new StringBuilder();
+				for (String ext : exts)
+					sb.append(ext).append("\n");
+				
+				Document doc = new Document();
+				doc.add(new Field("se", s, Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				doc.add(new Field("e", sb.toString(), Field.Store.YES, Field.Index.NO));
+				
+				m_writer.addDocument(doc);
+			}
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
 	private void loadDocuments(GTable<String> table, List<Integer> docIds, Index index, String so) throws StorageException {
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
@@ -387,19 +416,19 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public GTable<String> getIndexTable(Index index, String ext, String property, String so) throws StorageException {
 //		m_timings.start(Timings.DATA);
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 
 		TermQuery tq = new TermQuery(getTerm(index, ext, property, so));
 			
 		GTable<String> table = new GTable<String>("source", "target");
 		int docs = 0;
 		
-		long ds = System.currentTimeMillis();
+//		long ds = System.currentTimeMillis();
 		
 		List<Integer> docIds = getDocumentIds(tq);
-		ds = System.currentTimeMillis() - ds;
+//		ds = System.currentTimeMillis() - ds;
 		
-		long dr = 0;
+//		long dr = 0;
 		if (docIds.size() > 0) {
 			docs += docIds.size();
 			
@@ -458,11 +487,34 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public boolean isValidObjectExtension(String object, String ext) throws StorageException {
-		String term = object + "__" + ext;
-		TermQuery tq = new TermQuery(new Term(Index.OE.getIndexField(), term));
+		m_timings.start(Timings.DATA);
+		
+		String cachedExt = m_o2e.get(object);
+		if (cachedExt != null) {
+			m_timings.end(Timings.DATA);
+			return cachedExt.equals(ext);
+		}
+		
+		String term = new StringBuilder().append(object).append("__").append(ext).toString();
+//		TermQuery tq = new TermQuery(new Term(Index.OE.getIndexField(), term));
 		try {
-			Hits hits = m_searcher.search(tq);
-			return hits.length() > 0;
+			TermDocs td = m_reader.termDocs(new Term(Index.OE.getIndexField(), term));
+			boolean tdd = td.next();
+			if (tdd) {
+				m_o2e.put(object, ext);
+				m_timings.end(Timings.DATA);
+				return true;
+			}
+			m_timings.end(Timings.DATA);
+			return false;
+//			Hits hits = m_searcher.search(tq);
+//			if (hits.length() > 0) {
+//				m_o2e.put(object, ext);
+//				m_timings.end(Timings.DATA);
+//				return true;
+//			}
+//			m_timings.end(Timings.DATA);
+//			return false;
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -614,4 +666,5 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //		logger.debug("extcachehits: " + m_extCacheHits);
 		logger.debug("o2e: " + m_o2e.keySet().size());
 	}
+
 }

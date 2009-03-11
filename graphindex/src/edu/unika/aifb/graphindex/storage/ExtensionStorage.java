@@ -2,6 +2,7 @@ package edu.unika.aifb.graphindex.storage;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.data.GTable;
@@ -62,9 +63,11 @@ public interface ExtensionStorage {
 	public List<GTable<String>> getIndexTables(Index index, String ext, String property) throws StorageException;
 	public Set<String> getExtensions(Index index, String so) throws StorageException;
 	public String getExtension(String object) throws StorageException;
+	public boolean isValidObjectExtension(String object, String ext) throws StorageException;
 
 	public void mergeExtensions() throws IOException, StorageException;
 	public void clearCaches() throws StorageException;
 	
 	public void updateCacheSizes();
+	public void createSEOE(Map<String,Set<String>> se, Set<String> oe) throws StorageException;
 }

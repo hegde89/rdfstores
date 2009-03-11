@@ -1,6 +1,8 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
 
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
@@ -22,10 +24,13 @@ public class StructureIndex {
 	private int m_configTableCacheSize;
 	private boolean m_gzip = false;
 	private int m_configDocCacheSize = 100;
+	private Set<String> m_forwardEdges, m_backwardEdges;
 	
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
 		m_collector = new StatisticsCollector();
+		m_forwardEdges = new HashSet<String>();
+		m_backwardEdges = new HashSet<String>();
 		
 		initialize(clean, readonly);
 	}
@@ -48,6 +53,26 @@ public class StructureIndex {
 		
 	}
 	
+	public Set<String> getForwardEdges() {
+		return m_forwardEdges;
+	}
+
+	public void setForwardEdges(Set<String> edges) {
+		m_forwardEdges = edges;
+	}
+
+	public Set<String> getBackwardEdges() {
+		return m_backwardEdges;
+	}
+
+	public void setBackwardEdges(Set<String> edges) {
+		m_backwardEdges = edges;
+	}
+	
+	public String getDirectory() {
+		return m_directory;
+	}
+
 	public StatisticsCollector getCollector() {
 		return m_collector;
 	}

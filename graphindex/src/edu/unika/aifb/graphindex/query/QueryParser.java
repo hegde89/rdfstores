@@ -42,7 +42,7 @@ public class QueryParser {
 	}
 	
 	public Query parseQuery(String queryString) throws IOException {
-		Set<String> vars = new HashSet<String>();
+		List<String> vars = new ArrayList<String>();
 		List<Literal> lits = new ArrayList<Literal>();
 		Map<String,Integer> e2s = new HashMap<String,Integer>();
 		
@@ -65,7 +65,8 @@ public class QueryParser {
 				if (i == 0) {
 					if (tokenizer.sval.startsWith("?")) {
 						subject = new Variable(tokenizer.sval);
-						vars.add(tokenizer.sval);
+						if (!vars.contains(tokenizer.sval))
+							vars.add(tokenizer.sval);
 					}
 					else
 						subject = new Individual(resolveNamespace(tokenizer.sval));
@@ -76,7 +77,8 @@ public class QueryParser {
 				else if (i == 2) {
 					if (tokenizer.sval.startsWith("?")) {
 						object = new Variable(tokenizer.sval);
-						vars.add(tokenizer.sval);
+						if (!vars.contains(tokenizer.sval))
+							vars.add(tokenizer.sval);
 					}
 					else if (tokenizer.sval.startsWith("http") || tokenizer.sval.contains(":"))
 						object = new Individual(resolveNamespace(tokenizer.sval));

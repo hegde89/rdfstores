@@ -35,8 +35,10 @@ public class LVertex extends AbstractVertex {
 			image = new ArrayList<IVertex>();
 			m_image.put(label, image);
 		}
-		if (!image.contains(v))
+//		if (!image.contains(v))
 			image.add(v);
+//		else
+//			System.out.println("blök");
 	}
 	
 	public void setImage(long label, List<IVertex> image) {

@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.algorithm.rcp;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,13 +34,15 @@ import edu.unika.aifb.graphindex.util.Util;
 public class RCPFast2 {
 	private GraphManager m_gm;
 	private HashValueProvider m_hashes;
+	private Set<String> m_forwardEdges, m_backwardEdges;
 	private static final Logger log = Logger.getLogger(RCPFast2.class);
 	
 	public RCPFast2(StructureIndex index, HashValueProvider provider) {
+		m_forwardEdges = index.getForwardEdges();
+		m_backwardEdges = index.getBackwardEdges();
 		m_gm = index.getGraphManager();
 		m_hashes = provider;
 	}
-	
 	
 	/**
 	 * Refines the partition <code>p</code> with respect to the vertex set <code>image</code>, which in most
@@ -114,13 +117,14 @@ public class RCPFast2 {
 		return image;
 	}
 	
-	private Partition createPartition(Partition p, List<IVertex> vertices) {
+	private Partition createPartition(Partition p, List<IVertex> vertices, Set<String> edges) {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Set<XBlock> cbs = new HashSet<XBlock>();
 		Set<Long> labels = new TreeSet<Long>();
 
-		labels.addAll(m_hashes.getEdges());
+		for (String edge : edges) 
+			labels.add(new Long(Util.hash(edge)));
 		
 		for (Block b : p.getBlocks())
 			startXB.addBlock(b);
@@ -275,7 +279,9 @@ public class RCPFast2 {
 			p.add(nb);
 	}
 	
-	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile) throws StorageException, IOException, InterruptedException {
+	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile) throws StorageException, IOException, InterruptedException {
+		log.debug("---------------------------------- starting backward bisim");
+		log.debug("backward edges: " + m_backwardEdges);
 		List<IVertex> vertices = vlp.getList();
 		if (vertices.size() < 20)
 			return null;
@@ -287,49 +293,81 @@ public class RCPFast2 {
 		Partition p = new Partition();
 		p.add(startBlock);
 		
-		p = createPartition(p, vertices);
+		p = createPartition(p, vertices, m_backwardEdges);
 
-//		Map<Long,Block> id2block = new HashMap<Long,Block>();
-//		for (Block b : p.getBlocks()) {
-//			Block nb = new Block();
-//			for (IVertex v : b) {
-//				id2block.put(v.getId(), nb);
-//			}
-//		}
-//		
-//		vertices = null;
-//		p = null;
-//		System.gc();
-//		log.debug(Util.memory());
-//		
-//		vertices = vlp.getInverted();
-//		for (IVertex v : vertices)
-//			id2block.get(v.getId()).add(v);
-//		
-//		p = new Partition();
-//		p.addAll(new HashSet<Block>(id2block.values()));
-//		
-//		p = createPartition(p, vertices);
+		Map<Long,Block> id2block = new HashMap<Long,Block>();
+		for (Block b : p.getBlocks()) {
+			Block nb = new Block();
+			for (IVertex v : b) {
+				id2block.put(v.getId(), nb);
+			}
+		}
+		
+		vertices = null;
+		p = null;
+		System.gc();
+		log.debug("---------------------------------- starting forward bisim");
+		log.debug("forward edges: " + m_forwardEdges);
+		log.debug(Util.memory());
+		
+		vertices = vlp.getInverted();
+		for (IVertex v : vertices)
+			id2block.get(v.getId()).add(v);
+		
+		p = new Partition();
+		p.addAll(new HashSet<Block>(id2block.values()));
+		
+		p = createPartition(p, vertices, m_forwardEdges);
 		
 
-		IndexGraph g = createIndexGraph(p);
-		writePartition(p, partitionFile);
+		writePartition(p, partitionFile, graphFile, true);
+//		IndexGraph g = createIndexGraph(p, true);
+//		log.debug(g.edgeCount());
 		
-		return g;
+//		writePartition(p, partitionFile, false);
+//		IndexGraph g = createIndexGraph(p, false);
+		
+		return null;
 	}
 	
-	private IndexGraph createIndexGraph(Partition p) throws StorageException, FileNotFoundException {
+	private String getTripleString(String s, String p, String o) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(s).append("__").append(p).append("__").append(o);
+		return sb.toString();
+	}
+	
+	private IndexGraph createIndexGraph(Partition p, boolean inverted) throws StorageException, FileNotFoundException {
 		log.info("creating index graph...");
 		int blocks = 0;
 		NamedGraph<String,LabeledEdge<String>> g = m_gm.graph();
+		int edges = 0;
+		Set<String> triples = new HashSet<String>();
 		for (Block b : p.getBlocks()) {
 			g.addVertex(b.getName());
 
 			for (IVertex v : b) {
 				for (Long label : v.getEdgeLabels()) {
+					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
+						continue;
+					
 					for (IVertex y : v.getImage(label)) {
 						g.addVertex(y.getBlock().getName());
-						g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), m_hashes.getValue(label)));
+						if (inverted) {
+							String s = getTripleString(y.getBlock().getName(), m_hashes.getValue(label), b.getName());
+							if (!triples.contains(s)) {
+								g.addEdge(y.getBlock().getName(), b.getName(), new LabeledEdge<String>(y.getBlock().getName(), b.getName(), m_hashes.getValue(label)));
+								edges++;
+								triples.add(s);
+							}
+						}
+						else {
+							String s = getTripleString(b.getName(), m_hashes.getValue(label), y.getBlock().getName());
+							if (!triples.contains(s)) {
+								g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), m_hashes.getValue(label)));
+								edges++;
+								triples.add(s);
+							}
+						}
 					}
 				}
 			}
@@ -339,21 +377,33 @@ public class RCPFast2 {
 			if (blocks % 5000 == 0)
 				log.debug(" blocks processed: " + blocks);
 		}
+		log.debug("edges added: " + edges + ", in graph: " + g.edgeSet().size());
 		
 		return new IndexGraph(g);
 	}
 
-	private void writePartition(Partition p, String partitionFile) throws IOException, InterruptedException {
+	private void writePartition(Partition p, String partitionFile, String graphFile, boolean inverted) throws IOException, InterruptedException {
 		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
+		PrintWriter graph = new PrintWriter(new BufferedWriter(new FileWriter(graphFile)));
 	
 		log.info("writing partition file...");
 		int blocks = 0;
 		for (Block b : p.getBlocks()) {
 			for (IVertex v : b) {
 				for (Long label : v.getEdgeLabels()) {
+					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
+						continue;
+
 					for (IVertex y : v.getImage(label)) {
-						// extension, subject, property, object, subject extension
-						out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t" + b.getName());
+						if (inverted) {
+							out.println(v.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t" + b.getName());
+							graph.println(y.getBlock().getName() + "\t" + m_hashes.getValue(label) + "\t" + b.getName());
+						}
+						else {
+							// extension, subject, property, object, subject extension
+							out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t" + b.getName());
+							graph.println(b.getName() + "\t" + m_hashes.getValue(label) + "\t" + y.getBlock().getName());
+						}
 					}
 				}
 			}
@@ -363,12 +413,22 @@ public class RCPFast2 {
 			if (blocks % 5000 == 0)
 				log.debug(" blocks processed: " + blocks);
 		}
-		
 		out.close();
+		graph.close();
 		
 		// sort partition file by extension uri, property uri, object
 		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
 		process.waitFor();
 		log.debug("sorted");
+		
+		process = Runtime.getRuntime().exec("sort -o " + graphFile + " " + graphFile);
+		process.waitFor();
+		process = Runtime.getRuntime().exec("uniq " + graphFile + " " + graphFile + ".uniq");
+		process.waitFor();
+		File f = new File(graphFile);
+		f.delete();
+		f = new File(graphFile + ".uniq");
+		f.renameTo(new File(graphFile));
+		log.debug("graph uniq");
 	}
 }

@@ -56,6 +56,10 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		return m_colNames;
 	}
 	
+	public T getValue(T[] row, String colName) {
+		return row[getColumn(colName)];
+	}
+	
 	public String getSortedColumn() {
 		if (m_sortedCol == -1)
 			return null;

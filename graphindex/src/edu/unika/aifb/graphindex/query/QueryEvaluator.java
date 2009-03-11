@@ -63,53 +63,52 @@ public class QueryEvaluator implements IQueryEvaluator {
 	private ExtensionStorage m_es;
 	private QueryMappingListener m_listener;
 	private Timings m_timings;
-	private Map<Graph<String>,JoinMatcher> m_matchers;
+	private HashMap<String,JoinMatcher2> m_matchers;
 	private MappingListValidator m_mlv;
 	static final Logger log = Logger.getLogger(QueryEvaluator.class);
 	
-	public static List<String> removeNodes = new ArrayList<String>();
-	
-	public QueryEvaluator(StructureIndexReader indexReader) {
+	public QueryEvaluator(StructureIndexReader indexReader) throws StorageException {
 		m_indexReader = indexReader;
 		m_index = indexReader.getIndex();
 		m_em = m_index.getExtensionManager();
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		m_es = m_em.getExtensionStorage();
-		m_matchers = new HashMap<Graph<String>,JoinMatcher>();
+		m_matchers = new HashMap<String,JoinMatcher2>();
 		m_listener = new QueryMappingListener(m_indexReader);
 		m_mlv = new MappingListValidator(m_indexReader, m_index.getCollector());
-		for (Graph<String> ig : m_indexReader.getIndexGraphs()) {
-			m_matchers.put(ig, new JoinMatcher(ig, m_listener, m_index));
+//		for (Graph<String> ig : m_indexReader.getIndexGraphs()) {
+//			m_matchers.put(ig, new JoinMatcher(ig, m_listener, m_index));
+//		}
+		for (String ig : m_indexReader.getGraphNames()) {
+			m_matchers.put(ig, new JoinMatcher2(m_index, ig, m_listener));
 		}
-		
 	}
 	
 	public int evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
 		log.info("evaluating...");
-		removeNodes = new ArrayList<String>(query.getRemoveNodes());
-		log.debug("remove nodes: " + removeNodes);
 
 		m_index.getCollector().reset();
 		m_timings = new Timings();
 		
 		long start = System.currentTimeMillis();
 		
-		Graph<QueryNode> origGraph = query.toGraph();
+		Graph<QueryNode> origGraph = query.getGraph();
 		
 //		final ExecutorService executor = Executors.newFixedThreadPool(1);
 //		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
 		List<String[]> result = new ArrayList<String[]>();
-		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
+//		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
+		for (String indexGraph : m_indexReader.getGraphNames()) {
 			m_timings.start(Timings.SETUP);
 			
 //			Util.printDOT(query.getName() + ".dot", origGraph);
 //			Util.printDOT(query.getName() + "_m.dot", qg);
 
-			JoinMatcher matcher = m_matchers.get(indexGraph);
+			JoinMatcher2 matcher = m_matchers.get(indexGraph);
 			
 			matcher.setTimings(m_timings);
-			matcher.setQueryGraph(origGraph);
-			m_listener.setQueryGraph(origGraph);
+			matcher.setQueryGraph(query, origGraph);
+			m_listener.setQueryGraph(query, origGraph);
 
 			GTable.timings = null;
 			Tables.timings = null;
@@ -117,22 +116,23 @@ public class QueryEvaluator implements IQueryEvaluator {
 			m_timings.end(Timings.SETUP);
 			
 			m_timings.start(Timings.MATCH);
-			matcher.match();
+			GTable<String> matches = matcher.match();
 			m_timings.end(Timings.MATCH);
 
-			List<Map<String,String>> mappings = m_listener.generateMappings();
+//			List<Map<String,String>> mappings = m_listener.generateMappings();
 			
-			if (mappings.size() == 0)
-				continue;
+//			if (mappings.size() == 0)
+//				continue;
 			
 			GTable.timings = m_timings;
 			Tables.timings = m_timings;
 			
 			long vt = System.currentTimeMillis();
-			List<String[]> res = m_mlv.validateMappings(origGraph, mappings, query.getEvalOrder());
-			log.debug(System.currentTimeMillis() - vt);
-			if (res.size() > 0)
-				result.addAll(res);
+//			List<String[]> res = m_mlv.validateMappings(query, origGraph, mappings, query.getEvalOrder(), query.getSelectVariables());
+//			List<String[]> res = m_mlv.validateMappings(query, origGraph, matches, query.getEvalOrder(), query.getSelectVariables());
+//			log.debug(System.currentTimeMillis() - vt);
+//			if (res.size() > 0)
+//				result.addAll(res);
 		}
 //		executor.shutdown();
 //		log.debug("result maps: " + results.size());
@@ -141,7 +141,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 //			for (String[] res : result) {
 //				String s = "";
 //				for (String r : res)
-//					s += ">" + r + "< ";
+//					s += r + " ";
 //				log.info("\t" + s);
 //			}
 //		}
@@ -160,8 +160,6 @@ public class QueryEvaluator implements IQueryEvaluator {
 //					map.put("" + i, row[i]);
 //				maps.add(map);
 //			}
-//			for (Map<String,String> map : maps)
-//				log.debug(map);
 //			log.debug(maps.size());
 //		}
 		

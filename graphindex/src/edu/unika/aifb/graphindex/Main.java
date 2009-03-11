@@ -1,6 +1,8 @@
 package edu.unika.aifb.graphindex;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -102,6 +104,9 @@ public class Main {
 		String indexName = (String)config.get("index_name");
 		String outputDirectory = (String)config.get("output_directory") + "/" + indexName;
 		String inputDirectory = (String)config.get("input_directory");
+		String edgeSetFile = (String)config.get("edge_set_file");
+		String fwEdgeSetFile = (String)config.get("fw_edge_set_file");
+		String bwEdgeSetFile = (String)config.get("bw_edge_set_file");
 		
 		String queryfile = (String)config.get("queryfile");
 		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
@@ -147,6 +152,15 @@ public class Main {
 			}
 		}
 		
+		Set<String> edgeSet = new HashSet<String>();
+		Set<String> fwEdgeSet = new HashSet<String>();
+		Set<String> bwEdgeSet = new HashSet<String>();
+		
+		if (fwEdgeSetFile != null)
+			fwEdgeSet = Util.readEdgeSet(fwEdgeSetFile);
+		if (bwEdgeSetFile != null)
+			bwEdgeSet = Util.readEdgeSet(bwEdgeSetFile);
+		
 		log.info("output directory: " + outputDirectory);
 		log.info("components output directory: " + componentDirectory);
 		log.info("index output directory: " + indexDirectory);
@@ -162,6 +176,8 @@ public class Main {
 		
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
+			iw.setForwardEdgeSet(fwEdgeSet);
+			iw.setBackwardEdgeSet(bwEdgeSet);
 			iw.setImporter(getImporter(ntFiles, owlFiles));
 			iw.create(stages);
 //			iw.removeTemporaryFiles();

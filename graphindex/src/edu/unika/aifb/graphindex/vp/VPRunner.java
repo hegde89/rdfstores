@@ -148,10 +148,10 @@ public class VPRunner {
 			
 			if (dataset.equals("sweto")) {
 				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblp queries.txt");
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("q18"))
+					if (!q.getName().equals("q13"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
@@ -162,7 +162,7 @@ public class VPRunner {
 			}
 			else if (dataset.equals("lubm")) {
 				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubm queries.txt");
+				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
 				
 				for (Query q : queries) {
 					if (!q.getName().equals("lq9"))

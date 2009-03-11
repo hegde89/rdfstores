@@ -69,8 +69,10 @@ public class LVertexM extends AbstractVertex {
 			m_images.add(i);
 		}
 		
-		if (!i.image.contains(v))
+//		if (!i.image.contains(v))
 			i.image.add(v);
+//		else
+//			System.out.println("blök2");
 	}
 	
 	public void setImage(long label, List<IVertex> image) {

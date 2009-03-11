@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,7 +15,11 @@ import java.io.Writer;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
@@ -92,6 +97,39 @@ public class Util {
 //		}
 //	}
 //
+	
+	public static String resolveNamespace(String uri, Map<String,String> namespaces) {
+		for (String ns : namespaces.keySet()) {
+			if (uri.startsWith(ns + ":")) {
+				return uri.replaceFirst(ns + ":", namespaces.get(ns));
+			}
+		}
+		return uri;
+	}
+	
+	public static Set<String> readEdgeSet(File file) throws IOException {
+		Set<String> edgeSet = new HashSet<String>();
+		BufferedReader in = new BufferedReader(new FileReader(file));
+		String input;
+		Map<String,String> namespaces = new HashMap<String,String>();
+		while ((input = in.readLine()) != null) {
+			input = input.trim();
+			
+			if (input.startsWith("ns:")) {
+				String[] t = input.split(" ");
+				namespaces.put(t[1], t[2]);
+				continue;
+			}
+			
+			edgeSet.add(resolveNamespace(input, namespaces));
+		}
+		in.close();
+		return edgeSet;
+	}
+	
+	public static Set<String> readEdgeSet(String file) throws IOException {
+		return readEdgeSet(new File(file));
+	}
 	
 	public static <V extends Comparable<V>> void printTLP(PrintWriter out, Graph<V> graph) {
 		out.println("(tlp \"3.0\"");

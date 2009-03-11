@@ -9,6 +9,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.data.HashValueProvider;
+import edu.unika.aifb.graphindex.data.LVertex;
 import edu.unika.aifb.graphindex.data.LVertexM;
 import edu.unika.aifb.graphindex.data.ListVertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;
@@ -35,6 +36,14 @@ public class StructureIndexWriter {
 	public StructureIndexWriter(String dir, boolean clean) throws StorageException {
 		m_directory = dir;
 		m_index = new StructureIndex(dir, clean, false);
+	}
+	
+	public void setBackwardEdgeSet(Set<String> edgeSet) {
+		m_index.setBackwardEdges(edgeSet);
+	}
+	
+	public void setForwardEdgeSet(Set<String> edgeSet) {
+		m_index.setForwardEdges(edgeSet);
 	}
 	
 	public void setImporter(Importer importer) {

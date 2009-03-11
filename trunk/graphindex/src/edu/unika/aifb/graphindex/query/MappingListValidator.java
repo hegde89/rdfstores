@@ -45,6 +45,7 @@ import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
 import edu.unika.aifb.graphindex.query.model.Constant;
 import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.query.model.Term;
 import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
@@ -256,7 +257,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		return scores;
 	}
 	
-	public List<String[]> validateMappings(final Graph<QueryNode> queryGraph, List<Map<String,String>> mappings, final Map<String,Integer> e2s) throws StorageException, InterruptedException, ExecutionException {
+	public List<String[]> validateMappings(Query query, final Graph<QueryNode> queryGraph, List<Map<String,String>> mappings, final Map<String,Integer> e2s, List<String> selectVars) throws StorageException, InterruptedException, ExecutionException {
 		t = new Timings();
 		
 		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
@@ -329,16 +330,19 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		
 		toVisit.addAll(queryGraph.edges());
 		
-		Set<String> removedTargets = new HashSet<String>();
+		Set<String> removedTargets = query.getBackwardTargets();
 		
+		log.debug("remove nodes: " + query.getRemovedNodes());
 		for (Iterator<GraphEdge<QueryNode>> i = toVisit.iterator(); i.hasNext(); ) {
 			GraphEdge<QueryNode> e = i.next();
-			if (QueryEvaluator.removeNodes.contains(queryGraph.getNode(e.getSrc()).getSingleMember())) {
+			if (query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
+				|| query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember())) {
 				i.remove();
-				removedTargets.add(queryGraph.getNode(e.getDst()).getSingleMember());
+//				removedTargets.add(queryGraph.getNode(e.getDst()).getSingleMember());
 			}
 		}
 		log.debug("removed targets: " + removedTargets);
+		log.debug("toVisit: " + toVisit);
 			
 		
 		// TODO for start edge prefer edge where the src node has no incoming edges
@@ -466,7 +470,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 							
 							for (EvaluationClass ec : ecs) {
 								GTable<String> t2 = ec.findResult(srcNode);
-								if (table.rowCount() == 0)
+								if (table.rowCount() == 0 || t2 == null) // TODO this correct
 									continue;
 								ec.getResults().add(t2);
 								remainingClasses.add(ec);
@@ -570,11 +574,13 @@ public class MappingListValidator implements Callable<List<String[]>> {
 							String objectExt = m_es.getExtension(srcExt);
 							GTable<String> t2 = new GTable<String>(srcNode, dstNode);
 							if (removedTargets.contains(srcNode)) {
-								for (String[] row : table) {
-									if (row[0].equals(objectExt))
-										t2.addRow(row);
-								}
-								t2.setSortedColumn(0);
+//								log.debug("blah");
+//								for (String[] row : table) {
+//									if (row[0].equals(objectExt))
+//										t2.addRow(row);
+//								}
+//								t2.setSortedColumn(0);
+								t2 = table;
 							}
 							else
 								t2 = table;
@@ -692,8 +698,13 @@ public class MappingListValidator implements Callable<List<String[]>> {
 						objects.addAll(getDistinctValues(ec.findResult(dstNode), dstNode));
 
 					Set<String> exts = new HashSet<String>();
-					for (String o : objects)
-						exts.add(m_es.getExtension(o));
+					if (val2ec.keySet().size() > 1) {
+						for (String o : objects)
+							exts.add(m_es.getExtension(o));
+					}
+					else {
+						exts.addAll(val2ec.keySet());
+					}
 					t.end(Timings.EXTSETUP);
 					log.debug("o: " + objects.size());
 					log.debug("exts: " + exts.size());
@@ -702,11 +713,18 @@ public class MappingListValidator implements Callable<List<String[]>> {
 						if (!exts.contains(dstExt))
 							continue;
 						
+						int invalid = 0;
 						GTable<String> table = new GTable<String>(srcNode, dstNode);
+//						table = getTable(Index.EPO, dstExt, property, dstNode, srcNode, dstNode);
+//						log.debug(table.rowCount());
+//						table = new GTable<String>(srcNode, dstNode);
 						for (String o : objects) 
-							if (m_es.getExtension(o).equals(dstExt))
+							if (m_es.isValidObjectExtension(o, dstExt))
 								table.addRows(getTable(Index.EPO, dstExt, property, o, srcNode, dstNode).getRows());
-						
+							else
+								invalid++;
+						log.debug("invalid: " + invalid);
+						log.debug(table.rowCount());
 						if (table.rowCount() == 0) 
 							continue;
 						
@@ -739,7 +757,6 @@ public class MappingListValidator implements Callable<List<String[]>> {
 								remainingClasses.add(ec);
 								ec.getResults().add(result);
 							}
-//							log.debug(ec);
 						}
 					}
 				}
@@ -840,11 +857,36 @@ public class MappingListValidator implements Callable<List<String[]>> {
 
 		log.debug("classes: " + classes.size());
 		List<String[]> result = new ArrayList<String[]>();
+		Set<String> sigs = new HashSet<String>();
+		int rows = 0;
 		for (EvaluationClass ec : classes) {
 			if (ec.getResults().size() == 0)
 				continue;
-			result.addAll(ec.getResults().get(0).getTable());
+//			result.addAll(ec.getResults().get(0).getTable());
+			GTable<String> table = ec.getResults().get(0);
+			rows += table.rowCount();
+			
+			int[] cols = new int [selectVars.size()];
+			for (int i = 0; i < selectVars.size(); i++)
+				cols[i] = table.getColumn(selectVars.get(i));
+					
+			for (String[] row : ec.getResults().get(0).getTable()) {
+				String[] selectRow = new String [cols.length];
+				StringBuilder sb = new StringBuilder();
+				
+				for (int i = 0; i < cols.length; i++) {
+					selectRow[i] = row[cols[i]];
+					sb.append(row[cols[i]]).append("__");
+				}
+				
+				String sig = sb.toString();
+				if (!sigs.contains(sig)) {
+					sigs.add(sig);
+					result.add(selectRow);
+				}
+			}
 		}
+		log.debug("rows: " + rows);
 		log.debug("extloaded: " + extLoaded);
 		log.debug("loaded: " + loaded);
 		extLoaded = 0;

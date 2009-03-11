@@ -16,6 +16,9 @@ import java.util.concurrent.ExecutionException;
 
 import javax.swing.event.ListSelectionEvent;
 
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
@@ -213,7 +216,7 @@ public class TestRunner {
 					log.info("-----------------------------");
 					log.info("query run #" + j);
 					
-					Process p = Runtime.getRuntime().exec("./drop_caches.sh");
+					Process p = Runtime.getRuntime().exec("/local_data/users/btc/gula/drop_caches.sh");
 					p.waitFor();
 					log.info("system caches dropped");
 	
@@ -244,21 +247,35 @@ public class TestRunner {
 	}
 
 	public static void main(String[] args) throws IOException, StorageException, InterruptedException, ExecutionException {
-		if (args.length < 2) {
-			log.info("Usage:");
-			log.info(" TestRunner [vp|gi] <vpdir> <gidir> <queriesfile> <repetitions> [query]");
+		OptionParser op = new OptionParser();
+		op.accepts("vp").withRequiredArg().ofType(String.class);
+		op.accepts("sp").withRequiredArg().ofType(String.class);
+		op.accepts("qf").withRequiredArg().ofType(String.class);
+		op.accepts("rf").withRequiredArg().ofType(String.class);
+		op.accepts("r").withRequiredArg().ofType(Integer.class);
+		op.accepts("q").withRequiredArg().ofType(String.class);
+		
+		OptionSet os = op.parse(args);
+		
+		if ((!os.has("vp") && !os.has("sp")) || !os.has("qf") || !os.has("rf") || !os.has("r")) {
+			op.printHelpOn(System.out);
+			return;
 		}
 		
-		String type = args[0];
-		String vpDir = args[1];
-		String giDir = args[2];
-		String queriesFile = args[3];
-		int reps = Integer.parseInt(args[4]);
-		String resultsFile = args[5];
-		String query = args.length == 7 ? args[6] : null;
+		boolean runVP = os.has("vp");
+		boolean runSP = os.has("sp");
 		
-		log.info("type: " + type);
+		String vpDir = (String)os.valueOf("vp");
+		String spDir = (String)os.valueOf("sp");
+		String queriesFile = (String)os.valueOf("qf");
+		String resultsFile = (String)os.valueOf("rf");
+		int reps = (Integer)os.valueOf("r");
+		String query = (String)os.valueOf("q");
+
+		log.info("vp: " + runVP + " " + vpDir);
+		log.info("sp: " + runSP + " " + spDir);
 		log.info("queries: " + queriesFile);
+		log.info("res file: " + resultsFile);
 		log.info("repetitions: " + reps);
 		
 		QueryLoader ql = new QueryLoader();
@@ -272,37 +289,57 @@ public class TestRunner {
 		}
 		List<Query> ordered = new ArrayList<Query>(queries);
 		
-		LuceneStorage ls = new LuceneStorage(vpDir);
-		ls.initialize(false, true);
-		IQueryEvaluator qeVP = new VPQueryEvaluator(ls);
-		Result vp = run2(qeVP, queries, reps);
-		ls.close();
-		
-		ls = null;
-		qeVP = null;
-		System.gc();
+		Result vp, gi; 
+		if (runVP) {
+			LuceneStorage ls = new LuceneStorage(vpDir);
+			ls.initialize(false, true);
+			IQueryEvaluator qeVP = new VPQueryEvaluator(ls);
+			
+			if (runVP)
+				vp = run2(qeVP, queries, reps);
+			else 
+				vp = null;
+			ls.close();
+			
+			ls = null;
+			qeVP = null;
+			System.gc();
+		}
+		else
+			vp = null;
 
-		StructureIndexReader index = new StructureIndexReader(giDir);
-		index.setNumEvalThreads(2);
-//		index.getIndex().setTableCacheSize(1);
-		index.getIndex().setDocumentCacheSize(10000);
-		IQueryEvaluator qeGI = index.getQueryEvaluator();
-		
-		Result gi = run2(qeGI, queries, reps);
+		if (runSP) {
+			StructureIndexReader index = new StructureIndexReader(spDir);
+			index.setNumEvalThreads(2);
+	//		index.getIndex().setTableCacheSize(1);
+			index.getIndex().setDocumentCacheSize(10000);
+			IQueryEvaluator qeGI = index.getQueryEvaluator();
+			
+			if (runSP)
+				gi = run2(qeGI, queries, reps);
+			else
+				gi = null;
+			index.close();
+		}
+		else 
+			gi = null;
 		
 		PrintWriter pw = new PrintWriter(new FileWriter(resultsFile));
 		
-		log.info("================================================================");
-		log.info("vp:");
-		pw.println("vp");
-		vp.print(ordered, pw);
+		if (vp != null) {
+			log.info("================================================================");
+			log.info("vp:");
+			pw.println("vp");
+			vp.print(ordered, pw);
+		}
 		
-		log.info("----------------------------------------------------------------");
-		log.info("gi:");
-		pw.println("gi");
-		gi.print(ordered, pw);
+		if (gi != null) {
+			log.info("----------------------------------------------------------------");
+			log.info("gi:");
+			pw.println("gi");
+			gi.print(ordered, pw);
+		}
 		
 		pw.close();
-		index.close();
 	}
 }

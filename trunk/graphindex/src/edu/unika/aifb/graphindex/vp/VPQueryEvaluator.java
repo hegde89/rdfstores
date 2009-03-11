@@ -222,6 +222,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				}
 				left.sort(1);
 				left.setSortedColumn(1);
+				log.debug("left size: " + left.rowCount());
 //			}
 //			else
 //				left = getTable(Index.PS, e.getLabel(), src, src, dst);
@@ -263,6 +264,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				}
 				right.sort(0);
 				right.setSortedColumn(0);
+				log.debug("right size: " + right.rowCount());
 //				Tables.verifySorted(right);
 //			}
 //			else
@@ -330,7 +332,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		GTable.timings = t;
 		Tables.timings = t;
 		long start = System.currentTimeMillis();
-		final Graph<QueryNode> queryGraph = q.toGraph();
+		final Graph<QueryNode> queryGraph = q.getGraph();
 
 		final Map<String,Integer> scores = getScores(queryGraph);
 		log.debug(scores);
@@ -562,6 +564,29 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			return 0;
 		} else {
 			log.debug("size: " + results.get(0).getResult().rowCount());
+			List<String[]> result = new ArrayList<String[]>();
+			Set<String> sigs = new HashSet<String>();
+			GTable<String> table = results.get(0).getResult();
+			int[] cols = new int [q.getSelectVariables().size()];
+			for (int i = 0; i < q.getSelectVariables().size(); i++)
+				cols[i] = table.getColumn(q.getSelectVariables().get(i));
+			for (String[] row : table) {
+				String[] selectRow = new String [cols.length];
+				StringBuilder sb = new StringBuilder();
+				
+				for (int i = 0; i < cols.length; i++) {
+					selectRow[i] = row[cols[i]];
+					sb.append(row[cols[i]]).append("__");
+				}
+				
+				String sig = sb.toString();
+				if (!sigs.contains(sig)) {
+					sigs.add(sig);
+					result.add(selectRow);
+				}
+			}
+			log.debug("size: " + result.size());
+			return result.size();
 //			if (results.get(0).getResult().rowCount() > 0) {
 //				for (int i = 0; i < results.get(0).getResult().columnCount(); i++) {
 //					Set<String> vals = new HashSet<String>();
@@ -581,7 +606,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 //			for (Map<String,String> map : maps)
 //				log.debug(map);
 //			log.debug(maps.size());
-			return results.get(0).getResult().rowCount();
+//			return results.get(0).getResult().rowCount();
 		}
 	}
 	
@@ -592,7 +617,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 	public void evaluateOld(Query q) throws StorageException, IOException {
 		long start = System.currentTimeMillis();
-		Graph<QueryNode> queryGraph = q.toGraph();
+		Graph<QueryNode> queryGraph = q.getGraph();
 
 		Queue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
 

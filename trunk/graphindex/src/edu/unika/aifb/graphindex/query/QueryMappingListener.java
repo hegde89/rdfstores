@@ -20,6 +20,7 @@ import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
@@ -29,6 +30,7 @@ import edu.unika.aifb.graphindex.util.Timings;
 
 public class QueryMappingListener implements MappingListener {
 	private StructureIndex m_index;
+	private Query m_query;
 	private Graph<QueryNode> m_origQueryGraph;
 	private StatisticsCollector m_collector;
 	private ExecutorCompletionService<List<String[]>> m_completionService;
@@ -49,7 +51,8 @@ public class QueryMappingListener implements MappingListener {
 		m_index.getCollector().addTimings(t);
 	}
 	
-	public void setQueryGraph(Graph<QueryNode> queryGraph) {
+	public void setQueryGraph(Query query, Graph<QueryNode> queryGraph) {
+		m_query = query;
 		m_origQueryGraph = queryGraph;
 		
 		m_mappings = new ArrayList<Map<String,String>>();
@@ -61,8 +64,8 @@ public class QueryMappingListener implements MappingListener {
 				m_signatureNodes.add(m_origQueryGraph.getNode(i).getSingleMember());
 		}
 		
-		if (QueryEvaluator.removeNodes.size() > 0) {
-			for (String node : QueryEvaluator.removeNodes) {
+		if (m_query.getRemovedNodes().size() > 0) {
+			for (String node : m_query.getRemovedNodes()) {
 				if (!m_signatureNodes.contains(node))
 					m_signatureNodes.remove(node);
 			}
@@ -94,10 +97,10 @@ public class QueryMappingListener implements MappingListener {
 	public List<Map<String,String>> generateMappings() throws StorageException {
 		log.debug("mappings: " + m_mappings.size());
 
-		if (QueryEvaluator.removeNodes.size() > 0) {
+		if (m_query.getRemovedNodes().size() > 0) {
 			for (Map<String,String> map : m_mappings) {
 //				log.debug(map);
-				for (String node : QueryEvaluator.removeNodes)
+				for (String node : m_query.getRemovedNodes())
 					map.remove(node);
 			}
 //			log.debug("removed nodes");

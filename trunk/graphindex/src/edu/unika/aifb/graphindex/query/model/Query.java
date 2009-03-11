@@ -7,12 +7,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
+import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.graph.Graph;
+import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.LabeledQueryEdge;
@@ -21,15 +24,37 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class Query {
 	private List<Literal> m_literals;
-	private Set<String> m_selectVariables;
+	private List<String> m_selectVariables;
 	private String m_name;
+	private Set<String> m_backwardEdgeSet, m_forwardEdgeSet, m_neutralEdgeSet;
 	private Map<String,Integer> m_e2s;
 	private Set<String> m_removeNodes;
+	private Graph<QueryNode> m_queryGraph;
+	private Set<String> m_backwardTargets;
+	private Set<String> m_forwardSources;
+	private static final Logger log = Logger.getLogger(Query.class);
 	
-	public Query(Set<String> vars) {
+	public Query(List<String> vars) {
 		m_literals = new ArrayList<Literal>();
 		m_selectVariables = vars;
 		m_removeNodes = new HashSet<String>();
+		m_backwardEdgeSet = new HashSet<String>();
+		m_forwardEdgeSet = new HashSet<String>();
+		m_forwardSources = new HashSet<String>();
+		m_neutralEdgeSet = new HashSet<String>();
+		m_backwardTargets = new HashSet<String>();
+	}
+	
+	public Set<String> getBackwardEdgeSet() {
+		return m_backwardEdgeSet;
+	}
+	
+	public Set<String> getForwardEdgeSet() {
+		return m_forwardEdgeSet;
+	}
+	
+	public Set<String> getNeutralEdgeSet() {
+		return m_neutralEdgeSet;
 	}
 	
 	public String getName() {
@@ -40,7 +65,7 @@ public class Query {
 		m_name = name;
 	}
 	
-	public Set<String> getRemoveNodes() {
+	public Set<String> getRemovedNodes() {
 		return m_removeNodes;
 	}
 	
@@ -48,11 +73,11 @@ public class Query {
 		m_removeNodes = rn;
 	}
 	
-	public void setSelectVariables(Set<String> vars) {
+	public void setSelectVariables(List<String> vars) {
 		m_selectVariables = vars;
 	}
 	
-	public Set<String> getSelectVariables() {
+	public List<String> getSelectVariables() {
 		return m_selectVariables;
 	}
 	
@@ -104,7 +129,7 @@ public class Query {
 		return g;
 	}
 	
-	public Graph<QueryNode> toGraph() throws StorageException {
+	public void createQueryGraph() {
 		DirectedGraph<QueryNode,LabeledEdge<QueryNode>> g = new DirectedMultigraph<QueryNode,LabeledEdge<QueryNode>>(new ClassBasedEdgeFactory<QueryNode,LabeledEdge<QueryNode>>((Class<? extends LabeledEdge<QueryNode>>)LabeledEdge.class));
 		Map<String,QueryNode> t2qn = new HashMap<String,QueryNode>();
 		for (Literal l : m_literals) {
@@ -129,7 +154,12 @@ public class Query {
 			g.addEdge(src, dst, new LabeledEdge<QueryNode>(src, dst, l.getPredicate().getUri()));
 		}
 		
-		return new Graph<QueryNode>(g);
+		m_queryGraph = new Graph<QueryNode>(g);
+		pruneQueryGraph(m_queryGraph);
+	}
+	
+	public Graph<QueryNode> getGraph() throws StorageException {
+		return m_queryGraph;
 	}
 	
 	public String toString() {
@@ -160,5 +190,131 @@ public class Query {
 				vars.add(l.getObject().toString());
 		}
 		return vars;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void pruneQueryGraph(Graph<QueryNode> g) {
+		Set<Integer> fixedNodes = new HashSet<Integer>();
+		Set<Integer> selectIds = new HashSet<Integer>();
+		m_removeNodes = new HashSet<String>();
+		
+		for (String srcSelectVar : m_selectVariables) {
+			Set<Integer> visited = new HashSet<Integer>();
+			Stack<Integer> currentPath = new Stack<Integer>();
+			Stack<String> currentLabelPath = new Stack<String>();
+			Stack<Integer[]> toVisit = new Stack<Integer[]>();
+
+			int srcId = g.getNodeId(new QueryNode(srcSelectVar));
+			fixedNodes.add(srcId);
+			selectIds.add(srcId);
+			
+			toVisit.push(new Integer[] {srcId, 0});
+			currentLabelPath.push("");
+			while (toVisit.size() > 0) {
+				Integer[] cur = toVisit.pop();
+				int n = cur[0];
+				int level = cur[1];
+				QueryNode qn = g.getNode(n);
+				
+				m_removeNodes.add(qn.getName());
+				
+				if (visited.contains(n))
+					continue;
+				visited.add(n);
+				for (int i = currentPath.size() - 1; i >= level; i--) {
+					currentPath.remove(i);
+					currentLabelPath.remove(i);
+				}
+				currentPath.push(n);
+//				log.debug(currentPath);
+//				log.debug(currentLabelPath);
+				if (n != srcId) {
+					if (m_selectVariables.contains(qn.getName()) || !qn.getName().startsWith("?")) {
+						fixedNodes.addAll(currentPath);
+						m_neutralEdgeSet.addAll(currentLabelPath);
+					}
+				}
+				
+				int toVisitSize = toVisit.size();
+				
+				for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
+					if (!visited.contains(edge.getSrc())) {
+						toVisit.push(new Integer[] {edge.getSrc(), level + 1});
+						currentLabelPath.add(edge.getLabel());
+					}
+				}
+				for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
+					if (!visited.contains(edge.getDst())) {
+						toVisit.push(new Integer[] {edge.getDst(), level + 1});
+						currentLabelPath.add(edge.getLabel());
+					}
+				}
+//				log.debug(toVisit);
+//				if (toVisitSize == toVisit.size()) {
+//					currentPath.pop();
+//				}
+			}
+		}
+		
+		m_neutralEdgeSet.remove("");
+		
+		Set<String> fixed = new HashSet<String>();
+		for (int n : fixedNodes)
+			fixed.add(g.getNode(n).getName());
+//		log.debug("fixed: " + fixed);
+		
+		m_removeNodes.removeAll(fixed);
+		
+		Set<String> bw = new HashSet<String>();
+		Set<String> fw = new HashSet<String>();
+		Set<String>[] removableNodeSets = new Set[] { new HashSet<String>(), new HashSet<String>() };
+		for (int srcId : selectIds) {
+//			List<Integer>[] startNodeSets = new List[] {g.predecessors(srcId), g.successors(srcId)};
+			List<Integer>[] startNodeSets = new List[] {Arrays.asList(srcId), Arrays.asList(srcId)};
+			for (int i = 0; i < startNodeSets.length; i++) {
+				Set<Integer> visited = new HashSet<Integer>();
+				Stack<Integer> toVisit = new Stack<Integer>();
+				
+				toVisit.addAll(startNodeSets[i]);
+				visited.add(srcId);
+				while (toVisit.size() > 0) {
+					int n = toVisit.pop();
+					visited.add(n);
+					QueryNode qn = g.getNode(n);
+					
+					if (!fixedNodes.contains(n))
+						removableNodeSets[i].add(qn.getName());
+					
+					for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
+						if (!visited.contains(edge.getSrc()) && !fixedNodes.contains(edge.getSrc())) {
+							toVisit.add(edge.getSrc());
+							m_backwardEdgeSet.add(edge.getLabel());
+							if (fixedNodes.contains(n))
+								m_backwardTargets.add(qn.getName());
+						}
+					}
+					for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
+						if (!visited.contains(edge.getDst()) && !fixedNodes.contains(edge.getDst())) {
+							toVisit.add(edge.getDst());
+							m_forwardEdgeSet.add(edge.getLabel());
+							if (fixedNodes.contains(n))
+								m_forwardSources.add(qn.getName());
+						}
+					}
+				}
+			}
+		}
+		bw = removableNodeSets[0];
+		fw = removableNodeSets[1];
+//		log.debug("bw: " + bw + " " + bwEdges);
+//		log.debug("fw: " + fw + " " + fwEdges);
+//		log.debug("bw targets: " + bwTargets);
+//		log.debug("fw sources: " + fwSources);
+//		log.debug("rem: " + m_removeNodes + ", fixed: " + fixed);
+//		log.debug("neu: " + m_neutralEdgeSet);
+	}
+
+	public Set<String> getBackwardTargets() {
+		return m_backwardTargets;
 	}
 }

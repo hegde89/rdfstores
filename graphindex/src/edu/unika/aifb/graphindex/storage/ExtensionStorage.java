@@ -56,9 +56,6 @@ public interface ExtensionStorage {
 	
 	public boolean hasTriples(String ext, String propertyUri, String object) throws StorageException;
 	public boolean hasTriples(Index index, String ext, String property, String so) throws StorageException;
-//	public List<Triple> getTriples(String extUri, String property, String object) throws StorageException;
-//	public List<Triple> getTriples(String extUri, String property) throws StorageException;
-//	public GTable<String> getTable(String extUri, String property, String object, String allowedSubject) throws StorageException;
 	public GTable<String> getIndexTable(Index index, String ext, String property, String so) throws StorageException;
 	public List<GTable<String>> getIndexTables(Index index, String ext, String property) throws StorageException;
 	public Set<String> getExtensions(Index index, String so) throws StorageException;

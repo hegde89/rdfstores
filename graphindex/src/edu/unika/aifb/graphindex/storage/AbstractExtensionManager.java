@@ -11,7 +11,6 @@ import edu.unika.aifb.graphindex.StructureIndex;
 
 public abstract class AbstractExtensionManager implements ExtensionManager {
 	protected Set<String> m_extensionUris;
-	protected Map<String,Extension> m_handlers;
 	protected ExtensionStorage m_storage;
 	protected StructureIndex m_index;
 	protected boolean m_readonly;
@@ -21,7 +20,6 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 	private static final Logger log = Logger.getLogger(AbstractExtensionManager.class);
 	
 	protected AbstractExtensionManager() {
-		m_handlers = new HashMap<String,Extension>();
 		m_extensionUris = new HashSet<String>();
 	}
 	
@@ -75,30 +73,5 @@ public abstract class AbstractExtensionManager implements ExtensionManager {
 	public void setExtensionStorage(ExtensionStorage storage) {
 		m_storage = storage;
 		m_storage.setExtensionManager(this);
-	}
-	
-	public void removeExtension(String extUri) throws StorageException {
-		Extension ext = m_handlers.get(extUri);
-		if (ext == null)
-			return;
-		
-		m_handlers.remove(extUri);
-		m_extensionUris.remove(extUri);
-		ext.remove();
-	}
-	
-	public boolean registerExtensionHandler(String extUri, Extension extension) {
-		if (m_handlers.containsKey(extUri))
-			return false;
-		m_extensionUris.add(extUri);
-		m_handlers.put(extUri, extension);
-		return true;
-	}
-	
-	public boolean extensionExists(String extUri) {
-		return m_extensionUris.contains(extUri);
-	}
-
-	public void join(String leftExt, String leftProperty, String rightExt) {
 	}
 }

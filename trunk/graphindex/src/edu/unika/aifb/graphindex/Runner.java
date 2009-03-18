@@ -285,7 +285,9 @@ public class Runner {
 			.withRequiredArg().ofType(String.class).describedAs("dataset");
 		op.accepts("q", "optional, name of query")
 			.withRequiredArg().ofType(String.class).describedAs("query name");
-		
+		op.accepts("nodstes");
+		op.accepts("nosrces");
+
 		OptionSet os = op.parse(args);
 		
 		if (!os.has("a") || !os.has("p") || !os.has("d")) {
@@ -297,6 +299,8 @@ public class Runner {
 		String prefix = (String)os.valueOf("p");
 		String dataset = (String)os.valueOf("d");
 		String queryName = (String)os.valueOf("q");
+		boolean dstUnmappedES = !os.has("nodstes");
+		boolean srcUnmappedES = !os.has("nosrces");
 
 		log.info("stages: " + stages);
 		log.info("prefix: " + prefix);
@@ -336,7 +340,12 @@ public class Runner {
 				return;
 			}
 			
-			QueryLoader ql = new QueryLoader();
+			StructureIndexReader index = new StructureIndexReader(outputDirectory);
+			index.setNumEvalThreads(2);
+			index.getIndex().setTableCacheSize(1);
+			index.getIndex().setDocumentCacheSize(1000);
+
+			QueryLoader ql = index.getQueryLoader();
 			List<Query> queries = ql.loadQueryFile(queriesFile);
 			
 			log.debug("bw: " + ql.getBackwardEdgeSet().size() + " " + ql.getBackwardEdgeSet());
@@ -347,13 +356,9 @@ public class Runner {
 				out.print(q.toSPARQL());
 				out.close();
 			}
-
-			StructureIndexReader index = new StructureIndexReader(outputDirectory);
-			index.setNumEvalThreads(2);
-			index.getIndex().setTableCacheSize(1);
-			index.getIndex().setDocumentCacheSize(1000);
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
+			qe.getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
 			
 			String sizes = "";
 			for (Query q : queries) {
@@ -362,6 +367,7 @@ public class Runner {
 				log.debug("--------------------------------------------");
 				log.debug("query: " + q.getName());
 				log.debug(q);
+//				q.createQueryGraph(index.getIndex());
 				sizes += q.getName() + "\t" + qe.evaluate(q) + "\n";
 				qe.clearCaches();
 //				break;

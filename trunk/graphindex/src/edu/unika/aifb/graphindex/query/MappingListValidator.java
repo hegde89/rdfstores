@@ -65,6 +65,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 	private StatisticsCollector m_collector;
 	private Timings t;
 	private ExtensionStorage m_es;
+	private boolean m_dstUnmappedExtSetup = true, m_srcUnmappedExtSetup = true;
 	
 	private static final int IS_NONE = 0, IS_SRC = 1, IS_DST = 2, IS_SRCDST = 3, IS_DSTSRC = 4;
 	
@@ -93,6 +94,11 @@ public class MappingListValidator implements Callable<List<String[]>> {
 	
 	private boolean isGT(String node) {
 		return !node.startsWith("?");
+	}
+	
+	public void setDstExtSetup(boolean dstUnmapped, boolean srcUnmapped) {
+		m_dstUnmappedExtSetup = dstUnmapped;
+		m_srcUnmappedExtSetup = srcUnmapped;
 	}
 	
 	private int intersect(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
@@ -257,7 +263,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		return scores;
 	}
 	
-	public List<String[]> validateMappings(Query query, final Graph<QueryNode> queryGraph, List<Map<String,String>> mappings, final Map<String,Integer> e2s, List<String> selectVars) throws StorageException, InterruptedException, ExecutionException {
+	public List<String[]> validateMappings(Query query, final Graph<QueryNode> queryGraph, GTable<String> mappings, final Map<String,Integer> e2s, List<String> selectVars) throws StorageException, InterruptedException, ExecutionException {
 		t = new Timings();
 		
 		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
@@ -472,7 +478,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 								GTable<String> t2 = ec.findResult(srcNode);
 								if (table.rowCount() == 0 || t2 == null) // TODO this correct
 									continue;
-								ec.getResults().add(t2);
+//								ec.getResults().add(t2); // TODO where did this come from?
 								remainingClasses.add(ec);
 							}
 							
@@ -609,14 +615,17 @@ public class MappingListValidator implements Callable<List<String[]>> {
 						subjects.addAll(getDistinctValues(ec.findResult(srcNode), srcNode));
 
 					Set<String> exts = new HashSet<String>();
-					for (String s : subjects)
-						exts.addAll(getExtensions(Index.SE, s));
+					if (m_dstUnmappedExtSetup) {
+						log.debug("extsetup");
+						for (String s : subjects)
+							exts.addAll(getExtensions(Index.SE, s));
+					}
 					t.end(Timings.EXTSETUP);
 //					log.debug(System.currentTimeMillis() - time);
 					log.debug("subjects: " + subjects.size());
 					log.debug("exts: " + exts.size());
 					for (String dstExt : val2ec.keySet()) {
-						if (!exts.contains(dstExt))
+						if (m_dstUnmappedExtSetup && !exts.contains(dstExt))
 							continue;
 							
 						subjects.clear();
@@ -698,19 +707,21 @@ public class MappingListValidator implements Callable<List<String[]>> {
 						objects.addAll(getDistinctValues(ec.findResult(dstNode), dstNode));
 
 					Set<String> exts = new HashSet<String>();
-					if (val2ec.keySet().size() > 1) {
-						for (String o : objects)
-							exts.add(m_es.getExtension(o));
-					}
-					else {
-						exts.addAll(val2ec.keySet());
+					if (m_srcUnmappedExtSetup) {
+						if (val2ec.keySet().size() > 1) {
+							for (String o : objects)
+								exts.add(m_es.getExtension(o));
+						}
+						else {
+							exts.addAll(val2ec.keySet());
+						}
 					}
 					t.end(Timings.EXTSETUP);
 					log.debug("o: " + objects.size());
 					log.debug("exts: " + exts.size());
 					
 					for (String dstExt : val2ec.keySet()) {
-						if (!exts.contains(dstExt))
+						if (m_srcUnmappedExtSetup && !exts.contains(dstExt))
 							continue;
 						
 						int invalid = 0;
@@ -723,8 +734,8 @@ public class MappingListValidator implements Callable<List<String[]>> {
 								table.addRows(getTable(Index.EPO, dstExt, property, o, srcNode, dstNode).getRows());
 							else
 								invalid++;
-						log.debug("invalid: " + invalid);
-						log.debug(table.rowCount());
+//						log.debug("invalid: " + invalid);
+//						log.debug(table.rowCount());
 						if (table.rowCount() == 0) 
 							continue;
 						

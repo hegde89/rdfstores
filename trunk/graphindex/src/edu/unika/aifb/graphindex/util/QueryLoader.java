@@ -13,11 +13,13 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.query.QueryParser;
 import edu.unika.aifb.graphindex.query.model.Query;
 
 public class QueryLoader {
 	private QueryParser m_parser;
+	private StructureIndex m_index;
 	private Map<String,String> m_namespaces;
 	private Set<String> m_bwEdgeSet;
 	private Set<String> m_fwEdgeSet;
@@ -25,6 +27,10 @@ public class QueryLoader {
 	private static final Logger log = Logger.getLogger(QueryLoader.class);
 
 	public QueryLoader() {
+		this(null);
+	}
+	public QueryLoader(StructureIndex index) {
+		m_index = index;
 		m_namespaces = new HashMap<String,String>();
 		m_parser = new QueryParser(m_namespaces);
 	}
@@ -42,7 +48,12 @@ public class QueryLoader {
 		q.setName(queryName);
 //		q.setRemoveNodes(removeNodes);
 		q.setSelectVariables(selectNodes);
-		q.createQueryGraph();
+		q.createQueryGraph(m_index);
+		
+		if (q.getGraph() == null) {
+			log.debug("query " + q.getName() + " not compatible with index edge set");
+			return null;
+		}
 		
 		m_fwEdgeSet.addAll(q.getForwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getBackwardEdgeSet());
@@ -81,7 +92,9 @@ public class QueryLoader {
 			
 			if (input.startsWith("query:")) {
 				if (currentQuery.length() > 0) {
-					queries.add(createQuery(currentQueryName, currentQuery, selectNodes));
+					Query q = createQuery(currentQueryName, currentQuery, selectNodes);
+					if (q != null)
+						queries.add(q);
 				}
 
 				String[] t = input.split(":");
@@ -108,7 +121,9 @@ public class QueryLoader {
 			
 		}
 		
-		queries.add(createQuery(currentQueryName, currentQuery, selectNodes));
+		Query q = createQuery(currentQueryName, currentQuery, selectNodes);
+		if (q != null)
+			queries.add(q);
 		
 		log.debug("bw edge set");
 		for (String s : m_bwEdgeSet)

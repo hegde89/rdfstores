@@ -13,22 +13,18 @@ import edu.unika.aifb.graphindex.data.GTable;
 
 public class EvaluationClass {
 	private Map<String,String> m_matches;
-	private List<Map<String,String>> m_mappings;
+	private GTable<String> m_mappings;
 //	private GTable<String> m_result;
 	private List<GTable<String>> m_results;
 	private boolean m_empty = false;
 	
-	public EvaluationClass() {
-		this(new HashMap<String,String>());
-	}
-	
-	public EvaluationClass(Map<String,String> matches) {
+	public EvaluationClass(Map<String,String> matches, String[] colNames) {
 		m_matches = matches;
-		m_mappings = new ArrayList<Map<String,String>>();
+		m_mappings = new GTable<String>(colNames);
 		m_results = new ArrayList<GTable<String>>();
 	}
 	
-	public EvaluationClass(List<Map<String,String>> mappings) {
+	public EvaluationClass(GTable<String> mappings) {
 		m_mappings = mappings;
 		m_matches = new HashMap<String,String>();
 		m_results = new ArrayList<GTable<String>>();
@@ -42,8 +38,8 @@ public class EvaluationClass {
 		return m_empty;
 	}
 	
-	public void addMapping(Map<String,String> mapping) {
-		m_mappings.add(mapping);
+	public void addMapping(String[] mapping) {
+		m_mappings.addRow(mapping);
 	}
 	
 	public String getMatch(String key) {
@@ -77,13 +73,14 @@ public class EvaluationClass {
 		String maxKey = null;
 		int maxCount = 0;
 		
-		for (String key : m_mappings.get(0).keySet()) {
+		for (String key : m_mappings.getColumnNames()) {
 			Map<String,Integer> val2count = new HashMap<String,Integer>();
-			for (Map<String,String> map : m_mappings) {
-				if (!val2count.containsKey(map.get(key)))
-					val2count.put(map.get(key), 1);
+			for (String[] map : m_mappings) {
+				String val = m_mappings.getValue(map, key);
+				if (!val2count.containsKey(val))
+					val2count.put(val, 1);
 				else
-					val2count.put(map.get(key), val2count.get(map.get(key)) + 1);
+					val2count.put(val, val2count.get(val) + 1);
 			}
 			for (String val : val2count.keySet()) {
 				if (val2count.get(val) > maxCount) {
@@ -98,10 +95,10 @@ public class EvaluationClass {
 	
 	public Map<String,Integer> getCardinalityMap() {
 		Map<String,Integer> cardinality = new HashMap<String,Integer>();
-		for (String key : m_mappings.get(0).keySet()) {
+		for (String key : m_mappings.getColumnNames()) {
 			Set<String> values = new HashSet<String>();
-			for (Map<String,String> map : m_mappings)
-				values.add(map.get(key));
+			for (String[] map : m_mappings)
+				values.add(m_mappings.getValue(map, key));
 			cardinality.put(key, values.size());
 		}
 		return cardinality;
@@ -112,15 +109,15 @@ public class EvaluationClass {
 		Map<String,EvaluationClass> val2class = new HashMap<String,EvaluationClass>();
 
 		int j = 0;
-		List<Map<String,String>> mappings = m_mappings;
-		m_mappings = new ArrayList<Map<String,String>>();
-		for (Iterator<Map<String,String>> i = mappings.iterator(); i.hasNext(); ) {
-			Map<String,String> mapping = i.next();
-			String val = mapping.get(key);
+		GTable<String> mappings = m_mappings;
+		m_mappings = new GTable<String>(mappings.getColumnNames());
+		for (String[] map : mappings) {
+			String val = mappings.getValue(map, key);
 			if (val2class.size() == 0) {
 				// first value is added to this class, others to new classes
 				m_matches.put(key, val);
 				val2class.put(val, this);
+				m_mappings.addRow(map);
 			}
 			else {
 				EvaluationClass ec = val2class.get(val);
@@ -130,25 +127,25 @@ public class EvaluationClass {
 				if (ec == null) {
 					Map<String,String> newMatches = new HashMap<String,String>(m_matches);
 					newMatches.put(key, val);
-					ec = new EvaluationClass(newMatches);
+					ec = new EvaluationClass(newMatches, mappings.getColumnNames());
 					ec.setResults(new ArrayList<GTable<String>>(getResults()));
 					newClasses.add(ec);
 					val2class.put(val, ec);
 				}
 				
-				ec.addMapping(mapping);
+				ec.addMapping(map);
 			}
 			
-			j++;
-			if (j % 10000 == 0) {
-				System.out.println(j + " " + val2class.keySet().size() + " " + newClasses.size());
-			}
+//			j++;
+//			if (j % 10000 == 0) {
+//				System.out.println(j + " " + val2class.keySet().size() + " " + newClasses.size());
+//			}
 		}
 		
 		return newClasses;
 	}
 	
 	public String toString() {
-		return "[" + m_matches.toString() + ", " + m_mappings.size() + "]";// + ", mappings: " + m_mappings;
+		return "[" + m_matches.toString() + ", " + m_mappings.toString() + "]";// + ", mappings: " + m_mappings;
 	}
 }

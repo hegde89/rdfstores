@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class StructureIndexReader {
@@ -24,6 +25,7 @@ public class StructureIndexReader {
 	private QueryEvaluator m_evaluator;
 	
 	private int m_configEvalThreads = 15;
+	private QueryLoader m_loader;
 	
 	private static final Logger log = Logger.getLogger(StructureIndexReader.class);
 	
@@ -66,6 +68,12 @@ public class StructureIndexReader {
 		if (m_evaluator == null)
 			m_evaluator = new QueryEvaluator(this);
 		return m_evaluator;
+	}
+	
+	public QueryLoader getQueryLoader() {
+		if (m_loader == null)
+			m_loader = new QueryLoader(getIndex());
+		return m_loader;
 	}
 	
 	public StructureIndex getIndex() {

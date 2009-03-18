@@ -16,24 +16,17 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 
 import edu.unika.aifb.graphindex.StructureIndex;
-import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast2;
+import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
 import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
-import edu.unika.aifb.graphindex.data.Subject;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
-import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.preprocessing.IVertexListProvider;
 import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
-import edu.unika.aifb.graphindex.storage.Extension;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.StorageManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -172,7 +165,7 @@ public class FastIndexBuilder {
 	public void buildIndex() throws StorageException, NumberFormatException, IOException, InterruptedException {
 		long start = System.currentTimeMillis();
 		
-		RCPFast2 rcp = new RCPFast2(m_index, m_hashProvider);
+		RCPFast rcp = new RCPFast(m_index, m_hashProvider);
 		OneIndexMerger merger = new OneIndexMerger();
 		MergedIndexList<IndexGraph> list = new MergedIndexList<IndexGraph>(merger, new Comparator<IndexGraph>() {
 					public int compare(IndexGraph g1, IndexGraph g2) {

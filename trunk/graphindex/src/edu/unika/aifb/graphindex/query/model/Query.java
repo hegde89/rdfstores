@@ -14,6 +14,7 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 import org.jgrapht.graph.DirectedMultigraph;
 
+import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
@@ -129,9 +130,10 @@ public class Query {
 		return g;
 	}
 	
-	public void createQueryGraph() {
+	public void createQueryGraph(StructureIndex index) {
 		DirectedGraph<QueryNode,LabeledEdge<QueryNode>> g = new DirectedMultigraph<QueryNode,LabeledEdge<QueryNode>>(new ClassBasedEdgeFactory<QueryNode,LabeledEdge<QueryNode>>((Class<? extends LabeledEdge<QueryNode>>)LabeledEdge.class));
 		Map<String,QueryNode> t2qn = new HashMap<String,QueryNode>();
+		Set<String> edgeLabels = new HashSet<String>();
 		for (Literal l : m_literals) {
 			QueryNode src = t2qn.get(l.getSubject().toString());
 			if (src == null) {
@@ -150,15 +152,25 @@ public class Query {
 				t2qn.put(l.getObject().toString(), dst);
 				g.addVertex(dst);
 			}
-
+			
+			edgeLabels.add(l.getPredicate().getUri());
 			g.addEdge(src, dst, new LabeledEdge<QueryNode>(src, dst, l.getPredicate().getUri()));
 		}
 		
 		m_queryGraph = new Graph<QueryNode>(g);
-		pruneQueryGraph(m_queryGraph);
+		
+		if (index != null) {
+			Set<String> indexEdges = new HashSet<String>();
+			indexEdges.addAll(index.getBackwardEdges());
+			indexEdges.addAll(index.getForwardEdges());
+			if (!indexEdges.containsAll(edgeLabels))
+				m_queryGraph = null;
+			else
+				pruneQueryGraph(m_queryGraph, index);
+		}
 	}
 	
-	public Graph<QueryNode> getGraph() throws StorageException {
+	public Graph<QueryNode> getGraph() {
 		return m_queryGraph;
 	}
 	
@@ -193,67 +205,19 @@ public class Query {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void pruneQueryGraph(Graph<QueryNode> g) {
+	private void pruneQueryGraph(Graph<QueryNode> g, StructureIndex index) {
+		m_removeNodes = new HashSet<String>();
+		m_neutralEdgeSet = new HashSet<String>();
+		
+		resetEdgeSets();
+		
 		Set<Integer> fixedNodes = new HashSet<Integer>();
 		Set<Integer> selectIds = new HashSet<Integer>();
-		m_removeNodes = new HashSet<String>();
 		
 		for (String srcSelectVar : m_selectVariables) {
-			Set<Integer> visited = new HashSet<Integer>();
-			Stack<Integer> currentPath = new Stack<Integer>();
-			Stack<String> currentLabelPath = new Stack<String>();
-			Stack<Integer[]> toVisit = new Stack<Integer[]>();
-
 			int srcId = g.getNodeId(new QueryNode(srcSelectVar));
-			fixedNodes.add(srcId);
 			selectIds.add(srcId);
-			
-			toVisit.push(new Integer[] {srcId, 0});
-			currentLabelPath.push("");
-			while (toVisit.size() > 0) {
-				Integer[] cur = toVisit.pop();
-				int n = cur[0];
-				int level = cur[1];
-				QueryNode qn = g.getNode(n);
-				
-				m_removeNodes.add(qn.getName());
-				
-				if (visited.contains(n))
-					continue;
-				visited.add(n);
-				for (int i = currentPath.size() - 1; i >= level; i--) {
-					currentPath.remove(i);
-					currentLabelPath.remove(i);
-				}
-				currentPath.push(n);
-//				log.debug(currentPath);
-//				log.debug(currentLabelPath);
-				if (n != srcId) {
-					if (m_selectVariables.contains(qn.getName()) || !qn.getName().startsWith("?")) {
-						fixedNodes.addAll(currentPath);
-						m_neutralEdgeSet.addAll(currentLabelPath);
-					}
-				}
-				
-				int toVisitSize = toVisit.size();
-				
-				for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
-					if (!visited.contains(edge.getSrc())) {
-						toVisit.push(new Integer[] {edge.getSrc(), level + 1});
-						currentLabelPath.add(edge.getLabel());
-					}
-				}
-				for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
-					if (!visited.contains(edge.getDst())) {
-						toVisit.push(new Integer[] {edge.getDst(), level + 1});
-						currentLabelPath.add(edge.getLabel());
-					}
-				}
-//				log.debug(toVisit);
-//				if (toVisitSize == toVisit.size()) {
-//					currentPath.pop();
-//				}
-			}
+			calculateFixedPaths(g, fixedNodes, srcId);
 		}
 		
 		m_neutralEdgeSet.remove("");
@@ -262,56 +226,205 @@ public class Query {
 		for (int n : fixedNodes)
 			fixed.add(g.getNode(n).getName());
 //		log.debug("fixed: " + fixed);
-		
+
 		m_removeNodes.removeAll(fixed);
 		
-		Set<String> bw = new HashSet<String>();
-		Set<String> fw = new HashSet<String>();
-		Set<String>[] removableNodeSets = new Set[] { new HashSet<String>(), new HashSet<String>() };
-		for (int srcId : selectIds) {
-//			List<Integer>[] startNodeSets = new List[] {g.predecessors(srcId), g.successors(srcId)};
-			List<Integer>[] startNodeSets = new List[] {Arrays.asList(srcId), Arrays.asList(srcId)};
-			for (int i = 0; i < startNodeSets.length; i++) {
-				Set<Integer> visited = new HashSet<Integer>();
-				Stack<Integer> toVisit = new Stack<Integer>();
-				
-				toVisit.addAll(startNodeSets[i]);
-				visited.add(srcId);
-				while (toVisit.size() > 0) {
-					int n = toVisit.pop();
-					visited.add(n);
-					QueryNode qn = g.getNode(n);
-					
-					if (!fixedNodes.contains(n))
-						removableNodeSets[i].add(qn.getName());
-					
-					for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
-						if (!visited.contains(edge.getSrc()) && !fixedNodes.contains(edge.getSrc())) {
-							toVisit.add(edge.getSrc());
-							m_backwardEdgeSet.add(edge.getLabel());
-							if (fixedNodes.contains(n))
-								m_backwardTargets.add(qn.getName());
-						}
-					}
-					for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
-						if (!visited.contains(edge.getDst()) && !fixedNodes.contains(edge.getDst())) {
-							toVisit.add(edge.getDst());
-							m_forwardEdgeSet.add(edge.getLabel());
-							if (fixedNodes.contains(n))
-								m_forwardSources.add(qn.getName());
-						}
-					}
-				}
-			}
-		}
-		bw = removableNodeSets[0];
-		fw = removableNodeSets[1];
+		Map<String,Set<String>> bwEdgeSources = new HashMap<String,Set<String>>();
+		Map<String,Set<String>> fwEdgeTargets = new HashMap<String,Set<String>>();
+		
+		calculateEdgeSets(g, index, fixedNodes, new HashSet<Integer>(fixedNodes), bwEdgeSources, fwEdgeTargets);
+
+		for (int n : fixedNodes)
+			fixed.add(g.getNode(n).getName());
+
+		m_removeNodes.removeAll(fixed);
+
+//		log.debug("bw: " + m_backwardEdgeSet);
+//		log.debug("fw: " + m_forwardEdgeSet);
+//		log.debug("bwedgesources: " + bwEdgeSources);
+//		log.debug("fwedgetargets: " + fwEdgeTargets);
+		
+//		if (index != null) {
+//			Set<String> unIndexedForwardEdges = new HashSet<String>(m_forwardEdgeSet);
+//			unIndexedForwardEdges.removeAll(index.getForwardEdges());
+//			log.debug("unindexed fw: " + unIndexedForwardEdges);
+//			
+//			Set<String> notPrunable = new HashSet<String>();
+//			for (String edge : unIndexedForwardEdges) {
+//				if (fwEdgeTargets.containsKey(edge)) {
+//					for (String node : fwEdgeTargets.get(edge)) {
+//						Set<String> dependsOn = depends.get(node);
+//						log.debug(" not prunable fw node: " + node + ", depends on: " + dependsOn);
+//						notPrunable.add(node);
+//					}
+//				}
+//			}
+//	
+//			Set<String> unIndexedBackwardEdges = new HashSet<String>(m_backwardEdgeSet);
+//			unIndexedBackwardEdges.removeAll(index.getBackwardEdges());
+//			log.debug("unindexed bw: " + unIndexedBackwardEdges);
+//			
+//			for (String edge : unIndexedBackwardEdges) {
+//				if (bwEdgeSources.containsKey(edge)) {
+//					for (String node : bwEdgeSources.get(edge)) {
+//						notPrunable.add(node);
+//					}
+//				}
+//			}
+//			
+//			for (String node : notPrunable) {
+//				int id = g.getNodeId(new QueryNode(node));
+//				fixedNodes.add(id);
+//				selectIds.add(id);
+//			}
+//
+//			Set<String> newFixed = new HashSet<String>();
+//			for (int n : fixedNodes)
+//				newFixed.add(g.getNode(n).getName());
+////			log.debug("fixed: " + newFixed);
+//			m_removeNodes.removeAll(newFixed);
+////			log.debug("remove: " + m_removeNodes);
+//			
+//			bwEdgeSources = new HashMap<String,Set<String>>();
+//			fwEdgeTargets = new HashMap<String,Set<String>>();
+//			resetEdgeSets();
+//			calculateEdgeSets(g, index, fixedNodes, selectIds, bwEdgeSources, fwEdgeTargets);
+//		}		
+		
 //		log.debug("bw: " + bw + " " + bwEdges);
 //		log.debug("fw: " + fw + " " + fwEdges);
 //		log.debug("bw targets: " + bwTargets);
 //		log.debug("fw sources: " + fwSources);
-//		log.debug("rem: " + m_removeNodes + ", fixed: " + fixed);
+		log.debug(getName() + " queryrem: " + m_removeNodes.size() + " " + m_removeNodes + ", fixed: " + fixed);
 //		log.debug("neu: " + m_neutralEdgeSet);
+	}
+
+	private void calculateFixedPaths(Graph<QueryNode> g, Set<Integer> fixedNodes, int srcId) {
+		Set<Integer> visited = new HashSet<Integer>();
+		Stack<Integer> currentPath = new Stack<Integer>();
+		Stack<String> currentLabelPath = new Stack<String>();
+		Stack<Integer[]> toVisit = new Stack<Integer[]>();
+
+		toVisit.push(new Integer[] {srcId, 0});
+		currentLabelPath.push("");
+		while (toVisit.size() > 0) {
+			Integer[] cur = toVisit.pop();
+			int n = cur[0];
+			int level = cur[1];
+			QueryNode qn = g.getNode(n);
+			
+			m_removeNodes.add(qn.getName());
+			
+			if (visited.contains(n))
+				continue;
+			visited.add(n);
+			for (int i = currentPath.size() - 1; i >= level; i--) {
+				currentPath.remove(i);
+				currentLabelPath.remove(i);
+			}
+			currentPath.push(n);
+//				log.debug(currentPath);
+//				log.debug(currentLabelPath);
+			if (n != srcId) {
+				if (m_selectVariables.contains(qn.getName()) || !qn.getName().startsWith("?")) {
+					fixedNodes.addAll(currentPath);
+					m_neutralEdgeSet.addAll(currentLabelPath);
+				}
+			}
+			
+			int toVisitSize = toVisit.size();
+			
+			for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
+				if (!visited.contains(edge.getSrc())) {
+					toVisit.push(new Integer[] {edge.getSrc(), level + 1});
+					currentLabelPath.add(edge.getLabel());
+				}
+			}
+			for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
+				if (!visited.contains(edge.getDst())) {
+					toVisit.push(new Integer[] {edge.getDst(), level + 1});
+					currentLabelPath.add(edge.getLabel());
+				}
+			}
+//				log.debug(toVisit);
+//				if (toVisitSize == toVisit.size()) {
+//					currentPath.pop();
+//				}
+		}
+	}
+
+	private void resetEdgeSets() {
+		m_forwardEdgeSet = new HashSet<String>();
+		m_backwardEdgeSet  = new HashSet<String>();
+		m_forwardSources = new HashSet<String>();
+		m_backwardTargets = new HashSet<String>();
+	}
+
+	private void calculateEdgeSets(Graph<QueryNode> g, StructureIndex index, Set<Integer> fixedNodes, Set<Integer> selectIds, Map<String,Set<String>> bwEdgeSources, Map<String,Set<String>> fwEdgeTargets) {
+		for (int srcId : selectIds) {
+			Set<Integer> visited = new HashSet<Integer>();
+			Stack<Integer> toVisit = new Stack<Integer>();
+			
+			toVisit.push(srcId);
+			visited.add(srcId);
+			int startDirection = 0; // 0 = none, 1 = bw, 2 = fw
+			while (toVisit.size() > 0) {
+				int n = toVisit.pop();
+				visited.add(n);
+				QueryNode qn = g.getNode(n);
+				
+				for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
+					if (!visited.contains(edge.getSrc()) && !fixedNodes.contains(edge.getSrc())) {
+						toVisit.add(edge.getSrc());
+						
+						if (!index.getBackwardEdges().contains(edge.getLabel())) {
+							fixedNodes.add(edge.getSrc());
+							calculateFixedPaths(g, fixedNodes, edge.getSrc());
+							continue;
+						}
+
+						m_backwardEdgeSet.add(edge.getLabel());
+						if (startDirection == 2)
+							m_forwardEdgeSet.add(edge.getLabel());
+						
+						if (!bwEdgeSources.containsKey(edge.getLabel()))
+							bwEdgeSources.put(edge.getLabel(), new HashSet<String>());
+						bwEdgeSources.get(edge.getLabel()).add(g.getNode(edge.getSrc()).getSingleMember());
+						
+						if (fixedNodes.contains(n))
+							m_backwardTargets.add(qn.getName());
+						
+						if (startDirection == 0)
+							startDirection = 1;
+					}
+				}
+				for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
+					if (!visited.contains(edge.getDst()) && !fixedNodes.contains(edge.getDst())) {
+						toVisit.add(edge.getDst());
+
+						if (!index.getForwardEdges().contains(edge.getLabel())) {
+							fixedNodes.add(edge.getDst());
+							calculateFixedPaths(g, fixedNodes, edge.getDst());
+							continue;
+						}
+						
+						m_forwardEdgeSet.add(edge.getLabel());
+						if (startDirection == 1)
+							m_backwardEdgeSet.add(edge.getLabel());
+						
+						if (!fwEdgeTargets.containsKey(edge.getLabel()))
+							fwEdgeTargets.put(edge.getLabel(), new HashSet<String>());
+						fwEdgeTargets.get(edge.getLabel()).add(g.getNode(edge.getDst()).getSingleMember());
+						
+						if (fixedNodes.contains(n))
+							m_forwardSources.add(qn.getName());
+
+						if (startDirection == 0)
+							startDirection = 2;
+					}
+				}
+			}
+		}
 	}
 
 	public Set<String> getBackwardTargets() {

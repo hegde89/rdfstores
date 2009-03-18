@@ -127,8 +127,8 @@ public class Main {
 	
 		Map<String,List<String>> files = (Map<String,List<String>>)config.get("input_files");
 		
-		if (indexName == null || outputDirectory == null || files == null) {
-			log.error("The config file must at least contain index_name, output_directory and input_files.");
+		if (indexName == null || outputDirectory == null || files == null || fwEdgeSetFile == null || bwEdgeSetFile == null) {
+			log.error("The config file must at least contain index_name, output_directory, input_files, fw_edge_set_file and bw_edge_set_file.");
 			return;
 		}
 		

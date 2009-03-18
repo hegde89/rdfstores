@@ -34,6 +34,13 @@
   		<scope>compile</scope>
   	</dependency>
   	<dependency>
+  		<groupId>joptsimple</groupId>
+  		<artifactId>joptsimple</artifactId>
+  		<version>3.1</version>
+  		<type>jar</type>
+  		<scope>compile</scope>
+  	</dependency>
+  	<dependency>
   		<groupId>org.openrdf</groupId>
   		<artifactId>rio-rdfxml</artifactId>
   		<version>2.0.1</version>
@@ -92,12 +99,20 @@
         	<configuration>
           		<descriptorRefs>
             		<descriptorRef>jar-with-dependencies</descriptorRef>
+            		<descriptorRef>src</descriptorRef>
           		</descriptorRefs>
 				<archive>
             		<manifest>
               			<mainClass>edu.unika.aifb.graphindex.Main</mainClass>
             		</manifest>
           		</archive>
+        	</configuration>
+      	</plugin>
+		<plugin>
+        	<groupId>org.apache.maven.plugins</groupId>
+        	<artifactId>maven-source-plugin</artifactId>
+        	<configuration>
+          		<attach>false</attach>
         	</configuration>
       	</plugin>
   	</plugins>

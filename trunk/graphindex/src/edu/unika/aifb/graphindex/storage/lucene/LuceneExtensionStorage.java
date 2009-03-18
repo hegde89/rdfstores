@@ -64,7 +64,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public IndexSearcher m_searcher;
 	private LRUCache<Integer,Document> m_docCache;
 	private Timings m_timings;
-	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
+//	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
 	private int m_docCacheHits;
 	private int m_docCacheMisses;
 	
@@ -496,7 +496,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 		
 		String term = new StringBuilder().append(object).append("__").append(ext).toString();
-//		TermQuery tq = new TermQuery(new Term(Index.OE.getIndexField(), term));
 		try {
 			TermDocs td = m_reader.termDocs(new Term(Index.OE.getIndexField(), term));
 			boolean tdd = td.next();
@@ -507,14 +506,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			}
 			m_timings.end(Timings.DATA);
 			return false;
-//			Hits hits = m_searcher.search(tq);
-//			if (hits.length() > 0) {
-//				m_o2e.put(object, ext);
-//				m_timings.end(Timings.DATA);
-//				return true;
-//			}
-//			m_timings.end(Timings.DATA);
-//			return false;
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -522,20 +513,9 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public static int extLoaded = 0;
 	public Set<String> getExtensions(Index index, String so) throws StorageException {
-		long start = System.currentTimeMillis();
 		m_timings.start(Timings.DATA);
 		
 		Set<String> exts;
-//		if (index == Index.SE)
-//			exts = m_subjectExtCache.get(so);
-//		else
-//			exts = m_objectExtCache.get(so);
-//		
-//		if (exts != null) {
-//			m_extCacheHits++;
-//			m_timings.end(Timings.DATA);
-//			return exts;
-//		}
 		
 		TermQuery tq = new TermQuery(new Term(index.getIndexField(), so));
 
@@ -550,14 +530,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 				exts.add(s);
 			}
 		}
-		
-//		if (index == Index.SE)
-//			m_subjectExtCache.put(so, exts);
-//		else
-//			m_objectExtCache.put(so, exts);
-//		extLoaded += docIds.size();
-		
-//		log.debug("eq: " + tq + " (" + exts.size() + ") {" + (System.currentTimeMillis() - start) + " ms}");
 		
 		m_timings.end(Timings.DATA);
 		
@@ -632,10 +604,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		long start = System.currentTimeMillis();
 
 		// LUBM warmup
-		getDocumentIds(new TermQuery(new Term(Index.EPO.getIndexField(), "b1186__http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name__University1__")));
-		getDocumentIds(new TermQuery(new Term(Index.EPS.getIndexField(), "b1904__http://www.w3.org/1999/02/22-rdf-syntax-ns#type__http://www.University1.edu__")));
-		getDocumentIds(new TermQuery(new Term(Index.OE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University__b1904")));
-		getDocumentIds(new TermQuery(new Term(Index.SE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University")));
+//		getDocumentIds(new TermQuery(new Term(Index.EPO.getIndexField(), "b1186__http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name__University1__")));
+//		getDocumentIds(new TermQuery(new Term(Index.EPS.getIndexField(), "b1904__http://www.w3.org/1999/02/22-rdf-syntax-ns#type__http://www.University1.edu__")));
+//		getDocumentIds(new TermQuery(new Term(Index.OE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University__b1904")));
+//		getDocumentIds(new TermQuery(new Term(Index.SE.getIndexField(), "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University")));
 
 		// DBLP warmup
 //		getDocumentIds(new TermQuery(new Term(Index.EPO.getIndexField(), "b257774__http://lsdis.cs.uga.edu/projects/semdis/opus#book_title__WWW__")));

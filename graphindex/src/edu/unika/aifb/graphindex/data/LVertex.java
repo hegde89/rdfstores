@@ -5,13 +5,10 @@ package edu.unika.aifb.graphindex.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
-import edu.unika.aifb.graphindex.util.Util;
 
 public class LVertex extends AbstractVertex {
 	private Map<Long,List<IVertex>> m_image;

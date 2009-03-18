@@ -186,10 +186,10 @@ public class TestRunner {
 		return r;
 	}
 	
-	private static Result run2(IQueryEvaluator qe, List<Query> queries, int reps) throws StorageException, InterruptedException, ExecutionException, IOException {
+	private static Result run2(IQueryEvaluator qe, List<Query> queries, int reps, int runs) throws StorageException, InterruptedException, ExecutionException, IOException {
 		Result r = new Result();
 		
-		for (int i = 1; i <= 3; i++) {
+		for (int i = 1; i <= runs; i++) {
 			log.info("run #" + i);
 			log.info("--------------------------------------------------");
 			
@@ -253,7 +253,10 @@ public class TestRunner {
 		op.accepts("qf").withRequiredArg().ofType(String.class);
 		op.accepts("rf").withRequiredArg().ofType(String.class);
 		op.accepts("r").withRequiredArg().ofType(Integer.class);
+		op.accepts("runs").withRequiredArg().ofType(Integer.class);
 		op.accepts("q").withRequiredArg().ofType(String.class);
+		op.accepts("nodstes");
+		op.accepts("nosrces");
 		
 		OptionSet os = op.parse(args);
 		
@@ -265,11 +268,15 @@ public class TestRunner {
 		boolean runVP = os.has("vp");
 		boolean runSP = os.has("sp");
 		
+		boolean dstUnmappedES = !os.has("nodstes");
+		boolean srcUnmappedES = !os.has("nosrces");
+		
 		String vpDir = (String)os.valueOf("vp");
 		String spDir = (String)os.valueOf("sp");
 		String queriesFile = (String)os.valueOf("qf");
 		String resultsFile = (String)os.valueOf("rf");
 		int reps = (Integer)os.valueOf("r");
+		int runs = os.valueOf("runs") != null ? (Integer)os.valueOf("runs") : 3;
 		String query = (String)os.valueOf("q");
 
 		log.info("vp: " + runVP + " " + vpDir);
@@ -277,26 +284,24 @@ public class TestRunner {
 		log.info("queries: " + queriesFile);
 		log.info("res file: " + resultsFile);
 		log.info("repetitions: " + reps);
+		log.info("dst unmapped ext setup: " + dstUnmappedES);
+		log.info("src unmapped ext setup: " + srcUnmappedES);
 		
-		QueryLoader ql = new QueryLoader();
-		List<Query> queries = ql.loadQueryFile(queriesFile);
-		log.info("loaded " + queries.size() + " queries");
+		QueryLoader ql;
 		
-		if (query != null) {
-			for (Iterator<Query> i = queries.iterator(); i.hasNext(); )
-				if (!i.next().getName().equals(query))
-					i.remove();
-		}
-		List<Query> ordered = new ArrayList<Query>(queries);
+		List<Query> queries = null;
 		
 		Result vp, gi; 
 		if (runVP) {
 			LuceneStorage ls = new LuceneStorage(vpDir);
 			ls.initialize(false, true);
+			
+			queries = loadQueries(queriesFile, query, new QueryLoader());
+			
 			IQueryEvaluator qeVP = new VPQueryEvaluator(ls);
 			
 			if (runVP)
-				vp = run2(qeVP, queries, reps);
+				vp = run2(qeVP, queries, reps, runs);
 			else 
 				vp = null;
 			ls.close();
@@ -313,10 +318,14 @@ public class TestRunner {
 			index.setNumEvalThreads(2);
 	//		index.getIndex().setTableCacheSize(1);
 			index.getIndex().setDocumentCacheSize(10000);
+			
+			queries = loadQueries(queriesFile, query, index.getQueryLoader());
+			
 			IQueryEvaluator qeGI = index.getQueryEvaluator();
+			((QueryEvaluator)qeGI).getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
 			
 			if (runSP)
-				gi = run2(qeGI, queries, reps);
+				gi = run2(qeGI, queries, reps, runs);
 			else
 				gi = null;
 			index.close();
@@ -324,6 +333,8 @@ public class TestRunner {
 		else 
 			gi = null;
 		
+		List<Query> ordered = new ArrayList<Query>(queries);
+
 		PrintWriter pw = new PrintWriter(new FileWriter(resultsFile));
 		
 		if (vp != null) {
@@ -341,5 +352,17 @@ public class TestRunner {
 		}
 		
 		pw.close();
+	}
+
+	private static List<Query> loadQueries(String queriesFile, String query, QueryLoader ql) throws IOException {
+		List<Query> queries = ql.loadQueryFile(queriesFile);
+		log.info("loaded " + queries.size() + " queries");
+		
+		if (query != null) {
+			for (Iterator<Query> i = queries.iterator(); i.hasNext(); )
+				if (!i.next().getName().equals(query))
+					i.remove();
+		}
+		return queries;
 	}
 }

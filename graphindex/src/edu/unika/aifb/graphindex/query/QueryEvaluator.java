@@ -61,9 +61,8 @@ public class QueryEvaluator implements IQueryEvaluator {
 	private StructureIndex m_index;
 	private ExtensionManager m_em;
 	private ExtensionStorage m_es;
-	private QueryMappingListener m_listener;
 	private Timings m_timings;
-	private HashMap<String,JoinMatcher2> m_matchers;
+	private HashMap<String,JoinMatcher> m_matchers;
 	private MappingListValidator m_mlv;
 	static final Logger log = Logger.getLogger(QueryEvaluator.class);
 	
@@ -73,15 +72,18 @@ public class QueryEvaluator implements IQueryEvaluator {
 		m_em = m_index.getExtensionManager();
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		m_es = m_em.getExtensionStorage();
-		m_matchers = new HashMap<String,JoinMatcher2>();
-		m_listener = new QueryMappingListener(m_indexReader);
+		m_matchers = new HashMap<String,JoinMatcher>();
 		m_mlv = new MappingListValidator(m_indexReader, m_index.getCollector());
 //		for (Graph<String> ig : m_indexReader.getIndexGraphs()) {
 //			m_matchers.put(ig, new JoinMatcher(ig, m_listener, m_index));
 //		}
 		for (String ig : m_indexReader.getGraphNames()) {
-			m_matchers.put(ig, new JoinMatcher2(m_index, ig, m_listener));
+			m_matchers.put(ig, new JoinMatcher(m_index, ig));
 		}
+	}
+	
+	public MappingListValidator getMLV() {
+		return m_mlv;
 	}
 	
 	public int evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
@@ -94,21 +96,14 @@ public class QueryEvaluator implements IQueryEvaluator {
 		
 		Graph<QueryNode> origGraph = query.getGraph();
 		
-//		final ExecutorService executor = Executors.newFixedThreadPool(1);
-//		final ExecutorCompletionService<List<String[]>> completionService = new ExecutorCompletionService<List<String[]>>(executor);
 		List<String[]> result = new ArrayList<String[]>();
-//		for (Graph<String> indexGraph : m_indexReader.getIndexGraphs()) {
 		for (String indexGraph : m_indexReader.getGraphNames()) {
 			m_timings.start(Timings.SETUP);
 			
-//			Util.printDOT(query.getName() + ".dot", origGraph);
-//			Util.printDOT(query.getName() + "_m.dot", qg);
-
-			JoinMatcher2 matcher = m_matchers.get(indexGraph);
+			JoinMatcher matcher = m_matchers.get(indexGraph);
 			
 			matcher.setTimings(m_timings);
 			matcher.setQueryGraph(query, origGraph);
-			m_listener.setQueryGraph(query, origGraph);
 
 			GTable.timings = null;
 			Tables.timings = null;
@@ -119,32 +114,18 @@ public class QueryEvaluator implements IQueryEvaluator {
 			GTable<String> matches = matcher.match();
 			m_timings.end(Timings.MATCH);
 
-//			List<Map<String,String>> mappings = m_listener.generateMappings();
-			
-//			if (mappings.size() == 0)
-//				continue;
+			if (matches == null || matches.rowCount() == 0)
+				continue;
 			
 			GTable.timings = m_timings;
 			Tables.timings = m_timings;
 			
 			long vt = System.currentTimeMillis();
-//			List<String[]> res = m_mlv.validateMappings(query, origGraph, mappings, query.getEvalOrder(), query.getSelectVariables());
-//			List<String[]> res = m_mlv.validateMappings(query, origGraph, matches, query.getEvalOrder(), query.getSelectVariables());
-//			log.debug(System.currentTimeMillis() - vt);
-//			if (res.size() > 0)
-//				result.addAll(res);
+			List<String[]> res = m_mlv.validateMappings(query, origGraph, matches, query.getEvalOrder(), query.getSelectVariables());
+
+			if (res.size() > 0)
+				result.addAll(res);
 		}
-//		executor.shutdown();
-//		log.debug("result maps: " + results.size());
-		
-//		if (result.size() < 50) {
-//			for (String[] res : result) {
-//				String s = "";
-//				for (String r : res)
-//					s += r + " ";
-//				log.info("\t" + s);
-//			}
-//		}
 		log.debug("size: " + result.size());
 		
 		long end = System.currentTimeMillis();
@@ -152,26 +133,6 @@ public class QueryEvaluator implements IQueryEvaluator {
 		
 		m_index.getCollector().addTimings(m_timings);
 
-//		if (result.size() > 0) {
-//			Set<Map<String,String>> maps = new HashSet<Map<String,String>>();
-//			for (String[] row : result) {
-//				Map<String,String> map = new HashMap<String,String>();
-//				for (int i = 0; i < row.length; i++)
-//					map.put("" + i, row[i]);
-//				maps.add(map);
-//			}
-//			log.debug(maps.size());
-//		}
-		
-//		if (result.size() > 0) {
-//			for (int i = 0; i < result.get(0).length; i++) {
-//				Set<String> vals = new HashSet<String>();
-//				for (String[] row : result)
-//					vals.add(row[i]);
-//				log.debug(vals.size());
-//			}
-//		}
-		
 		((LuceneExtensionStorage)m_es).logStats(log);
 		
 		return result.size();

@@ -18,10 +18,13 @@ import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
+import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
+import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
 import edu.unika.aifb.graphindex.util.Timings;
@@ -29,186 +32,157 @@ import edu.unika.aifb.graphindex.util.Timings;
 public class JoinMatcher {
 
 	private Graph<QueryNode> m_queryGraph;
-	private Graph<String> m_indexGraph;
-	private Map<String,List<GraphEdge<String>>> m_l2e;
-	private Map<String,GTable<Integer>> m_p2ts, m_p2to;
-	private MappingListener m_listener;
+	private HashMap<String,GTable<String>> m_p2ts;
+	private HashMap<String,GTable<String>> m_p2to;
 	private Timings m_timings;
 	private ExtensionStorage m_es;
-//	private Map<String,List<GraphEdge<String>>> m_s2e, m_d2e;
+	private GraphStorage m_gs;
+	private Set<String> m_signatureNodes;
+	private Set<String> m_joinNodes;
+	private Map<String,Integer> m_joinCounts;
 	
 	private final static Logger log = Logger.getLogger(JoinMatcher.class);
 	
-	public JoinMatcher(Graph<String> indexGraph, MappingListener listener, StructureIndex index) {
-		m_indexGraph = indexGraph;
-		m_listener = listener;
+	public JoinMatcher(StructureIndex index, String graphName) throws StorageException {
 		m_es = index.getExtensionManager().getExtensionStorage();
+		m_gs = index.getGraphManager().getGraphStorage();
 		
-		m_l2e = new HashMap<String,List<GraphEdge<String>>>();
-		m_p2ts = new HashMap<String,GTable<Integer>>();
-		m_p2to = new HashMap<String,GTable<Integer>>();
+		m_p2ts = new HashMap<String,GTable<String>>();
+		m_p2to = new HashMap<String,GTable<String>>();
+		
+		Set<LabeledEdge<String>> edges = m_gs.loadEdges(graphName);
 		
 		long start = System.currentTimeMillis();
-		for (GraphEdge<String> e : indexGraph.edges()) {
-			List<GraphEdge<String>> edges = m_l2e.get(e.getLabel());
-			if (edges == null) {
-				edges = new ArrayList<GraphEdge<String>>();
-				m_l2e.put(e.getLabel(), edges);
-			}
-			
-			edges.add(e);
-			
-			GTable<Integer> table = m_p2ts.get(e.getLabel());
+		for (LabeledEdge<String> e : edges) {
+
+			GTable<String> table = m_p2ts.get(e.getLabel());
 			if (table == null) {
-				table = new GTable<Integer>("source", "target");
+				table = new GTable<String>("source", "target");
 				m_p2ts.put(e.getLabel(), table);
 			}
-			table.addRow(new Integer[] { e.getSrc(), e.getDst() });
+			table.addRow(new String[] { e.getSrc(), e.getDst() });
 
 			table = m_p2to.get(e.getLabel());
 			if (table == null) {
-				table = new GTable<Integer>("source", "target");
+				table = new GTable<String>("source", "target");
 				m_p2to.put(e.getLabel(), table);
 			}
-			table.addRow(new Integer[] { e.getSrc(), e.getDst() });
+			table.addRow(new String[] { e.getSrc(), e.getDst() });
 		}
 		
-		for (GTable<Integer> t : m_p2ts.values())
+		for (GTable<String> t : m_p2ts.values())
 			t.sort(0);
-		for (GTable<Integer> t : m_p2to.values())
+		for (GTable<String> t : m_p2to.values())
 			t.sort(1);
 		
-		log.debug(System.currentTimeMillis() - start);
+//		log.debug(System.currentTimeMillis() - start);
 	}
 	
-	public void setQueryGraph(Graph<QueryNode> queryGraph) {
+	private GTable<String> purgeTable(GTable<String> table) {
+		long start = System.currentTimeMillis();
+		GTable<String> purged = new GTable<String>(table.getColumnNames());
+		if (table.isSorted())
+			purged.setSortedColumn(table.getSortedColumn());
+		
+		List<Integer> sigCols = getSignatureColumns(table);
+
+		if (sigCols.size() == 0 || sigCols.size() == table.columnCount())
+			return table;
+		
+		Set<String> signatures = new HashSet<String>(table.rowCount() / 2);
+		for (String[] row : table) {
+			String sig = getSignature(row, sigCols);
+			if (!signatures.contains(sig)) {
+				signatures.add(sig);
+				purged.addRow(row);
+			}
+		}
+		log.debug("purged " + table.rowCount() + " => " + purged.rowCount() + " in " + (System.currentTimeMillis() - start) + " msec");
+		return purged;
+	}
+	
+//	private GTable<String> purgeTable(GTable<String> table, boolean includeJoinNodes) {
+//		if (includeJoinNodes)
+//			return purgeTable(table, m_joinNodes.toArray(new String[]{}));
+//		else 
+//			return purgeTable(table);
+//	}
+	
+	public void setQueryGraph(Query query, Graph<QueryNode> queryGraph) {
 		m_queryGraph = queryGraph;
+		m_signatureNodes = new HashSet<String>();
+		m_joinNodes = new HashSet<String>();
+		m_joinCounts = new HashMap<String,Integer>();
+		
+		for (int i = 0; i < m_queryGraph.nodeCount(); i++) {
+			if (m_queryGraph.inDegreeOf(i) > 0)
+				m_signatureNodes.add(m_queryGraph.getNode(i).getSingleMember());
+			else if (m_queryGraph.outDegreeOf(i) > 1)
+				m_joinNodes.add(m_queryGraph.getNode(i).getSingleMember());
+			
+			m_joinCounts.put(m_queryGraph.getNode(i).getSingleMember(), m_queryGraph.inDegreeOf(i) + m_queryGraph.outDegreeOf(i));
+		}
+		
+		if (query.getRemovedNodes().size() > 0) {
+			for (String node : query.getRemovedNodes()) {
+				if (!m_signatureNodes.contains(node))
+					m_signatureNodes.remove(node);
+			}
+		}
+		
+		log.debug("sig nodes: " + m_signatureNodes);
+		log.debug("join nodes: " + m_joinNodes);
+//		log.debug("join counts: " + m_joinCounts);
 	}
 	
 	public void setTimings(Timings timings) {
 		m_timings = timings;
 	}
 	
-	private Table join(Table left, Table right, List<String> cols) {
-		long start = System.currentTimeMillis();
-		
-		if (left.rowCount() >= right.rowCount()) {
-//			log.debug("should swap");
-
-//			List<String> tmp = leftCols;
-//			leftCols = rightCols;
-//			rightCols = tmp;
-//			
-//			Table tmpTable = left;
-//			left = right;
-//			right = tmpTable;
-		}
-		
-//		log.debug(left + " " + right + " " + cols);
-		
-		int[] lc = new int [cols.size()];
-		for (int i = 0; i < lc.length; i++) {
-			lc[i] = left.getColumn(cols.get(i));
-		}
-		
-		int[] rc = new int [cols.size()];
-		int[] src = new int [cols.size()];
-		for (int i = 0; i < rc.length; i++) {
-			rc[i] = right.getColumn(cols.get(i));
-			src[i] = right.getColumn(cols.get(i));
-		}
-		
-		Arrays.sort(src);
-			
-		List<String> resultColumns = new ArrayList<String>();
-		for (String s : left.getColumnNames())
-			resultColumns.add(s);
-		for (String s : right.getColumnNames())
-			if (!cols.contains(s))
-				resultColumns.add(s);
-		
-		Table result = new Table(resultColumns);
-		
-		Map<String,List<int[]>> leftVal2Rows = new HashMap<String,List<int[]>>();
-		for (int[] row : left) {
-			String joinAttribute = getJoinAttribute(row, lc);
-			List<int[]> rows = leftVal2Rows.get(joinAttribute);
-			if (rows == null) {
-				rows = new ArrayList<int[]>();
-				leftVal2Rows.put(joinAttribute, rows);
-			}
-			rows.add(row);
-		}
-		
-		int count = 0;
-		for (int[] row : right) {
-			List<int[]> leftRows = leftVal2Rows.get(getJoinAttribute(row, rc));
-			if (leftRows != null && leftRows.size() > 0) {
-				for (int[] leftRow : leftRows) {
-					int[] resultRow = new int [result.columnCount()];
-					System.arraycopy(leftRow, 0, resultRow, 0, leftRow.length);
-					int s = 0, d = leftRow.length;
-					for (int i = 0; i < src.length; i++) {
-						System.arraycopy(row, s, resultRow, d, src[i] - s);
-						s = src[i] + 1;
-						d += src[i] - s + 1;
-					}
-					if (s < row.length)
-						System.arraycopy(row, s, resultRow, d, resultRow.length - d);
-//					System.arraycopy(row, 0, resultRow, leftRow.length, rc);
-//					System.arraycopy(row, rc + 1, resultRow, leftRow.length + rc, row.length - rc - 1);
-//					System.arraycopy(leftRow, 0, resultRow, 0, leftRow.length);
-//					System.arraycopy(row, 0, resultRow, leftRow.length, row.length);
-					result.addRow(resultRow);
-					count++;
-//					if (count % 100000 == 0)
-//						log.debug(" rows: " + count);
-				}
-			}
-		}
-//		log.debug(left + " " + right + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
-		return result;
-	}
-	private String getJoinAttribute(int[] row, int[] cols) {
-		String s = "";
-		for (int col : cols)
-			s += row[col] + "_";
-		return s;
-	}
-	
-	private Table toTable(String sourceCol, String targetCol, List<GraphEdge<String>> edges) {
-		Table t = new Table(Arrays.asList(sourceCol, targetCol));
-		
-		for (GraphEdge<String> edge : edges) {
-			int[] row = new int[] { edge.getSrc(), edge.getDst() };
-			t.addRow(row);
-		}
-		
-		return t;
-	}
-	
 	private String getSourceColumn(GraphEdge<QueryNode> edge) {
 //		return edge.toString() + "_src";
-		return edge.getSrc() + "";
+		return m_queryGraph.getNode(edge.getSrc()).getName();
 	}
 	
 	private String getTargetColumn(GraphEdge<QueryNode> edge) {
 //		return edge.toString() + "_dst";
-		return edge.getDst() + "";
+		return m_queryGraph.getNode(edge.getDst()).getName();
 	}
 	
-	private GTable<Integer> getTable(GraphEdge<QueryNode> queryEdge, int col) throws StorageException {
+	private List<Integer> getSignatureColumns(GTable<String> table) {
+		List<Integer> sigCols = new ArrayList<Integer>();
+
+		for (String colName : table.getColumnNames())
+			if (m_signatureNodes.contains(colName) || (m_joinNodes.contains(colName) && m_joinCounts.get(colName) > 0))
+				sigCols.add(table.getColumn(colName));
+
+		return sigCols;
+	}
+	
+	private String getSignature(String[] row, List<Integer> sigCols) {
+		StringBuilder sb = new StringBuilder();
+		for (int sigCol : sigCols)
+			sb.append(row[sigCol]).append("__");
+		return sb.toString();
+	}
+	
+	private GTable<String> getTable(GraphEdge<QueryNode> queryEdge, int col) throws StorageException {
 		QueryNode qnSrc = m_queryGraph.getNode(queryEdge.getSrc());
 		QueryNode qnDst = m_queryGraph.getNode(queryEdge.getDst());
+		String srcNode = qnSrc.getName();
+		String dstNode = qnDst.getName();
 
-		GTable<Integer> edgeTable;
+		GTable<String> edgeTable;
 		if (col == 0)
 			edgeTable = m_p2ts.get(queryEdge.getLabel());
 		else
 			edgeTable = m_p2to.get(queryEdge.getLabel());
 		
-		if (qnSrc.hasVariables() && qnDst.hasVariables())
-			return edgeTable;
+		if (qnSrc.hasVariables() && qnDst.hasVariables()) {
+			edgeTable.setColumnName(0, srcNode);
+			edgeTable.setColumnName(1, dstNode);
+			return purgeTable(edgeTable);
+		}
 		
 		boolean checkSrc = qnSrc.hasGroundTerms() && !qnSrc.hasVariables();
 		boolean checkDst = qnDst.hasGroundTerms() && !qnDst.hasVariables();
@@ -222,19 +196,32 @@ public class JoinMatcher {
 		if (checkDst)
 			validObjectExt = m_es.getExtension(qnDst.getSingleMember());
 		m_timings.end(Timings.GT);
-//		log.debug(validSubjectExts);
-//		log.debug(validObjectExt);
-		GTable<Integer> table = new GTable<Integer>("source", "target");
-		for (Integer[] row : edgeTable) {
+
+		
+		GTable<String> table = new GTable<String>(srcNode, dstNode);
+		List<Integer> sigCols = getSignatureColumns(table);
+		Set<String> signatures = new HashSet<String>(edgeTable.rowCount() / 2);
+		log.debug(sigCols);
+		log.debug(edgeTable);
+		for (String[] row : edgeTable) {
 			boolean foundAll = true;
-			if (checkSrc && !validSubjectExts.contains(m_indexGraph.getNode(row[1])))
+			if (checkSrc && !validSubjectExts.contains(row[1]))
 				foundAll = false;
 			
-			if (foundAll && checkDst && !validObjectExt.equals(m_indexGraph.getNode(row[1])))
+			if (foundAll && checkDst && !validObjectExt.equals(row[1]))
 				foundAll = false;
-			
-			if (foundAll)
-				table.addRow(row);
+
+			if (foundAll) {
+				if (sigCols.size() == 1) {
+					String sig = getSignature(row, sigCols);
+					if (!signatures.contains(sig)) {
+						table.addRow(row);
+						signatures.add(sig);
+					}
+				}
+				else
+					table.addRow(row);
+			}
 		}
 //		log.debug("=> " + table);
 		table.setSortedColumn(col);
@@ -242,72 +229,14 @@ public class JoinMatcher {
 		return table;
 	}
 	
-	private List<GraphEdge<String>> getEdges(GraphEdge<QueryNode> queryEdge) throws StorageException {
-		QueryNode qnSrc = m_queryGraph.getNode(queryEdge.getSrc());
-		QueryNode qnDst = m_queryGraph.getNode(queryEdge.getDst());
-		if (qnSrc.hasVariables() && qnDst.hasVariables())
-			return m_l2e.get(queryEdge.getLabel());
-		
-		boolean checkSrc = qnSrc.hasGroundTerms() && !qnSrc.hasVariables();
-		boolean checkDst = qnDst.hasGroundTerms() && !qnDst.hasVariables();
-		
-		Set<String> validObjectExts = new HashSet<String>();
-		Set<String> validSubjectExts = new HashSet<String>();
-		if (checkSrc)
-			validSubjectExts = new HashSet<String>(m_es.getExtensions(Index.SE, qnSrc.getSingleMember()));
-		if (checkDst)
-			validObjectExts = new HashSet<String>(m_es.getExtensions(Index.OE, qnDst.getSingleMember()));
-
-		List<GraphEdge<String>> indexEdges = m_l2e.get(queryEdge.getLabel());
-		List<GraphEdge<String>> edges = new ArrayList<GraphEdge<String>>();
-		for (GraphEdge<String> edge : indexEdges) {
-			if (!edge.getLabel().equals(queryEdge.getLabel()))
-				continue;
-			
-			m_timings.start(Timings.GT);
-			boolean foundAll = true;
-			if (checkSrc) {
-//				for (String gt : qnSrc.getGroundTerms()) {
-//					if (!m_es.hasTriples(Index.EPS, m_indexGraph.getNode(edge.getDst()), edge.getLabel(), gt)) {
-//						foundAll = false;
-//						break;
-//					}
-//				}
-				if (!validSubjectExts.contains(m_indexGraph.getNode(edge.getDst())))
-					foundAll = false;
-			}
-			
-			if (foundAll && checkDst) {
-//				for (String gt : qnDst.getGroundTerms()) {
-//					if (!m_es.hasTriples(Index.EPO, m_indexGraph.getNode(edge.getDst()), edge.getLabel(), gt)) {
-//						foundAll = false;
-//						break;
-//					}
-//				}
-				if (!validObjectExts.contains(m_indexGraph.getNode(edge.getDst())))
-					foundAll = false;
-			}
-			m_timings.end(Timings.GT);
-			
-			if (foundAll)
-				edges.add(edge);
-		}
-		return edges;
+	private void processed(String n1, String n2) {
+		m_joinCounts.put(n1, m_joinCounts.get(n1) - 1);
+		m_joinCounts.put(n2, m_joinCounts.get(n2) - 1);
 	}
-
-	public void match() throws StorageException {
+	
+	public GTable<String> match() throws StorageException {
 		if (m_queryGraph.edgeCount() == 1) {
-			GraphEdge<QueryNode> e = m_queryGraph.edges().get(0);
-			String s = m_queryGraph.getNode(e.getSrc()).getName();
-			String t = m_queryGraph.getNode(e.getDst()).getName();
-			GTable<Integer> table = getTable(e, 1);
-			for (Integer[] row : table) {
-				Map<String,String> map = new HashMap<String,String>();
-				map.put(s, m_indexGraph.getNode(row[0]));
-				map.put(t, m_indexGraph.getNode(row[1]));
-				m_listener.mapping(map);
-			}
-			return;
+			return getTable(m_queryGraph.edges().get(0), 1);
 		}
 		
 //		final HashMap<GraphEdge<QueryNode>,GTable<Integer>> queryEdge2IndexEdges = new HashMap<GraphEdge<QueryNode>,GTable<Integer>>();
@@ -343,7 +272,7 @@ public class JoinMatcher {
 		toVisit.clear();
 		toVisit.offer(startEdge);
 		
-		GTable<Integer> result = null;
+		GTable<String> result = null;
 		
 		while (toVisit.size() > 0) {
 			GraphEdge<QueryNode> currentEdge = toVisit.poll();
@@ -355,43 +284,34 @@ public class JoinMatcher {
 			String sourceCol = getSourceColumn(currentEdge);
 			String targetCol = getTargetColumn(currentEdge);
 			
-//			log.debug(m_queryGraph.getNode(currentEdge.getSrc()).getSingleMember() + " -> " + m_queryGraph.getNode(currentEdge.getDst()).getSingleMember() + " (" + " rows)");
+			log.debug(m_queryGraph.getNode(currentEdge.getSrc()).getSingleMember() + " -> " + m_queryGraph.getNode(currentEdge.getDst()).getSingleMember() + " (" + " rows)");
 			
 			if (result == null) {
-				GTable<Integer> currentEdges = getTable(currentEdge, 0);
-				currentEdges.setColumnName(0, sourceCol);
-				currentEdges.setColumnName(1, targetCol);
-				result = currentEdges;
+				result = getTable(currentEdge, 0);
+				processed(sourceCol, targetCol);
 			}
 			else {
 				if (result.hasColumn(sourceCol) && result.hasColumn(targetCol)) {
-					GTable<Integer> currentEdges = getTable(currentEdge, 0);
-					currentEdges.setColumnName(0, sourceCol);
-					currentEdges.setColumnName(1, targetCol);
-					result = Tables.hashJoinInteger(result, currentEdges, Arrays.asList(sourceCol, targetCol));
+					GTable<String> currentEdges = getTable(currentEdge, 0);
+					result = Tables.hashJoin(result, currentEdges, Arrays.asList(sourceCol, targetCol));
 				}
 				else if (result.hasColumn(sourceCol)) {
-					GTable<Integer> currentEdges = getTable(currentEdge, 0);
-					currentEdges.setColumnName(0, sourceCol);
-					currentEdges.setColumnName(1, targetCol);
-
+					GTable<String> currentEdges = getTable(currentEdge, 0);
 					result.sort(sourceCol, true);
-					
-					result = Tables.mergeJoinInteger(result, currentEdges, sourceCol);
+					result = Tables.mergeJoin(result, currentEdges, sourceCol);
 				}
 				else {
-					GTable<Integer> currentEdges = getTable(currentEdge, 1);
-					currentEdges.setColumnName(0, sourceCol);
-					currentEdges.setColumnName(1, targetCol);
-
+					GTable<String> currentEdges = getTable(currentEdge, 1);
 					result.sort(targetCol, true);
-
-					result = Tables.mergeJoinInteger(result, currentEdges, targetCol);
+					result = Tables.mergeJoin(result, currentEdges, targetCol);
 				}
+				processed(sourceCol, targetCol);
+				result = purgeTable(result);
 			}
 			
+			
 			if (result.rowCount() == 0)
-				return;
+				return null;
 			
 			for (GraphEdge<QueryNode> e : m_queryGraph.outgoingEdges(currentEdge.getSrc()))
 				if (!visited.contains(e))
@@ -406,20 +326,23 @@ public class JoinMatcher {
 			for (GraphEdge<QueryNode> e : m_queryGraph.incomingEdges(currentEdge.getDst()))
 				if (!visited.contains(e))
 					toVisit.add(e);
+//			log.debug(result);
+//			result = purgeTable(result);
+//			log.debug("join counts: " + m_joinCounts);
 		}
 		log.debug("rows: " + result.rowCount());
-//		log.debug("mg start");
-		int[] cols = new int [result.getColumnNames().length];
-		for (int i = 0; i < result.getColumnNames().length; i++)
-			cols[i] = Integer.parseInt(result.getColumnNames()[i]);
-		
-		for (Integer[] row : result) {
-			Map<String,String> map = new HashMap<String,String>();
-			for (int i = 0; i < row.length; i++)
-				map.put(m_queryGraph.getNode(cols[i]).getName(), m_indexGraph.getNode(row[i]));
-
-			m_listener.mapping(map);
-		}
-//		log.debug("mg done");
+//		result = purgeTable(result, false);
+//		int[] cols = new int [result.getColumnNames().length];
+//		for (int i = 0; i < result.getColumnNames().length; i++)
+//			cols[i] = Integer.parseInt(result.getColumnNames()[i]);
+//		
+//		for (String[] row : result) {
+//			Map<String,String> map = new HashMap<String,String>();
+//			for (int i = 0; i < row.length; i++)
+//				map.put(m_queryGraph.getNode(cols[i]).getName(), row[i]);
+//
+//			m_listener.mapping(map);
+//		}
+		return result;
 	}
 }

@@ -1,7 +1,9 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
@@ -25,12 +27,14 @@ public class StructureIndex {
 	private boolean m_gzip = false;
 	private int m_configDocCacheSize = 100;
 	private Set<String> m_forwardEdges, m_backwardEdges;
+	private Map<String,Integer> m_objectCardinalities;
 	
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
 		m_collector = new StatisticsCollector();
 		m_forwardEdges = new HashSet<String>();
 		m_backwardEdges = new HashSet<String>();
+		m_objectCardinalities = new HashMap<String,Integer>();
 		
 		initialize(clean, readonly);
 	}
@@ -50,7 +54,14 @@ public class StructureIndex {
 		m_gm.setGraphStorage(gs);
 		m_gm.setIndex(this);
 		m_gm.initialize(clean, readonly);
-		
+	}
+	
+	public void setObjectCardinalities(Map<String,Integer> cards) {
+		m_objectCardinalities = cards;
+	}
+	
+	public Integer getObjectCardinality(String property) {
+		return m_objectCardinalities.get(property);
 	}
 	
 	public Set<String> getForwardEdges() {

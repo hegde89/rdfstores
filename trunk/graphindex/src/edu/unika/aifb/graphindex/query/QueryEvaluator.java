@@ -86,7 +86,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 		return m_mlv;
 	}
 	
-	public int evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
+	public List<String[]> evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
 		log.info("evaluating...");
 
 		m_index.getCollector().reset();
@@ -135,7 +135,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 
 		((LuceneExtensionStorage)m_es).logStats(log);
 		
-		return result.size();
+		return result;
 	}
 	
 	public void clearCaches() throws StorageException {

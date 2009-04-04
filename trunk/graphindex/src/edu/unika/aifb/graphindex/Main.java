@@ -104,7 +104,6 @@ public class Main {
 		String indexName = (String)config.get("index_name");
 		String outputDirectory = (String)config.get("output_directory") + "/" + indexName;
 		String inputDirectory = (String)config.get("input_directory");
-		String edgeSetFile = (String)config.get("edge_set_file");
 		String fwEdgeSetFile = (String)config.get("fw_edge_set_file");
 		String bwEdgeSetFile = (String)config.get("bw_edge_set_file");
 		
@@ -152,7 +151,6 @@ public class Main {
 			}
 		}
 		
-		Set<String> edgeSet = new HashSet<String>();
 		Set<String> fwEdgeSet = new HashSet<String>();
 		Set<String> bwEdgeSet = new HashSet<String>();
 		

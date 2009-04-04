@@ -168,7 +168,7 @@ public class TestRunner {
 //					log.debug(input);
 				
 				long start = System.currentTimeMillis();
-				int res = qe.evaluate(q);
+				int res = qe.evaluate(q).size();
 				long duration = System.currentTimeMillis() - start;
 				
 				r.runs.get(q.getName()).add(duration);
@@ -216,7 +216,7 @@ public class TestRunner {
 					log.info("-----------------------------");
 					log.info("query run #" + j);
 					
-					Process p = Runtime.getRuntime().exec("/local_data/users/btc/gula/drop_caches.sh");
+					Process p = Runtime.getRuntime().exec("/local/users/btc/gula/drop_caches.sh");
 					p.waitFor();
 					log.info("system caches dropped");
 	
@@ -227,7 +227,7 @@ public class TestRunner {
 					log.info("gc run");
 					
 					long start = System.currentTimeMillis();
-					int res = qe.evaluate(q);
+					int res = qe.evaluate(q).size();
 					long duration = System.currentTimeMillis() - start;
 					
 					r.runs.get(q.getName()).add(duration);

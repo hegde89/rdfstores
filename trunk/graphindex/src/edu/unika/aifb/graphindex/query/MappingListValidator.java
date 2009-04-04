@@ -274,13 +274,13 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		final Set<String> matchedNodes = new HashSet<String>();
 		
 		long time = System.currentTimeMillis();
-//		final Map<String,Integer> cardinality = evc.getCardinalityMap();
-//		log.debug("card map: " + (System.currentTimeMillis() - time));
+		final Map<String,Integer> cardinality = evc.getCardinalityMap(query.getRemovedNodes());
+		log.debug("card map: " + (System.currentTimeMillis() - time));
 		
-//		for (String node : cardinality.keySet())
-//			if (isGT(node))
-//				cardinality.put(node, 1);
-//		log.debug("cardinalityMap: " + cardinality);
+		for (String node : cardinality.keySet())
+			if (isGT(node))
+				cardinality.put(node, 1);
+		log.debug("cardinalityMap: " + cardinality);
 		
 		
 //		final Map<String,Integer> scores = getScores(queryGraph);
@@ -303,14 +303,14 @@ public class MappingListValidator implements Callable<List<String[]>> {
 				String d1 = queryGraph.getNode(e1.getDst()).getSingleMember();
 				String d2 = queryGraph.getNode(e2.getDst()).getSingleMember();
 				
-				String es1 = s1 + " " + e1.getLabel() + " " + d1;
-				String es2 = s2 + " " + e2.getLabel() + " " + d2;
-
-					if (e2s.get(es1) < e2s.get(es2))
-						return -1;
-					else
-						return 1;
-				
+//				String es1 = s1 + " " + e1.getLabel() + " " + d1;
+//				String es2 = s2 + " " + e2.getLabel() + " " + d2;
+//
+//					if (e2s.get(es1) < e2s.get(es2))
+//						return -1;
+//					else
+//						return 1;
+//				
 //				int e1score = scores.get(s1) * scores.get(d1);
 //				int e2score = scores.get(s2) * scores.get(d2);
 //
@@ -319,32 +319,41 @@ public class MappingListValidator implements Callable<List<String[]>> {
 //				else
 //					return 1;
 
-//				int c1 = cardinality.get(s1) * cardinality.get(d1);
-//				int c2 = cardinality.get(s2) * cardinality.get(d2);
-//				
-//				if (c1 == c2) {
-//					if (cardinality.get(d1) < cardinality.get(d2))
-//						return 1;
-//					else
-//						return -1;
-//				}
-//				
-//				return c1 < c2 ? -1 : 1;
+//				log.debug(s1 + " " + d1 + " " + s2 + " " + d2);
+				int c1 = cardinality.get(s1) * cardinality.get(d1);
+				int c2 = cardinality.get(s2) * cardinality.get(d2);
+				
+				if (c1 == c2) {
+					Integer ce1 = m_indexReader.getIndex().getObjectCardinality(e1.getLabel());
+					Integer ce2 = m_indexReader.getIndex().getObjectCardinality(e2.getLabel());
+					
+					if (cardinality.get(d1) == cardinality.get(d2) && ce1 != null && ce2 != null && ce1.intValue() != ce2.intValue()) {
+						if (ce1 < ce2)
+							return 1;
+						else
+							return -1;
+					}
+					
+					if (cardinality.get(d1) < cardinality.get(d2))
+						return 1;
+					else
+						return -1;
+				}
+				
+				return c1 < c2 ? -1 : 1;
 
 			}
 		});
 		
-		toVisit.addAll(queryGraph.edges());
+//		toVisit.addAll(queryGraph.edges());
 		
 		Set<String> removedTargets = query.getBackwardTargets();
 		
 		log.debug("remove nodes: " + query.getRemovedNodes());
-		for (Iterator<GraphEdge<QueryNode>> i = toVisit.iterator(); i.hasNext(); ) {
-			GraphEdge<QueryNode> e = i.next();
-			if (query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
-				|| query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember())) {
-				i.remove();
-//				removedTargets.add(queryGraph.getNode(e.getDst()).getSingleMember());
+		for (GraphEdge<QueryNode> e : queryGraph.edges()) {
+			if (!query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
+				&& !query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember())) {
+				toVisit.add(e);
 			}
 		}
 		log.debug("removed targets: " + removedTargets);
@@ -352,12 +361,6 @@ public class MappingListValidator implements Callable<List<String[]>> {
 			
 		
 		// TODO for start edge prefer edge where the src node has no incoming edges
-		
-//		log.debug(toVisit);
-		
-//		ExecutorService executor = Executors.newFixedThreadPool(m_indexReader.getNumEvalThreads());
-//		ExecutorCompletionService<EvaluationClass> completionService = new ExecutorCompletionService<EvaluationClass>(executor);
-//		ExecutorCompletionService<EvaluationClass> completionService = new ExecutorCompletionService<EvaluationClass>(executor);
 		
 		while (toVisit.size() > 0) {
 			long edgeStart = System.currentTimeMillis();
@@ -897,7 +900,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 				}
 			}
 		}
-		log.debug("rows: " + rows);
+		log.debug("rows: " + rows + " => " + result.size());
 		log.debug("extloaded: " + extLoaded);
 		log.debug("loaded: " + loaded);
 		extLoaded = 0;

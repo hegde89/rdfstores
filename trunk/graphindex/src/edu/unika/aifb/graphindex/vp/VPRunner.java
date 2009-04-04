@@ -162,10 +162,12 @@ public class VPRunner {
 			}
 			else if (dataset.equals("lubm")) {
 				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt");
+				String queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
+				List<Query> queries = ql.loadQueryFile(queriesFile);
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("lq9"))
+					if (!q.getName().equals("q83"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());

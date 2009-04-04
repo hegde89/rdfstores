@@ -4,10 +4,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -267,6 +270,25 @@ public class Runner {
 		return importer;
  	}
 	
+	private static void calculateCardinalities(StructureIndexReader ir) throws StorageException, IOException, InterruptedException, ExecutionException {
+		QueryEvaluator qe = ir.getQueryEvaluator();
+		QueryParser qp = new QueryParser();
+		Map<String,Integer> cmap = new HashMap<String,Integer>();
+		
+		for (String edge : ir.getIndex().getBackwardEdges()) {
+			Query q = qp.parseQuery("?x " + edge + " ?y");
+			q.createQueryGraph(ir.getIndex());
+			List<String[]> result = qe.evaluate(q);
+			log.debug(edge + ": " + result.size());
+			Set<String> values = new HashSet<String>();
+			for (String[] row : result)
+				values.add(row[q.getSelectVariables().indexOf("?y")]);
+			log.debug(edge + ": " + result.size() + " => " + values.size());
+			cmap.put(edge, values.size());
+		}
+		log.debug(cmap);
+	}
+	
 	/**
 	 * @param args
 	 * @throws StorageException 
@@ -327,12 +349,29 @@ public class Runner {
 		
 		if (stages.contains("query")) {
 			String queriesFile, queryOutputDirectory;
+			List<String> queryFiles = new ArrayList<String>();
 			if (dataset.equals("sweto")) {
 				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpqueries/";
+				String dir = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/dblp/";
+				queryFiles.add(dir + "AtomQuery_noResult.txt");
+				queryFiles.add(dir + "AtomQuery.txt");
+				queryFiles.add(dir + "StarQuery_noResult.txt");
+				queryFiles.add(dir + "StarQuery.txt");
+				queryFiles.add(dir + "EntityQuery_noResult.txt");
+				queryFiles.add(dir + "EntityQuery.txt");
+				queryFiles.add(dir + "PathQuery_noResult.txt");
+				queryFiles.add(dir + "PathQuery.txt");
+				queryFiles.add(dir + "GraphQuery_noResult.txt");
+				queryFiles.add(dir + "GraphQuery.txt");
 			}
 			else if (dataset.equals("lubm")) {
 				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/AtomQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/GraphQuery.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/";
 			}
 			else {
@@ -344,18 +383,26 @@ public class Runner {
 			index.setNumEvalThreads(2);
 			index.getIndex().setTableCacheSize(1);
 			index.getIndex().setDocumentCacheSize(1000);
-
+			
+			calculateCardinalities(index);
+			System.exit(-1);
 			QueryLoader ql = index.getQueryLoader();
-			List<Query> queries = ql.loadQueryFile(queriesFile);
+			List<Query> queries = new ArrayList<Query>();
+			if (queryFiles != null && queryFiles.size() > 0) {
+				for (String file : queryFiles)
+					queries.addAll(ql.loadQueryFile(file));
+			}
+			else
+				queries.addAll(ql.loadQueryFile(queriesFile));
 			
 			log.debug("bw: " + ql.getBackwardEdgeSet().size() + " " + ql.getBackwardEdgeSet());
 			log.debug("fw: " + ql.getForwardEdgeSet().size() + " " +ql.getForwardEdgeSet());
 			
-			for (Query q : queries) {
-				PrintWriter out = new PrintWriter(new FileWriter(queryOutputDirectory + q.getName() + ".txt"));
-				out.print(q.toSPARQL());
-				out.close();
-			}
+//			for (Query q : queries) {
+//				PrintWriter out = new PrintWriter(new FileWriter(queryOutputDirectory + q.getName() + ".txt"));
+//				out.print(q.toSPARQL());
+//				out.close();
+//			}
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
 			qe.getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
@@ -368,7 +415,7 @@ public class Runner {
 				log.debug("query: " + q.getName());
 				log.debug(q);
 //				q.createQueryGraph(index.getIndex());
-				sizes += q.getName() + "\t" + qe.evaluate(q) + "\n";
+				sizes += q.getName() + "\t" + qe.evaluate(q).size() + "\n";
 				qe.clearCaches();
 //				break;
 			}

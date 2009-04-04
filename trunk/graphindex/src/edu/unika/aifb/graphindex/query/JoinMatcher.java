@@ -42,6 +42,7 @@ public class JoinMatcher {
 	private Map<String,Integer> m_joinCounts;
 	
 	private final static Logger log = Logger.getLogger(JoinMatcher.class);
+	private boolean m_purgeNeeded;
 	
 	public JoinMatcher(StructureIndex index, String graphName) throws StorageException {
 		m_es = index.getExtensionManager().getExtensionStorage();
@@ -78,26 +79,37 @@ public class JoinMatcher {
 //		log.debug(System.currentTimeMillis() - start);
 	}
 	
-	private GTable<String> purgeTable(GTable<String> table) {
+	private GTable<String> purgeTable(GTable<String> table, Integer newColumn) {
 		long start = System.currentTimeMillis();
-		GTable<String> purged = new GTable<String>(table.getColumnNames());
-		if (table.isSorted())
-			purged.setSortedColumn(table.getSortedColumn());
+		GTable<String> purged = new GTable<String>(table, false);
 		
 		List<Integer> sigCols = getSignatureColumns(table);
+		log.debug("sig cols: " + sigCols + " " + sigCols.size());
+		log.debug("new col: " + newColumn);
 
 		if (sigCols.size() == 0 || sigCols.size() == table.columnCount())
 			return table;
 		
+		boolean nopurge = false;
+		if (!m_purgeNeeded && newColumn != null && sigCols.contains(newColumn.intValue())) {
+			log.debug("new column is a sig col, no purged needed");
+			nopurge = true;
+			purged.setRows(table.getRows());
+			return purged;
+		}
+		
 		Set<String> signatures = new HashSet<String>(table.rowCount() / 2);
 		for (String[] row : table) {
 			String sig = getSignature(row, sigCols);
-			if (!signatures.contains(sig)) {
-				signatures.add(sig);
+			if (signatures.add(sig)) 
 				purged.addRow(row);
-			}
 		}
 		log.debug("purged " + table.rowCount() + " => " + purged.rowCount() + " in " + (System.currentTimeMillis() - start) + " msec");
+		if (table.rowCount() > purged.rowCount()) {
+//			log.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			if (nopurge)
+				log.debug("??????");
+		}
 		return purged;
 	}
 	
@@ -153,7 +165,7 @@ public class JoinMatcher {
 		List<Integer> sigCols = new ArrayList<Integer>();
 
 		for (String colName : table.getColumnNames())
-			if (m_signatureNodes.contains(colName) || (m_joinNodes.contains(colName) && m_joinCounts.get(colName) > 0))
+			if (m_signatureNodes.contains(colName) || (m_joinNodes.contains(colName) && m_joinCounts.get(colName) > 0)) 
 				sigCols.add(table.getColumn(colName));
 
 		return sigCols;
@@ -179,9 +191,10 @@ public class JoinMatcher {
 			edgeTable = m_p2to.get(queryEdge.getLabel());
 		
 		if (qnSrc.hasVariables() && qnDst.hasVariables()) {
-			edgeTable.setColumnName(0, srcNode);
-			edgeTable.setColumnName(1, dstNode);
-			return purgeTable(edgeTable);
+			GTable<String> table = new GTable<String>(edgeTable);
+			table.setColumnName(0, srcNode);
+			table.setColumnName(1, dstNode);
+			return purgeTable(table, null);
 		}
 		
 		boolean checkSrc = qnSrc.hasGroundTerms() && !qnSrc.hasVariables();
@@ -230,8 +243,19 @@ public class JoinMatcher {
 	}
 	
 	private void processed(String n1, String n2) {
-		m_joinCounts.put(n1, m_joinCounts.get(n1) - 1);
-		m_joinCounts.put(n2, m_joinCounts.get(n2) - 1);
+		m_purgeNeeded = false;
+		
+		int c = m_joinCounts.get(n1) - 1;
+		m_joinCounts.put(n1, c);
+		if (c == 0 && m_joinNodes.contains(n1))
+			m_purgeNeeded = true;
+		
+		c = m_joinCounts.get(n2) - 1;
+		m_joinCounts.put(n2, c);
+		if (c == 0 && m_joinNodes.contains(n2))
+			m_purgeNeeded = true;
+
+		log.debug("purge needed: " + m_purgeNeeded);
 	}
 	
 	public GTable<String> match() throws StorageException {
@@ -273,7 +297,7 @@ public class JoinMatcher {
 		toVisit.offer(startEdge);
 		
 		GTable<String> result = null;
-		
+
 		while (toVisit.size() > 0) {
 			GraphEdge<QueryNode> currentEdge = toVisit.poll();
 			
@@ -283,14 +307,15 @@ public class JoinMatcher {
 			
 			String sourceCol = getSourceColumn(currentEdge);
 			String targetCol = getTargetColumn(currentEdge);
+			m_purgeNeeded = false;
 			
-			log.debug(m_queryGraph.getNode(currentEdge.getSrc()).getSingleMember() + " -> " + m_queryGraph.getNode(currentEdge.getDst()).getSingleMember() + " (" + " rows)");
-			
+			log.debug(sourceCol + " -> " + targetCol + " (" + (result != null ? result.rowCount() : "0") + " rows)");
 			if (result == null) {
 				result = getTable(currentEdge, 0);
 				processed(sourceCol, targetCol);
 			}
 			else {
+				Integer newColumn = null;
 				if (result.hasColumn(sourceCol) && result.hasColumn(targetCol)) {
 					GTable<String> currentEdges = getTable(currentEdge, 0);
 					result = Tables.hashJoin(result, currentEdges, Arrays.asList(sourceCol, targetCol));
@@ -299,16 +324,18 @@ public class JoinMatcher {
 					GTable<String> currentEdges = getTable(currentEdge, 0);
 					result.sort(sourceCol, true);
 					result = Tables.mergeJoin(result, currentEdges, sourceCol);
+					newColumn = result.getColumn(targetCol);
 				}
 				else {
 					GTable<String> currentEdges = getTable(currentEdge, 1);
+					log.debug(result);
 					result.sort(targetCol, true);
 					result = Tables.mergeJoin(result, currentEdges, targetCol);
+					newColumn = result.getColumn(sourceCol);
 				}
 				processed(sourceCol, targetCol);
-				result = purgeTable(result);
+				result = purgeTable(result, newColumn);
 			}
-			
 			
 			if (result.rowCount() == 0)
 				return null;
@@ -328,7 +355,8 @@ public class JoinMatcher {
 					toVisit.add(e);
 //			log.debug(result);
 //			result = purgeTable(result);
-//			log.debug("join counts: " + m_joinCounts);
+			log.debug("join counts: " + m_joinCounts);
+			log.debug("");
 		}
 		log.debug("rows: " + result.rowCount());
 //		result = purgeTable(result, false);

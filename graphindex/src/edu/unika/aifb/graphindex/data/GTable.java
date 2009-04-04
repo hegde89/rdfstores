@@ -36,9 +36,27 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 	
 	public GTable(String... colNames) {
 		this(colNames.length);
-		m_colNames = colNames;
-		for (int i = 0; i < colNames.length; i++)
+		m_colNames = new String[colNames.length];
+		for (int i = 0; i < colNames.length; i++) {
+			m_colNames[i] = colNames[i];
 			m_name2col.put(colNames[i], i);
+		}
+	}
+	
+	public GTable(GTable<T> table) {
+		this(table, true);
+	}
+
+	public GTable(GTable<T> table, boolean rows) {
+		this(table.getColumnNames());
+		if (table.isSorted())
+			setSortedColumn(table.getSortedColumn());
+		if (rows)
+			m_rows = table.getRows();
+	}
+	
+	public void setRows(List<T[]> rows) {
+		m_rows = rows;
 	}
 	
 	public void setColumnName(int col, String name) {

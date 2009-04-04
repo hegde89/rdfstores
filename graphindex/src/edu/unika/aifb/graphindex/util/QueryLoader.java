@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -23,6 +24,8 @@ public class QueryLoader {
 	private Map<String,String> m_namespaces;
 	private Set<String> m_bwEdgeSet;
 	private Set<String> m_fwEdgeSet;
+	private Set<String> m_requiredBwEdgeSet;
+	private Set<String> m_requiredFwEdgeSet;
 	
 	private static final Logger log = Logger.getLogger(QueryLoader.class);
 
@@ -48,10 +51,21 @@ public class QueryLoader {
 		q.setName(queryName);
 //		q.setRemoveNodes(removeNodes);
 		q.setSelectVariables(selectNodes);
+
+		// ignore the current edge sets, i.e. calculate prunable 
+		// node as if all edges were in both sets
+		q.setIgnoreIndexEdgeSets(true);
+		q.createQueryGraph(m_index);
+		// add edges to the requested edge set
+		m_requiredFwEdgeSet.addAll(q.getForwardEdgeSet());
+		m_requiredBwEdgeSet.addAll(q.getBackwardEdgeSet());
+		m_requiredBwEdgeSet.addAll(q.getNeutralEdgeSet());
+
+		q.setIgnoreIndexEdgeSets(false);
 		q.createQueryGraph(m_index);
 		
 		if (q.getGraph() == null) {
-			log.debug("query " + q.getName() + " not compatible with index edge set");
+//			log.debug("query " + q.getName() + " not compatible with index edge set");
 			return null;
 		}
 		
@@ -68,6 +82,10 @@ public class QueryLoader {
 	}
 	
 	public List<Query> loadQueryFile(String filename) throws IOException {
+		return loadQueryFile(filename, false);
+	}
+	
+	public List<Query> loadQueryFile(String filename, boolean addPrefix) throws IOException {
 		List<Query> queries = new ArrayList<Query>();
 		
 		BufferedReader in = new BufferedReader(new FileReader(filename));
@@ -77,7 +95,11 @@ public class QueryLoader {
 		List<String> selectNodes = new ArrayList<String>();
 		m_fwEdgeSet = new HashSet<String>();
 		m_bwEdgeSet = new HashSet<String>();
+		m_requiredFwEdgeSet = new HashSet<String>();
+		m_requiredBwEdgeSet = new HashSet<String>();
+		int prunableQueries = 0;
 		String input;
+		String prefix = new File(filename).getName();
 		while ((input = in.readLine()) != null) {
 			input = input.trim();
 		
@@ -93,12 +115,17 @@ public class QueryLoader {
 			if (input.startsWith("query:")) {
 				if (currentQuery.length() > 0) {
 					Query q = createQuery(currentQueryName, currentQuery, selectNodes);
-					if (q != null)
+					if (q != null) {
 						queries.add(q);
+						if (q.getRemovedNodes().size() > 0)
+							prunableQueries++;
+					}
 				}
 
 				String[] t = input.split(":");
 				currentQueryName = t[1].trim();
+				if (addPrefix)
+					currentQueryName = prefix + "_" + currentQueryName; 
 				
 				currentQuery = "";
 				removeNodes = new HashSet<String>();
@@ -122,16 +149,21 @@ public class QueryLoader {
 		}
 		
 		Query q = createQuery(currentQueryName, currentQuery, selectNodes);
-		if (q != null)
+		if (q != null) {
 			queries.add(q);
+			if (q.getRemovedNodes().size() > 0)
+				prunableQueries++;
+		}
 		
-		log.debug("bw edge set");
-		for (String s : m_bwEdgeSet)
+		// the "requested" edge sets are the minimal sets to support maximal pruning 
+		// for all queries in the query file
+		log.debug("req bw edge set " + m_requiredBwEdgeSet.size());
+		for (String s : m_requiredBwEdgeSet)
 			System.out.println(s);
-		log.debug("fw edge set");
-		for (String s : m_fwEdgeSet)
+		log.debug("req fw edge set " + m_requiredFwEdgeSet.size());
+		for (String s : m_requiredFwEdgeSet)
 			System.out.println(s);
-		
+		log.debug("prunable: " + prunableQueries + "/" + queries.size());
 		return queries;
 	}
 }

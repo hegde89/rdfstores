@@ -1,12 +1,14 @@
 package edu.unika.aifb.graphindex.vp;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +33,7 @@ import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
+import org.ho.yaml.Yaml;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -48,7 +51,8 @@ public class LuceneStorage {
 	private ExecutorService m_documentLoader;
 	private boolean m_readonly;
 	private boolean m_merged;
-	
+	private Map<String,Integer> m_objectCardinalities;
+
 	public static final class Index {
 		public static final Index PO = new Index("po", "s");
 		public static final Index PS = new Index("ps", "o");
@@ -78,11 +82,23 @@ public class LuceneStorage {
 	
 	private static final Logger log = Logger.getLogger(LuceneStorage.class);
 
+	@SuppressWarnings("unchecked")
 	public LuceneStorage(String directory) {
 		m_directory = directory;
 		
 		m_queryExecutor = Executors.newFixedThreadPool(1);
 		m_documentLoader = Executors.newFixedThreadPool(1);
+		
+		m_objectCardinalities = new HashMap<String,Integer>();
+		try {
+			Map cmap = (Map)Yaml.load(new File(directory + "/object_cardinalities"));
+			for (String prop : (Set<String>)cmap.keySet()) {
+				m_objectCardinalities.put(prop, (Integer)cmap.get(prop));
+			}
+			log.debug("object cards. loaded: " + m_objectCardinalities);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -161,6 +177,10 @@ public class LuceneStorage {
 	}
 	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(10000);
 	
+	public Integer getObjectCardinality(String property) {
+		return m_objectCardinalities.get(property);
+	}
+
 	private Document getDocument(int docId) throws StorageException {
 		try {
 			Document doc = m_docCache.get(docId);

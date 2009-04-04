@@ -6,11 +6,14 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.ho.yaml.Yaml;
 
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
@@ -29,6 +32,7 @@ public class StructureIndexReader {
 	
 	private static final Logger log = Logger.getLogger(StructureIndexReader.class);
 	
+	@SuppressWarnings("unchecked")
 	public StructureIndexReader(String directory) throws StorageException, IOException {
 		m_index = new StructureIndex(directory, false, true);
 		m_graphs = new ArrayList<Graph<String>>();
@@ -47,6 +51,17 @@ public class StructureIndexReader {
 			log.debug("bw: " + edgeSet);
 			m_index.setBackwardEdges(edgeSet);
 		}
+		
+		Map<String,Integer> cardinalities = new HashMap<String,Integer>();
+		File cmapFile = new File(directory + "/object_cardinalities");
+		if (cmapFile.exists()) {
+			Map cmap = (Map)Yaml.load(cmapFile);
+			for (String prop : (Set<String>)cmap.keySet()) {
+				cardinalities.put(prop, (Integer)cmap.get(prop));
+			}
+			log.debug("object cards. loaded: " + cardinalities);
+		}
+		m_index.setObjectCardinalities(cardinalities);
 	}
 	
 	private void loadIndexGraphs() throws StorageException {

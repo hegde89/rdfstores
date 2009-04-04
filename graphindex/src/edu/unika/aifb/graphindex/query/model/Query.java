@@ -33,6 +33,7 @@ public class Query {
 	private Graph<QueryNode> m_queryGraph;
 	private Set<String> m_backwardTargets;
 	private Set<String> m_forwardSources;
+	private boolean m_ignoreIndexEdgeSets = false;
 	private static final Logger log = Logger.getLogger(Query.class);
 	
 	public Query(List<String> vars) {
@@ -163,7 +164,7 @@ public class Query {
 			Set<String> indexEdges = new HashSet<String>();
 			indexEdges.addAll(index.getBackwardEdges());
 			indexEdges.addAll(index.getForwardEdges());
-			if (!indexEdges.containsAll(edgeLabels))
+			if (!m_ignoreIndexEdgeSets && !indexEdges.containsAll(edgeLabels))
 				m_queryGraph = null;
 			else
 				pruneQueryGraph(m_queryGraph, index);
@@ -291,12 +292,8 @@ public class Query {
 //			calculateEdgeSets(g, index, fixedNodes, selectIds, bwEdgeSources, fwEdgeTargets);
 //		}		
 		
-//		log.debug("bw: " + bw + " " + bwEdges);
-//		log.debug("fw: " + fw + " " + fwEdges);
-//		log.debug("bw targets: " + bwTargets);
-//		log.debug("fw sources: " + fwSources);
-		log.debug(getName() + " queryrem: " + m_removeNodes.size() + " " + m_removeNodes + ", fixed: " + fixed);
-//		log.debug("neu: " + m_neutralEdgeSet);
+
+//		log.debug(getName() + " queryrem: " + m_removeNodes.size() + " " + m_removeNodes + ", fixed: " + fixed);
 	}
 
 	private void calculateFixedPaths(Graph<QueryNode> g, Set<Integer> fixedNodes, int srcId) {
@@ -377,7 +374,7 @@ public class Query {
 					if (!visited.contains(edge.getSrc()) && !fixedNodes.contains(edge.getSrc())) {
 						toVisit.add(edge.getSrc());
 						
-						if (!index.getBackwardEdges().contains(edge.getLabel())) {
+						if (!m_ignoreIndexEdgeSets && !index.getBackwardEdges().contains(edge.getLabel())) {
 							fixedNodes.add(edge.getSrc());
 							calculateFixedPaths(g, fixedNodes, edge.getSrc());
 							continue;
@@ -402,7 +399,7 @@ public class Query {
 					if (!visited.contains(edge.getDst()) && !fixedNodes.contains(edge.getDst())) {
 						toVisit.add(edge.getDst());
 
-						if (!index.getForwardEdges().contains(edge.getLabel())) {
+						if (!m_ignoreIndexEdgeSets && !index.getForwardEdges().contains(edge.getLabel())) {
 							fixedNodes.add(edge.getDst());
 							calculateFixedPaths(g, fixedNodes, edge.getDst());
 							continue;
@@ -429,5 +426,13 @@ public class Query {
 
 	public Set<String> getBackwardTargets() {
 		return m_backwardTargets;
+	}
+
+	public void setIgnoreIndexEdgeSets(boolean m_ignoreIndexEdgeSets) {
+		this.m_ignoreIndexEdgeSets = m_ignoreIndexEdgeSets;
+	}
+
+	public boolean ignoreIndexEdgeSets() {
+		return m_ignoreIndexEdgeSets;
 	}
 }

@@ -93,12 +93,18 @@ public class EvaluationClass {
 		return maxKey;
 	}
 	
-	public Map<String,Integer> getCardinalityMap() {
+	public Map<String,Integer> getCardinalityMap(Set<String> excludeNodes) {
 		Map<String,Integer> cardinality = new HashMap<String,Integer>();
 		for (String key : m_mappings.getColumnNames()) {
-			Set<String> values = new HashSet<String>();
+			if (excludeNodes.contains(key))
+				continue;
+			
+			int col = m_mappings.getColumn(key);
+
+			Set<String> values = new HashSet<String>(m_mappings.rowCount());
 			for (String[] map : m_mappings)
-				values.add(m_mappings.getValue(map, key));
+				values.add(map[col]);
+			
 			cardinality.put(key, values.size());
 		}
 		return cardinality;

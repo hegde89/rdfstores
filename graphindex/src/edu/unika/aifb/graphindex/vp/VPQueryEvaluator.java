@@ -286,6 +286,9 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			}
 		}
 		
+		if (startNode == -1)
+			startNode = 0;
+		
 		Stack<Integer> tov = new Stack<Integer>();
 		
 		tov.push(startNode);
@@ -296,7 +299,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			if (visited.contains(node))
 				continue;
 			visited.add(node);
-			
+
 			String curNode = queryGraph.getNode(node).getSingleMember();
 			
 			int min = Integer.MAX_VALUE;
@@ -327,7 +330,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		return scores;
 	}
 
-	public int evaluate(Query q) throws StorageException, IOException {
+	public List<String[]> evaluate(Query q) throws StorageException, IOException {
 		t = new Timings();
 		GTable.timings = t;
 		Tables.timings = t;
@@ -352,14 +355,29 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				int e1score = scores.get(s1) * scores.get(d1);
 				int e2score = scores.get(s2) * scores.get(d2);
 				
-				String es1 = s1 + " " + e1.getLabel() + " " + d1;
-				String es2 = s2 + " " + e2.getLabel() + " " + d2;
+//				String es1 = s1 + " " + e1.getLabel() + " " + d1;
+//				String es2 = s2 + " " + e2.getLabel() + " " + d2;
 
-				if (e2s.get(es1) != null && e2s.get(es2) != null) {
-					if (e2s.get(es1) < e2s.get(es2))
-						return -1;
-					else
-						return 1;
+//				if (e2s.get(es1) != null && e2s.get(es2) != null) {
+//					if (e2s.get(es1) < e2s.get(es2))
+//						return -1;
+//					else
+//						return 1;
+//				}
+				
+//				log.debug(e1score + " " + e2score);
+				
+				if (e1score == e2score) {
+					Integer ce1 = m_ls.getObjectCardinality(e1.getLabel());
+					Integer ce2 = m_ls.getObjectCardinality(e2.getLabel());
+					
+					if (ce1 != null && ce2 != null && ce1.intValue() != ce2.intValue()) {
+						if (ce1 < ce2)
+							return 1;
+						else
+							return -1;
+					}
+
 				}
 				
 				if (e1score < e2score)
@@ -561,7 +579,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
 		if (empty) {
 			log.debug("size: 0");
-			return 0;
+			return new ArrayList<String[]>();
 		} else {
 			log.debug("size: " + results.get(0).getResult().rowCount());
 			List<String[]> result = new ArrayList<String[]>();
@@ -586,7 +604,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				}
 			}
 			log.debug("size: " + result.size());
-			return result.size();
+			return result;
 //			if (results.get(0).getResult().rowCount() > 0) {
 //				for (int i = 0; i < results.get(0).getResult().columnCount(); i++) {
 //					Set<String> vals = new HashSet<String>();

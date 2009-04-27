@@ -169,4 +169,9 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			throw new StorageException(e);
 		}
 	}
+
+	public IndexSearcher getIndexSearcher() {
+		return m_searcher;
+	}
+	
 }

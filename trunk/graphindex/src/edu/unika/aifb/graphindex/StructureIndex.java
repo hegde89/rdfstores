@@ -6,6 +6,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import edu.unika.aifb.graphindex.storage.BlockManager;
+import edu.unika.aifb.graphindex.storage.BlockManagerImpl;
+import edu.unika.aifb.graphindex.storage.BlockStorage;
+import edu.unika.aifb.graphindex.storage.DataManager;
+import edu.unika.aifb.graphindex.storage.DataManagerImpl;
+import edu.unika.aifb.graphindex.storage.DataStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphManager;
@@ -13,6 +19,8 @@ import edu.unika.aifb.graphindex.storage.GraphManagerImpl;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
+import edu.unika.aifb.graphindex.storage.lucene.LuceneBlockStorage;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneDataStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
@@ -28,6 +36,9 @@ public class StructureIndex {
 	private int m_configDocCacheSize = 100;
 	private Set<String> m_forwardEdges, m_backwardEdges;
 	private Map<String,Integer> m_objectCardinalities;
+	
+	private DataManager m_dm;
+	private BlockManager m_bm;
 	
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
@@ -54,6 +65,18 @@ public class StructureIndex {
 		m_gm.setGraphStorage(gs);
 		m_gm.setIndex(this);
 		m_gm.initialize(clean, readonly);
+		
+		DataStorage ds = new LuceneDataStorage(m_directory + "/data");
+		m_dm = new DataManagerImpl();
+		m_dm.setDataStorage(ds);
+		m_dm.setIndex(this);
+		m_dm.initialize(clean, readonly);
+		
+		BlockStorage bs = new LuceneBlockStorage(m_directory + "/block");
+		m_bm = new BlockManagerImpl();
+		m_bm.setBlockStorage(bs);
+		m_bm.setIndex(this);
+		m_bm.initialize(clean, readonly);
 	}
 	
 	public void setObjectCardinalities(Map<String,Integer> cards) {
@@ -96,12 +119,22 @@ public class StructureIndex {
 		return m_gm;
 	}
 	
+	public DataManager getDataManager() {
+		return m_dm;
+	}
+	
+	public BlockManager getBlockManager() {
+		return m_bm;
+	}
+	
 	public void optimize() {
 	}
 
 	public void close() throws StorageException {
 		m_em.close();
 		m_gm.close();
+		m_dm.close();
+		m_bm.close();
 	}
 	
 	public int getTableCacheSize() {

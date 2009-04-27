@@ -69,7 +69,9 @@ public class StructureIndexWriter {
 	}
 	
 	private void convert() throws IOException, InterruptedException {
-		// CONVERT
+		// CONVERT: convert triples into hash values and store the hashed triples in 'input.ht',  
+		// then sort the file 'input.ht' to generate file 'input_sorted.ht'.
+		// The mapping of elements and hash values are stored in the files '/hash' and '/propertyhashes', 
 		TripleConverter tc = new TripleConverter(m_directory);
 		
 		m_importer.setTripleSink(tc);
@@ -83,7 +85,7 @@ public class StructureIndexWriter {
 	}
 	
 	private void partition() throws IOException {
-		// PARTITION
+		// PARTITION: compute the connected components and store the nodes of them in files '/components/componentID'.
 		TriplesPartitioner tp = new TriplesPartitioner(m_directory + "/components");
 		
 		Importer importer = new TriplesImporter();
@@ -95,7 +97,7 @@ public class StructureIndexWriter {
 	}
 	
 	private void transform() throws NumberFormatException, IOException {
-		// TRANSFORM
+		// TRANSFORM: generate files '/components/componentID..vertexlist'.
 		Importer importer = new TriplesImporter();
 		importer.addImport(m_directory + "/input_sorted.ht");
 		
@@ -134,5 +136,27 @@ public class StructureIndexWriter {
 
 		f = new File(m_directory + "/input.ht");
 		f.delete();
+		
+		f = new File(m_directory + "/attributes");
+		f.delete();
+		
+		f = new File(m_directory + "/relations");
+		f.delete();
+		
+		f = new File(m_directory + "/concepts");
+		f.delete();
+		
+		f = new File(m_directory + "/entities");
+		f.delete();
+		
+		File dir = new File(m_directory + "/block");
+		for (File fi : dir.listFiles())
+			fi.delete();
+		dir.delete();
+		
+		dir = new File(m_directory + "/data");
+		for (File fi : dir.listFiles())
+			fi.delete();
+		dir.delete();
 	}
 }

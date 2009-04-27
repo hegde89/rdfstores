@@ -39,12 +39,14 @@ public class TriplesPartitioner implements HashedTripleSink {
 		m_pid = 0;
 		m_componentDirectory = componentDirectory;
 		
-		for (File f : new File(componentDirectory).listFiles()) {
-			if (f.getName().startsWith("component")) {
-				f.delete();
-				log.debug("deleted " + f);
+		File[] cf = new File(componentDirectory).listFiles();
+		if (cf != null)
+			for (File f : new File(componentDirectory).listFiles()) {
+				if (f.getName().startsWith("component")) {
+					f.delete();
+					log.debug("deleted " + f);
+				}
 			}
-		}
 	}
 	
 	public void triple(long s, long p, long o) {
@@ -150,8 +152,13 @@ public class TriplesPartitioner implements HashedTripleSink {
 			PrintWriter pw;
 			if (!p2f.containsKey(p)) {
 				try {
-					pw = new PrintWriter(new BufferedWriter(new FileWriter(m_componentDirectory + "/component" + p, true)));
+					File file = new File(m_componentDirectory + "/component" + p);
+					if (!file.exists()) 
+						file.getParentFile().mkdirs(); 
+					pw = new PrintWriter(new BufferedWriter(new FileWriter(file, true)));
 					p2f.put(p, pw);
+//					pw = new PrintWriter(new BufferedWriter(new FileWriter(m_componentDirectory + "/component" + p, true)));
+//					p2f.put(p, pw);
 				}
 				catch (IOException e) {
 					// exceptions are probably due to too many open files

@@ -27,10 +27,8 @@ import org.jgrapht.ext.VertexNameProvider;
 
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
-import edu.unika.aifb.graphindex.graph.IndexEdge;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.graph.QueryGraph;
 
 public class Util {
 	public static class Counter {
@@ -328,6 +326,10 @@ public class Util {
 	public static void sortFile(String file, String fileOut) throws IOException, InterruptedException {
 		Process p = Runtime.getRuntime().exec("sort -o " + fileOut + " " + file);
 		p.waitFor();
+		
+//		LineSortFile lsf = new LineSortFile(file, fileOut);
+//		lsf.setDeleteWhenStringRepeated(true);
+//		lsf.sortFile();
 	}
 
 	public static <V> String atos(V[] a) {

@@ -2,6 +2,9 @@ package edu.unika.aifb.graphindex.storage;
 
 import java.util.Set;
 
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.IndexSearcher;
+
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 
 public interface GraphStorage {
@@ -20,4 +23,6 @@ public interface GraphStorage {
 	public Set<String> loadGraphList() throws StorageException;
 	public void saveGraphList(Set<String> graphs) throws StorageException;
 	public void optimize() throws StorageException;
+	
+	public IndexSearcher getIndexSearcher();
 }

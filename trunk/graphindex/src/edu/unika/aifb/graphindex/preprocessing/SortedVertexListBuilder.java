@@ -45,6 +45,8 @@ public class SortedVertexListBuilder implements HashedTripleSink {
 		File componentDir = new File(componentDirectory);
 		
 		List<File> componentFiles = new ArrayList<File>();
+		File[] cf = componentDir.listFiles();
+		if(cf != null)
 		for (File file : componentDir.listFiles())
 			if (file.getName().startsWith("component") && !file.getName().endsWith("vertexlist"))
 				componentFiles.add(file);

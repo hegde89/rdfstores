@@ -30,8 +30,6 @@ import org.apache.log4j.Logger;
 import org.jgrapht.experimental.isomorphism.IsomorphismRelation;
 import org.semanticweb.kaon2.api.owl.elements.ObjectSome;
 
-import sun.tools.tree.RemainderExpression;
-
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.StructureIndexReader;
 import edu.unika.aifb.graphindex.data.GTable;

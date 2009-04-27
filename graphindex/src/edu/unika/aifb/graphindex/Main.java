@@ -1,8 +1,6 @@
 package edu.unika.aifb.graphindex;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -15,37 +13,16 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
 
-import edu.unika.aifb.graphindex.data.HashValueProvider;
-import edu.unika.aifb.graphindex.data.VertexFactory;
 import edu.unika.aifb.graphindex.importer.CompositeImporter;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
-import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
-import edu.unika.aifb.graphindex.importer.TriplesImporter;
-import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
-import edu.unika.aifb.graphindex.preprocessing.DatasetAnalyzer;
-import edu.unika.aifb.graphindex.preprocessing.FileHashValueProvider;
-import edu.unika.aifb.graphindex.preprocessing.SortedVertexListBuilder;
-import edu.unika.aifb.graphindex.preprocessing.TripleConverter;
-import edu.unika.aifb.graphindex.preprocessing.TriplesPartitioner;
-import edu.unika.aifb.graphindex.preprocessing.VertexListBuilder;
-import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
-import edu.unika.aifb.graphindex.query.QueryParser;
 import edu.unika.aifb.graphindex.query.model.Query;
-import edu.unika.aifb.graphindex.storage.ExtensionManager;
-import edu.unika.aifb.graphindex.storage.ExtensionStorage;
-import edu.unika.aifb.graphindex.storage.GraphManager;
-import edu.unika.aifb.graphindex.storage.GraphManagerImpl;
-import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
 
 public class Main {
 
@@ -75,7 +52,7 @@ public class Main {
 			return;
 		}
 		
-		Set<String> _stages = new HashSet<String>(Arrays.asList("preprocess", "index", "query", "convert", "partition", "transform"));
+		Set<String> _stages = new HashSet<String>(Arrays.asList("preprocess", "index", "query", "convert", "partition", "transform", "keywordindex"));
 		
 		Set<String> stages = new HashSet<String>();
 		Set<String> queryNames = new HashSet<String>();
@@ -178,8 +155,12 @@ public class Main {
 			iw.setBackwardEdgeSet(bwEdgeSet);
 			iw.setImporter(getImporter(ntFiles, owlFiles));
 			iw.create(stages);
-//			iw.removeTemporaryFiles();
 			iw.close();
+		}
+		
+		if (stages.contains("keywordindex")) {
+			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory); 
+			kb.indexKeywords();
 		}
 		
 		if (stages.contains("temp")) {
@@ -211,6 +192,22 @@ public class Main {
 			
 			index.close();
 		}
+		
+//		if(stages.contains("keywordsearch")) {
+//			KeywordSearchService ksService = new KeywordSearchService(outputDirectory);
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("Please input the keywords:");
+//				String line = scanner.nextLine();
+//				String tokens[] = line.split(" ");
+//				LinkedList<String> keywordList = new LinkedList<String>();
+//				for (int i = 0; i < tokens.length; i++) {
+//					keywordList.add(tokens[i]);
+//				}
+//				ksService.getPossibleGraphs(keywordList);
+//			}
+//			
+//		}
 		
 		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");
 	}

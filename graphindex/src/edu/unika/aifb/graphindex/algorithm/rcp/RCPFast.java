@@ -29,6 +29,7 @@ import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
 import edu.unika.aifb.graphindex.storage.GraphManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.StorageManager;
+import edu.unika.aifb.graphindex.util.LineSortFile;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class RCPFast {
@@ -279,12 +280,12 @@ public class RCPFast {
 			p.add(nb);
 	}
 	
-	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile) throws StorageException, IOException, InterruptedException {
+	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile, String blockFile) throws StorageException, IOException, InterruptedException {
 		log.debug("---------------------------------- starting backward bisim");
 		log.debug("backward edges: " + m_backwardEdges);
 		List<IVertex> vertices = vlp.getList();
-		if (vertices.size() < 20)
-			return null;
+//		if (vertices.size() < 20)
+//			return null;
 		
 		Block startBlock = new Block();
 		for (IVertex v : vertices)
@@ -320,7 +321,7 @@ public class RCPFast {
 		p = createPartition(p, vertices, m_forwardEdges);
 		
 
-		writePartition(p, partitionFile, graphFile, true);
+		writePartition(p, partitionFile, graphFile, blockFile, true);
 //		IndexGraph g = createIndexGraph(p, true);
 //		log.debug(g.edgeCount());
 		
@@ -382,10 +383,18 @@ public class RCPFast {
 		return new IndexGraph(g);
 	}
 
-	private void writePartition(Partition p, String partitionFile, String graphFile, boolean inverted) throws IOException, InterruptedException {
+	private void writePartition(Partition p, String partitionFile, String graphFile, String blockFile, boolean inverted) throws IOException, InterruptedException {
 		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
 		PrintWriter graph = new PrintWriter(new BufferedWriter(new FileWriter(graphFile)));
+		PrintWriter block = new PrintWriter(new BufferedWriter(new FileWriter(blockFile)));
 	
+		log.info("writing block file...");
+		for(Block b : p.getBlocks()) {
+			for (IVertex v : b) {
+				block.println(b.getName() + "\t" + m_hashes.getValue(v.getId()));
+			}
+		}
+		
 		log.info("writing partition file...");
 		int blocks = 0;
 		for (Block b : p.getBlocks()) {
@@ -413,13 +422,22 @@ public class RCPFast {
 			if (blocks % 5000 == 0)
 				log.debug(" blocks processed: " + blocks);
 		}
+		block.close();
 		out.close();
 		graph.close();
+		
+		LineSortFile blsf = new LineSortFile(blockFile, blockFile);
+		blsf.setDeleteWhenStringRepeated(true);
+		blsf.sortFile();
 		
 		// sort partition file by extension uri, property uri, object
 		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
 		process.waitFor();
 		log.debug("sorted");
+		
+//		LineSortFile plsf = new LineSortFile(partitionFile, partitionFile);
+//		plsf.setDeleteWhenStringRepeated(true);
+//		plsf.sortFile();
 		
 		process = Runtime.getRuntime().exec("sort -o " + graphFile + " " + graphFile);
 		process.waitFor();
@@ -430,5 +448,9 @@ public class RCPFast {
 		f = new File(graphFile + ".uniq");
 		f.renameTo(new File(graphFile));
 		log.debug("graph uniq");
+		
+//		LineSortFile glsf = new LineSortFile(graphFile, graphFile);
+//		glsf.setDeleteWhenStringRepeated(true);
+//		glsf.sortFile();
 	}
 }

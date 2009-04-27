@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex.indexing;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.openrdf.model.vocabulary.RDFS;
 
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.algorithm.rcp.RCPFast;
@@ -23,11 +25,14 @@ import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.data.IVertex;
 import edu.unika.aifb.graphindex.graph.IndexGraph;
 import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
+import edu.unika.aifb.graphindex.storage.BlockStorage;
+import edu.unika.aifb.graphindex.storage.DataStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
+import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class FastIndexBuilder {
@@ -146,6 +151,79 @@ public class FastIndexBuilder {
 		m_em.finishBulkUpdate();
 	}
 	
+	public void createBlocks(String blockFile) throws StorageException, IOException {
+		BlockStorage bs = m_index.getBlockManager().getBlockStorage();
+		BufferedReader in = new BufferedReader(new FileReader(blockFile));
+		String input;
+		int blocks = 0;
+		while ((input = in.readLine()) != null) {
+			input = input.trim();
+			String[] t = input.split("\t");
+			if(t.length == 2){
+				bs.addBlock(t[0], t[1]);
+				blocks++;
+			}
+		}
+		in.close();
+		bs.optimize();
+		log.info("index blocks: " + blocks);
+	}
+	
+	public void createData() throws StorageException, IOException {
+		DataStorage ds = m_index.getDataManager().getDataStorage();
+		int triple = 0;
+		for (File componentFile : m_componentFiles) {
+			log.info(" " + componentFile + ".partition");
+			
+			if (!new File(componentFile.getAbsolutePath() + ".partition").exists()) {
+				log.debug(" ...not found");
+				continue;
+			}
+			
+			BufferedReader in = new BufferedReader(new FileReader(componentFile.getAbsolutePath() + ".partition"));
+			String input;
+			while ((input = in.readLine()) != null) {
+				input = input.trim();
+				String[] t = input.split("\t");
+				
+				long s = Long.parseLong(t[1]);
+				long p = Long.parseLong(t[2]);
+				long o = Long.parseLong(t[3]);
+				
+				String subject = m_hashProvider.getValue(s);
+				String predicate = m_hashProvider.getValue(p);
+				String object = m_hashProvider.getValue(o);
+				String type = null; 
+				
+				if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY)
+						&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.ENTITY)
+						&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.RELATION)) {
+					type = TypeUtil.RELATION;
+				}
+				else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(predicate, object).equals(TypeUtil.LITERAL)
+						&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.ATTRIBUTE)) {
+					type = TypeUtil.ATTRIBUTE;
+				}
+				else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY)
+						&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.CONCEPT)) {
+					type = TypeUtil.TYPE;
+				}
+				else {
+					type = "";
+				}
+				
+				if(type.equals(TypeUtil.ATTRIBUTE) && predicate.equals(RDFS.LABEL.toString())) {
+					type = TypeUtil.LABEL;
+				}
+				ds.addTriple(subject, predicate, object, type);
+				triple++;
+			}
+			in.close();
+		}	
+		ds.optimize();
+		log.info("index tripes: " + triple);
+	}
+	
 	public void createGraph(String graphFile) throws StorageException, IOException {
 		GraphStorage gs = m_index.getGraphManager().getGraphStorage();
 		BufferedReader in = new BufferedReader(new FileReader(graphFile));
@@ -180,7 +258,7 @@ public class FastIndexBuilder {
 			log.info("unique edges: " + m_hashProvider.getEdges().size());
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
-			IndexGraph g = rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph");
+			IndexGraph g = rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph", m_vlp.getComponentFile().getAbsolutePath() + ".block");
 //			if (g == null)
 //				continue;
 //			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
@@ -200,6 +278,8 @@ public class FastIndexBuilder {
 		
 		createExtensions(merger.getMergeMap());
 		createGraph(m_vlp.getComponentFile().getAbsolutePath() + ".graph");
+		createBlocks(m_vlp.getComponentFile().getAbsolutePath() + ".block");
+		createData();
 		
 		writeEdgeSet(m_index.getForwardEdges(), m_index.getDirectory() + "/forward_edgeset");
 		writeEdgeSet(m_index.getBackwardEdges(), m_index.getDirectory() + "/backward_edgeset");

@@ -3,6 +3,9 @@ package edu.unika.aifb.graphindex.storage;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.IndexSearcher;
+
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 
 public class NullGraphStorage extends AbstractGraphStorage {
@@ -33,5 +36,13 @@ public class NullGraphStorage extends AbstractGraphStorage {
 
 	public void addEdge(String graphName, String source, String edge, String target)
 			throws StorageException {
+	}
+
+	public IndexReader getIndexReader() {
+		return null;
+	}
+
+	public IndexSearcher getIndexSearcher() {
+		return null;
 	}
 }

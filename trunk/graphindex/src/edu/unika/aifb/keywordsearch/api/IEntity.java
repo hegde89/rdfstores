@@ -11,9 +11,13 @@ public interface IEntity  extends IResource {
 	
 	public INamedConcept getType();
 	
-	public void setReachaleEntities(Set<IEntity> entities);
+	public void setExtension(String extension);
+	
+	public String getExtension();
 	
 	public void addReachableEntity(IEntity entity);
+	
+	public void setReachaleEntities(Set<IEntity> entities);
 	
 	public Set<IEntity> getReachaleEntities();
 	
@@ -25,8 +29,16 @@ public interface IEntity  extends IResource {
 	
 	public boolean isAllReachable(Collection<Collection<KeywordElement>> colls);
 	
+	public void addAttributeValueCompound(IAttributeValueCompound compound);
+	
 	public void setAttributeValueCompounds(Set<IAttributeValueCompound> compounds);
 	
 	public Set<IAttributeValueCompound> getAttributeValueCompounds();
+	
+	public void addAttributeValue(IValue value);
+	
+	public void setAttributeValues(Set<IValue> values);
+	
+	public Set<IValue> getAttributeValues();
 	
 }

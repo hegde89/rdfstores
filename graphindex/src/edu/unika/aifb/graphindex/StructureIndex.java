@@ -66,17 +66,17 @@ public class StructureIndex {
 		m_gm.setIndex(this);
 		m_gm.initialize(clean, readonly);
 		
-		DataStorage ds = new LuceneDataStorage(m_directory + "/data");
-		m_dm = new DataManagerImpl();
-		m_dm.setDataStorage(ds);
-		m_dm.setIndex(this);
-		m_dm.initialize(clean, readonly);
-		
-		BlockStorage bs = new LuceneBlockStorage(m_directory + "/block");
-		m_bm = new BlockManagerImpl();
-		m_bm.setBlockStorage(bs);
-		m_bm.setIndex(this);
-		m_bm.initialize(clean, readonly);
+//		DataStorage ds = new LuceneDataStorage(m_directory + "/data");
+//		m_dm = new DataManagerImpl();
+//		m_dm.setDataStorage(ds);
+//		m_dm.setIndex(this);
+//		m_dm.initialize(clean, readonly);
+//		
+//		BlockStorage bs = new LuceneBlockStorage(m_directory + "/block");
+//		m_bm = new BlockManagerImpl();
+//		m_bm.setBlockStorage(bs);
+//		m_bm.setIndex(this);
+//		m_bm.initialize(clean, readonly);
 	}
 	
 	public void setObjectCardinalities(Map<String,Integer> cards) {
@@ -133,8 +133,8 @@ public class StructureIndex {
 	public void close() throws StorageException {
 		m_em.close();
 		m_gm.close();
-		m_dm.close();
-		m_bm.close();
+//		m_dm.close();
+//		m_bm.close();
 	}
 	
 	public int getTableCacheSize() {

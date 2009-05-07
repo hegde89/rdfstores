@@ -124,6 +124,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 		public void setResult(GTable<String> result) {
 			m_result = result;
+//			m_result.removeDuplicates();
 		}
 
 		public List<GraphEdge<QueryNode>> getEdges() {
@@ -341,6 +342,13 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		log.debug(scores);
 
 		final Map<String,Integer> e2s = q.getEvalOrder();
+		
+		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
+			if (m_ls.getObjectCardinality(edge.getLabel()) == null) {
+				log.debug("unknown edge: aborting");
+				return new ArrayList<String[]>();
+			}
+		}
 
 		Queue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
 			public int compare(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
@@ -423,14 +431,20 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				if (toVisit.size() == 0) { // special case: query graph contains only one edge
 					if (isVariable(srcNode))
 						ra.setResult(getTable(Index.PO, property, dstNode, srcNode, dstNode));
-					else
+					else if (isVariable(dstNode))
 						ra.setResult(getTable(Index.PS, property, srcNode, srcNode, dstNode));
+					else {
+						log.debug("unsupported");
+					}
 				}
 				else if (!isVariable(dstNode)) {
 					ra.setResult(getTable(Index.PO, property, dstNode, srcNode, dstNode));
 				}
 				else if (!isVariable(srcNode)) {
 					ra.setResult(getTable(Index.PS, property, srcNode, srcNode, dstNode));
+				}
+				else {
+					ra.setResult(getTable(Index.PO, property, dstNode, srcNode, dstNode));
 				}
 			} else if (leftArea == null || rightArea == null) {
 				ra.addEdge(currentEdge, srcNode, dstNode);
@@ -564,6 +578,8 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 			results.remove(leftArea);
 			results.remove(rightArea);
+			
+			log.debug("rows: " + ra.getResult().rowCount());
 
 			if (ra.getResult() == null || ra.getResult().rowCount() > 0)
 				results.add(ra);
@@ -605,26 +621,6 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			}
 			log.debug("size: " + result.size());
 			return result;
-//			if (results.get(0).getResult().rowCount() > 0) {
-//				for (int i = 0; i < results.get(0).getResult().columnCount(); i++) {
-//					Set<String> vals = new HashSet<String>();
-//					for (String[] row : results.get(0).getResult())
-//						vals.add(row[i]);
-//					log.debug(vals.size());
-//				}
-//			}
-			
-//			Set<Map<String,String>> maps = new HashSet<Map<String,String>>();
-//			for (String[] row : results.get(0).getResult()) {
-//				Map<String,String> map = new HashMap<String,String>();
-//				for (int i = 0; i < row.length; i++)
-//					map.put("" + i, row[i]);
-//				maps.add(map);
-//			}
-//			for (Map<String,String> map : maps)
-//				log.debug(map);
-//			log.debug(maps.size());
-//			return results.get(0).getResult().rowCount();
 		}
 	}
 	
@@ -633,107 +629,12 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		m_ls.reopenAndWarmup();
 	}
 
-	public void evaluateOld(Query q) throws StorageException, IOException {
-		long start = System.currentTimeMillis();
-		Graph<QueryNode> queryGraph = q.getGraph();
-
-		Queue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
-
-			public int compare(GraphEdge<QueryNode> o1, GraphEdge<QueryNode> o2) {
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-		});
-		Set<GraphEdge<QueryNode>> visited = new HashSet<GraphEdge<QueryNode>>();
-
-		toVisit.addAll(queryGraph.edges());
-
-		List<GTable<String>> results = new ArrayList<GTable<String>>();
-
-		boolean empty = false;
-		;
-		while (toVisit.size() > 0) {
-			GraphEdge<QueryNode> currentEdge = toVisit.poll();
-
-			if (visited.contains(currentEdge))
-				continue;
-
-			visited.add(currentEdge);
-
-			String srcLabel = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
-			String dstLabel = queryGraph.getNode(currentEdge.getDst()).getSingleMember();
-			log.debug(srcLabel + " -> " + dstLabel);
-
-			GTable<String> table = getTable(srcLabel, currentEdge.getLabel(), dstLabel);
-			table.setColumnName(0, srcLabel);
-			table.setColumnName(1, dstLabel);
-
-			GTable<String> left = null, right = null;
-			for (GTable<String> t : results) {
-				if (t.hasColumn(srcLabel))
-					left = t;
-				if (t.hasColumn(dstLabel))
-					right = t;
-			}
-
-			GTable<String> result;
-
-			if (left == null && right == null) {
-				result = table;
-			} else if (left == null) {
-				result = Tables.hashJoin(table, right, Arrays.asList(dstLabel));
-			} else if (right == null) {
-				result = Tables.hashJoin(left, table, Arrays.asList(srcLabel));
-			} else {
-				// edge is between two intermediary results
-				// we need to load triples from the dst ext with the label of
-				// the current edge
-				// probably use the objects already mapped there
-
-				Set<String> objects = new HashSet<String>();
-				int col = right.getColumn(dstLabel);
-				for (String[] t : right) {
-					objects.add(t[col]);
-				}
-
-				GTable<String> middle = new GTable<String>(Arrays.asList(srcLabel, dstLabel));
-
-				for (String[] row : table) {
-					if (objects.contains(row[1]))
-						middle.addRow(row);
-				}
-
-				if (left.rowCount() < right.rowCount()) {
-					result = Tables.hashJoin(left, middle, Arrays.asList(srcLabel));
-					result = Tables.hashJoin(result, right, Arrays.asList(dstLabel));
-				} else {
-					result = Tables.hashJoin(middle, right, Arrays.asList(dstLabel));
-					result = Tables.hashJoin(left, result, Arrays.asList(srcLabel));
-				}
-			}
-
-			results.remove(left);
-			results.remove(right);
-
-			if (result.rowCount() > 0)
-				results.add(result);
-			else {
-				empty = true;
-				break;
-			}
-		}
-
-		if (empty) {
-			log.debug("size: 0");
-		} else {
-			log.debug("size: " + results.get(0).rowCount());
-		}
-		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
-	}
-
 	public long[] getTimings() {
 		return t.getTimings();
+	}
+
+	public Timings getT() {
+		return t;
 	}
 
 	// public static void main(String[] args) {

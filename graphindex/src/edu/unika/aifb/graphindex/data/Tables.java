@@ -191,6 +191,8 @@ public class Tables {
 	
 		int lc = left.getColumn(col);
 		int rc = right.getColumn(col);
+		
+		log.debug("merge join: " + left + " x " + right);
 	
 		GTable<String> result = new GTable<String>(resultColumns);
 	
@@ -227,7 +229,7 @@ public class Tables {
 		}
 	
 		result.setSortedColumn(lc);
-	
+		log.debug("merge join: done in " + (System.currentTimeMillis() - start));
 //		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
 			timings.end(Timings.JOIN);
@@ -237,7 +239,7 @@ public class Tables {
 	public static GTable<Integer> hashJoinInteger(GTable<Integer> left, GTable<Integer> right, List<String> cols) {
 		if (timings != null)
 			timings.start(Timings.JOIN);
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 	
 		if (left.rowCount() >= right.rowCount()) {
 			GTable<Integer> tmpTable = left;

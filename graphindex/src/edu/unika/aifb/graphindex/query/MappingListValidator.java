@@ -65,8 +65,6 @@ public class MappingListValidator implements Callable<List<String[]>> {
 	private ExtensionStorage m_es;
 	private boolean m_dstUnmappedExtSetup = true, m_srcUnmappedExtSetup = true;
 	
-	private static final int IS_NONE = 0, IS_SRC = 1, IS_DST = 2, IS_SRCDST = 3, IS_DSTSRC = 4;
-	
 	private static final Logger log = Logger.getLogger(MappingListValidator.class);
 	
 	public MappingListValidator(StructureIndexReader indexReader, StatisticsCollector collector) {
@@ -84,7 +82,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		int x = classes.size();
 		List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 		for (EvaluationClass ec : classes)
-			newClasses.addAll(ec.addMatch(key));
+			newClasses.addAll(ec.addMatch(key, isGT(key)));
 		classes.addAll(newClasses);
 		log.debug("update classes: " + x + " -> " + classes.size() + " in " + (System.currentTimeMillis() - start));
 		t.end(Timings.UC);
@@ -97,18 +95,6 @@ public class MappingListValidator implements Callable<List<String[]>> {
 	public void setDstExtSetup(boolean dstUnmapped, boolean srcUnmapped) {
 		m_dstUnmappedExtSetup = dstUnmapped;
 		m_srcUnmappedExtSetup = srcUnmapped;
-	}
-	
-	private int intersect(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
-		if (e1.getSrc() == e2.getSrc())
-			return IS_SRC;
-		if (e1.getDst() == e2.getDst())
-			return IS_DST;
-		if (e1.getSrc() == e2.getDst())
-			return IS_SRCDST;
-		if (e1.getDst() == e2.getSrc())
-			return IS_DSTSRC;
-		return IS_NONE;
 	}
 	
 	private Map<String,List<EvaluationClass>> getValueMap(List<EvaluationClass> classes, String node) {
@@ -264,6 +250,13 @@ public class MappingListValidator implements Callable<List<String[]>> {
 	public List<String[]> validateMappings(Query query, final Graph<QueryNode> queryGraph, GTable<String> mappings, final Map<String,Integer> e2s, List<String> selectVars) throws StorageException, InterruptedException, ExecutionException {
 		t = new Timings();
 		
+		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
+			if (m_indexReader.getIndex().getObjectCardinality(edge.getLabel()) == null) {
+				log.debug("unknown edge: aborting " + edge.getLabel());
+				return new ArrayList<String[]>();
+			}
+		}
+		
 		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
 		EvaluationClass evc = new EvaluationClass(mappings);
 		classes.add(evc);
@@ -281,7 +274,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		log.debug("cardinalityMap: " + cardinality);
 		
 		
-//		final Map<String,Integer> scores = getScores(queryGraph);
+		final Map<String,Integer> scores = getScores(queryGraph);
 		
 		// toVisit contains the nodes to be visited by the evaluation algorithm
 		// the queue is sorted using a custom comparator so that the 'best' node 
@@ -300,24 +293,15 @@ public class MappingListValidator implements Callable<List<String[]>> {
 				String s2 = queryGraph.getNode(e2.getSrc()).getSingleMember();
 				String d1 = queryGraph.getNode(e1.getDst()).getSingleMember();
 				String d2 = queryGraph.getNode(e2.getDst()).getSingleMember();
-				
-//				String es1 = s1 + " " + e1.getLabel() + " " + d1;
-//				String es2 = s2 + " " + e2.getLabel() + " " + d2;
-//
-//					if (e2s.get(es1) < e2s.get(es2))
-//						return -1;
-//					else
-//						return 1;
-//				
-//				int e1score = scores.get(s1) * scores.get(d1);
-//				int e2score = scores.get(s2) * scores.get(d2);
-//
-//				if (e1score < e2score)
-//					return -1;
-//				else
-//					return 1;
 
-//				log.debug(s1 + " " + d1 + " " + s2 + " " + d2);
+				int e1score = scores.get(s1) * scores.get(d1);
+				int e2score = scores.get(s2) * scores.get(d2);
+				
+				if (e1score < e2score)
+					return -1;
+				else if (e1score > e2score)
+					return 1;
+				
 				int c1 = cardinality.get(s1) * cardinality.get(d1);
 				int c2 = cardinality.get(s2) * cardinality.get(d2);
 				
@@ -390,8 +374,8 @@ public class MappingListValidator implements Callable<List<String[]>> {
 					GraphEdge<QueryNode> next = null;
 					int is = 0;
 					for (GraphEdge<QueryNode> e : toVisit) {
-						is = intersect(currentEdge, e);
-						if (is != IS_NONE) {
+						is = currentEdge.intersect(e);
+						if (is != GraphEdge.IS_NONE) {
 							next = e;
 							break;
 						}
@@ -403,7 +387,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 						index = Index.EPS;
 					}
 					else {
-						if (is == IS_SRC || is == IS_SRCDST)
+						if (is == GraphEdge.IS_SRC || is == GraphEdge.IS_SRCDST)
 							index = Index.EPO;
 						else
 							index = Index.EPS;
@@ -418,6 +402,7 @@ public class MappingListValidator implements Callable<List<String[]>> {
 				
 				updateClasses(classes, srcNode);
 				updateClasses(classes, dstNode);
+					
 				
 				Map<String,List<EvaluationClass>> val2ec = getValueMap(classes, dstNode);
 				if (index == Index.EPS) {

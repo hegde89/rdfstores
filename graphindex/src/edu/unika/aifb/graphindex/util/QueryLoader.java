@@ -65,7 +65,7 @@ public class QueryLoader {
 		q.createQueryGraph(m_index);
 		
 		if (q.getGraph() == null) {
-//			log.debug("query " + q.getName() + " not compatible with index edge set");
+			log.debug("query " + q.getName() + " not compatible with index edge set");
 			return null;
 		}
 		
@@ -73,10 +73,10 @@ public class QueryLoader {
 		m_bwEdgeSet.addAll(q.getBackwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getNeutralEdgeSet());
 		
-		log.debug("query: " + q.getName());
-		log.debug("  ne: " + q.getNeutralEdgeSet());
-		log.debug("  bw: " + q.getBackwardEdgeSet());
-		log.debug("  fw: " + q.getForwardEdgeSet());
+//		log.debug("query: " + q.getName());
+//		log.debug("  ne: " + q.getNeutralEdgeSet());
+//		log.debug("  bw: " + q.getBackwardEdgeSet());
+//		log.debug("  fw: " + q.getForwardEdgeSet());
 		
 		return q;
 	}

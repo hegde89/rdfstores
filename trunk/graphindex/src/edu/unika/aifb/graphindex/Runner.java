@@ -354,16 +354,16 @@ public class Runner {
 				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpqueries/";
 				String dir = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/dblp/";
-				queryFiles.add(dir + "AtomQuery_noResult.txt");
-				queryFiles.add(dir + "AtomQuery.txt");
-				queryFiles.add(dir + "StarQuery_noResult.txt");
+//				queryFiles.add(dir + "AtomQuery_noResult.txt");
+//				queryFiles.add(dir + "AtomQuery.txt");
+//				queryFiles.add(dir + "StarQuery_noResult.txt");
 				queryFiles.add(dir + "StarQuery.txt");
-				queryFiles.add(dir + "EntityQuery_noResult.txt");
-				queryFiles.add(dir + "EntityQuery.txt");
-				queryFiles.add(dir + "PathQuery_noResult.txt");
-				queryFiles.add(dir + "PathQuery.txt");
-				queryFiles.add(dir + "GraphQuery_noResult.txt");
-				queryFiles.add(dir + "GraphQuery.txt");
+//				queryFiles.add(dir + "EntityQuery_noResult.txt");
+//				queryFiles.add(dir + "EntityQuery.txt");
+//				queryFiles.add(dir + "PathQuery_noResult.txt");
+//				queryFiles.add(dir + "PathQuery.txt");
+//				queryFiles.add(dir + "GraphQuery_noResult.txt");
+//				queryFiles.add(dir + "GraphQuery.txt");
 			}
 			else if (dataset.equals("lubm")) {
 				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
@@ -371,7 +371,7 @@ public class Runner {
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
-				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/GraphQuery.txt";
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/";
 			}
 			else {
@@ -384,8 +384,8 @@ public class Runner {
 			index.getIndex().setTableCacheSize(1);
 			index.getIndex().setDocumentCacheSize(1000);
 			
-			calculateCardinalities(index);
-			System.exit(-1);
+//			calculateCardinalities(index);
+//			System.exit(-1);
 			QueryLoader ql = index.getQueryLoader();
 			List<Query> queries = new ArrayList<Query>();
 			if (queryFiles != null && queryFiles.size() > 0) {
@@ -394,7 +394,7 @@ public class Runner {
 			}
 			else
 				queries.addAll(ql.loadQueryFile(queriesFile));
-			
+			log.debug(queries.size());
 			log.debug("bw: " + ql.getBackwardEdgeSet().size() + " " + ql.getBackwardEdgeSet());
 			log.debug("fw: " + ql.getForwardEdgeSet().size() + " " +ql.getForwardEdgeSet());
 			

@@ -6,12 +6,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
@@ -162,6 +165,37 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		return sorted;
 	}
 	
+	public void removeDuplicates(List<String> columns) {
+		List<T[]> result = new ArrayList<T[]>();
+		Set<String> sigs = new HashSet<String>();
+		int[] cols = new int [columns.size()];
+		for (int i = 0; i < columns.size(); i++)
+			cols[i] = getColumn(columns.get(i));
+		for (T[] row : m_rows) {
+			StringBuilder sb = new StringBuilder();
+			
+			for (int i = 0; i < cols.length; i++) 
+				sb.append(row[cols[i]]).append("__");
+			
+			String sig = sb.toString();
+			if (!sigs.contains(sig)) {
+				sigs.add(sig);
+				result.add(row);
+			}
+		}
+		log.debug("purged duplicates: " + rowCount() + " => " + result.size());
+		setRows(result);
+	}
+	
+	public void removeDuplicates() {
+		removeDuplicates(Arrays.asList(m_colNames));
+	}
+
+	/**
+	 * Sort the table by a column.
+	 * @param col
+	 * @param conditional if true, only sort if table is unsorted on col
+	 */
 	public void sort(String col, boolean conditional) {
 		if (conditional)
 			if (!isSortedBy(col))

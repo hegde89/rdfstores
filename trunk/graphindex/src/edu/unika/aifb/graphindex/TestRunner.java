@@ -23,6 +23,7 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
+import edu.unika.aifb.graphindex.query.model.Literal;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.QueryLoader;
@@ -297,6 +298,11 @@ public class TestRunner {
 			ls.initialize(false, true);
 			
 			queries = loadQueries(queriesFile, query, new QueryLoader());
+			if (queries.size() == 0) {
+				log.info("no queries");
+				ls.close();
+				return;
+			}
 			
 			IQueryEvaluator qeVP = new VPQueryEvaluator(ls);
 			
@@ -320,7 +326,12 @@ public class TestRunner {
 			index.getIndex().setDocumentCacheSize(10000);
 			
 			queries = loadQueries(queriesFile, query, index.getQueryLoader());
-			
+			if (queries.size() == 0) {
+				log.info("no queries");
+				index.close();
+				return;
+			}
+
 			IQueryEvaluator qeGI = index.getQueryEvaluator();
 			((QueryEvaluator)qeGI).getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
 			
@@ -328,6 +339,7 @@ public class TestRunner {
 				gi = run2(qeGI, queries, reps, runs);
 			else
 				gi = null;
+
 			index.close();
 		}
 		else 
@@ -358,11 +370,24 @@ public class TestRunner {
 		List<Query> queries = ql.loadQueryFile(queriesFile);
 		log.info("loaded " + queries.size() + " queries");
 		
+		for (Iterator<Query> i = queries.iterator(); i.hasNext(); ) {
+			boolean hasConstant = false;
+			Query q = i.next();
+			for (Literal l : q.getLiterals())
+				if (!l.getObject().toString().startsWith("?") || !l.getSubject().toString().startsWith("?"))
+					hasConstant = true;
+			if (!hasConstant) {
+				i.remove();
+				log.debug("no constants: " + q.getName());
+			}
+		}
+		
 		if (query != null) {
 			for (Iterator<Query> i = queries.iterator(); i.hasNext(); )
 				if (!i.next().getName().equals(query))
 					i.remove();
 		}
+		
 		return queries;
 	}
 }

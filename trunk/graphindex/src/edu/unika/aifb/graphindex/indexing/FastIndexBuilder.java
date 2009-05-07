@@ -278,8 +278,8 @@ public class FastIndexBuilder {
 		
 		createExtensions(merger.getMergeMap());
 		createGraph(m_vlp.getComponentFile().getAbsolutePath() + ".graph");
-		createBlocks(m_vlp.getComponentFile().getAbsolutePath() + ".block");
-		createData();
+//		createBlocks(m_vlp.getComponentFile().getAbsolutePath() + ".block");
+//		createData();
 		
 		writeEdgeSet(m_index.getForwardEdges(), m_index.getDirectory() + "/forward_edgeset");
 		writeEdgeSet(m_index.getBackwardEdges(), m_index.getDirectory() + "/backward_edgeset");

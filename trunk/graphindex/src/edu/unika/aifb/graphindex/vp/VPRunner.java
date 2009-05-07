@@ -22,6 +22,8 @@ import edu.unika.aifb.graphindex.query.QueryParser;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.QueryLoader;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
+import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class VPRunner {
@@ -163,11 +165,11 @@ public class VPRunner {
 			else if (dataset.equals("lubm")) {
 				QueryLoader ql = new QueryLoader();
 				String queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
-				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
 				List<Query> queries = ql.loadQueryFile(queriesFile);
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("q83"))
+					if (!q.getName().equals("lq1"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());
@@ -176,6 +178,11 @@ public class VPRunner {
 //					break;
 				}
 			}
+			
+			Timings t = qe.getT();
+			StatisticsCollector sc = new StatisticsCollector();
+			sc.addTimings(t);
+			sc.logStats();
 			
 //			GTable<String> res = ls.getTable(null, "http://example.org/simple#k", null);
 //			for (String[] row : res) {

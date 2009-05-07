@@ -110,11 +110,10 @@ public class EvaluationClass {
 		return cardinality;
 	}
 
-	public List<EvaluationClass> addMatch(String key) {
+	public List<EvaluationClass> addMatch(String key, boolean onlyOneClass) {
 		List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 		Map<String,EvaluationClass> val2class = new HashMap<String,EvaluationClass>();
 
-		int j = 0;
 		GTable<String> mappings = m_mappings;
 		m_mappings = new GTable<String>(mappings.getColumnNames());
 		for (String[] map : mappings) {
@@ -124,6 +123,10 @@ public class EvaluationClass {
 				m_matches.put(key, val);
 				val2class.put(val, this);
 				m_mappings.addRow(map);
+				if (onlyOneClass) {
+					m_mappings = mappings;
+					return new ArrayList<EvaluationClass>();
+				}
 			}
 			else {
 				EvaluationClass ec = val2class.get(val);

@@ -1,9 +1,17 @@
 package edu.unika.aifb.graphindex.graph;
 
+import edu.unika.aifb.graphindex.query.MappingListValidator;
+
 public class GraphEdge<V> {
 
 	private int m_src, m_dst;
 	private String m_label;
+	
+	public static final int IS_SRC = 0;
+	public static final int IS_SRCDST = 1;
+	public static final int IS_DSTSRC = 2;
+	public static final int IS_NONE = 3;
+	public static final int IS_DST = 4;
 	
 	public GraphEdge(LabeledEdge<V> e, int src, int dst, Graph graph) {
 		m_label = e.getLabel();
@@ -57,6 +65,18 @@ public class GraphEdge<V> {
 		} else if (!m_label.equals(other.m_label))
 			return false;
 		return true;
+	}
+
+	public int intersect(GraphEdge<QueryNode> e2) {
+		if (getSrc() == e2.getSrc())
+			return IS_SRC;
+		if (getDst() == e2.getDst())
+			return IS_DST;
+		if (getSrc() == e2.getDst())
+			return IS_SRCDST;
+		if (getDst() == e2.getSrc())
+			return IS_DSTSRC;
+		return IS_NONE;
 	}
 	
 	

@@ -16,7 +16,7 @@ import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
 
 public class Tables {
 
-	private static final Logger log = Logger.getLogger(Tables.class);
+	public static final Logger log = Logger.getLogger(Tables.class);
 	public static Timings timings = null;
 	
 	public static GTable<String> mergeTables(List<GTable<String>> tables, final int col) {
@@ -181,6 +181,12 @@ public class Tables {
 		if (timings != null)
 			timings.start(Timings.JOIN);
 		long start = System.currentTimeMillis();
+		
+		if (right.columnCount() > left.columnCount()) {
+			GTable<String> temp = right;
+			right = left;
+			left = temp;
+		}
 	
 		List<String> resultColumns = new ArrayList<String>();
 		for (String s : left.getColumnNames())
@@ -194,16 +200,17 @@ public class Tables {
 		
 		log.debug("merge join: " + left + " x " + right);
 	
-		GTable<String> result = new GTable<String>(resultColumns);
+		GTable<String> result = new GTable<String>(resultColumns, left.rowCount() + right.rowCount());
 	
 		int l = 0, r = 0;
 		while (l < left.rowCount() && r < right.rowCount()) {
 			String[] lrow = left.getRow(l);
 			String[] rrow = right.getRow(r);
 	
-			if (lrow[lc].compareTo(rrow[rc]) < 0)
+			int val = lrow[lc].compareTo(rrow[rc]); 
+			if (val < 0)
 				l++;
-			else if (lrow[lc].compareTo(rrow[rc]) > 0)
+			else if (val > 0)
 				r++;
 			else {
 				result.addRow(combineRow(lrow, rrow, rc));

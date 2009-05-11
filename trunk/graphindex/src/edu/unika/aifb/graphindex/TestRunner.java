@@ -333,7 +333,7 @@ public class TestRunner {
 			}
 
 			IQueryEvaluator qeGI = index.getQueryEvaluator();
-			((QueryEvaluator)qeGI).getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
+//			((QueryEvaluator)qeGI).getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
 			
 			if (runSP)
 				gi = run2(qeGI, queries, reps, runs);

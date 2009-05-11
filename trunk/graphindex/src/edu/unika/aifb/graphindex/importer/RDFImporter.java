@@ -77,7 +77,7 @@ public class RDFImporter extends Importer {
 			}
 			
 			if (source != null && target != null && label != null) {
-				m_sink.triple(source, label, target);
+				m_sink.triple(source, label, target, null);
 				m_triplesAdded++;
 //				if (m_triplesAdded % 500000 == 0)
 //					log.debug("nt importer: " + m_triplesAdded + " triples imported");

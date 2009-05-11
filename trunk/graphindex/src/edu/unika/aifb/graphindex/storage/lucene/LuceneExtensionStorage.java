@@ -63,6 +63,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public IndexReader m_reader;
 	public IndexSearcher m_searcher;
 	private LRUCache<Integer,Document> m_docCache;
+	private LRUCache<String,Set<String>> m_dataSetCache;
+	private LRUCache<String,List<String>> m_dataListCache;
 	private Timings m_timings;
 //	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
 	private int m_docCacheHits;
@@ -88,6 +90,9 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			
 			log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
 			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
+			
+			m_dataSetCache = new LRUCache<String,Set<String>>(50000);
+			m_dataListCache = new LRUCache<String,List<String>>(50000);
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -96,7 +101,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		
 		m_manager.getIndex().getCollector().addTimings(m_timings);
 		BooleanQuery.setMaxClauseCount(1048576);
-		log.debug("gzip: " + m_manager.getIndex().isGZip());
 	}
 	
 	public void close() {
@@ -222,11 +226,18 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return path;
 	}
 	
-	private Term getTerm(Index index, String val) {
-		return new Term(index.getIndexField(), val);
+	public String concat(String[] values, int length) {
+		String path = "";
+		for (int i = 0; i < length; i++)
+			path += values[i] + EXT_PATH_SEP;
+		return path;
 	}
 	
-	private Term getTerm(Index index, String... val) {
+	private Term getTerm(IndexDescription index, String val) {
+		return new Term(index.getIndexFieldName(), val);
+	}
+	
+	private Term getTerm(IndexDescription index, String... val) {
 		return getTerm(index, getPath(val));
 	}
 	
@@ -267,7 +278,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	private Map<String,Boolean> htcache = new HashMap<String,Boolean>();
 
-	public boolean hasTriples(Index index, String ext, String property, String so) throws StorageException  {
+	public boolean hasTriples(IndexDescription index, String ext, String property, String so) throws StorageException  {
 		try {
 			String s = new StringBuilder().append(ext).append("__").append(property).append("__").append(so).toString();
 			Boolean value = htcache.get(s);
@@ -277,7 +288,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			Query q = new TermQuery(getTerm(index, ext, property, so));
 			Hits hits = m_searcher.search(q);
 			boolean has = hits.length() > 0;
-//			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
+			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
 			htcache.put(s, has);
 			return has;
 		} catch (CorruptIndexException e) {
@@ -286,8 +297,62 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			throw new StorageException(e);
 		}
 	}
+	
+	public List<String> getData(IndexDescription index, String... indexFields) throws StorageException {
+		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), concat(indexFields, indexFields.length)));
 
-	public void addTriples(Index index, String ext, String property, String so, List<String> values) throws StorageException {
+		List<String> values = new ArrayList<String>(200);
+		List<Integer> docIds = getDocumentIds(tq);
+		if (docIds.size() > 0) {
+			values.addAll(loadDocuments(docIds, index));
+		}
+		return values;
+	}
+	
+	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException {
+		String query = concat(indexFields, indexFields.length);
+		Set<String> values = m_dataSetCache.get(query);
+		if (values != null)
+			return values;
+		
+		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), query));
+
+		values = new HashSet<String>(200);
+		List<Integer> docIds = getDocumentIds(tq);
+		if (docIds.size() > 0) {
+			values.addAll(loadDocuments(docIds, index));
+		}
+		
+		m_dataSetCache.put(query, values);
+		
+		return values;
+	}
+
+	public void addData(IndexDescription index, String indexKey, List<String> values, boolean sort) throws StorageException {
+		if (sort)
+			Collections.sort(values);
+		addData(index, indexKey, values);
+	}
+
+	public void addData(IndexDescription index, String indexKey, Collection<String> values) throws StorageException {
+		StringBuilder sb = new StringBuilder();
+		for (String s : values)
+			sb.append(s).append('\n');
+		
+		Document doc = new Document();
+		doc.add(new Field(index.getIndexFieldName(), indexKey, Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
+		
+		try {
+			m_writer.addDocument(doc);
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public void addTriples(IndexDescription index, String ext, String property, String so, List<String> values) throws StorageException {
 		Collections.sort(values);
 		
 		StringBuilder sb = new StringBuilder();
@@ -295,8 +360,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			sb.append(s).append('\n');
 	
 		Document doc = new Document();
-		doc.add(new Field(index.getIndexField(), getPath(ext, property, so), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
-		doc.add(new Field(index.getValField(), sb.toString(), Field.Store.YES, Field.Index.NO));
+		doc.add(new Field(index.getIndexFieldName(), getPath(ext, property, so), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
 		
 		try {
 			m_writer.addDocument(doc);
@@ -335,12 +400,25 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
-	private void loadDocuments(GTable<String> table, List<Integer> docIds, Index index, String so) throws StorageException {
+	private List<String> loadDocuments(List<Integer> docIds, IndexDescription index) throws StorageException {
+		List<String> values = new ArrayList<String>(100);
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+
+			StringSplitter splitter = new StringSplitter(doc.getField(index.getValueFieldName()).stringValue(), "\n");
+			String s;
+			while ((s = splitter.next()) != null)
+				values.add(s);
+		}
+		return values;
+	}
+	
+	private void loadDocuments(GTable<String> table, List<Integer> docIds, IndexDescription index, String so) throws StorageException {
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
 			
-			if (index == Index.EPS) {
-				String objects = doc.getField(index.getValField()).stringValue();
+			if (index.getValueField() == DataField.OBJECT) {
+				String objects = doc.getField(index.getValueFieldName()).stringValue();
 				StringSplitter splitter = new StringSplitter(objects, "\n");
 				
 				String s;
@@ -348,7 +426,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 					table.addRow(new String[] { so, s });
 			}
 			else {
-				String subjects = doc.getField(index.getValField()).stringValue();
+				String subjects = doc.getField(index.getValueFieldName()).stringValue();
 				StringSplitter splitter = new StringSplitter(subjects, "\n");
 				
 				String s;
@@ -358,7 +436,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
-	public List<GTable<String>> getIndexTables(Index index, String ext, String property) throws StorageException {
+	public List<GTable<String>> getIndexTables(IndexDescription index, String ext, String property) throws StorageException {
 //		m_timings.start(Timings.DATA);
 		long start = System.currentTimeMillis();
 	
@@ -389,8 +467,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			for (int docId : (List<Integer>)o[1]) {
 				Document doc = getDocument(docId);
 				
-				if (index == Index.EPS) {
-					String objects = doc.getField(index.getValField()).stringValue();
+				if (index.getValueField() == DataField.OBJECT) {
+					String objects = doc.getField(index.getValueFieldName()).stringValue();
 					StringSplitter splitter = new StringSplitter(objects, "\n");
 					
 					String s;
@@ -398,7 +476,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 						table.addRow(new String[] { so, s });
 				}
 				else {
-					String subjects = doc.getField(index.getValField()).stringValue();
+					String subjects = doc.getField(index.getValueFieldName()).stringValue();
 					StringSplitter splitter = new StringSplitter(subjects, "\n");
 					
 					String s;
@@ -414,7 +492,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		return tables;
 	}
 	
-	public GTable<String> getIndexTable(Index index, String ext, String property, String so) throws StorageException {
+	public GTable<String> getIndexTable(IndexDescription index, String ext, String property, String so) throws StorageException {
 //		m_timings.start(Timings.DATA);
 //		long start = System.currentTimeMillis();
 
@@ -434,7 +512,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			
 			loadDocuments(table, docIds, index, so);
 			
-			if (index == Index.EPO)
+			if (index.getValueField() == DataField.SUBJECT)
 				table.setSortedColumn(0);
 			else
 				table.setSortedColumn(1);
@@ -512,18 +590,18 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public static int extLoaded = 0;
-	public Set<String> getExtensions(Index index, String so) throws StorageException {
+	public Set<String> getExtensions(IndexDescription index, String so) throws StorageException {
 		m_timings.start(Timings.DATA);
 		
 		Set<String> exts;
 		
-		TermQuery tq = new TermQuery(new Term(index.getIndexField(), so));
+		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), so));
 
 		exts = new HashSet<String>();	
 		List<Integer> docIds = getDocumentIds(tq);
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
-			String sos = doc.getField(index.getValField()).stringValue();
+			String sos = doc.getField(index.getValueFieldName()).stringValue();
 			StringSplitter splitter = new StringSplitter(sos, "\n");
 			String s;
 			while ((s = splitter.next()) != null) {

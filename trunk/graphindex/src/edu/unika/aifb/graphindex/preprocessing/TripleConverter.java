@@ -45,7 +45,7 @@ public class TripleConverter implements TripleSink {
 		m_entSet = new TreeSet<String>();
 	}
 	
-	public void triple(String s, String p, String o) {
+	public void triple(String s, String p, String o, String objectType) {
 		if (!p.equals(RDFS.LABEL.toString())) {
 			if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
 					&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)) {
@@ -76,7 +76,7 @@ public class TripleConverter implements TripleSink {
 		long ph = Util.hash(p);
 		long oh = Util.hash(o);
 		
-		m_out.println(sh + "\t" + ph + "\t" + oh);
+		m_out.println(sh + "\t" + ph + "\t" + oh + "\t" + (o.startsWith("http") ? "e" : "d"));
 		
 		if (!m_propertyHashes.containsKey(ph))
 			m_propertyHashes.put(ph, p);

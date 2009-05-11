@@ -35,6 +35,7 @@ import edu.unika.aifb.graphindex.util.Util;
 public class RCPFast {
 	private GraphManager m_gm;
 	private HashValueProvider m_hashes;
+	private boolean m_ignoreDataValues = false;
 	private Set<String> m_forwardEdges, m_backwardEdges;
 	private static final Logger log = Logger.getLogger(RCPFast.class);
 	
@@ -43,6 +44,10 @@ public class RCPFast {
 		m_backwardEdges = index.getBackwardEdges();
 		m_gm = index.getGraphManager();
 		m_hashes = provider;
+	}
+	
+	public void setIgnoreDataValue(boolean ignore) {
+		m_ignoreDataValues = ignore;
 	}
 	
 	/**
@@ -60,9 +65,11 @@ public class RCPFast {
 	private void refinePartition(Partition p, Set<IVertex> image, Splitters w, Integer currentIteration) {
 		List<Block> splitBlocks = new LinkedList<Block>();
 		for (IVertex x : image) {
-			if (currentIteration != null && x.getMovedIn() == currentIteration) {
+			if (m_ignoreDataValues && x.isDataValue())
 				continue;
-			}
+			
+			if (currentIteration != null && x.getMovedIn() == currentIteration)
+				continue;
 			
 			Block block = x.getBlock();
 			if (block.getSplitBlock() == null) {
@@ -246,50 +253,26 @@ public class RCPFast {
 		return p;
 	}
 	
-	private void purgeSelfloops(Partition p) {
-		List<Block> newBlocks = new LinkedList<Block>();
-		for (Block b : p.getBlocks()) {
-			IVertex v = b.m_head;
-			boolean hasSelfloop = false;
-			for (IVertex v2 : b) {
-				if (v != v2) {
-					for (long label : v.getEdgeLabels()) {
-						if (v.getImage(label).contains(v2)) {
-							hasSelfloop = true;
-							break;
-						}
-					}
-				}
-			}
-			
-			if (hasSelfloop) {
-				Block nb = new Block();
-				int i = 0;
-				int x = b.size() / 2;
-				for (IVertex n : b) {
-					n.getBlock().remove(n);
-					nb.add(n);
-					i++;
-					if (i >= x)
-						break;
-				}
-				newBlocks.add(nb);
-			}
-		}
-		for (Block nb : newBlocks)
-			p.add(nb);
-	}
-	
-	public IndexGraph createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile, String blockFile) throws StorageException, IOException, InterruptedException {
+	public void createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile, String blockFile) throws StorageException, IOException, InterruptedException {
 		log.debug("---------------------------------- starting backward bisim");
 		log.debug("backward edges: " + m_backwardEdges);
 		List<IVertex> vertices = vlp.getList();
-//		if (vertices.size() < 20)
-//			return null;
 		
+		int dataEdges = 0, entityEdges = 0;
 		Block startBlock = new Block();
-		for (IVertex v : vertices)
-			startBlock.add(v);
+		for (IVertex v : vertices) {
+			if (!m_ignoreDataValues || !v.isDataValue())
+				startBlock.add(v);
+			
+			for (long label : v.getEdgeLabels())
+				for (IVertex d : v.getImage(label))
+					if (d.isDataValue())
+						dataEdges++;
+					else
+						entityEdges++;
+		}
+		log.debug("startblock: " + startBlock.size());
+		log.debug(dataEdges + " " + entityEdges);
 
 		Partition p = new Partition();
 		p.add(startBlock);
@@ -312,23 +295,34 @@ public class RCPFast {
 		log.debug(Util.memory());
 		
 		vertices = vlp.getInverted();
-		for (IVertex v : vertices)
-			id2block.get(v.getId()).add(v);
+		List<IVertex> dataVertices = new ArrayList<IVertex>();
+		int edges = 0;
+		for (IVertex v : vertices) {
+			if (!m_ignoreDataValues || !v.isDataValue())
+				id2block.get(v.getId()).add(v);
+			else
+				dataVertices.add(v);
+			for (long label : v.getEdgeLabels())
+				for (IVertex y : v.getImage(label))
+					edges++;
+		}
+		log.debug(edges + " " + dataVertices.size() + " " + vertices.size());
 		
 		p = new Partition();
 		p.addAll(new HashSet<Block>(id2block.values()));
-		
 		p = createPartition(p, vertices, m_forwardEdges);
-		
 
+		edges = 0;
+		for (IVertex v : vertices) {
+			for (long label : v.getEdgeLabels())
+				for (IVertex y : v.getImage(label))
+					edges++;
+		}
+		log.debug(edges);
+		
 		writePartition(p, partitionFile, graphFile, blockFile, true);
-//		IndexGraph g = createIndexGraph(p, true);
-//		log.debug(g.edgeCount());
-		
-//		writePartition(p, partitionFile, false);
-//		IndexGraph g = createIndexGraph(p, false);
-		
-		return null;
+		if (m_ignoreDataValues)
+			writeDataEdges(partitionFile, vertices, true);
 	}
 	
 	private String getTripleString(String s, String p, String o) {
@@ -337,50 +331,29 @@ public class RCPFast {
 		return sb.toString();
 	}
 	
-	private IndexGraph createIndexGraph(Partition p, boolean inverted) throws StorageException, FileNotFoundException {
-		log.info("creating index graph...");
-		int blocks = 0;
-		NamedGraph<String,LabeledEdge<String>> g = m_gm.graph();
+	private void writeDataEdges(String partitionFile, List<IVertex> vertices, boolean inverted) throws IOException {
+		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile, true)));
+		
 		int edges = 0;
-		Set<String> triples = new HashSet<String>();
-		for (Block b : p.getBlocks()) {
-			g.addVertex(b.getName());
-
-			for (IVertex v : b) {
-				for (Long label : v.getEdgeLabels()) {
-					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
-						continue;
-					
-					for (IVertex y : v.getImage(label)) {
-						g.addVertex(y.getBlock().getName());
+		for (IVertex v : vertices) {
+			for (long label : v.getEdgeLabels()) {
+				for (IVertex y : v.getImage(label)) {
+					if (v.isDataValue()) {
 						if (inverted) {
-							String s = getTripleString(y.getBlock().getName(), m_hashes.getValue(label), b.getName());
-							if (!triples.contains(s)) {
-								g.addEdge(y.getBlock().getName(), b.getName(), new LabeledEdge<String>(y.getBlock().getName(), b.getName(), m_hashes.getValue(label)));
-								edges++;
-								triples.add(s);
-							}
+							// switch around if inverted
+							out.println(y.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t");
 						}
 						else {
-							String s = getTripleString(b.getName(), m_hashes.getValue(label), y.getBlock().getName());
-							if (!triples.contains(s)) {
-								g.addEdge(b.getName(), y.getBlock().getName(), new LabeledEdge<String>(b.getName(), y.getBlock().getName(), m_hashes.getValue(label)));
-								edges++;
-								triples.add(s);
-							}
+							out.println(v.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t");
 						}
+						edges++;
 					}
 				}
 			}
-			
-			blocks++;
-
-			if (blocks % 5000 == 0)
-				log.debug(" blocks processed: " + blocks);
 		}
-		log.debug("edges added: " + edges + ", in graph: " + g.edgeSet().size());
 		
-		return new IndexGraph(g);
+		log.debug("data edges written: " + edges);
+		out.close();
 	}
 
 	private void writePartition(Partition p, String partitionFile, String graphFile, String blockFile, boolean inverted) throws IOException, InterruptedException {
@@ -397,22 +370,29 @@ public class RCPFast {
 		
 		log.info("writing partition file...");
 		int blocks = 0;
+		int edges = 0;
+		int vertices = 0;
 		for (Block b : p.getBlocks()) {
 			for (IVertex v : b) {
+				vertices++;
+				if (v.isDataValue())
+					log.debug("data");
 				for (Long label : v.getEdgeLabels()) {
 					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
 						continue;
 
 					for (IVertex y : v.getImage(label)) {
+						// subject extension, subject, property, object, object extension
 						if (inverted) {
-							out.println(v.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t" + b.getName());
+							// switch around if inverted
+							out.println(y.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t" + b.getName());
 							graph.println(y.getBlock().getName() + "\t" + m_hashes.getValue(label) + "\t" + b.getName());
 						}
 						else {
-							// extension, subject, property, object, subject extension
-							out.println(y.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t" + b.getName());
+							out.println(b.getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t" + y.getBlock().getName());
 							graph.println(b.getName() + "\t" + m_hashes.getValue(label) + "\t" + y.getBlock().getName());
 						}
+						edges++;
 					}
 				}
 			}
@@ -426,20 +406,19 @@ public class RCPFast {
 		out.close();
 		graph.close();
 		
+		log.debug("entity edges written: " + edges);
+		log.debug("vertices in partition: " + vertices);
+		
 		LineSortFile blsf = new LineSortFile(blockFile, blockFile);
 		blsf.setDeleteWhenStringRepeated(true);
 		blsf.sortFile();
-		
-		// sort partition file by extension uri, property uri, object
-		Process process = Runtime.getRuntime().exec("sort -n -k 1.2,1n -k 3,3n -k 4,4n -o " + partitionFile + " " + partitionFile);
-		process.waitFor();
-		log.debug("sorted");
 		
 //		LineSortFile plsf = new LineSortFile(partitionFile, partitionFile);
 //		plsf.setDeleteWhenStringRepeated(true);
 //		plsf.sortFile();
 		
-		process = Runtime.getRuntime().exec("sort -o " + graphFile + " " + graphFile);
+		// uniq only filters repeated lines: sort so that duplicate lines are consecutive
+		Process process = Runtime.getRuntime().exec("sort -o " + graphFile + " " + graphFile);
 		process.waitFor();
 		process = Runtime.getRuntime().exec("uniq " + graphFile + " " + graphFile + ".uniq");
 		process.waitFor();

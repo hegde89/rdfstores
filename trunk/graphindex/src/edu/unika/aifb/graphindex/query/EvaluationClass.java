@@ -111,6 +111,10 @@ public class EvaluationClass {
 	}
 
 	public List<EvaluationClass> addMatch(String key, boolean onlyOneClass) {
+		return addMatch(key, onlyOneClass, null, null);
+	}
+	
+	public List<EvaluationClass> addMatch(String key, boolean onlyOneClass, String valueMapNode, Map<String,List<EvaluationClass>> valueMap) {
 		List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 		Map<String,EvaluationClass> val2class = new HashMap<String,EvaluationClass>();
 
@@ -123,6 +127,13 @@ public class EvaluationClass {
 				m_matches.put(key, val);
 				val2class.put(val, this);
 				m_mappings.addRow(map);
+				if (valueMapNode != null) {
+					String v = mappings.getValue(map, valueMapNode);
+					if (!valueMap.containsKey(v)) {
+						valueMap.put(v, new ArrayList<EvaluationClass>());
+					}
+					valueMap.get(v).add(this);
+				}
 				if (onlyOneClass) {
 					m_mappings = mappings;
 					return new ArrayList<EvaluationClass>();
@@ -140,6 +151,14 @@ public class EvaluationClass {
 					ec.setResults(new ArrayList<GTable<String>>(getResults()));
 					newClasses.add(ec);
 					val2class.put(val, ec);
+					
+					if (valueMapNode != null) {
+						String v = mappings.getValue(map, valueMapNode);
+						if (!valueMap.containsKey(v)) {
+							valueMap.put(v, new ArrayList<EvaluationClass>());
+						}
+						valueMap.get(v).add(ec);
+					}
 				}
 				
 				ec.addMapping(map);
@@ -155,6 +174,6 @@ public class EvaluationClass {
 	}
 	
 	public String toString() {
-		return "[" + m_matches.toString() + ", " + m_mappings.toString() + "]";// + ", mappings: " + m_mappings;
+		return "[" + m_matches.toString() + ", " + m_mappings.toString() + ", " + m_results + "]";// + ", mappings: " + m_mappings;
 	}
 }

@@ -16,7 +16,7 @@ public class DatasetAnalyzer implements TripleSink {
 		m_properties = new HashMap<String,Integer>();
 	}
 
-	public void triple(String s, String p, String o) {
+	public void triple(String s, String p, String o, String objectType) {
 		if (!m_properties.containsKey(p)) {
 			m_properties.put(p, 1);
 		}

@@ -49,7 +49,6 @@ public class VertexListProvider {
 	public List<IVertex> getInverted() throws IOException {
 		m_edges = new HashSet<String>();
 		VertexCollection vc = VertexFactory.collection();
-//		VertexCollection vc = new MapVertexCollection();
 		vc.loadFromComponentFile(m_componentFile.getAbsolutePath());
 
 		BufferedReader in = new BufferedReader(new FileReader(m_componentFile.getAbsolutePath() + ".vertexlist"));
@@ -80,7 +79,12 @@ public class VertexListProvider {
 				ts = System.currentTimeMillis();
 				currentVertex = vc.getVertex(Long.parseLong(input.substring(input.lastIndexOf(" ") + 1)));
 				t1 += System.currentTimeMillis() - ts;
+				
+				if (input.charAt(1) == 'd')
+					currentVertex.setDataValue(true);
+				
 				vertices++;
+				
 				continue;
 			}
 			
@@ -162,7 +166,12 @@ public class VertexListProvider {
 				
 				currentImage = new HashMap<Long,List<IVertex>>();
 				currentVertex = vc.getVertex(Long.parseLong(input.substring(input.lastIndexOf(" ") + 1)));
+
+				if (input.charAt(1) == 'd')
+					currentVertex.setDataValue(true);
+				
 				vertices++;
+				
 				continue;
 			}
 			

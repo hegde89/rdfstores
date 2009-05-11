@@ -1,9 +1,11 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -29,7 +31,7 @@ import edu.unika.aifb.graphindex.util.Util;
 public class StructureIndexWriter {
 	private String m_directory;
 	private StructureIndex m_index;
-	private Importer m_importer;
+	private Importer m_importer = null;
 	
 	private static final Logger log = Logger.getLogger(StructureIndexWriter.class);
 	
@@ -44,6 +46,11 @@ public class StructureIndexWriter {
 	
 	public void setForwardEdgeSet(Set<String> edgeSet) {
 		m_index.setForwardEdges(edgeSet);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public void setOptions(Map options) throws FileNotFoundException {
+		m_index.setOptions(options);
 	}
 	
 	public void setImporter(Importer importer) {
@@ -115,7 +122,6 @@ public class StructureIndexWriter {
 		
 //		m_index.getExtensionManager().getExtensionStorage().mergeExtensions();
 		m_index.getExtensionManager().getExtensionStorage().optimize();
-
 	}
 	
 	public void close() throws StorageException {

@@ -26,4 +26,7 @@ public interface IVertex {
 	public void addToImage(long label, IVertex v);
 	public void setImage(long label, List<IVertex> image);
 
+	public void setDataValue(boolean b);
+	public boolean isDataValue();
+
 }

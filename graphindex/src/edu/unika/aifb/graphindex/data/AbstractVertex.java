@@ -7,6 +7,7 @@ public abstract class AbstractVertex implements IVertex {
 	protected IVertex m_next, m_prev;
 	protected Block m_block;
 	protected int m_movedIn = -1;
+	protected boolean m_dataValue = false;
 
 	public AbstractVertex(long id) {
 		m_id = id;
@@ -48,6 +49,14 @@ public abstract class AbstractVertex implements IVertex {
 	
 	public void setBlock(Block b) {
 		m_block = b;
+	}
+	
+	public boolean isDataValue() {
+		return m_dataValue;
+	}
+	
+	public void setDataValue(boolean dataValue) {
+		m_dataValue = dataValue;
 	}
 	
 	@Override

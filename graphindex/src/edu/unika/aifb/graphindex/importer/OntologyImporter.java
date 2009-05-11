@@ -113,7 +113,7 @@ public class OntologyImporter extends Importer {
 						OWLClass sub = (OWLClass)sco.getSubDescription();
 						OWLClass sup = (OWLClass)sco.getSuperDescription();
 						
-						m_sink.triple(sub.getURI(), SUBCLASSOF, sup.getURI());
+						m_sink.triple(sub.getURI(), SUBCLASSOF, sup.getURI(), null);
 						axioms++;
 					}
 				}
@@ -129,7 +129,7 @@ public class OntologyImporter extends Importer {
 				
 				if (a instanceof ObjectPropertyMember) {
 					ObjectPropertyMember opm = (ObjectPropertyMember)a;
-					m_sink.triple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI());
+					m_sink.triple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI(), null);
 					axioms++;
 				}
 				
@@ -138,7 +138,7 @@ public class OntologyImporter extends Importer {
 					String datatype = getDatatype((DataProperty)dpm.getDataProperty());
 //					log.debug(dpm);
 					if (datatype != null) {
-						m_sink.triple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString());
+						m_sink.triple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString(), null);
 						axioms++;
 					}
 				}
@@ -147,7 +147,7 @@ public class OntologyImporter extends Importer {
 					ClassMember cm = (ClassMember)a;
 					if (cm.getDescription() instanceof OWLClass) {
 						OWLClass c = (OWLClass)cm.getDescription();
-						m_sink.triple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI());
+						m_sink.triple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI(), null);
 						axioms++;
 					}
 				}

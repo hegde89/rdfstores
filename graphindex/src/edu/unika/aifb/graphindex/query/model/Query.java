@@ -424,6 +424,62 @@ public class Query {
 		}
 	}
 
+	public Map<String,Integer> calculateConstantProximities() {
+		Set<Integer> visited = new HashSet<Integer>();
+		int startNode = -1;
+		final Map<String,Integer> scores = new HashMap<String,Integer>();
+		for (int i = 0; i < m_queryGraph.nodeCount(); i++) {
+			String node = m_queryGraph.getNode(i).getSingleMember();
+			if (!node.startsWith("?")) {
+				scores.put(node, 0);
+				startNode = i;
+			}
+		}
+		
+		if (startNode == -1)
+			startNode = 0;
+		
+		Stack<Integer> tov = new Stack<Integer>();
+		
+		tov.push(startNode);
+		
+		while (tov.size() > 0) {
+			int node = tov.pop();
+			
+			if (visited.contains(node))
+				continue;
+			visited.add(node);
+
+			String curNode = m_queryGraph.getNode(node).getSingleMember();
+			
+			int min = Integer.MAX_VALUE;
+			for (int i : m_queryGraph.predecessors(node)) {
+				if (!scores.containsKey(curNode)) {
+					String v = m_queryGraph.getNode(i).getSingleMember();
+					if (scores.containsKey(v) && scores.get(v) < min)
+						min = scores.get(v);
+				}
+				if (!visited.contains(i))
+					tov.push(i);
+			}
+			
+			for (int i : m_queryGraph.successors(node)) {
+				if (!scores.containsKey(curNode)) {
+					String v = m_queryGraph.getNode(i).getSingleMember();
+					if (scores.containsKey(v) && scores.get(v) < min)
+						min = scores.get(v);
+				}
+				if (!visited.contains(i))
+					tov.push(i);
+			}
+			
+			if (!scores.containsKey(curNode))
+				scores.put(curNode, min + 1);
+		}
+		
+		return scores;
+	}
+	
 	public Set<String> getBackwardTargets() {
 		return m_backwardTargets;
 	}

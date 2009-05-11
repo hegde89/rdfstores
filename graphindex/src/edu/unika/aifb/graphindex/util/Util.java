@@ -341,4 +341,12 @@ public class Util {
 		}
 		return s + "]";
 	}
+
+	public static boolean isVariable(String label) {
+		return label.startsWith("?");
+	}
+
+	public static boolean isConstant(String label) {
+		return !isVariable(label);
+	}
 }

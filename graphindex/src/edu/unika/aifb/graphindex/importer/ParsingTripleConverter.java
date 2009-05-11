@@ -6,7 +6,7 @@ public class ParsingTripleConverter extends AbstractTripleConverter {
 		super(hashedSink);
 	}
 
-	public void triple(String s, String p, String o) {
-		m_hashedSink.triple(Long.parseLong(s), Long.parseLong(p), Long.parseLong(o));
+	public void triple(String s, String p, String o, String objectType) {
+		m_hashedSink.triple(Long.parseLong(s), Long.parseLong(p), Long.parseLong(o), objectType);
 	}
 }

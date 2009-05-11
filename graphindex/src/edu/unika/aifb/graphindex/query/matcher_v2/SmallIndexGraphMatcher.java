@@ -1,0 +1,274 @@
+package edu.unika.aifb.graphindex.query.matcher_v2;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.graphindex.StructureIndex;
+import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Tables;
+import edu.unika.aifb.graphindex.graph.GraphEdge;
+import edu.unika.aifb.graphindex.graph.QueryNode;
+import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
+import edu.unika.aifb.graphindex.util.Util;
+
+public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
+
+	private IndexDescription m_idxESPS;
+	private IndexDescription m_idxESPO;
+	private IndexDescription m_idxEOPO;
+	private IndexDescription m_idxPOES;
+//	private IndexDescription m_idxESPS;
+	
+	private static final Logger log = Logger.getLogger(SmallIndexGraphMatcher.class);
+	
+	public SmallIndexGraphMatcher(StructureIndex index, String graphName) {
+		super(index, graphName);
+	}
+
+	@Override
+	protected boolean isCompatibleWithIndex() {
+		m_idxESPS = m_index.getCompatibleIndex(DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
+		m_idxESPO = m_index.getCompatibleIndex(DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		m_idxPOES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);
+//		m_idxEOPO = m_index.getCompatibleIndex(DataField.EXT_OBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		
+		if (m_idxESPS == null || m_idxESPO == null || m_idxPOES == null)
+			return false;
+		
+		return true;
+	}
+
+	public GTable<String> match() throws StorageException {
+		
+		final Map<String,Integer> scores = m_query.calculateConstantProximities();
+		for (String label : scores.keySet())
+			if (scores.get(label) > 1)
+				scores.put(label, 10);
+		
+		log.debug("constant proximities: " + scores);
+
+		PriorityQueue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(m_queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
+			public int compare(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
+				String s1 = m_queryGraph.getNode(e1.getSrc()).getSingleMember();
+				String s2 = m_queryGraph.getNode(e2.getSrc()).getSingleMember();
+				String d1 = m_queryGraph.getNode(e1.getDst()).getSingleMember();
+				String d2 = m_queryGraph.getNode(e2.getDst()).getSingleMember();
+			
+				int e1score = scores.get(s1) * scores.get(d1);
+				int e2score = scores.get(s2) * scores.get(d2);
+				
+				// order first by proximity to a constant
+				if (e1score < e2score)
+					return -1;
+				else if (e1score > e2score)
+					return 1;
+				
+				// if the proximity is equal, prefer edges with a constant over edges without one 
+				// TODO probably stupid: if both edges have the same proximity value, both either
+				// have a constant or both don't
+				boolean g1 = !s1.startsWith("?") || !d1.startsWith("?");
+				boolean g2 = !s2.startsWith("?") || !d2.startsWith("?");
+				
+				if ((g1 && g2) || (!g1 && !g2)) {
+					// if both or neither have constants, prefer the edge with smaller edge table
+					GTable<String> t1 = m_p2to.get(e1.getLabel());
+					GTable<String> t2 = m_p2to.get(e2.getLabel());
+					
+					if (t1 == null || t2 == null)
+						return 0;
+					
+					int r1 = t1.rowCount();
+					int r2 = t2.rowCount();
+					
+					if (r1 < r2)
+						return -1;
+					else if (r1 > r2)
+						return 1;
+					else 
+						return 0;
+				}
+				else if (g1)
+					return -1;
+				else
+					return 1;
+			}
+		});
+		
+		toVisit.addAll(m_queryGraph.edges());
+
+		List<GTable<String>> resultTables = new ArrayList<GTable<String>>();
+		Set<String> visited = new HashSet<String>();
+		
+		while (toVisit.size() > 0) {
+			GraphEdge<QueryNode> currentEdge;
+			String srcLabel, trgLabel, property;
+			List<GraphEdge<QueryNode>> skipped = new ArrayList<GraphEdge<QueryNode>>();
+			do {
+				currentEdge = toVisit.poll();
+				skipped.add(currentEdge);
+				property = currentEdge.getLabel();
+				srcLabel = getSourceLabel(currentEdge);
+				trgLabel = getTargetLabel(currentEdge);
+			}
+			while (!visited.contains(srcLabel) && !visited.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel));
+			
+			skipped.remove(currentEdge);
+			toVisit.addAll(skipped);
+
+			visited.add(srcLabel);
+			visited.add(trgLabel);
+			
+			log.debug(srcLabel + " -> " + trgLabel + " (" + property + ")");
+			
+			GTable<String> sourceTable = null, targetTable = null, result;
+			for (GTable<String> table : resultTables) {
+				if (table.hasColumn(srcLabel))
+					sourceTable = table;
+				if (table.hasColumn(trgLabel))
+					targetTable = table;
+			}
+			
+			resultTables.remove(sourceTable);
+			resultTables.remove(targetTable);
+			
+			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
+			
+			if (sourceTable == null && targetTable != null) {
+				// cases 1 a,b: edge has one unprocessed node, the source
+				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				
+				targetTable.sort(trgLabel, true);
+				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel);
+			}
+			else if (sourceTable != null && targetTable == null) {
+				// cases 1 c,d: edge has one unprocessed node, the target
+				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+				
+				sourceTable.sort(srcLabel, true);
+				result = Tables.mergeJoin(sourceTable, edgeTable, srcLabel);
+			}
+			else if (sourceTable == null && targetTable == null) {
+				// case 2: edge has two unprocessed nodes
+				GTable<String> edgeTable;
+				if (Util.isConstant(srcLabel) || Util.isConstant(trgLabel)) {
+					int is = findNextIntersection(currentEdge, toVisit); 
+					if (is == GraphEdge.IS_SRC || is == GraphEdge.IS_SRCDST)
+						edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+					else
+						edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				}
+				else {
+					throw new UnsupportedOperationException("edges with two variables and both unprocessed should not happen");
+				}
+				
+				result = edgeTable;
+			}
+			else {
+				// case 3: both nodes already processed
+				GTable<String> first, second;
+				String firstCol, secondCol;
+				if (sourceTable.rowCount() < targetTable.rowCount()) {
+					first = sourceTable;
+					firstCol = srcLabel;
+					
+					second = targetTable;
+					secondCol = trgLabel;
+				}
+				else {
+					first = targetTable;
+					firstCol = trgLabel;
+					
+					second = sourceTable;
+					secondCol = srcLabel;
+				}
+				
+				GTable<String> edgeTable;
+				if (firstCol.equals(srcLabel))
+					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+				else
+					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				
+				first.sort(firstCol, true);
+				result = Tables.mergeJoin(first, edgeTable, firstCol);
+	
+				result.sort(secondCol, true);
+				second.sort(secondCol, true);
+				result = Tables.mergeJoin(second, result, secondCol);
+			}
+			
+			log.debug("rows: " + result.rowCount());
+			
+			if (result.rowCount() == 0)
+				return null;
+			
+			resultTables.add(result);
+			
+			log.debug("tables: " + resultTables);
+			log.debug("");
+		}
+		
+		if (resultTables.size() == 1)
+			return resultTables.get(0);
+		else
+			return null;
+	}
+	
+	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
+		GTable<String> edgeTable; 
+		if (orderedBy == 0)
+			edgeTable = m_p2ts.get(property);
+		else 
+			edgeTable = m_p2to.get(property);
+		
+		boolean doTrgFilter = true;
+		if (edgeTable == null) {
+			if (Util.isConstant(trgLabel)) {
+				doTrgFilter = true;
+				List<String> subjectExtensions = m_es.getData(m_idxPOES, property, trgLabel);
+				log.debug("subject extensions: " + subjectExtensions);
+				edgeTable = new GTable<String>(srcLabel, trgLabel);
+				for (String subjectExt : subjectExtensions)
+					edgeTable.addRow(new String[] { subjectExt, "bxxx" });
+				edgeTable.sort(orderedBy);
+			}
+			else
+				throw new UnsupportedOperationException("error");
+		}
+		
+		GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+		table.setRows(edgeTable.getRows());
+		table.setSortedColumn(orderedBy);
+		
+		if (doTrgFilter && Util.isConstant(trgLabel)) {
+			List<String[]> filtered = new ArrayList<String[]>();
+			for (String[] row : table) {
+				if (m_es.hasTriples(IndexDescription.ESPO, row[0], property, trgLabel))
+					filtered.add(row);
+			}
+			table.setRows(filtered);
+		}
+		
+		log.debug("edge table rows: " + table.rowCount());
+		return table;
+	}
+	
+	private int findNextIntersection(GraphEdge<QueryNode> edge, PriorityQueue<GraphEdge<QueryNode>> nextEdges) {
+		for (GraphEdge<QueryNode> e : nextEdges) {
+			int is = edge.intersect(e);
+			if (is != GraphEdge.IS_NONE)
+				return is;
+		}
+		return GraphEdge.IS_NONE;
+	}
+}

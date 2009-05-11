@@ -43,6 +43,10 @@ import edu.unika.aifb.graphindex.graph.isomorphism.SubgraphMatcher;
 import edu.unika.aifb.graphindex.graph.isomorphism.FeasibilityChecker;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.query.matcher_v1.JoinMatcher;
+import edu.unika.aifb.graphindex.query.matcher_v1.MappingListValidator;
+import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexGraphMatcher;
+import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Constant;
 import edu.unika.aifb.graphindex.query.model.Individual;
 import edu.unika.aifb.graphindex.query.model.Query;
@@ -62,8 +66,8 @@ public class QueryEvaluator implements IQueryEvaluator {
 	private ExtensionManager m_em;
 	private ExtensionStorage m_es;
 	private Timings m_timings;
-	private HashMap<String,JoinMatcher> m_matchers;
-	private MappingListValidator m_mlv;
+	private HashMap<String,IndexGraphMatcher> m_matchers;
+	private IndexMatchesValidator m_mlv;
 	static final Logger log = Logger.getLogger(QueryEvaluator.class);
 	
 	public QueryEvaluator(StructureIndexReader indexReader) throws StorageException {
@@ -72,17 +76,19 @@ public class QueryEvaluator implements IQueryEvaluator {
 		m_em = m_index.getExtensionManager();
 		m_em.setMode(ExtensionManager.MODE_READONLY);
 		m_es = m_em.getExtensionStorage();
-		m_matchers = new HashMap<String,JoinMatcher>();
-		m_mlv = new MappingListValidator(m_indexReader, m_index.getCollector());
-//		for (Graph<String> ig : m_indexReader.getIndexGraphs()) {
-//			m_matchers.put(ig, new JoinMatcher(ig, m_listener, m_index));
-//		}
+		m_matchers = new HashMap<String,IndexGraphMatcher>();
+//		m_mlv = new MappingListValidator(m_index, m_index.getCollector());
+		m_mlv = new SmallIndexMatchesValidator(m_index, m_index.getCollector());
+
 		for (String ig : m_indexReader.getGraphNames()) {
-			m_matchers.put(ig, new JoinMatcher(m_index, ig));
+//			IndexGraphMatcher matcher = new JoinMatcher(m_index, ig);
+			IndexGraphMatcher matcher = new SmallIndexGraphMatcher(m_index, ig);
+			matcher.initialize();
+			m_matchers.put(ig, matcher);
 		}
 	}
 	
-	public MappingListValidator getMLV() {
+	public IndexMatchesValidator getMLV() {
 		return m_mlv;
 	}
 	
@@ -100,7 +106,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 		for (String indexGraph : m_indexReader.getGraphNames()) {
 			m_timings.start(Timings.SETUP);
 			
-			JoinMatcher matcher = m_matchers.get(indexGraph);
+			IndexGraphMatcher matcher = m_matchers.get(indexGraph);
 			
 			matcher.setTimings(m_timings);
 			matcher.setQueryGraph(query, origGraph);
@@ -120,8 +126,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 			GTable.timings = m_timings;
 			Tables.timings = m_timings;
 			
-			long vt = System.currentTimeMillis();
-			List<String[]> res = m_mlv.validateMappings(query, origGraph, matches, query.getEvalOrder(), query.getSelectVariables());
+			List<String[]> res = m_mlv.validateIndexMatches(query, origGraph, matches, query.getSelectVariables());
 
 			if (res.size() > 0)
 				result.addAll(res);

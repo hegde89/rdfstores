@@ -16,15 +16,15 @@ public class TripleWriter implements HashedTripleSink, TripleSink {
 		m_out = new PrintWriter(new BufferedWriter(new FileWriter(file)));
 	}
 	
-	public void triple(long s, long p, long o) {
-		m_out.println(s + "\t" + p + "\t" + o);
+	public void triple(long s, long p, long o, String objectType) {
+		m_out.println(s + "\t" + p + "\t" + o + "\t" + objectType);
 	}
 
 	public void close() throws IOException {
 		m_out.close();
 	}
 
-	public void triple(String s, String p, String o) {
-		m_out.println(s + "\t" + p + "\t" + o);
+	public void triple(String s, String p, String o, String objectType) {
+		m_out.println(s + "\t" + p + "\t" + o + "\t" + objectType);
 	}
 }

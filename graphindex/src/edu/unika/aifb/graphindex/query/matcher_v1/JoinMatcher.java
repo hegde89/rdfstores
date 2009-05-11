@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.query;
+package edu.unika.aifb.graphindex.query.matcher_v1;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,76 +23,41 @@ import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.graph.isomorphism.MappingListener;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.Index;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
-public class JoinMatcher {
-
-	private Graph<QueryNode> m_queryGraph;
-	private HashMap<String,GTable<String>> m_p2ts;
-	private HashMap<String,GTable<String>> m_p2to;
-	private Timings m_timings;
-	private ExtensionStorage m_es;
-	private GraphStorage m_gs;
+public class JoinMatcher extends AbstractIndexGraphMatcher {
 	private Set<String> m_signatureNodes;
 	private Set<String> m_joinNodes;
 	private Map<String,Integer> m_joinCounts;
+	private boolean m_purgeNeeded;
 	
 	private final static Logger log = Logger.getLogger(JoinMatcher.class);
-	private boolean m_purgeNeeded;
-	private HashMap<String,Integer> m_inDegree;
-	private StructureIndex m_index;
 	
 	public JoinMatcher(StructureIndex index, String graphName) throws StorageException {
-		m_index = index;
-		m_es = index.getExtensionManager().getExtensionStorage();
-		m_gs = index.getGraphManager().getGraphStorage();
-		
-		m_p2ts = new HashMap<String,GTable<String>>();
-		m_p2to = new HashMap<String,GTable<String>>();
-		
-		m_inDegree = new HashMap<String,Integer>();
-		
-		Set<LabeledEdge<String>> edges = m_gs.loadEdges(graphName);
-		
-		long start = System.currentTimeMillis();
-		for (LabeledEdge<String> e : edges) {
-
-			GTable<String> table = m_p2ts.get(e.getLabel());
-			if (table == null) {
-				table = new GTable<String>("source", "target");
-				m_p2ts.put(e.getLabel(), table);
-			}
-			table.addRow(new String[] { e.getSrc(), e.getDst() });
-
-			table = m_p2to.get(e.getLabel());
-			if (table == null) {
-				table = new GTable<String>("source", "target");
-				m_p2to.put(e.getLabel(), table);
-			}
-			table.addRow(new String[] { e.getSrc(), e.getDst() });
-			
-			if (!m_inDegree.containsKey(e.getSrc()))
-				m_inDegree.put(e.getSrc(), 0);
-			
-			Integer deg = m_inDegree.get(e.getDst());
-			if (deg == null)
-				m_inDegree.put(e.getDst(), 1);
-			else
-				m_inDegree.put(e.getDst(), deg + 1);
-		}
-		
-		for (GTable<String> t : m_p2ts.values())
-			t.sort(0);
-		for (GTable<String> t : m_p2to.values())
-			t.sort(1);
-		
-		log.debug(System.currentTimeMillis() - start);
+		super(index, graphName);
+	}
+	
+	public void initialize() throws StorageException {
+		super.initialize();
+	}
+	
+	protected boolean isCompatibleWithIndex() {
+		IndexDescription idx = m_index.getCompatibleIndex(DataField.EXT_OBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		if (idx == null)
+			return false;
+		idx = m_index.getCompatibleIndex(DataField.EXT_OBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
+		if (idx == null)
+			return false;
+		return true;
 	}
 	
 	private GTable<String> purgeTable(GTable<String> table, Integer newColumn) {
@@ -137,7 +102,8 @@ public class JoinMatcher {
 //	}
 	
 	public void setQueryGraph(Query query, Graph<QueryNode> queryGraph) {
-		m_queryGraph = queryGraph;
+		super.setQueryGraph(query, queryGraph);
+		
 		m_signatureNodes = new HashSet<String>();
 		m_joinNodes = new HashSet<String>();
 		m_joinCounts = new HashMap<String,Integer>();
@@ -161,20 +127,6 @@ public class JoinMatcher {
 		log.debug("sig nodes: " + m_signatureNodes);
 		log.debug("join nodes: " + m_joinNodes);
 //		log.debug("join counts: " + m_joinCounts);
-	}
-	
-	public void setTimings(Timings timings) {
-		m_timings = timings;
-	}
-	
-	private String getSourceColumn(GraphEdge<QueryNode> edge) {
-//		return edge.toString() + "_src";
-		return m_queryGraph.getNode(edge.getSrc()).getName();
-	}
-	
-	private String getTargetColumn(GraphEdge<QueryNode> edge) {
-//		return edge.toString() + "_dst";
-		return m_queryGraph.getNode(edge.getDst()).getName();
 	}
 	
 	private List<Integer> getSignatureColumns(GTable<String> table) {
@@ -285,25 +237,6 @@ public class JoinMatcher {
 		return table;
 	}
 	
-	private void filterTable(GTable<String> table, String property, String col, GTable<String> extTable, Map<String,GTable<String>> extTriples) throws StorageException {
-		HashMap<String,GTable<String>> newExtTriples = new HashMap<String,GTable<String>>();
-		if (table.getColumn(col) == 0) {
-			// column is subject of table to filter
-		}
-		else if (table.getColumn(col) == 1) {
-			// column is object of table to filter
-			
-			for (String[] extRow : extTable) {
-				String ext = extRow[extTable.getColumn(col)];
-				GTable<String> tripleTable = extTriples.get(ext);
-				for (String[] tripleRow : tripleTable) {
-					GTable<String> t = m_es.getIndexTable(Index.EPO, ext, property, tripleRow[tripleTable.getColumn(col)]);
-					
-				}
-			}
-		}
-	}
-	
 	private void processed(String n1, String n2) {
 		m_purgeNeeded = false;
 		
@@ -320,62 +253,6 @@ public class JoinMatcher {
 		log.debug("purge needed: " + m_purgeNeeded);
 	}
 	
-	public Map<String,Integer> getScores(Graph<QueryNode> queryGraph) {
-		Set<Integer> visited = new HashSet<Integer>();
-		int startNode = -1;
-		final Map<String,Integer> scores = new HashMap<String,Integer>();
-		for (int i = 0; i < queryGraph.nodeCount(); i++) {
-			String node = queryGraph.getNode(i).getSingleMember();
-			if (!node.startsWith("?")) {
-				scores.put(node, 0);
-				startNode = i;
-			}
-		}
-		
-		if (startNode == -1)
-			startNode = 0;
-		
-		Stack<Integer> tov = new Stack<Integer>();
-		
-		tov.push(startNode);
-		
-		while (tov.size() > 0) {
-			int node = tov.pop();
-			
-			if (visited.contains(node))
-				continue;
-			visited.add(node);
-
-			String curNode = queryGraph.getNode(node).getSingleMember();
-			
-			int min = Integer.MAX_VALUE;
-			for (int i : queryGraph.predecessors(node)) {
-				if (!scores.containsKey(curNode)) {
-					String v = queryGraph.getNode(i).getSingleMember();
-					if (scores.containsKey(v) && scores.get(v) < min)
-						min = scores.get(v);
-				}
-				if (!visited.contains(i))
-					tov.push(i);
-			}
-			
-			for (int i : queryGraph.successors(node)) {
-				if (!scores.containsKey(curNode)) {
-					String v = queryGraph.getNode(i).getSingleMember();
-					if (scores.containsKey(v) && scores.get(v) < min)
-						min = scores.get(v);
-				}
-				if (!visited.contains(i))
-					tov.push(i);
-			}
-			
-			if (!scores.containsKey(curNode))
-				scores.put(curNode, min + 1);
-		}
-		
-		return scores;
-	}
-	
 	private void filterTable(GTable<String> table, Set<String> values, int col) {
 		long start = System.currentTimeMillis();
 		List<String[]> filteredRows = new ArrayList<String[]>();
@@ -389,8 +266,8 @@ public class JoinMatcher {
 	
 	private void estimateBenefit(Graph<QueryNode> queryGraph) throws StorageException {
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-			String src = getSourceColumn(edge);
-			String tgt = getTargetColumn(edge);
+			String src = getSourceLabel(edge);
+			String tgt = getTargetLabel(edge);
 			
 			int dataCardinality = m_index.getObjectCardinality(edge.getLabel());
 			int indexEdgeCount = m_p2to.get(edge.getLabel()).rowCount();
@@ -413,13 +290,16 @@ public class JoinMatcher {
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see edu.unika.aifb.graphindex.query.IndexMatcher#match()
+	 */
 	public GTable<String> match() throws StorageException {
 //		estimateBenefit(m_queryGraph);
 		if (m_queryGraph.edgeCount() == 1) {
 			return getTable(m_queryGraph.edges().get(0), 1, null);
 		}
 		
-		final Map<String,Integer> scores = getScores(m_queryGraph);
+		final Map<String,Integer> scores = m_query.calculateConstantProximities();
 		log.debug(scores);
 		
 		PriorityQueue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(m_queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
@@ -468,8 +348,8 @@ public class JoinMatcher {
 			long start = System.currentTimeMillis();
 			GraphEdge<QueryNode> currentEdge = toVisit.poll();
 			
-			String sourceCol = getSourceColumn(currentEdge);
-			String targetCol = getTargetColumn(currentEdge);
+			String sourceCol = getSourceLabel(currentEdge);
+			String targetCol = getTargetLabel(currentEdge);
 			log.debug(sourceCol + " (" + m_queryGraph.inDegreeOf(currentEdge.getSrc()) + ") -> " + targetCol + " (" + m_queryGraph.inDegreeOf(currentEdge.getDst()) + ") (" + currentEdge.getLabel() + ")");
 			
 			int sourceIn = m_queryGraph.inDegreeOf(currentEdge.getSrc());

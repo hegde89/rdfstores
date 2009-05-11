@@ -333,7 +333,10 @@ public class Runner {
 		
 		long start = System.currentTimeMillis();
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
+			Map options = new HashMap();
+			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
+			iw.setOptions(options);
 			iw.setForwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".fw.txt"));
 			iw.setBackwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".bw.txt"));
 			iw.setImporter(getImporter(dataset));
@@ -370,8 +373,8 @@ public class Runner {
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/AtomQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
-//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
-				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
+				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/";
 			}
 			else {
@@ -405,7 +408,7 @@ public class Runner {
 //			}
 			
 			QueryEvaluator qe = index.getQueryEvaluator();
-			qe.getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
+//			qe.getMLV().setDstExtSetup(dstUnmappedES, srcUnmappedES);
 			
 			String sizes = "";
 			for (Query q : queries) {

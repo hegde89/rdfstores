@@ -37,6 +37,11 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		this(colNames.toArray(new String [colNames.size()]));
 	}
 	
+	public GTable(List<String> colNames, int initialCapacity) {
+		this(colNames.toArray(new String [colNames.size()]));
+		m_rows = new ArrayList<T[]>(initialCapacity);
+	}
+	
 	public GTable(String... colNames) {
 		this(colNames.length);
 		m_colNames = new String[colNames.length];
@@ -185,6 +190,14 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		}
 		log.debug("purged duplicates: " + rowCount() + " => " + result.size());
 		setRows(result);
+	}
+	
+	public Set<T> getUniqueValueSet(String colName) {
+		Set<T> values = new HashSet<T>();
+		int col = getColumn(colName);
+		for (T[] row : this)
+			values.add(row[col]);
+		return values;
 	}
 	
 	public void removeDuplicates() {

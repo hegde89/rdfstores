@@ -1,10 +1,17 @@
 package edu.unika.aifb.graphindex;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
+import org.ho.yaml.Yaml;
 
 import edu.unika.aifb.graphindex.storage.BlockManager;
 import edu.unika.aifb.graphindex.storage.BlockManagerImpl;
@@ -19,6 +26,8 @@ import edu.unika.aifb.graphindex.storage.GraphManagerImpl;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneBlockStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneDataStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionManager;
@@ -30,30 +39,36 @@ public class StructureIndex {
 	private String m_directory;
 	private ExtensionManager m_em;
 	private GraphManager m_gm;
+	private DataManager m_dm;
+	private BlockManager m_bm;
 	private StatisticsCollector m_collector;
 	private int m_configTableCacheSize;
-	private boolean m_gzip = false;
 	private int m_configDocCacheSize = 100;
 	private Set<String> m_forwardEdges, m_backwardEdges;
 	private Map<String,Integer> m_objectCardinalities;
+	private List<IndexDescription> m_indexes;
+	private boolean m_ignoreDataValues = false;
+	private String m_metaFile;
 	
-	private DataManager m_dm;
-	private BlockManager m_bm;
+	private static final String META_FILENAME = "index.yml";
+	public static final String OPT_IGNORE_DATA_VALUES = "ignore_data_values";
+	public static final String OPT_INDEXES = "indexes";
 	
+	private static final Logger log = Logger.getLogger(StructureIndex.class);
+
 	public StructureIndex(String dir, boolean clean, boolean readonly) throws StorageException {
 		m_directory = dir;
+		m_metaFile = dir + "/" + META_FILENAME;
 		m_collector = new StatisticsCollector();
 		m_forwardEdges = new HashSet<String>();
 		m_backwardEdges = new HashSet<String>();
 		m_objectCardinalities = new HashMap<String,Integer>();
+		m_indexes = new ArrayList<IndexDescription>();
 		
 		initialize(clean, readonly);
 	}
 	
 	private void initialize(boolean clean, boolean readonly) throws StorageException {
-		if (new File(m_directory + "/gzip").exists())
-			m_gzip = true;
-
 		ExtensionStorage es = new LuceneExtensionStorage(m_directory + "/index");
 		m_em = new LuceneExtensionManager();
 		m_em.setExtensionStorage(es);
@@ -66,17 +81,25 @@ public class StructureIndex {
 		m_gm.setIndex(this);
 		m_gm.initialize(clean, readonly);
 		
-//		DataStorage ds = new LuceneDataStorage(m_directory + "/data");
-//		m_dm = new DataManagerImpl();
-//		m_dm.setDataStorage(ds);
-//		m_dm.setIndex(this);
-//		m_dm.initialize(clean, readonly);
-//		
-//		BlockStorage bs = new LuceneBlockStorage(m_directory + "/block");
-//		m_bm = new BlockManagerImpl();
-//		m_bm.setBlockStorage(bs);
-//		m_bm.setIndex(this);
-//		m_bm.initialize(clean, readonly);
+		DataStorage ds = new LuceneDataStorage(m_directory + "/data");
+		m_dm = new DataManagerImpl();
+		m_dm.setDataStorage(ds);
+		m_dm.setIndex(this);
+		m_dm.initialize(clean, readonly);
+		
+		BlockStorage bs = new LuceneBlockStorage(m_directory + "/block");
+		m_bm = new BlockManagerImpl();
+		m_bm.setBlockStorage(bs);
+		m_bm.setIndex(this);
+		m_bm.initialize(clean, readonly);
+		
+		if (new File(m_metaFile).exists()) {
+			try {
+				readMetaData();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	public void setObjectCardinalities(Map<String,Integer> cards) {
@@ -133,8 +156,13 @@ public class StructureIndex {
 	public void close() throws StorageException {
 		m_em.close();
 		m_gm.close();
-//		m_dm.close();
-//		m_bm.close();
+		m_dm.close();
+		m_bm.close();
+		try {
+			writeMetaData();
+		} catch (FileNotFoundException e) {
+			throw new StorageException(e);
+		}
 	}
 	
 	public int getTableCacheSize() {
@@ -150,10 +178,29 @@ public class StructureIndex {
 		m_em.getExtensionStorage().clearCaches();
 	}
 
-	public boolean isGZip() {
-		return m_gzip;
+	public boolean ignoreDataValues() {
+		return m_ignoreDataValues;
 	}
-
+	
+	public List<IndexDescription> getIndexes() {
+		return m_indexes;
+	}
+	
+	public void addIndex(IndexDescription index) {
+		m_indexes.add(index);
+	}
+	
+	public void clearIndexes() {
+		m_indexes.clear();
+	}
+	
+	public IndexDescription getCompatibleIndex(DataField... fields) {
+		for (IndexDescription index : m_indexes)
+			if (index.isCompatible(fields))
+				return index;
+		return null;
+	}
+	
 	public int getDocumentCacheSize() {
 		return m_configDocCacheSize ;
 	}
@@ -161,5 +208,43 @@ public class StructureIndex {
 	public void setDocumentCacheSize(int docCacheSize) {
 		m_configDocCacheSize = docCacheSize;
 		m_em.getExtensionStorage().updateCacheSizes();
+	}
+
+	private List<IndexDescription> toIndexDescriptions(List<Map<String,String>> indexMaps) {
+		List<IndexDescription> indexes = new ArrayList<IndexDescription>();
+		for (Map<String,String> map : indexMaps) 
+			indexes.add(new IndexDescription(map));
+		return indexes;
+	}
+	
+
+	@SuppressWarnings("unchecked")
+	public void setOptions(Map options) throws FileNotFoundException {
+		if (options.containsKey(OPT_IGNORE_DATA_VALUES))
+			m_ignoreDataValues = (Boolean)options.get(OPT_IGNORE_DATA_VALUES);
+		if (options.containsKey(OPT_INDEXES)) {
+			m_indexes = toIndexDescriptions((List<Map<String,String>>)options.get(OPT_INDEXES));
+		}
+		
+		writeMetaData();
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void readMetaData() throws FileNotFoundException {
+		Map meta = (Map)Yaml.load(new File(m_metaFile));
+		m_ignoreDataValues = (Boolean)meta.get(OPT_IGNORE_DATA_VALUES);
+		m_indexes = toIndexDescriptions((List<Map<String,String>>)meta.get(OPT_INDEXES));
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void writeMetaData() throws FileNotFoundException {
+		Map options = new HashMap();
+		options.put(OPT_IGNORE_DATA_VALUES, m_ignoreDataValues);
+		List<Map<String,String>> indexMaps = new ArrayList<Map<String,String>>();
+		for (IndexDescription idx : m_indexes)
+			indexMaps.add(idx.asMap());
+		options.put(OPT_INDEXES, indexMaps);
+		
+		Yaml.dump(options, new File(m_metaFile));
 	}
 }

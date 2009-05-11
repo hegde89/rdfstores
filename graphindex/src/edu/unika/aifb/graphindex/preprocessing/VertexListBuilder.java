@@ -56,7 +56,7 @@ public class VertexListBuilder implements TripleSink {
 		m_edgeHashes = new HashSet<Long>();
 	}
 	
-	public void triple(String src, String edge, String dst) {
+	public void triple(String src, String edge, String dst, String objectType) {
 		long sh = Util.hash(src);
 		IVertex sv = m_vertices.getVertex(sh);
 		if (sv == null)
@@ -67,6 +67,8 @@ public class VertexListBuilder implements TripleSink {
 		if (ov == null) {
 			throw new UnsupportedOperationException("if the subject is in the current component the object should be too");
 		}
+		if (objectType.equals("d"))
+			ov.setDataValue(true);
 		
 		long eh = Util.hash(edge);
 
@@ -107,7 +109,7 @@ public class VertexListBuilder implements TripleSink {
 			out.println(edgeLabel);
 
 		for (IVertex v : m_vertices) {
-			out.println("v " + v.getId());
+			out.println("v" + (v.isDataValue() ? "d" : "e") + " " + v.getId());
 			for (long edgeLabel : m_edgeHashes) {
 				List<IVertex> i = v.getImage(edgeLabel);
 				if (i != null) {

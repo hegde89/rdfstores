@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.query;
+package edu.unika.aifb.graphindex.query.matcher_v1;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,6 +41,9 @@ import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.graph.QueryGraph;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.graph.isomorphism.VertexMapping;
+import edu.unika.aifb.graphindex.query.AbstractIndexMatchesValidator;
+import edu.unika.aifb.graphindex.query.EvaluationClass;
+import edu.unika.aifb.graphindex.query.IndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Constant;
 import edu.unika.aifb.graphindex.query.model.Individual;
 import edu.unika.aifb.graphindex.query.model.Query;
@@ -56,23 +59,16 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
 
-public class MappingListValidator implements Callable<List<String[]>> {
+public class MappingListValidator extends AbstractIndexMatchesValidator implements Callable<List<String[]>>  {
 	
-	private StructureIndexReader m_indexReader;
-	private ExtensionManager m_em;
-	private StatisticsCollector m_collector;
 	private Timings t;
-	private ExtensionStorage m_es;
 	private boolean m_dstUnmappedExtSetup = true, m_srcUnmappedExtSetup = true;
 	
 	private static final Logger log = Logger.getLogger(MappingListValidator.class);
 	
-	public MappingListValidator(StructureIndexReader indexReader, StatisticsCollector collector) {
-		m_indexReader = indexReader;
+	public MappingListValidator(StructureIndex index, StatisticsCollector collector) {
+		super(index, collector);
 
-		m_em = m_indexReader.getIndex().getExtensionManager();
-		m_es = m_em.getExtensionStorage();
-		m_collector = collector;
 		t = new Timings();
 	}
 	
@@ -247,11 +243,11 @@ public class MappingListValidator implements Callable<List<String[]>> {
 		return scores;
 	}
 	
-	public List<String[]> validateMappings(Query query, final Graph<QueryNode> queryGraph, GTable<String> mappings, final Map<String,Integer> e2s, List<String> selectVars) throws StorageException, InterruptedException, ExecutionException {
+	public List<String[]> validateIndexMatches(Query query, final Graph<QueryNode> queryGraph, GTable<String> mappings, List<String> selectVars) throws StorageException {
 		t = new Timings();
 		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-			if (m_indexReader.getIndex().getObjectCardinality(edge.getLabel()) == null) {
+			if (m_index.getObjectCardinality(edge.getLabel()) == null) {
 				log.debug("unknown edge: aborting " + edge.getLabel());
 				return new ArrayList<String[]>();
 			}
@@ -306,8 +302,8 @@ public class MappingListValidator implements Callable<List<String[]>> {
 				int c2 = cardinality.get(s2) * cardinality.get(d2);
 				
 				if (c1 == c2) {
-					Integer ce1 = m_indexReader.getIndex().getObjectCardinality(e1.getLabel());
-					Integer ce2 = m_indexReader.getIndex().getObjectCardinality(e2.getLabel());
+					Integer ce1 = m_index.getObjectCardinality(e1.getLabel());
+					Integer ce2 = m_index.getObjectCardinality(e2.getLabel());
 					
 					if (cardinality.get(d1) == cardinality.get(d2) && ce1 != null && ce2 != null && ce1.intValue() != ce2.intValue()) {
 						if (ce1 < ce2)

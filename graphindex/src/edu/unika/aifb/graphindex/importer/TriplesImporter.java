@@ -16,7 +16,7 @@ public class TriplesImporter extends Importer {
 				while ((input = in.readLine()) != null) {
 					input = input.trim();
 					String[] t = input.split("\t");
-					m_sink.triple(t[0], t[1], t[2]);
+					m_sink.triple(t[0], t[1], t[2], t.length >=4 ? t[3] : null);
 				}
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();

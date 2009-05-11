@@ -67,7 +67,7 @@ public class SortedVertexListBuilder implements HashedTripleSink {
 		m_edgeHashes = new HashSet<Long>();
 	}
 	
-	public void triple(long s, long p, long o) {
+	public void triple(long s, long p, long o, String objectType) {
 		if (m_currentVertex == null) {
 			m_currentVertex = m_vertices.getVertex(s);
 			m_currentImage = new HashMap<Long,List<IVertex>>();
@@ -89,6 +89,9 @@ public class SortedVertexListBuilder implements HashedTripleSink {
 		if (ov == null) {
 			throw new UnsupportedOperationException("if the subject is in the current component the object should be too");
 		}
+		
+		if (objectType.equals("d"))
+			ov.setDataValue(true);
 		
 //		m_currentVertex.addToImage(p, ov);
 		List<IVertex> image = m_currentImage.get(p);
@@ -137,7 +140,7 @@ public class SortedVertexListBuilder implements HashedTripleSink {
 			out.println(edgeLabel);
 
 		for (IVertex v : m_vertices) {
-			out.println("v " + v.getId());
+			out.println("v" + (v.isDataValue() ? "d" : "e") + " " + v.getId());
 			for (long edgeLabel : m_edgeHashes) {
 				List<IVertex> i = v.getImage(edgeLabel);
 				if (i != null) {

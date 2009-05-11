@@ -49,7 +49,7 @@ public class TriplesPartitioner implements HashedTripleSink {
 			}
 	}
 	
-	public void triple(long s, long p, long o) {
+	public void triple(long s, long p, long o, String objectType) {
 		long sh = s;
 		long oh = o;
 		

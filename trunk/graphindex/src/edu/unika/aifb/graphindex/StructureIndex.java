@@ -48,10 +48,12 @@ public class StructureIndex {
 	private Map<String,Integer> m_objectCardinalities;
 	private List<IndexDescription> m_indexes;
 	private boolean m_ignoreDataValues = false;
+	private int m_pathLength = -1;
 	private String m_metaFile;
 	
 	private static final String META_FILENAME = "index.yml";
 	public static final String OPT_IGNORE_DATA_VALUES = "ignore_data_values";
+	public static final String OPT_PATH_LENGTH = "path_length";
 	public static final String OPT_INDEXES = "indexes";
 	
 	private static final Logger log = Logger.getLogger(StructureIndex.class);
@@ -182,6 +184,10 @@ public class StructureIndex {
 		return m_ignoreDataValues;
 	}
 	
+	public int getPathLength() {
+		return m_pathLength;
+	}
+	
 	public List<IndexDescription> getIndexes() {
 		return m_indexes;
 	}
@@ -222,6 +228,8 @@ public class StructureIndex {
 	public void setOptions(Map options) throws FileNotFoundException {
 		if (options.containsKey(OPT_IGNORE_DATA_VALUES))
 			m_ignoreDataValues = (Boolean)options.get(OPT_IGNORE_DATA_VALUES);
+		if (options.containsKey(OPT_PATH_LENGTH))
+			m_pathLength = (Integer)options.get(OPT_PATH_LENGTH);
 		if (options.containsKey(OPT_INDEXES)) {
 			m_indexes = toIndexDescriptions((List<Map<String,String>>)options.get(OPT_INDEXES));
 		}
@@ -233,6 +241,8 @@ public class StructureIndex {
 	private void readMetaData() throws FileNotFoundException {
 		Map meta = (Map)Yaml.load(new File(m_metaFile));
 		m_ignoreDataValues = (Boolean)meta.get(OPT_IGNORE_DATA_VALUES);
+		if (meta.get(OPT_PATH_LENGTH) != null)
+			m_pathLength = (Integer)meta.get(OPT_PATH_LENGTH);
 		m_indexes = toIndexDescriptions((List<Map<String,String>>)meta.get(OPT_INDEXES));
 	}
 	
@@ -240,6 +250,7 @@ public class StructureIndex {
 	private void writeMetaData() throws FileNotFoundException {
 		Map options = new HashMap();
 		options.put(OPT_IGNORE_DATA_VALUES, m_ignoreDataValues);
+		options.put(OPT_PATH_LENGTH, m_pathLength);
 		List<Map<String,String>> indexMaps = new ArrayList<Map<String,String>>();
 		for (IndexDescription idx : m_indexes)
 			indexMaps.add(idx.asMap());

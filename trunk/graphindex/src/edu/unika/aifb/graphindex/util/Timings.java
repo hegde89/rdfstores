@@ -4,17 +4,24 @@ public class Timings {
 	private long[] starts = new long[20];
 	private long[] timings = new long[20];
 	private int[] counts = new int[20];
-	public static final int DATA = 0;
-	public static final int JOIN = 1;
-	public static final int ML = 2;
-	public static final int SETUP = 3;
-	public static final int MATCH = 4;
-	public static final int UC = 5;
-	public static final int GT = 6;
-	public static final int EXTSETUP = 7;
-	public static final int TABLEMERGE = 11;
-	public static final int TABLESORT = 12;
-	public static final int DATA_E = 13;
+	public static final int LOAD_DATA_LIST = 0;
+	public static final int LOAD_DATA_SET = 1;
+	public static final int LOAD_HT = 2;
+	public static final int LOAD_IT = 3;
+	public static final int LOAD_EXT_OBJECT = 10;
+	public static final int LOAD_EXT_SUBJECT = 11;
+	public static final int JOIN_MERGE = 4;
+	public static final int JOIN_HASH = 5;
+	public static final int TBL_SORT = 6;
+	public static final int TBL_MERGE = 7;
+	public static final int IM_PURGE = 8;
+	public static final int DM_FILTER = 9;
+	public static final int DM_CLASSES = 14;
+	
+	public static final int STEP_IM = 12;
+	public static final int STEP_DM = 13;
+	
+	public static final int VP_LOAD = 15;
 	
 	public Timings() {
 		

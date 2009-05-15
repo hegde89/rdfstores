@@ -483,6 +483,10 @@ public class Query {
 	public Set<String> getBackwardTargets() {
 		return m_backwardTargets;
 	}
+	
+	public Set<String> getForwardSources() {
+		return m_forwardSources;
+	}
 
 	public void setIgnoreIndexEdgeSets(boolean m_ignoreIndexEdgeSets) {
 		this.m_ignoreIndexEdgeSets = m_ignoreIndexEdgeSets;

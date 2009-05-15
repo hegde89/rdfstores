@@ -43,8 +43,8 @@ public class VPRunner {
 			for (String file : m_files)
 				i.addImport(file);
 			i.setTripleSink(new ParsingTripleConverter(new HashedTripleSink() {
-				public void triple(long s, long p, long o) {
-					m_sink.triple(m_hash.getValue(s), m_hash.getValue(p), m_hash.getValue(o));
+				public void triple(long s, long p, long o, String objectType) {
+					m_sink.triple(m_hash.getValue(s), m_hash.getValue(p), m_hash.getValue(o), objectType);
 				}
 			}));
 			i.doImport();
@@ -102,7 +102,7 @@ public class VPRunner {
  	}
 
 	public static void main(String[] args) throws StorageException, IOException {
-		String dir = "/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/vp/" + args[1];
+		String dir = "/data/sp/indexes/vp/" + args[1];
 		String dataset = args[2];
 		
 //		String dir = args[1];
@@ -124,7 +124,7 @@ public class VPRunner {
 			Importer importer = new HashedTriplesImporter(htDir + "/hashes", htDir + "/propertyhashes"); 
 			importer.addImport(htDir + "/input.ht");
 			importer.setTripleSink(new TripleSink() {
-				public void triple(String s, String p, String o) {
+				public void triple(String s, String p, String o, String objectType) {
 					ls.addTriple(s, p, o);
 					c.val++;
 					if (c.val % 100000 == 0)
@@ -164,12 +164,12 @@ public class VPRunner {
 			}
 			else if (dataset.equals("lubm")) {
 				QueryLoader ql = new QueryLoader();
-				String queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
-//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
+//				String queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
+				String queriesFile = "/Users/gla/Projects/sp/evaluation/queries/lubm/PathQuery.txt";
 				List<Query> queries = ql.loadQueryFile(queriesFile);
 				
 				for (Query q : queries) {
-					if (!q.getName().equals("lq1"))
+					if (!q.getName().equals("q100"))
 						continue;
 					log.debug("--------------------------------------------");
 					log.debug("query: " + q.getName());

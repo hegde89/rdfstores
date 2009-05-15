@@ -231,7 +231,7 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 	
 	public void sort(final int col) {
 		if (timings != null)
-			timings.start(Timings.JOIN);
+			timings.start(Timings.TBL_SORT);
 //		long start = System.currentTimeMillis();
 //		String s = this.toString();
 		Collections.sort(m_rows, new Comparator<T[]>() {
@@ -243,7 +243,7 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 //		if (log.isDebugEnabled())
 //			log.debug(" sorted " + s + " by " + getColumnName(col) + " in " + (System.currentTimeMillis() - start) + " ms");
 		if (timings != null)
-			timings.end(Timings.JOIN);
+			timings.end(Timings.TBL_SORT);
 	}
 	
 	@Override

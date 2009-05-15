@@ -9,8 +9,8 @@ import edu.unika.aifb.graphindex.util.Timings;
 
 public interface IndexGraphMatcher {
 	public void initialize() throws StorageException;
-	public GTable<String> match() throws StorageException;
-	public void setQueryGraph(Query query, Graph<QueryNode> graph);
+	public void match() throws StorageException;
+	public void setQueryExecution(QueryExecution qe);
 	
 	public void setTimings(Timings t);
 }

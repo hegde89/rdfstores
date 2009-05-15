@@ -11,45 +11,110 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.sun.tools.extcheck.ExtCheck;
+
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.data.Tables;
+import edu.unika.aifb.graphindex.data.Tables.JoinedRowValidator;
+import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
+import edu.unika.aifb.graphindex.query.QueryExecution;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
+import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
+	private class SignatureRowValidator implements JoinedRowValidator {
+		private Set<String> signatures;
+		private List<Integer> leftSigCols, rightSigCols;
+		private boolean nopurge = true;
+		public int purged = 0, total = 0;
+		
+		public void setTables(GTable<String> left, GTable<String> right) {
+			leftSigCols = getSignatureColumns(left);
+			rightSigCols = getSignatureColumns(right);
+			
+//			log.debug("last purge: " + purged + "/" + total);
+//			log.debug(left + " " + leftSigCols);
+//			log.debug(right + " " + rightSigCols);
 
-	private IndexDescription m_idxESPS;
-	private IndexDescription m_idxESPO;
-	private IndexDescription m_idxEOPO;
-	private IndexDescription m_idxPOES;
-//	private IndexDescription m_idxESPS;
+			purged = 0;
+			total = 0;
+			
+			if (leftSigCols.size() + rightSigCols.size() == 0 
+				|| (leftSigCols.size() == left.columnCount() && rightSigCols.size() == right.columnCount())
+				|| left.rowCount() > 5000 || right.rowCount() > 5000) {
+				nopurge = true;
+				log.debug("no purge");
+				return;
+			}
+			
+			signatures = new HashSet<String>((left.rowCount() + right.rowCount()) / 2);
+			nopurge = false;
+		}
+		
+		public boolean isValid(String[] leftRow, String[] rightRow) {
+			if (nopurge)
+				return true;
+			
+			m_timings.start(Timings.IM_PURGE);
+			total++;
+			
+			StringBuffer sb = new StringBuffer();
+			sb.append(getSignature(leftRow, leftSigCols)).append("||").append(getSignature(rightRow, rightSigCols));
+			
+			if (signatures.add(sb.toString())) {
+				m_timings.end(Timings.IM_PURGE);
+				return true;
+			}
+			
+			purged++;
+			
+			m_timings.end(Timings.IM_PURGE);
+			return false;
+		}
+	}
 	
+	private SignatureRowValidator m_validator;
+	private final Set<String> m_signatureNodes, m_joinNodes;
+	private final Map<String,Integer> m_joinCounts;
+	private boolean m_purgeNeeded;
+	
+	private IndexDescription m_idxPSESO;
+	private IndexDescription m_idxPOESS;
+	private IndexDescription m_idxPOES;
+	private IndexDescription m_idxPSES;
+
 	private static final Logger log = Logger.getLogger(SmallIndexGraphMatcher.class);
 	
 	public SmallIndexGraphMatcher(StructureIndex index, String graphName) {
 		super(index, graphName);
+		m_signatureNodes = new HashSet<String>();
+		m_joinNodes = new HashSet<String>();
+		m_joinCounts = new HashMap<String,Integer>();
+		m_validator = new SignatureRowValidator();
 	}
 
 	@Override
 	protected boolean isCompatibleWithIndex() {
-		m_idxESPS = m_index.getCompatibleIndex(DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
-		m_idxESPO = m_index.getCompatibleIndex(DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		m_idxPSESO = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
+		m_idxPOESS = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
 		m_idxPOES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);
-//		m_idxEOPO = m_index.getCompatibleIndex(DataField.EXT_OBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		m_idxPSES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
 		
-		if (m_idxESPS == null || m_idxESPO == null || m_idxPOES == null)
+		if (m_idxPSESO == null || m_idxPOESS == null || m_idxPOES == null || m_idxPSES == null)
 			return false;
 		
 		return true;
 	}
 
-	public GTable<String> match() throws StorageException {
+	public void match() throws StorageException {
 		
 		final Map<String,Integer> scores = m_query.calculateConstantProximities();
 		for (String label : scores.keySet())
@@ -113,6 +178,10 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		while (toVisit.size() > 0) {
 			GraphEdge<QueryNode> currentEdge;
 			String srcLabel, trgLabel, property;
+			
+			// start with query edge with at least one constant, after that, only use
+			// edges connected to an already processed edge. never evaluate lone edges
+			// with both positions being variables
 			List<GraphEdge<QueryNode>> skipped = new ArrayList<GraphEdge<QueryNode>>();
 			do {
 				currentEdge = toVisit.poll();
@@ -144,19 +213,27 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			
 			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 			
+			processed(srcLabel, trgLabel);
+			
+//			if (toVisit.size() == 0) {
+//				m_validator = new SignatureRowValidator();
+//			}
+//			else
+//				m_validator = null;
+			
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,b: edge has one unprocessed node, the source
 				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
 				
 				targetTable.sort(trgLabel, true);
-				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel);
+				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel, m_validator);
 			}
 			else if (sourceTable != null && targetTable == null) {
 				// cases 1 c,d: edge has one unprocessed node, the target
-				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0, sourceTable);
 				
 				sourceTable.sort(srcLabel, true);
-				result = Tables.mergeJoin(sourceTable, edgeTable, srcLabel);
+				result = Tables.mergeJoin(sourceTable, edgeTable, srcLabel, m_validator);
 			}
 			else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
@@ -178,12 +255,17 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 				// case 3: both nodes already processed
 				GTable<String> first, second;
 				String firstCol, secondCol;
+				GTable<String> edgeTable;
+				
+				// start with smaller table
 				if (sourceTable.rowCount() < targetTable.rowCount()) {
 					first = sourceTable;
 					firstCol = srcLabel;
 					
 					second = targetTable;
 					secondCol = trgLabel;
+
+					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
 				}
 				else {
 					first = targetTable;
@@ -191,40 +273,47 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 					
 					second = sourceTable;
 					secondCol = srcLabel;
+
+					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
 				}
 				
-				GTable<String> edgeTable;
-				if (firstCol.equals(srcLabel))
-					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
-				else
-					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
-				
 				first.sort(firstCol, true);
-				result = Tables.mergeJoin(first, edgeTable, firstCol);
+				result = Tables.mergeJoin(first, edgeTable, firstCol, m_validator);
 	
 				result.sort(secondCol, true);
 				second.sort(secondCol, true);
-				result = Tables.mergeJoin(second, result, secondCol);
+				result = Tables.mergeJoin(second, result, secondCol, m_validator);
 			}
 			
 			log.debug("rows: " + result.rowCount());
 			
-			if (result.rowCount() == 0)
-				return null;
+			if (result.rowCount() == 0) {
+				m_qe.setIndexMatches(null);
+				return;
+			}
 			
 			resultTables.add(result);
 			
 			log.debug("tables: " + resultTables);
+			if (m_validator != null)
+				log.debug("purged: " + m_validator.purged + "/" + m_validator.total);
 			log.debug("");
 		}
 		
 		if (resultTables.size() == 1)
-			return resultTables.get(0);
+			m_qe.setIndexMatches(resultTables.get(0));
 		else
-			return null;
+			m_qe.setIndexMatches(null);
 	}
 	
 	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
+		return getEdgeTable(property, srcLabel, trgLabel, orderedBy, null);
+	}
+	
+	private Map<String,String> m_inventedExtensions = new HashMap<String,String>();
+	private int m_extCounter = 0;
+	
+	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy, GTable<String> sourceTable) throws StorageException {
 		GTable<String> edgeTable; 
 		if (orderedBy == 0)
 			edgeTable = m_p2ts.get(property);
@@ -233,13 +322,28 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		
 		boolean doTrgFilter = true;
 		if (edgeTable == null) {
+			String inventedExtension = m_inventedExtensions.get(trgLabel);
+			if (inventedExtension == null) {
+				inventedExtension = "bx" + m_extCounter++;
+				m_inventedExtensions.put(trgLabel, inventedExtension);
+			}
 			if (Util.isConstant(trgLabel)) {
-				doTrgFilter = true;
+				doTrgFilter = false;
 				List<String> subjectExtensions = m_es.getData(m_idxPOES, property, trgLabel);
-				log.debug("subject extensions: " + subjectExtensions);
+				log.debug("subject extensions: " + subjectExtensions.size());
 				edgeTable = new GTable<String>(srcLabel, trgLabel);
 				for (String subjectExt : subjectExtensions)
-					edgeTable.addRow(new String[] { subjectExt, "bxxx" });
+					edgeTable.addRow(new String[] { subjectExt, inventedExtension });
+				edgeTable.sort(orderedBy);
+			}
+			else if (sourceTable != null) {
+				edgeTable = new GTable<String>(srcLabel, trgLabel);
+				doTrgFilter = false;
+				int sourceCol = sourceTable.getColumn(srcLabel);
+				for (String[] srcRow : sourceTable) {
+					if (m_es.hasTriples(m_idxPSESO, srcRow[sourceCol], property, null))
+						edgeTable.addRow(new String[] { srcRow[sourceCol], inventedExtension });
+				}
 				edgeTable.sort(orderedBy);
 			}
 			else
@@ -253,7 +357,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		if (doTrgFilter && Util.isConstant(trgLabel)) {
 			List<String[]> filtered = new ArrayList<String[]>();
 			for (String[] row : table) {
-				if (m_es.hasTriples(IndexDescription.ESPO, row[0], property, trgLabel))
+				if (m_es.hasTriples(m_idxPOESS, row[0], property, trgLabel))
 					filtered.add(row);
 			}
 			table.setRows(filtered);
@@ -270,5 +374,66 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 				return is;
 		}
 		return GraphEdge.IS_NONE;
+	}
+	
+	@Override
+	public void setQueryExecution(QueryExecution qe) {
+		super.setQueryExecution(qe);
+		
+		m_signatureNodes.clear();
+		m_joinNodes.clear();
+		m_joinCounts.clear();
+		
+		for (int i = 0; i < m_queryGraph.nodeCount(); i++) {
+			if (m_queryGraph.outDegreeOf(i) > 0 || Util.isConstant(m_queryGraph.getNode(i).getSingleMember()))
+				m_signatureNodes.add(m_queryGraph.getNode(i).getSingleMember());
+			else if (m_queryGraph.inDegreeOf(i) > 1)
+				m_joinNodes.add(m_queryGraph.getNode(i).getSingleMember());
+			
+			m_joinCounts.put(m_queryGraph.getNode(i).getSingleMember(), m_queryGraph.inDegreeOf(i) + m_queryGraph.outDegreeOf(i));
+		}
+		
+//		if (query.getRemovedNodes().size() > 0) {
+//			for (String node : query.getRemovedNodes()) {
+//				if (!m_signatureNodes.contains(node))
+//					m_signatureNodes.remove(node);
+//			}
+//		}
+		
+		log.debug("sig nodes: " + m_signatureNodes);
+		log.debug("join nodes: " + m_joinNodes);
+	}
+
+	private void processed(String n1, String n2) {
+		m_purgeNeeded = false;
+		
+		int c = m_joinCounts.get(n1) - 1;
+		m_joinCounts.put(n1, c);
+		if (c == 0 && m_joinNodes.contains(n1))
+			m_purgeNeeded = true;
+		
+		c = m_joinCounts.get(n2) - 1;
+		m_joinCounts.put(n2, c);
+		if (c == 0 && m_joinNodes.contains(n2))
+			m_purgeNeeded = true;
+
+		log.debug("purge needed: " + m_purgeNeeded);
+	}
+
+	private String getSignature(String[] row, List<Integer> sigCols) {
+		StringBuilder sb = new StringBuilder();
+		for (int sigCol : sigCols)
+			sb.append(row[sigCol]).append("__");
+		return sb.toString();
+	}
+	
+	private List<Integer> getSignatureColumns(GTable<String> table) {
+		List<Integer> sigCols = new ArrayList<Integer>();
+
+		for (String colName : table.getColumnNames())
+			if (m_signatureNodes.contains(colName) || (m_joinNodes.contains(colName) && m_joinCounts.get(colName) > 0)) 
+				sigCols.add(table.getColumn(colName));
+
+		return sigCols;
 	}
 }

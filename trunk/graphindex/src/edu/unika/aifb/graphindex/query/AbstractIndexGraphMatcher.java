@@ -18,6 +18,7 @@ import edu.unika.aifb.graphindex.util.Timings;
 public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 
 	protected StructureIndex m_index;
+	protected QueryExecution m_qe;
 	protected String m_graphName;
 	protected Query m_query;
 	protected Graph<QueryNode> m_queryGraph;
@@ -79,11 +80,12 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 			t.sort(1);
 	}
 	
-	public void setQueryGraph(Query query, Graph<QueryNode> queryGraph) {
-		m_query = query;
-		m_queryGraph = queryGraph;
+	public void setQueryExecution(QueryExecution qe) {
+		m_qe = qe;
+		m_query = qe.getQuery();
+		m_queryGraph = qe.getQueryGraph();
 	}
-
+	
 	protected String getSourceLabel(GraphEdge<QueryNode> edge) {
 		return m_queryGraph.getNode(edge.getSrc()).getName();
 	}

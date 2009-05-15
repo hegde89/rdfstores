@@ -15,13 +15,17 @@ import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
 
 public class Tables {
+	public interface JoinedRowValidator {
+		public void setTables(GTable<String> left, GTable<String> right);
+		public boolean isValid(String[] leftRow, String[] rightRow);
+	}
 
 	public static final Logger log = Logger.getLogger(Tables.class);
 	public static Timings timings = null;
 	
 	public static GTable<String> mergeTables(List<GTable<String>> tables, final int col) {
 		if (timings != null)
-			timings.start(Timings.TABLEMERGE);
+			timings.start(Timings.TBL_MERGE);
 		long start = System.currentTimeMillis();
 	
 		GTable<String> result = new GTable<String>(tables.get(0).getColumnNames());
@@ -53,7 +57,7 @@ public class Tables {
 			result = tables.get(0);
 		
 		if (timings != null)
-			timings.end(Timings.TABLEMERGE);
+			timings.end(Timings.TBL_MERGE);
 		return result;
 	}
 
@@ -120,7 +124,7 @@ public class Tables {
 		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
 			throw new UnsupportedOperationException("merge join with unsorted tables");
 		if (timings != null)
-			timings.start(Timings.JOIN);
+			timings.start(Timings.JOIN_MERGE);
 		long start = System.currentTimeMillis();
 	
 		List<String> resultColumns = new ArrayList<String>();
@@ -171,15 +175,19 @@ public class Tables {
 	
 //		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
-			timings.end(Timings.JOIN);
+			timings.end(Timings.JOIN_MERGE);
 		return result;
 	}
 
 	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, String col) {
+		return mergeJoin(left, right, col, null);
+	}
+	
+	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, String col, JoinedRowValidator validator) {
 		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
 			throw new UnsupportedOperationException("merge join with unsorted tables");
 		if (timings != null)
-			timings.start(Timings.JOIN);
+			timings.start(Timings.JOIN_MERGE);
 		long start = System.currentTimeMillis();
 		
 		if (right.columnCount() > left.columnCount()) {
@@ -199,6 +207,9 @@ public class Tables {
 		int rc = right.getColumn(col);
 		
 		log.debug("merge join: " + left + " x " + right);
+		
+		if (validator != null)
+			validator.setTables(left, right);
 	
 		GTable<String> result = new GTable<String>(resultColumns, left.rowCount() + right.rowCount());
 	
@@ -213,20 +224,23 @@ public class Tables {
 			else if (val > 0)
 				r++;
 			else {
-				result.addRow(combineRow(lrow, rrow, rc));
+				if (validator == null || validator.isValid(lrow, rrow))
+					result.addRow(combineRow(lrow, rrow, rc));
 	
 				String[] row;
 				int i = l + 1;
 				while (i < left.rowCount() && left.getRow(i)[lc].compareTo(rrow[rc]) == 0) {
 					row = left.getRow(i);
-					result.addRow(combineRow(row, rrow, rc));
+					if (validator == null || validator.isValid(row, rrow))
+						result.addRow(combineRow(row, rrow, rc));
 					i++;
 				}
 	
 				int j = r + 1;
 				while (j < right.rowCount() && lrow[lc].compareTo(right.getRow(j)[rc]) == 0) {
 					row = right.getRow(j);
-					result.addRow(combineRow(lrow, row, rc));
+					if (validator == null || validator.isValid(lrow, row))
+						result.addRow(combineRow(lrow, row, rc));
 					j++;
 				}
 	
@@ -239,13 +253,13 @@ public class Tables {
 		log.debug("merge join: done in " + (System.currentTimeMillis() - start));
 //		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
-			timings.end(Timings.JOIN);
+			timings.end(Timings.JOIN_MERGE);
 		return result;
 	}
 
 	public static GTable<Integer> hashJoinInteger(GTable<Integer> left, GTable<Integer> right, List<String> cols) {
 		if (timings != null)
-			timings.start(Timings.JOIN);
+			timings.start(Timings.JOIN_HASH);
 //		long start = System.currentTimeMillis();
 	
 		if (left.rowCount() >= right.rowCount()) {
@@ -311,14 +325,14 @@ public class Tables {
 	
 //		log.debug(" joined (hash) " + left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
-			timings.end(Timings.JOIN);
+			timings.end(Timings.JOIN_HASH);
 	
 		return result;
 	}
 
 	public static GTable<String> hashJoin(GTable<String> left, GTable<String> right, List<String> cols) {
 		if (timings != null)
-			timings.start(Timings.JOIN);
+			timings.start(Timings.JOIN_HASH);
 		long start = System.currentTimeMillis();
 	
 		if (left.rowCount() >= right.rowCount()) {
@@ -384,7 +398,7 @@ public class Tables {
 	
 //		log.debug(" joined (hash) " + left + " " + right + " => " + result + ", " + count + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
-			timings.end(Timings.JOIN);
+			timings.end(Timings.JOIN_HASH);
 	
 		return result;
 	}

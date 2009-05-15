@@ -59,33 +59,6 @@ public class TestRunner {
 				log.debug(dt);
 				log.debug(jt);
 				
-//				if (tt.size() >= 3) {
-//					int lowRun = 0, highRun = 0;
-//					for (int i = 0; i < tt.size(); i++) {
-//						if (tt.get(i) > tt.get(highRun))
-//							highRun = i;
-//						if (tt.get(i) < tt.get(lowRun))
-//							lowRun = i;
-//					}
-//					
-//					tt.remove(Math.max(lowRun, highRun));
-//					tt.remove(Math.min(lowRun, highRun));
-//					mt.remove(Math.max(lowRun, highRun));
-//					mt.remove(Math.min(lowRun, highRun));
-//					dt.remove(Math.max(lowRun, highRun));
-//					dt.remove(Math.min(lowRun, highRun));
-//					jt.remove(Math.max(lowRun, highRun));
-//					jt.remove(Math.min(lowRun, highRun));
-////					tt.remove(0);
-////					tt.remove(0);
-////					mt.remove(0);
-////					mt.remove(0);
-////					dt.remove(0);
-////					dt.remove(0);
-////					jt.remove(0);
-////					jt.remove(0);
-//				}
-				
 				double total_avg = 0, match_avg = 0, data_avg = 0, join_avg = 0;
 				for (int i = 0; i < tt.size(); i++) {
 					total_avg += tt.get(i);
@@ -178,9 +151,9 @@ public class TestRunner {
 				
 				long[] t = qe.getTimings();
 				
-				r.q2match.get(q.getName()).add(t[Timings.MATCH]);
-				r.q2data.get(q.getName()).add(t[Timings.DATA]);
-				r.q2join.get(q.getName()).add(t[Timings.JOIN]);
+//				r.q2match.get(q.getName()).add(t[Timings.MATCH]);
+//				r.q2data.get(q.getName()).add(t[Timings.DATA]);
+//				r.q2join.get(q.getName()).add(t[Timings.JOIN]);
 			}
 		}
 		
@@ -237,9 +210,9 @@ public class TestRunner {
 					
 					long[] t = qe.getTimings();
 					
-					r.q2match.get(q.getName()).add(t[Timings.MATCH]);
-					r.q2data.get(q.getName()).add(t[Timings.DATA]);
-					r.q2join.get(q.getName()).add(t[Timings.JOIN]);
+//					r.q2match.get(q.getName()).add(t[Timings.MATCH]);
+//					r.q2data.get(q.getName()).add(t[Timings.DATA]);
+//					r.q2join.get(q.getName()).add(t[Timings.JOIN]);
 				}
 			}
 		}

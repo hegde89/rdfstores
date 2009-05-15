@@ -60,181 +60,31 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
+import edu.unika.aifb.keywordsearch.search.KeywordSearcher;
 
 public class Runner {
 
 	private static final Logger log = Logger.getLogger(Runner.class);
 
-	private static Query getQuery(String dataset) {
-		Query q = new Query(Arrays.asList("?x", "?y", "?z"));
-		
-		if (dataset.equals("simple")) {
-			Individual p1 = new Individual("http://example.org/simple#P1");
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#a"), new Variable("?x"), p1));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?x"), new Variable("?z")));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#p"), p1, new Variable("?a")));
-			
-			Individual a1 = new Individual("http://example.org/simple#A2");
-			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), a1, new Variable("?y")));
-			q.addLiteral(new Literal(new Predicate("http://example.org/simple#a"), new Variable("?y"), new Variable("?z")));
-
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#m"), new Variable("?x"), new Variable("?y")));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#o"), new Variable("?x"), new Variable("?z")));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#k"), new Variable("?y"), new Variable("?z")));
-			
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?x"), new Variable("?y")));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?y"), new Variable("?z")));
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#f"), new Variable("?z"), new Variable("?y")));
-			
-//			q.addLiteral(new Literal(new Predicate("http://example.org/simple#subClassOf"), new Variable("?x"), new Variable("?y")));
-		}
-		else if (dataset.equals("lubm")) {
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#advisor"), new Variable("?x"), new Variable("?y")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#worksFor"), new Variable("?y"), new Variable("?z")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf"), new Variable("?y"), new Variable("?a")));
-			
-			q.addLiteral(new Literal(new Predicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), new Variable("?x"), new Individual("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent")));
-			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse"), new Variable("?x"), new Individual("http://www.Department0.University0.edu/GraduateCourse0")));
-
-//			q.addLiteral(new Literal(new Predicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), new Variable("?x"), new Individual("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent")));
-//			q.addLiteral(new Literal(new Predicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), new Variable("?y"), new Individual("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#University")));
-//			q.addLiteral(new Literal(new Predicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), new Variable("?z"), new Individual("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#Department")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#memberOf"), new Variable("?x"), new Variable("?z")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#subOrganizationOf"), new Variable("?z"), new Variable("?y")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom"), new Variable("?x"), new Variable("?y")));
-			
-//			Individual prof0 = new Individual("http://www.Department0.University0.edu/FullProfessor0");
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#worksFor"), prof0, new Variable("?x")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf"), prof0, new Variable("?y")));
-//			q.addLiteral(new Literal(new Predicate("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#worksFor"), prof0, new Variable("?x")));
-		}
-		else {
-			return null;
-		}
-		
-		return q;
-	}
-	
-	private static String getQueryString(String dataset) {
-		if (dataset.equals("simple")) {
-			String q1 = "?x http://example.org/simple#a ?p\n" +
-				"?y http://example.org/simple#a ?p\n" +
-				"?x http://example.org/simple#f ?y";
-			
-			String q2 = "?x http://example.org/simple#is_a ?y\n ?y http://example.org/simple#subClassOf ?z \n " +
-				"?a http://example.org/simple#is_a ?b\n ?b http://example.org/simple#subClassOf ?z";
-			
-			String q3 = "?x http://example.org/simple#subClassOf ?z\n ?y http://example.org/simple#subClassOf ?z";
-			
-			String q4 = "?x http://example.org/simple#f http://example.org/simple#A1";
-
-			String q5 = "?x http://example.org/simple#f ?y\n?y http://example.org/simple#f ?z";
-
-			String q6 = "?x http://example.org/simple#f ?y\n?x http://example.org/simple#a ?z";
-			
-			String q7 = "?x http://example.org/simple#f ?y\n?y http://example.org/simple#f ?z\n?x http://example.org/simple#f ?f";
-			
-			String q8 = "?x http://example.org/simple#f http://example.org/simple#A2\n?x http://example.org/simple#f ?y\n?y http://example.org/simple#a ?z";
-			
-			return q4;
-		}
-		else if (dataset.equals("lubm")) {
-			String q1 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y";
-
-			String q2 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y\n" + 
-				"?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent\n" +
-				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0";
-
-			String q3 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone ?y\n" + 
-				"?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#GraduateStudent\n" +
-				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0\n" +
-				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse ?z";
-
-			String q4 = "?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse ?y\n" +
-				"?x http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse http://www.Department0.University0.edu/GraduateCourse0";
-			
-			return q4;
-		}
-		else if (dataset.equals("wordnet")) {
-			String q1 = "http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSatelliteSynset http://www.w3.org/2000/01/rdf-schema#subClassOf http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSynset";
-			
-			String q2 = "?x http://www.w3.org/2000/01/rdf-schema#subClassOf http://www.w3.org/2006/03/wn/wn20/schema/AdjectiveSynset";
-			
-			String q3 = "?x http://www.w3.org/2000/01/rdf-schema#subClassOf ?y";
-			
-			return q2;
-		}
-		else if (dataset.equals("sweto")) {
-			String q1 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn ?y";
-				
-			String q2 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y";
-			
-			String q3 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn ?y\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?z";
-			
-			String q4 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#isbn '3-540-22116-6'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?z";
-			
-			String q5 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name 'Pattern Recognition'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?y";
-			
-			String q6 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name ?n";
-			
-			String q7 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#journal_name 'Pattern Recognition'\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://lsdis.cs.uga.edu/projects/semdis/opus#Article";
-			
-			String q8 = "?x http://xmlns.com/foaf/0.1/name 'Anurag Garg'";
-			
-			String q9 = "?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://xmlns.com/foaf/0.1/Agent";
-			
-			String q10 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#pages '253-254'";
-			
-			String q11 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#number '1'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#pages '39-48'\n?x http://www.w3.org/2000/01/rdf-schema#label 'Parametric characterization of the form of the human pupil from blurred noisy images.'";
-			
-			String q12 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n ?x http://lsdis.cs.uga.edu/projects/semdis/opus#in_series ?z\n?z http://lsdis.cs.uga.edu/projects/semdis/opus#book_title 'WWW'";
-
-			String q13 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#in_series ?y";
-			
-			String q14 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#number '1'";
-
-			String q15 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y";//\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?a http://lsdis.cs.uga.edu/projects/semdis/opus#number '1'";
-			
-			String q16 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?z";
-			
-			String q17 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://lsdis.cs.uga.edu/projects/semdis/opus#Article\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?z http://xmlns.com/foaf/0.1/name ?n";
-			
-			String q18 = "http://dblp.uni-trier.de/rec/bibtex/journals/iandc/CaprettaUV06 http://lsdis.cs.uga.edu/projects/semdis/opus#author ?x";
-			
-			String q19 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'";
-			
-			String q20 = "?y http://xmlns.com/foaf/0.1/name 'Tarmo Uustalu'\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?z\n?z http://xmlns.com/foaf/0.1/name ?n";
-
-			String q21 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n ?y http://xmlns.com/foaf/0.1/name ?z";
-			
-			String q22 = "?x http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://xmlns.com/foaf/0.1/Person\n?y http://lsdis.cs.uga.edu/projects/semdis/opus#author ?x\n?y http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://xmlns.com/foaf/0.1/Document\n?y http://lsdis.cs.uga.edu/projects/semdis/opus#volume 'cs.AI/0003028'";
-			
-			String q23 = "?x http://lsdis.cs.uga.edu/projects/semdis/opus#author ?y\n?y http://xmlns.com/foaf/0.1/name ?z";
-			
-			return q19; 
-		}
-		
-		return null;
-	}
-	
 	private static Importer getImporter(String dataset) {
 		Importer importer = null;
-		
+		String datasetDir = "/data/datasets";
 		if (dataset.equals("simple")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/simple.nt");
+			importer.addImport(datasetDir + "/simple.nt");
 		}
 		else if (dataset.equals("wordnet")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet.nt");
+			importer.addImport(datasetDir + "/wordnet.nt");
 		}
 		else if (dataset.equals("freebase")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/freebase/freebase_1m.nt");
+			importer.addImport(datasetDir + "/freebase_1m.nt");
 		}
 		else if (dataset.equals("lubm")) {
 			importer = new OntologyImporter();
-			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm1/").listFiles()) {
+			for (File f : new File(datasetDir + "/lubm1/").listFiles()) {
 				if (f.getName().startsWith("University")) {
 					importer.addImport(f.getAbsolutePath());
 //					break;
@@ -249,23 +99,23 @@ public class Runner {
 		}
 		else if (dataset.equals("swrc")) {
 			importer = new OntologyImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swrc/swrc_updated_v0.7.1.owl");
+			importer.addImport(datasetDir + "/swrc/swrc_updated_v0.7.1.owl");
 		}
 		else if (dataset.equals("dbpedia")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/dbpedia/infobox_500k.nt");
+			importer.addImport(datasetDir + "/dbpedia/infobox_500k.nt");
 		}
 		else if (dataset.equals("sweto")) {
 			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swetodblp/swetodblp_april_2008-mod.nt");
+			importer.addImport(datasetDir + "/swetodblp/swetodblp_april_2008-mod.nt");
 		}
 		else if (dataset.equals("simple_components")) {
 			importer = new ComponentImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/components/simple");
+			importer.addImport(datasetDir + "/components/simple");
 		}
 		else if (dataset.equals("chefmoz")) {
 			importer = new RDFImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/chefmoz.rest.rdf");
+			importer.addImport(datasetDir + "/chefmoz.rest.rdf");
 		}
 		return importer;
  	}
@@ -307,8 +157,10 @@ public class Runner {
 			.withRequiredArg().ofType(String.class).describedAs("dataset");
 		op.accepts("q", "optional, name of query")
 			.withRequiredArg().ofType(String.class).describedAs("query name");
-		op.accepts("nodstes");
-		op.accepts("nosrces");
+//		op.accepts("nodstes");
+//		op.accepts("nosrces");
+		op.accepts("k", "upper bound for label path length")
+			.withRequiredArg().ofType(Integer.class).describedAs("path length");
 
 		OptionSet os = op.parse(args);
 		
@@ -321,6 +173,7 @@ public class Runner {
 		String prefix = (String)os.valueOf("p");
 		String dataset = (String)os.valueOf("d");
 		String queryName = (String)os.valueOf("q");
+		int pathLength = os.valueOf("k") == null ? 10 : (Integer)os.valueOf("k");
 		boolean dstUnmappedES = !os.has("nodstes");
 		boolean srcUnmappedES = !os.has("nosrces");
 
@@ -329,20 +182,26 @@ public class Runner {
 		log.info("dataset: " + dataset);
 		log.info("query name: " + queryName);
 		
-		String outputDirectory = "/Users/gl/Studium/diplomarbeit/workspace/graphindex/output/" + prefix;
+		String outputDirectory = "/data/sp/indexes/sp/" + prefix;
 		
 		long start = System.currentTimeMillis();
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			Map options = new HashMap();
 			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
+			options.put(StructureIndex.OPT_PATH_LENGTH, pathLength);
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
 			iw.setOptions(options);
-			iw.setForwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".fw.txt"));
-			iw.setBackwardEdgeSet(Util.readEdgeSet("/Users/gl/Studium/diplomarbeit/datasets/" + dataset + ".bw.txt"));
+			iw.setForwardEdgeSet(Util.readEdgeSet("/Users/gla/Projects/sp/datasets/" + dataset + ".fw.txt"));
+			iw.setBackwardEdgeSet(Util.readEdgeSet("/Users/gla/Projects/sp/datasets/" + dataset + ".bw.txt"));
 			iw.setImporter(getImporter(dataset));
 			iw.create(stages);
 //			iw.removeTemporaryFiles();
 			iw.close();
+		}
+		
+		if (stages.contains("keywordindex")) {
+			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory); 
+			kb.indexKeywords();
 		}
 		
 		if (stages.contains("temp")) {
@@ -369,12 +228,12 @@ public class Runner {
 //				queryFiles.add(dir + "GraphQuery.txt");
 			}
 			else if (dataset.equals("lubm")) {
-				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
+				queriesFile = "/Users/gla/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/AtomQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/EntityQuery.txt";
 //				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
-				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
-//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/PathQuery.txt";
+//				queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/vldb2/lubm/StarQuery.txt";
+				queriesFile = "/Users/gla/Projects/sp/evaluation/queries/lubm/PathQuery.txt";
 				queryOutputDirectory = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmqueries/";
 			}
 			else {
@@ -425,6 +284,14 @@ public class Runner {
 			System.out.println(sizes);
 			index.close();
 		}
+		
+		if (stages.contains("kwquery")) {
+			KeywordSearcher ks = new KeywordSearcher(outputDirectory + "/keyword");
+			List<String> queries = new ArrayList<String>();
+			queries.add("professor");
+			ks.searchElements(queries);
+		}
+		
 		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");
 	}
 }

@@ -29,21 +29,35 @@ public class StatisticsCollector {
 			}
 			
 		}
+//		public static final int LOAD_DATA_LIST = 0;
+//		public static final int LOAD_DATA_SET = 1;
+//		public static final int LOAD_HT = 2;
+//		public static final int LOAD_IT = 3;
+//		public static final int LOAD_EXT_OBJECT = 10;
+//		public static final int LOAD_EXT_SUBJECT = 11;
+//		public static final int JOIN_MERGE = 4;
+//		public static final int JOIN_HASH = 5;
+//		public static final int TBL_SORT = 6;
+//		public static final int TBL_MERGE = 7;
+//		public static final int IM_PURGE = 8;
+//		public static final int DM_FILTER = 9;
+//		public static final int DM_CLASSES = 14;
+//		
+//		public static final int STEP_IM = 12;
+//		public static final int STEP_DM = 13;
+		
 		log.debug("time spent");
-//		log.debug(" rcp: " + (timings[Timings.RCP]));
-//		log.debug(" setup: " + timings[Timings.SETUP] + " " + counts[Timings.SETUP]);
-		log.debug(" join matching: " + (timings[Timings.MATCH]) + " " + counts[Timings.MATCH]);
-//		log.debug(" ml: " + (timings[Timings.ML]) + " " + counts[Timings.ML]);
-//		log.debug(" mapgen: " + (timings[Timings.MAPGEN]));
-		log.debug(" ground terms: " + (timings[Timings.GT]) + " " + counts[Timings.GT]);
-		log.debug(" extsetup: " + timings[Timings.EXTSETUP] + " " + counts[Timings.EXTSETUP]);
-		log.debug(" retrieving data: " + (timings[Timings.DATA]) + " " + counts[Timings.DATA]);
-//		log.debug(" retrieving extension data: " + (timings[Timings.DATA_E]) + " " + counts[Timings.DATA_E]);
-//		log.debug(" subject filter: " + (timings[Timings.SUBJECT_FILTER]));
-//		log.debug(" sorting: " + (timings[Timings.TABLESORT]) + " " + counts[Timings.TABLESORT]);
-		log.debug(" result joining: " + (timings[Timings.JOIN]) + " " + counts[Timings.JOIN]);
-		log.debug(" uc: " + (timings[Timings.UC]) + " " + counts[Timings.UC]);
-//		log.debug(" building result set: " + (timings[Timings.RS]) + " " + counts[Timings.RS]);
+		log.debug(" load data list: " + (timings[Timings.LOAD_DATA_LIST]));
+		log.debug(" load data set:  " + (timings[Timings.LOAD_DATA_SET]));
+		log.debug(" load ht:        " + (timings[Timings.LOAD_HT]));
+		log.debug(" load it:        " + (timings[Timings.LOAD_IT]));
+		log.debug(" join merge:     " + (timings[Timings.JOIN_MERGE]));
+		log.debug(" tbl sort:       " + (timings[Timings.TBL_SORT]));
+		log.debug(" im purge:       " + (timings[Timings.IM_PURGE]));
+		log.debug(" dm filter:      " + (timings[Timings.DM_FILTER]));
+		log.debug(" dm classes:     " + (timings[Timings.DM_CLASSES]));
+		log.debug(" IM total:       " + (timings[Timings.STEP_IM]));
+		log.debug(" DM total:       " + (timings[Timings.STEP_DM]));
 	}
 	
 	public long[] getConsolidated() {

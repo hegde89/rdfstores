@@ -212,9 +212,9 @@ public class FastIndexBuilder {
 			
 			// new
 			sortPartitionFile(partitionFile, 0);
-			importTriples(partitionFile, 0, IndexDescription.ESPS, 1, 3, IndexDescription.ESPO, 3, 1, false);
-			m_index.addIndex(IndexDescription.ESPS);
-			m_index.addIndex(IndexDescription.ESPO);
+			importTriples(partitionFile, 0, IndexDescription.PSESO, 1, 3, IndexDescription.POESS, 3, 1, false);
+			m_index.addIndex(IndexDescription.PSESO);
+			m_index.addIndex(IndexDescription.POESS);
 
 			secondaryIndex(partitionFile, IndexDescription.PSES, 2, 1, 0);
 			secondaryIndex(partitionFile, IndexDescription.POES, 2, 3, 0);
@@ -325,7 +325,7 @@ public class FastIndexBuilder {
 		log.info("ignore data values: " + m_index.ignoreDataValues());
 		
 		RCPFast rcp = new RCPFast(m_index, m_hashProvider);
-		rcp.setIgnoreDataValue(m_index.ignoreDataValues());
+		rcp.setIgnoreDataValues(m_index.ignoreDataValues());
 		OneIndexMerger merger = new OneIndexMerger();
 		MergedIndexList<IndexGraph> list = new MergedIndexList<IndexGraph>(merger, new Comparator<IndexGraph>() {
 					public int compare(IndexGraph g1, IndexGraph g2) {
@@ -340,7 +340,7 @@ public class FastIndexBuilder {
 			log.info("unique edges: " + m_hashProvider.getEdges().size());
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
-			rcp.createIndexGraph(m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph", m_vlp.getComponentFile().getAbsolutePath() + ".block");
+			rcp.createIndexGraph(m_index.getPathLength(),m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph", m_vlp.getComponentFile().getAbsolutePath() + ".block");
 //			if (g == null)
 //				continue;
 //			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());

@@ -56,14 +56,14 @@ public interface ExtensionStorage {
 		private List<DataField> m_indexFields;
 		private DataField m_valueField;
 		
-		public static final IndexDescription ESPS = new IndexDescription("esps", "o", 
-			DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
-		public static final IndexDescription ESPO = new IndexDescription("espo", "s", 
-			DataField.EXT_SUBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
-		public static final IndexDescription EOPS = new IndexDescription("eops", "o", 
-			DataField.EXT_OBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
-		public static final IndexDescription EOPO = new IndexDescription("eopo", "s", 
-			DataField.EXT_OBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		public static final IndexDescription PSESO = new IndexDescription("pseso", "o", 
+			DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
+		public static final IndexDescription POESS = new IndexDescription("poess", "s", 
+			DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
+		public static final IndexDescription PSEOO = new IndexDescription("pseoo", "o", 
+			DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_OBJECT, DataField.OBJECT);
+		public static final IndexDescription POEOS = new IndexDescription("poeos", "s", 
+			DataField.PROPERTY, DataField.OBJECT, DataField.EXT_OBJECT, DataField.SUBJECT);
 		
 		public static final IndexDescription POES = new IndexDescription("poes", "es",
 			DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);

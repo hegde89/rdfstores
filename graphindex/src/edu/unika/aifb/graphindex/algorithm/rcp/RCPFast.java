@@ -46,7 +46,7 @@ public class RCPFast {
 		m_hashes = provider;
 	}
 	
-	public void setIgnoreDataValue(boolean ignore) {
+	public void setIgnoreDataValues(boolean ignore) {
 		m_ignoreDataValues = ignore;
 	}
 	
@@ -125,7 +125,7 @@ public class RCPFast {
 		return image;
 	}
 	
-	private Partition createPartition(Partition p, List<IVertex> vertices, Set<String> edges) {
+	private Partition createPartition(Partition p, List<IVertex> vertices, Set<String> edges, int pathLength) {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Set<XBlock> cbs = new HashSet<XBlock>();
@@ -142,6 +142,7 @@ public class RCPFast {
 		int movedIn = 0;
 		
 		System.gc();
+		log.debug("path length: " + pathLength);
 		log.debug("blocks: " + p.getBlocks().size());
 		log.debug("setup complete, " + Util.memory());
 		
@@ -164,7 +165,7 @@ public class RCPFast {
 		
 		steps++;
 			
-		while (w.size() > 0) {
+		while (w.size() > 0 && (pathLength == -1 || steps < pathLength)) {
 			XBlock s = w.remove();
 			
 			Block b;
@@ -253,7 +254,8 @@ public class RCPFast {
 		return p;
 	}
 	
-	public void createIndexGraph(VertexListProvider vlp, String partitionFile, String graphFile, String blockFile) throws StorageException, IOException, InterruptedException {
+	public void createIndexGraph(int pathLength, VertexListProvider vlp, String partitionFile, String graphFile, String blockFile) throws StorageException, IOException, InterruptedException {
+		log.debug("ignore data values: " + m_ignoreDataValues);
 		log.debug("---------------------------------- starting backward bisim");
 		log.debug("backward edges: " + m_backwardEdges);
 		List<IVertex> vertices = vlp.getList();
@@ -277,7 +279,7 @@ public class RCPFast {
 		Partition p = new Partition();
 		p.add(startBlock);
 		
-		p = createPartition(p, vertices, m_backwardEdges);
+		p = createPartition(p, vertices, m_backwardEdges, pathLength);
 
 		Map<Long,Block> id2block = new HashMap<Long,Block>();
 		for (Block b : p.getBlocks()) {
@@ -310,7 +312,7 @@ public class RCPFast {
 		
 		p = new Partition();
 		p.addAll(new HashSet<Block>(id2block.values()));
-		p = createPartition(p, vertices, m_forwardEdges);
+		p = createPartition(p, vertices, m_forwardEdges, pathLength);
 
 		edges = 0;
 		for (IVertex v : vertices) {

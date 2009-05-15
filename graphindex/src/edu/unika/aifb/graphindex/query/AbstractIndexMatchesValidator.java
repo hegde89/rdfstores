@@ -15,6 +15,7 @@ import edu.unika.aifb.graphindex.util.Timings;
 
 public abstract class AbstractIndexMatchesValidator implements IndexMatchesValidator {
 	protected StructureIndex m_index;
+	protected QueryExecution m_qe;
 	protected StatisticsCollector m_collector;
 	protected ExtensionManager m_em;
 	protected ExtensionStorage m_es;
@@ -31,5 +32,13 @@ public abstract class AbstractIndexMatchesValidator implements IndexMatchesValid
 			throw new UnsupportedOperationException("this index matcher is incompatible with the index");
 	}
 
+	public Timings getTimings() {
+		return t;
+	}
+	
+	public void setQueryExecution(QueryExecution qe) {
+		m_qe = qe;
+	}
+	
 	protected abstract boolean isCompatibleWithIndex();
 }

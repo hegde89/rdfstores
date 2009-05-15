@@ -61,14 +61,6 @@ public class EvaluationClass {
 		return null;
 	}
 	
-//	public GTable<String> getResult() {
-//		return m_result;
-//	}
-//
-//	public void setResult(GTable<String> result) {
-//		m_result = result;
-//	}
-	
 	public String getMinUniqueValuesKey() {
 		String maxKey = null;
 		int maxCount = 0;
@@ -93,6 +85,12 @@ public class EvaluationClass {
 		return maxKey;
 	}
 	
+	/**
+	 * Returns a map of value cardinalities for all nodes and mappings in this class.
+	 * 
+	 * @param excludeNodes nodes to exclude (usually removed nodes)
+	 * @return
+	 */
 	public Map<String,Integer> getCardinalityMap(Set<String> excludeNodes) {
 		Map<String,Integer> cardinality = new HashMap<String,Integer>();
 		for (String key : m_mappings.getColumnNames()) {
@@ -145,6 +143,9 @@ public class EvaluationClass {
 //					continue;
 				
 				if (ec == null) {
+					// create a new evaluation class for this value by copying the current matches
+					// (which this class and the new class have in common) and adding the new match with
+					// the different value (and of course the currently examined mapping)
 					Map<String,String> newMatches = new HashMap<String,String>(m_matches);
 					newMatches.put(key, val);
 					ec = new EvaluationClass(newMatches, mappings.getColumnNames());

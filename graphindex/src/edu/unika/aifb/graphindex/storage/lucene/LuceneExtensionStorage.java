@@ -280,16 +280,20 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 
 	public boolean hasTriples(IndexDescription index, String ext, String property, String so) throws StorageException  {
 		try {
+			m_timings.start(Timings.LOAD_HT);
 			String s = new StringBuilder().append(ext).append("__").append(property).append("__").append(so).toString();
 			Boolean value = htcache.get(s);
-			if (value != null)
+			if (value != null) {
+				m_timings.end(Timings.LOAD_HT);
 				return value.booleanValue();
+			}
 			long start = System.currentTimeMillis();
-			Query q = new TermQuery(getTerm(index, ext, property, so));
+			Query q = so != null ? new TermQuery(getTerm(index, property, so, ext)) : new PrefixQuery(getTerm(index, ext, property));
 			Hits hits = m_searcher.search(q);
 			boolean has = hits.length() > 0;
-			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
+//			log.debug("ht q: " + q + ": " + has + " {" + (System.currentTimeMillis() - start) + " ms}");
 			htcache.put(s, has);
+			m_timings.end(Timings.LOAD_HT);
 			return has;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
@@ -299,6 +303,8 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public List<String> getData(IndexDescription index, String... indexFields) throws StorageException {
+		m_timings.start(Timings.LOAD_DATA_LIST);
+		
 		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), concat(indexFields, indexFields.length)));
 
 		List<String> values = new ArrayList<String>(200);
@@ -306,14 +312,20 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		if (docIds.size() > 0) {
 			values.addAll(loadDocuments(docIds, index));
 		}
+		
+		m_timings.end(Timings.LOAD_DATA_LIST);
 		return values;
 	}
 	
 	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException {
+		m_timings.start(Timings.LOAD_DATA_SET);
+
 		String query = concat(indexFields, indexFields.length);
 		Set<String> values = m_dataSetCache.get(query);
-		if (values != null)
+		if (values != null) {
+			m_timings.end(Timings.LOAD_DATA_SET);
 			return values;
+		}
 		
 		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), query));
 
@@ -325,6 +337,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		
 		m_dataSetCache.put(query, values);
 		
+		m_timings.end(Timings.LOAD_DATA_SET);
 		return values;
 	}
 
@@ -360,7 +373,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			sb.append(s).append('\n');
 	
 		Document doc = new Document();
-		doc.add(new Field(index.getIndexFieldName(), getPath(ext, property, so), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(index.getIndexFieldName(), getPath(property, so, ext), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 		doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
 		
 		try {
@@ -493,10 +506,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public GTable<String> getIndexTable(IndexDescription index, String ext, String property, String so) throws StorageException {
-//		m_timings.start(Timings.DATA);
+		m_timings.start(Timings.LOAD_IT);
 //		long start = System.currentTimeMillis();
 
-		TermQuery tq = new TermQuery(getTerm(index, ext, property, so));
+		TermQuery tq = new TermQuery(getTerm(index, property, so, ext));
 			
 		GTable<String> table = new GTable<String>("source", "target");
 		int docs = 0;
@@ -520,7 +533,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			
 //		log.debug("q: " + tq + " (" + docs + "/" + table.rowCount() + ") {" + (System.currentTimeMillis() - start) + " ms, " + ds + ", " + dr + "}");
 		
-//		m_timings.end(Timings.DATA);
+		m_timings.end(Timings.LOAD_IT);
 		return table;
 	}
 	
@@ -531,10 +544,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private Map<String,String> m_o2e = new HashMap<String,String>(100000);
 	
 	public String getExtension(String object) throws StorageException {
-		m_timings.start(Timings.DATA);
+		m_timings.start(Timings.LOAD_EXT_OBJECT);
 		String ext = m_o2e.get(object);
 		if (ext != null) {
-			m_timings.end(Timings.DATA);
+			m_timings.end(Timings.LOAD_EXT_OBJECT);
 			return ext;
 		}
 		
@@ -548,7 +561,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 		if (bq.getClauses().length == 0) {
 			m_o2e.put(object, "");
-			m_timings.end(Timings.DATA);
+			m_timings.end(Timings.LOAD_EXT_OBJECT);
 			return "";
 		}
 		
@@ -557,7 +570,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		ext = term.substring(term.indexOf("__") + 2);
 		
 		m_o2e.put(object, ext);
-		m_timings.end(Timings.DATA);
+		m_timings.end(Timings.LOAD_EXT_OBJECT);
 		
 //		log.debug("eq: " + tq);
 		
@@ -565,11 +578,11 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	}
 	
 	public boolean isValidObjectExtension(String object, String ext) throws StorageException {
-		m_timings.start(Timings.DATA);
+		m_timings.start(Timings.LOAD_EXT_OBJECT);
 		
 		String cachedExt = m_o2e.get(object);
 		if (cachedExt != null) {
-			m_timings.end(Timings.DATA);
+			m_timings.end(Timings.LOAD_EXT_OBJECT);
 			return cachedExt.equals(ext);
 		}
 		
@@ -579,10 +592,10 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			boolean tdd = td.next();
 			if (tdd) {
 				m_o2e.put(object, ext);
-				m_timings.end(Timings.DATA);
+				m_timings.end(Timings.LOAD_EXT_OBJECT);
 				return true;
 			}
-			m_timings.end(Timings.DATA);
+			m_timings.end(Timings.LOAD_EXT_OBJECT);
 			return false;
 		} catch (IOException e) {
 			throw new StorageException(e);
@@ -591,7 +604,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public static int extLoaded = 0;
 	public Set<String> getExtensions(IndexDescription index, String so) throws StorageException {
-		m_timings.start(Timings.DATA);
+		m_timings.start(Timings.LOAD_EXT_SUBJECT);
 		
 		Set<String> exts;
 		
@@ -609,7 +622,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			}
 		}
 		
-		m_timings.end(Timings.DATA);
+		m_timings.end(Timings.LOAD_EXT_SUBJECT);
 		
 		return exts;
 	}
@@ -714,7 +727,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 //		logger.debug("subcache: " + m_subjectExtCache.usedEntries());
 //		logger.debug("objcache: " + m_objectExtCache.usedEntries());
 //		logger.debug("extcachehits: " + m_extCacheHits);
-		logger.debug("o2e: " + m_o2e.keySet().size());
+//		logger.debug("o2e: " + m_o2e.keySet().size());
 	}
 
 }

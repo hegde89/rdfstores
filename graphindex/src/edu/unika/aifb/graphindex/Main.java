@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -88,6 +89,7 @@ public class Main {
 		int evalThreads = config.get("eval_threads") != null ? (Integer)config.get("eval_threads") : 10;
 		int tableCacheSize = config.get("table_cache_size") != null ? (Integer)config.get("table_cache_size") : 100;
 		int docCacheSize = config.get("doc_cache_size") != null ? (Integer)config.get("doc_cache_size") : 1000;
+		int pathLength = config.get("path_length") != null ? (Integer)config.get("path_length") : -1;
 		System.out.println(config);
 		
 		System.out.println(evalThreads + " " + tableCacheSize + " " + docCacheSize);
@@ -151,6 +153,10 @@ public class Main {
 		
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
+			Map options = new HashMap();
+			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
+			options.put(StructureIndex.OPT_PATH_LENGTH, pathLength);
+			iw.setOptions(options);
 			iw.setForwardEdgeSet(fwEdgeSet);
 			iw.setBackwardEdgeSet(bwEdgeSet);
 			iw.setImporter(getImporter(ntFiles, owlFiles));

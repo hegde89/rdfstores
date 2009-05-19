@@ -1,10 +1,16 @@
 package edu.unika.aifb.keywordsearch.search;
 
+import it.unimi.dsi.util.BloomFilter;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -44,6 +50,8 @@ public class KeywordSearcher {
 	private static final double SCHEMA_THRESHOLD = 0.8;
 	private static final int MAX_KEYWORDRESULT_SIZE = 5;
 	
+	private static final String SEPARATOR = "::";
+	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	
 	public KeywordSearcher(String indexDir) {
@@ -51,28 +59,31 @@ public class KeywordSearcher {
 		this.allRelations = new HashSet<String>();
 		try {
 			this.searcher = new IndexSearcher(indexDir);
+			searchAllAttributes(searcher, allAttributes);
+			searchAllRelations(searcher, allRelations);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 	}
 	
-	public Map<String,Collection<KeywordElement>> searchElements(Collection<String> queries) {
-		Map<String, Collection<KeywordElement>> schemaElements = new HashMap<String, Collection<KeywordElement>>();
-		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
+	public Map<String,Collection<KeywordElement>> searchKeywordElements(Collection<String> queries) {
+		Collection<String> keywordQueries = new HashSet<String>();
+		Map<String, Collection<String>> keywordCompoundQueries = new HashMap<String, Collection<String>>();
+		parseQueries(queries,keywordQueries, keywordCompoundQueries);
+		
+		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
+		Map<String, Collection<KeywordElement>> entitiesByKeyowrds = searchElementsByKeywords(keywordQueries, conceptsAndRelations);
+		Map<String, Collection<KeywordElement>> entitiesByKeyowrdCompounds = searchElementsByKeywordCompounds(keywordCompoundQueries);
+		
 		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
+		entities.putAll(entitiesByKeyowrds);
+		entities.putAll(entitiesByKeyowrdCompounds);
 		
-		
-		searchAllAttributes(searcher, allAttributes);
-		searchAllRelations(searcher, allRelations);
-		searchSchema(searcher, queries, schemaElements, attributes);
-		searchEntitiesWithAttributes(searcher, queries, attributes, entities);
-		searchEntitiesWithoutAttributes(searcher, queries, attributes, entities);
-		overlapNeighborhood(entities);
+		overlapNeighborhoods(entities);
 		
 		Set<String> keywords = new HashSet<String>();
-		keywords.addAll(schemaElements.keySet());
+		keywords.addAll(conceptsAndRelations.keySet());
 		keywords.addAll(entities.keySet());
 		Map<String, Collection<KeywordElement>> keywordElements = new HashMap<String, Collection<KeywordElement>>();
 		for(String keyword : keywords) {
@@ -81,64 +92,82 @@ public class KeywordSearcher {
 				coll = new HashSet<KeywordElement>();
 				keywordElements.put(keyword, coll);
 			}
-			coll.addAll(schemaElements.get(keyword));
-			coll.addAll(entities.get(keyword));
+			Collection<KeywordElement> elements = conceptsAndRelations.get(keyword);
+			if(elements != null && elements.size() != 0)
+				coll.addAll(elements);
+			elements = entities.get(keyword);
+			if(elements != null && elements.size() != 0)
+				coll.addAll(elements);
 		}
 		return keywordElements;
 	}
 	
-	private void searchAllAttributes(IndexSearcher searcher, Set<String> allAttributes) {
-		 Term term = new Term(Constant.TYPE_FIELD, TypeUtil.ATTRIBUTE);
-		 Query query = new TermQuery(term);
-		 try {
-			Hits hits = searcher.search(query);
-			if (hits != null || hits.length() != 0)
-			for (int i = 0; i < hits.length(); i++) {
-				Document doc = hits.doc(i);
-				allAttributes.add(doc.get(Constant.URI_FIELD));
+	public void parseQueries(Collection<String> queries, Collection<String> keywords, Map<String, Collection<String>> keywordCompounds) {
+		for(String query : queries) {
+			String[] strs = query.trim().split(SEPARATOR);
+			if(strs.length == 1) {
+				keywords.add(strs[0]);
 			}
-			allAttributes.add(Constant.LOCALNAME);
-			allAttributes.add(Constant.LABEL);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			else if(strs.length == 2) {
+				Collection<String> values = keywordCompounds.get(strs[0]);
+				if(values == null) {
+					values = new HashSet<String>();
+					keywordCompounds.put(strs[0], values);
+				}
+				values.add(strs[1]);
+			}
+			else {
+				log.error("--------------------- ERROR! ---------------------");
+			}
 		}
 	}
 	
-	private void searchAllRelations(IndexSearcher searcher, Set<String> allRelations) {
-		Term term = new Term(Constant.TYPE_FIELD, TypeUtil.RELATION);
-		Query query = new TermQuery(term);
-		try {
-			Hits hits = searcher.search(query);
-			if (hits != null || hits.length() != 0)
-				for (int i = 0; i < hits.length(); i++) {
-					Document doc = hits.doc(i);
-					allRelations.add(doc.get(Constant.URI_FIELD));
-				}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public Map<String,Collection<KeywordElement>> searchElementsByKeywords(Collection<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations) { 
+		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
+		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
+		
+		searchSchema(searcher, queries, conceptsAndRelations, attributes);
+		searchEntitiesByAttributesAndValues(searcher, queries, attributes, entities);
+		searchEntitiesByValues(searcher, queries, attributes, entities);
+		
+		return entities;
 	}
-
+	
+	public Map<String,Collection<KeywordElement>> searchElementsByKeywordCompounds(Map<String, Collection<String>> queries) { 
+		Map<String, Collection<KeywordElement>> attributesAndRelations = new HashMap<String, Collection<KeywordElement>>();
+		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
+		
+		searchSchema(searcher, queries.keySet(), attributesAndRelations);
+		searchEntitiesByCompounds(searcher, queries, attributesAndRelations, entities);
+		
+		return entities;
+	}
+	
 	public void searchSchema(IndexSearcher searcher, Collection<String> queries, 
-			Map<String, Collection<KeywordElement>> schemaElements, Map<String, Collection<KeywordElement>> attributes) {
+			Map<String, Collection<KeywordElement>> conceptsAndRelations, Map<String, Collection<KeywordElement>> attributes) {
+		Set<String> queriesWithResults = new HashSet<String>();
 		try {
 			// search schema elements
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			QueryParser parser = new QueryParser(Constant.SCHEMA_FIELD, analyzer);
-			for(String query : queries) {
-				Query q = parser.parse(query);
+			QueryParser uriParser = new QueryParser(Constant.URI_FIELD, analyzer);
+			for(String keyword : queries) {
+				Query q;
+				if(keyword.startsWith(Constant.URI_PREFIX)) {
+					q = uriParser.parse(keyword);
+				}
+				else {		
+					q = parser.parse(keyword);
+				}	
 				if(q instanceof BooleanQuery) {
 					BooleanQuery bquery = (BooleanQuery)q;
 					for(BooleanClause clause :  bquery.getClauses()) {
 						clause.setOccur(Occur.MUST);
 					}
 				}
-				String keyword = q.toString(Constant.SCHEMA_FIELD);
 				Collection<KeywordElement> tmp = searchSchemaWithClause(searcher, q, keyword);
 				if(tmp != null && tmp.size() != 0) {
-					queries.remove(query);
+					queriesWithResults.add(keyword);
 					for(KeywordElement resource : tmp) {
 						if(resource.getType() == KeywordElement.ATTRIBUTE) {
 							Collection<KeywordElement> coll = attributes.get(keyword);
@@ -149,10 +178,51 @@ public class KeywordSearcher {
 							coll.add(resource);
 						}
 						else if(resource.getType() == KeywordElement.CONCEPT || resource.getType() == KeywordElement.RELATION){
-							Collection<KeywordElement> coll = schemaElements.get(keyword);
+							Collection<KeywordElement> coll = conceptsAndRelations.get(keyword);
 							if(coll == null) {
 								coll = new HashSet<KeywordElement>(); 
-								schemaElements.put(keyword, coll);
+								conceptsAndRelations.put(keyword, coll);
+							} 
+							coll.add(resource);
+						}
+					}
+				}
+			}
+			queries.removeAll(queriesWithResults);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void searchSchema(IndexSearcher searcher, Collection<String> queries, Map<String, Collection<KeywordElement>> attributesAndRelations) {
+		try {
+			// search schema elements
+			StandardAnalyzer analyzer = new StandardAnalyzer();
+			QueryParser parser = new QueryParser(Constant.SCHEMA_FIELD, analyzer);
+			QueryParser uriParser = new QueryParser(Constant.URI_FIELD, analyzer);
+			for(String keyword : queries) {
+				Query q;
+				if(keyword.startsWith(Constant.URI_PREFIX)) {
+					q = uriParser.parse(keyword);
+				}
+				else {		
+					q = parser.parse(keyword);
+				}	
+				if(q instanceof BooleanQuery) {
+					BooleanQuery bquery = (BooleanQuery)q;
+					for(BooleanClause clause :  bquery.getClauses()) {
+						clause.setOccur(Occur.MUST);
+					}
+				}
+				Collection<KeywordElement> tmp = searchSchemaWithClause(searcher, q, keyword);
+				if(tmp != null && tmp.size() != 0) {
+					for(KeywordElement resource : tmp) {
+						if(resource.getType() == KeywordElement.ATTRIBUTE || resource.getType() == KeywordElement.RELATION) {
+							Collection<KeywordElement> coll = attributesAndRelations.get(keyword);
+							if(coll == null) {
+								coll = new HashSet<KeywordElement>(); 
+								attributesAndRelations.put(keyword, coll);
 							} 
 							coll.add(resource);
 						}
@@ -218,31 +288,37 @@ public class KeywordSearcher {
 		return result;
 	}
 	
-	private void searchEntitiesWithAttributes(IndexSearcher searcher, Collection<String> queries, 
+	private void searchEntitiesByAttributesAndValues(IndexSearcher searcher, Collection<String> queries, 
 			Map<String, Collection<KeywordElement>> attributes, Map<String, Collection<KeywordElement>> entities) {
 		Set<String> queriesWithResults = new HashSet<String>();
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
-			for (String keyword : attributes.keySet()) {
-				for (KeywordElement attribute : attributes.get(keyword)) {
+			for (String keywordForAttribute : attributes.keySet()) {
+				for (KeywordElement attribute : attributes.get(keywordForAttribute)) {
 					QueryParser parser = new QueryParser(attribute.getResource().getUri(), analyzer);
-					for (String query : queries) {
-						Query q = parser.parse(query);
+					for (String keywordForValue : queries) {
+						Query q = parser.parse(keywordForValue);
 						if (q instanceof BooleanQuery) {
 							BooleanQuery bquery = (BooleanQuery) q;
 							for (BooleanClause clause : bquery.getClauses()) {
 								clause.setOccur(Occur.MUST);
 							}
 						}
-						String compound = attribute.getQuery() + ":" + q.toString(attribute.getResource().getUri());
-						Collection<KeywordElement> tmp = searchEntitiesWithClause(searcher, q, compound);
+						Collection<KeywordElement> tmp = searchEntitiesWithClause(searcher, q, keywordForValue, keywordForAttribute);
 						if(tmp != null && tmp.size() != 0) {
-							queriesWithResults.add(query);
+							queriesWithResults.add(keywordForValue);
 							for (KeywordElement resource : tmp) {
-								Collection<KeywordElement> coll = entities.get(compound);
+								Collection<KeywordElement> coll = entities.get(keywordForValue);
 								if (coll == null) {
 									coll = new HashSet<KeywordElement>();
-									entities.put(compound, coll);
+									entities.put(keywordForValue, coll);
+								}
+								coll.add(resource);
+								
+								coll = entities.get(keywordForAttribute);
+								if (coll == null) {
+									coll = new HashSet<KeywordElement>();
+									entities.put(keywordForAttribute, coll);
 								}
 								coll.add(resource);
 							}
@@ -256,8 +332,8 @@ public class KeywordSearcher {
 			e.printStackTrace();
 		}
 	}
-		
-	public void searchEntitiesWithoutAttributes(IndexSearcher searcher, Collection<String> queries, 
+	
+	public void searchEntitiesByValues(IndexSearcher searcher, Collection<String> queries, 
 			Map<String, Collection<KeywordElement>> attributes, Map<String, Collection<KeywordElement>> entities) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
@@ -269,21 +345,15 @@ public class KeywordSearcher {
 				}
 			}
 			MyQueryParser parser = new MyQueryParser(fields.toArray(new String[fields.size()]), analyzer);
-			for (String query : queries) {
-				Query q = parser.parse(query);
-				if (q instanceof BooleanQuery) {
-					BooleanQuery bquery = (BooleanQuery) q;
-					for (BooleanClause clause : bquery.getClauses()) {
-						clause.setOccur(Occur.MUST);
-					}
-				}
-				Collection<KeywordElement> tmp = searchEntitiesWithClause(searcher, q, query);
+			for (String keyword : queries) {
+				Query q = parser.parse(keyword);
+				Collection<KeywordElement> tmp = searchEntitiesWithClause(searcher, q, keyword, null);
 				if (tmp != null && tmp.size() != 0) {
 					for (KeywordElement resource : tmp) {
-						Collection<KeywordElement> coll = entities.get(query);
+						Collection<KeywordElement> coll = entities.get(keyword);
 						if (coll == null) {
 							coll = new HashSet<KeywordElement>();
-							entities.put(query, coll);
+							entities.put(keyword, coll);
 						}
 						coll.add(resource);
 					}
@@ -294,7 +364,43 @@ public class KeywordSearcher {
 		}
 	}		
 	
-	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query clause, String keyword) {
+	private void searchEntitiesByCompounds(IndexSearcher searcher, Map<String, Collection<String>> queries, 
+			Map<String, Collection<KeywordElement>> attributesAndRelations, Map<String, Collection<KeywordElement>> entities) {
+		try {
+			StandardAnalyzer analyzer = new StandardAnalyzer();
+			for (String keywordForAttributeAndRelation : queries.keySet()) {
+				for (KeywordElement attributeAndRelation : attributesAndRelations.get(keywordForAttributeAndRelation)) {
+					QueryParser parser = new QueryParser(attributeAndRelation.getResource().getUri(), analyzer);
+					for(String keywordForValueAndEntityID : queries.get(keywordForAttributeAndRelation)) {
+						Query q = parser.parse(keywordForValueAndEntityID);
+						if (q instanceof BooleanQuery) {
+							BooleanQuery bquery = (BooleanQuery) q;
+							for (BooleanClause clause : bquery.getClauses()) {
+								clause.setOccur(Occur.MUST);
+							}
+						}
+						String compound = keywordForAttributeAndRelation + SEPARATOR + keywordForValueAndEntityID;
+						Collection<KeywordElement> tmp = searchEntitiesWithClause(searcher, q, compound, null);
+						if(tmp != null && tmp.size() != 0) {
+							for (KeywordElement resource : tmp) {
+								Collection<KeywordElement> coll = entities.get(compound);
+								if (coll == null) {
+									coll = new HashSet<KeywordElement>();
+									entities.put(compound, coll);
+								}
+								coll.add(resource);
+							}
+						}
+					}	
+				}
+			}
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+		
+	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query clause, String keyword, String additionalKeyword) {
 		Collection<KeywordElement> result = new HashSet<KeywordElement>();
 		try {
 			Hits hits = searcher.search(clause);
@@ -325,11 +431,14 @@ public class KeywordSearcher {
 
 					if(type.equals(TypeUtil.ENTITY)){
 						IEntity ent = new Entity(pruneString(doc.get(Constant.URI_FIELD)), doc.get(Constant.EXTENSION_FIELD));
-						String[] reachableEntities = doc.getValues(Constant.NEIGHBORHOOD_FIELD);
-						for(String str : reachableEntities) {
-							ent.addReachableEntity(new Entity(str));
-						}
+						byte[] bytes = doc.getBinaryValue(Constant.NEIGHBORHOOD_FIELD);
+						ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
+						ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
+						BloomFilter reachableEntities = (BloomFilter)objectInput.readObject(); 
+						ent.setReachaleEntities(reachableEntities);
 						KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, score, keyword);
+						if(additionalKeyword != null)
+							ele.addKeyword(additionalKeyword);
 						result.add(ele);
 					}
 				}
@@ -341,49 +450,112 @@ public class KeywordSearcher {
 		return result;
 	}
 	
-	private void overlapNeighborhood(Map<String, Collection<KeywordElement>> entities) {
-		Map<String, Collection<KeywordElement>> entitiesToBePruned = new HashMap<String, Collection<KeywordElement>>();
+	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> entities) {
+		Map<String, Collection<KeywordElement>> entitiesToBeRemoved = new HashMap<String, Collection<KeywordElement>>();
 		for(String keyword : entities.keySet()) {
 			for(KeywordElement ele : entities.get(keyword)) {
 				if (ele.getType() == KeywordElement.ENTITY && ele.getResource() instanceof IEntity) {
 					IEntity entity = (IEntity)ele.getResource();
 					Collection<Collection<KeywordElement>> colls = new HashSet<Collection<KeywordElement>>();
-					Set<String> keywords = entities.keySet();
-					keywords.remove(keyword);
-					for (String key : keywords) {
-						colls.add(entities.get(key));
+					for (String key : entities.keySet()) {
+						if(!keyword.equals(key) && !keyword.contains(key))
+							colls.add(entities.get(key));
 					}
 					if(!entity.isAllReachable(colls)) {
-						Collection<KeywordElement> coll = entitiesToBePruned.get(keyword);
+						Collection<KeywordElement> coll = entitiesToBeRemoved.get(keyword);
 						if (coll == null) {
 							coll = new HashSet<KeywordElement>();
-							entitiesToBePruned.put(keyword, coll);
+							entitiesToBeRemoved.put(keyword, coll);
 						}
 						coll.add(ele);
 					}
 				}
 				else {
 					log.error("--------------------- ERROR! ---------------------");
-					Collection<KeywordElement> coll = entitiesToBePruned.get(keyword);
+					Collection<KeywordElement> coll = entitiesToBeRemoved.get(keyword);
 					if (coll == null) {
 						coll = new HashSet<KeywordElement>();
-						entitiesToBePruned.put(keyword, coll);
+						entitiesToBeRemoved.put(keyword, coll);
 					}
 					coll.add(ele);
 				}
 			}
 		}
 		
-		for(String keyword : entitiesToBePruned.keySet()) {
-			entities.get(keyword).removeAll((entitiesToBePruned.get(keyword)));
+		for(String keyword : entitiesToBeRemoved.keySet()) {
+			entities.get(keyword).removeAll((entitiesToBeRemoved.get(keyword)));
 			if(entities.get(keyword).size() == 0) {
 				entities.remove(keyword);
 			}
 		}
 	}
-
+	
+	private void searchAllAttributes(IndexSearcher searcher, Set<String> allAttributes) {
+		 Term term = new Term(Constant.TYPE_FIELD, TypeUtil.ATTRIBUTE);
+		 Query query = new TermQuery(term);
+		 try {
+			Hits hits = searcher.search(query);
+			if (hits != null || hits.length() != 0)
+			for (int i = 0; i < hits.length(); i++) {
+				Document doc = hits.doc(i);
+				allAttributes.add(doc.get(Constant.URI_FIELD));
+			}
+			allAttributes.add(Constant.LOCALNAME_FIELD);
+			allAttributes.add(Constant.LABEL_FIELD);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void searchAllRelations(IndexSearcher searcher, Set<String> allRelations) {
+		Term term = new Term(Constant.TYPE_FIELD, TypeUtil.RELATION);
+		Query query = new TermQuery(term);
+		try {
+			Hits hits = searcher.search(query);
+			if (hits != null || hits.length() != 0)
+				for (int i = 0; i < hits.length(); i++) {
+					Document doc = hits.doc(i);
+					allRelations.add(doc.get(Constant.URI_FIELD));
+				}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	private String pruneString(String str) {
 		return str.replaceAll("\"", "");
 	}
+	
+	public static void main(String[] args) {
+		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/output/test/l1r/keyword"); 
+		
+		Scanner scanner = new Scanner(System.in);
+		while (true) {
+			System.out.println("Please input the keywords:");
+			System.out.println("******************** Example ********************");
+			System.out.println("name::Thanh publication AIFB");
+			System.out.println("******************** Example ********************");
+			String line = scanner.nextLine();
+			String tokens[] = line.split(" ");
+			LinkedList<String> keywordList = new LinkedList<String>();
+			for (int i = 0; i < tokens.length; i++) {
+				keywordList.add(tokens[i]);
+			}
+			Map<String,Collection<KeywordElement>> results = searcher.searchKeywordElements(keywordList);
+			
+			int i = 1;
+			for(String keyword : results.keySet()) {
+				Collection<KeywordElement> elements = results.get(keyword);
+				System.out.println("Keyword " + i++ + ": " + keyword);
+				System.out.println("Elements :");
+				for(KeywordElement ele : elements) {
+					System.out.println(ele);
+				}
+				System.out.println();
+			}
+		}
+	} 
 
 }

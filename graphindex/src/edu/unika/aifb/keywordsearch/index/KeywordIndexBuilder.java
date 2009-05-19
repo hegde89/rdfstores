@@ -1,12 +1,15 @@
 package edu.unika.aifb.keywordsearch.index;
 
+import it.unimi.dsi.util.BloomFilter;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -37,9 +40,11 @@ public class KeywordIndexBuilder {
 	private static final float CONCEPT_BOOST = 10.0f;
 	private static final float RELATION_BOOST = 5.0f;
 	private static final float ATTRIBUTE_BOOST = 5.0f;
-	private static final float ENTITY_BOOST = 5.0f;
+	private static final float ENTITY_BOOST = 10.0f;
 	private static final float ENTITY_DISCRIMINATIVE_BOOST = 10.0f;
 	private static final float ENTITY_DESCRIPTIVE_BOOST = 5.0f;
+	
+	private static final String SEPARATOR = "__";
 	
 	private static final int HOP = 5;  
 	private static final int MAXFIELDLENGTH = 100;
@@ -70,9 +75,13 @@ public class KeywordIndexBuilder {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer,true);
 			indexWriter.setMaxFieldLength(MAXFIELDLENGTH);
+			log.info("Indexing concepts");
 			indexSchema(indexWriter, outputDir + "/concepts", TypeUtil.CONCEPT, CONCEPT_BOOST);
+			log.info("Indexing attributes");
 			indexSchema(indexWriter, outputDir + "/attributes", TypeUtil.ATTRIBUTE, ATTRIBUTE_BOOST);
+			log.info("Indexing relations");
 			indexSchema(indexWriter, outputDir + "/relations", TypeUtil.RELATION, RELATION_BOOST);	
+			log.info("Indexing entities");
 			indexEntity(indexWriter, outputDir + "/entities");
 			indexWriter.optimize();
 			indexWriter.close();
@@ -124,7 +133,7 @@ public class KeywordIndexBuilder {
 				} 
 				
 				// indexing uri
-				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NO));
+				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.UN_TOKENIZED));
 				
 				// indexing extension id for concept
 				if(type.equals(TypeUtil.CONCEPT)){
@@ -160,6 +169,8 @@ public class KeywordIndexBuilder {
 					continue;
 				}
 				
+				log.info("Indexing entity " + localName);
+				
 				localName = localName.toLowerCase();
 				/* Write Index */
 				Document doc = new Document();
@@ -168,7 +179,7 @@ public class KeywordIndexBuilder {
 				doc.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NO));
 				
 				// indexing local name
-				Field field = new Field(Constant.LOCALNAME, localName, Field.Store.YES, Field.Index.TOKENIZED);
+				Field field = new Field(Constant.LOCALNAME_FIELD, localName, Field.Store.YES, Field.Index.TOKENIZED);
 				field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 				doc.add(field);
 				
@@ -187,7 +198,7 @@ public class KeywordIndexBuilder {
 				Set<String> labels = computeLabels(uri);
 				if(labels != null && labels.size() != 0)
 				for(String label : labels){
-					field = new Field(Constant.LABEL, label, Field.Store.YES, Field.Index.TOKENIZED);
+					field = new Field(Constant.LABEL_FIELD, label, Field.Store.YES, Field.Index.TOKENIZED);
 					field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 					doc.add(field);
 				} 
@@ -196,7 +207,7 @@ public class KeywordIndexBuilder {
 				Set<String> compounds = computeAttributeValueCompounds(uri);
 				if(compounds != null && compounds.size() != 0)
 				for(String compound : compounds){
-					String[] str = compound.trim().split("__");
+					String[] str = compound.trim().split(SEPARATOR);
 					String attribute,value;
 					if(str.length == 2) {
 						attribute = str[1];
@@ -206,16 +217,16 @@ public class KeywordIndexBuilder {
 						continue;
 					}
 					
-					field = new Field(attribute, value, Field.Store.YES,Field.Index.TOKENIZED);
+					field = new Field(attribute, value, Field.Store.YES, Field.Index.TOKENIZED);
 					field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
 					doc.add(field);
 				} 
 				
 				// indexing relation-entityID compounds
-				compounds = computeRealtionEntityCompounds(uri);
+				compounds = computeRelationEntityCompounds(uri);
 				if(compounds != null && compounds.size() != 0)
 				for(String compound : compounds){
-					String[] str = compound.trim().split("__");
+					String[] str = compound.trim().split(SEPARATOR);
 					String relation,entityId;
 					if(str.length == 2) {
 						relation = str[1];
@@ -232,9 +243,15 @@ public class KeywordIndexBuilder {
 				
 				// indexing reachable entities
 				Set<String> reachableEntities = computeReachableEntities(uri);
+				BloomFilter bf = new BloomFilter(reachableEntities.size());
 				for(String entity : reachableEntities){
-					doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, entity, Field.Store.YES,Field.Index.NO));
+					bf.add(entity);
 				} 
+				ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+				ObjectOutputStream objectOut = new ObjectOutputStream(byteArrayOut);
+				objectOut.writeObject(bf);
+				byte[] bytes = byteArrayOut.toByteArray(); 
+				doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.YES));
 				doc.setBoost(ENTITY_BOOST);
 				indexWriter.addDocument(doc);
 			}
@@ -245,16 +262,16 @@ public class KeywordIndexBuilder {
 		}
 	}
 	
-	public Set<String> computeRealtionEntityCompounds(String entityUri) throws IOException {
+	public Set<String> computeRelationEntityCompounds(String entityUri) throws IOException {
 		HashSet<String> set = new HashSet<String>(); 
 		
-		BooleanQuery bqfw = new BooleanQuery();
-		TermQuery tqfw = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
-		bqfw.add(tqfw, BooleanClause.Occur.MUST);
-		tqfw = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.RELATION));
-		bqfw.add(tqfw, BooleanClause.Occur.MUST);
+		BooleanQuery bq = new BooleanQuery();
+		TermQuery tq = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
+		bq.add(tq, BooleanClause.Occur.MUST);
+		tq = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.RELATION));
+		bq.add(tq, BooleanClause.Occur.MUST);
 		
-		Hits hits = dataSearcher.search(bqfw);
+		Hits hits = dataSearcher.search(bq);
 		if(hits != null && hits.length() != 0) {
 			Iterator iter = hits.iterator();
 			while(iter.hasNext()) {
@@ -263,12 +280,12 @@ public class KeywordIndexBuilder {
 				String entity = doc.get(DataStorage.DST_FIELD);
 				
 				String localname = TypeUtil.getLocalName(entity).trim();
-				set.add(localname + "__" + relation);
+				set.add(localname + SEPARATOR + relation);
 				
 				Set<String> entitylabels = computeLabels(entity);
 				if(entitylabels != null && entitylabels.size() != 0) {
 					for(String label : entitylabels) {
-						set.add(label + "__" + relation);
+						set.add(label + SEPARATOR + relation);
 					}
 				}
 			}
@@ -315,7 +332,7 @@ public class KeywordIndexBuilder {
 				Document doc = ((Hit)iter.next()).getDocument();
 				String attribute = doc.get(DataStorage.EDGE_FIELD);
 				String value = doc.get(DataStorage.DST_FIELD);
-				set.add(value + "__" + attribute);
+				set.add(value + SEPARATOR + attribute);
 			}
 			return set;
 		} else 
@@ -362,25 +379,28 @@ public class KeywordIndexBuilder {
 	
 	public Set<String> computeReachableEntities(String entityUri) throws IOException {
 		HashSet<String> reachableEntities = new HashSet<String>(); 
-		LinkedList<String> queue = new LinkedList<String>();
-		queue.addFirst(entityUri);
-		reachableEntities.add(entityUri);
+		HashSet<String> currentLayer = new HashSet<String>();
+		HashSet<String> nextLayer = new HashSet<String>();
+		currentLayer.add(entityUri);
 		
 		int i = 0;
-		
-		while(i <= HOP && !queue.isEmpty()) {
-			String entity = queue.getFirst();
-			i++;
-			Set<String> neighbors = computeNeighbors(entity);
-			if(neighbors != null && neighbors.size() != 0)
-			for(String neighbor : neighbors) {
-				if(!reachableEntities.contains(neighbor)) {
-					reachableEntities.add(neighbor);
-					queue.addLast(neighbor);
-				}
+		while(i <= HOP && !currentLayer.isEmpty()) {
+			for(String entity : currentLayer) {
+				Set<String> neighbors = computeNeighbors(entity);
+				if(neighbors != null && neighbors.size() != 0) {
+					for(String neighbor : neighbors) {
+						if(!reachableEntities.contains(neighbor) && !neighbor.equals(entityUri)) {
+							reachableEntities.add(neighbor);
+							nextLayer.add(neighbor);
+						}
+					}
+				}	
 			}
+			currentLayer = nextLayer;
+			nextLayer = new HashSet<String>();
+			i++;
 		}
-		reachableEntities.remove(entityUri);
+		reachableEntities.add(entityUri);
 		return reachableEntities;
 	} 
 

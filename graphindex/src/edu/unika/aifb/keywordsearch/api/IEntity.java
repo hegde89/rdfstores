@@ -1,5 +1,7 @@
 package edu.unika.aifb.keywordsearch.api;
 
+import it.unimi.dsi.util.BloomFilter;
+
 import java.util.Collection;
 import java.util.Set;
 
@@ -15,11 +17,9 @@ public interface IEntity  extends IResource {
 	
 	public String getExtension();
 	
-	public void addReachableEntity(IEntity entity);
+	public void setReachaleEntities(BloomFilter entities);
 	
-	public void setReachaleEntities(Set<IEntity> entities);
-	
-	public Set<IEntity> getReachaleEntities();
+	public BloomFilter getReachaleEntities();
 	
 	public boolean isReachable(IEntity entity);
 	

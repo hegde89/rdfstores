@@ -1,6 +1,8 @@
 package edu.unika.aifb.keywordsearch;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 import edu.unika.aifb.keywordsearch.api.IResource;
@@ -24,7 +26,8 @@ public class KeywordElement implements Serializable {
 
 	private IResource resource;
 	private double matchingScore;
-	private String query;
+//	private String query;
+	private Set<String> keywords;
 
 	protected int type;
 	
@@ -41,11 +44,20 @@ public class KeywordElement implements Serializable {
 		this.matchingScore = score;
 	}
 	
-	public KeywordElement(IResource resource, int type, double score, String query) {
+	public KeywordElement(IResource resource, int type, double score, String keyword) {
 		this.resource = resource;
 		this.type = type;
 		this.matchingScore = score;
-		this.query = query;
+		this.keywords = new HashSet<String>();
+		this.keywords.add(keyword);
+	}
+	
+	public KeywordElement(IResource resource, int type, double score, Collection<String> keywords) {
+		this.resource = resource;
+		this.type = type;
+		this.matchingScore = score;
+		this.keywords = new HashSet<String>();
+		this.keywords.addAll(keywords);
 	}
 
 	public int getType(){
@@ -56,14 +68,39 @@ public class KeywordElement implements Serializable {
 		this.type = type;
 	}
 	
-	public String getQuery(){
-		return query;
+	public Collection<String> getKeywords() {
+		return keywords;
 	}
 	
-	public void setQuery(String query) {
-		this.query = query;
+//	public String getKeyword() {
+//		if(keywords == null || keywords.size() == 0) {
+//			return null;
+//		}
+//		else
+//			return keywords.iterator().next();
+//			
+//	}
+	
+	public void addKeyword(String keyword) {
+		if(keywords != null) {
+			keywords.add(keyword);
+		}	
+		else {
+			keywords = new HashSet<String>();
+			keywords.add(keyword);
+		}
 	}
-
+	
+	public void addKeywords(Collection<String> keywords) {
+		if(keywords != null) {
+			keywords.addAll(keywords);
+		}	
+		else {
+			keywords = new HashSet<String>();
+			keywords.addAll(keywords);
+		}
+	}
+	
 	public void setResource(IResource resource){
 		this.resource = resource;
 	}

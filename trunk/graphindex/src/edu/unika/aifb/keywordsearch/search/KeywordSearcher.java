@@ -531,12 +531,12 @@ public class KeywordSearcher {
 	public static void main(String[] args) {
 		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/output/test/l1r/keyword"); 
 		
+		System.out.println("******************** Input Example ********************");
+		System.out.println("name::Thanh publication AIFB");
+		System.out.println("******************** Input Example ********************");
 		Scanner scanner = new Scanner(System.in);
 		while (true) {
 			System.out.println("Please input the keywords:");
-			System.out.println("******************** Example ********************");
-			System.out.println("name::Thanh publication AIFB");
-			System.out.println("******************** Example ********************");
 			String line = scanner.nextLine();
 			String tokens[] = line.split(" ");
 			LinkedList<String> keywordList = new LinkedList<String>();

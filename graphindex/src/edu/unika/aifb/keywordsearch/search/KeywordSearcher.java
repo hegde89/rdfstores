@@ -127,7 +127,8 @@ public class KeywordSearcher {
 		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(searcher, queries, conceptsAndRelations, attributes);
-		searchEntitiesByAttributesAndValues(searcher, queries, attributes, entities);
+		if(attributes != null && attributes.size() != 0)
+			searchEntitiesByAttributesAndValues(searcher, queries, attributes, entities);
 		searchEntitiesByValues(searcher, queries, attributes, entities);
 		
 		return entities;
@@ -138,7 +139,8 @@ public class KeywordSearcher {
 		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(searcher, queries.keySet(), attributesAndRelations);
-		searchEntitiesByCompounds(searcher, queries, attributesAndRelations, entities);
+		if(attributesAndRelations != null && attributesAndRelations.size() != 0)
+			searchEntitiesByCompounds(searcher, queries, attributesAndRelations, entities);
 		
 		return entities;
 	}
@@ -339,9 +341,11 @@ public class KeywordSearcher {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			Set<String> fields = new HashSet<String>();
 			fields.addAll(allAttributes);
-			for (Collection<KeywordElement> coll : attributes.values()) {
-				for (KeywordElement ele : coll) {
-					fields.remove(ele.getResource().getUri());
+			if (attributes != null && attributes.size() != 0) {
+				for (Collection<KeywordElement> coll : attributes.values()) {
+					for (KeywordElement ele : coll) {
+						fields.remove(ele.getResource().getUri());
+					}
 				}
 			}
 			MyQueryParser parser = new MyQueryParser(fields.toArray(new String[fields.size()]), analyzer);
@@ -369,6 +373,8 @@ public class KeywordSearcher {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			for (String keywordForAttributeAndRelation : queries.keySet()) {
+				Collection<KeywordElement> elements = attributesAndRelations.get(keywordForAttributeAndRelation);
+				if(elements != null && elements.size() != 0)
 				for (KeywordElement attributeAndRelation : attributesAndRelations.get(keywordForAttributeAndRelation)) {
 					QueryParser parser = new QueryParser(attributeAndRelation.getResource().getUri(), analyzer);
 					for(String keywordForValueAndEntityID : queries.get(keywordForAttributeAndRelation)) {
@@ -529,7 +535,7 @@ public class KeywordSearcher {
 	}
 	
 	public static void main(String[] args) {
-		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/output/test/l1r/keyword"); 
+		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/output/aifb/l1r/keyword"); 
 		
 		System.out.println("******************** Input Example ********************");
 		System.out.println("name::Thanh publication AIFB");
@@ -538,11 +544,15 @@ public class KeywordSearcher {
 		while (true) {
 			System.out.println("Please input the keywords:");
 			String line = scanner.nextLine();
-			String tokens[] = line.split(" ");
-			LinkedList<String> keywordList = new LinkedList<String>();
-			for (int i = 0; i < tokens.length; i++) {
-				keywordList.add(tokens[i]);
-			}
+			
+//			String tokens[] = line.split(" ");
+//			LinkedList<String> keywordList = new LinkedList<String>();
+//			for (int i = 0; i < tokens.length; i++) {
+//				keywordList.add(tokens[i]);
+//			}
+			
+			LinkedList<String> keywordList = getKeywordList(line);
+			
 			Map<String,Collection<KeywordElement>> results = searcher.searchKeywordElements(keywordList);
 			
 			int i = 1;
@@ -557,5 +567,50 @@ public class KeywordSearcher {
 			}
 		}
 	} 
+	
+	 public static LinkedList<String> getKeywordList(String line) {
+		LinkedList<String> ll = new LinkedList<String>();
 
+		// Boolean set to true if a " is opened
+		Boolean opened = false;
+		// Temporary string
+		String acc = "";
+		// Browse the string
+		for (int i = 0; i < line.length(); i++) {
+			// Get the character
+			String str = String.valueOf(line.charAt(i));
+			// If it is an opening "
+			if (str.equals("\"") && !opened) {
+				opened = true;
+				continue;
+			}
+			// If it is a closing "
+			if (str.equals("\"") && opened) {
+				opened = false;
+				// Put the acc string into the list
+				ll.add(acc);
+				acc = "";
+				continue;
+			}
+			// If it is a space not between "
+			if (str.equals(" ") && !opened) {
+				if (acc != "") {
+					ll.add(acc);
+					acc = "";
+				}
+				continue;
+			}
+			// If it is a space between "
+			if (str.equals(" ") && opened) {
+				acc += " ";
+				continue;
+			}
+			// Else, add the char
+			acc += str;
+		}
+		if (!acc.equals(""))
+			ll.add(acc);
+
+		return ll;
+	}
 }

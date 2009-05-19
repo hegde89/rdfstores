@@ -8,7 +8,9 @@ public class Constant {
 	public static final String EXTENSION_FIELD = "extension";
 	public static final String NEIGHBORHOOD_FIELD = "neighbor";
 	
-	public static final String LOCALNAME = "localname";
-	public static final String LABEL = "label";
+	public static final String LOCALNAME_FIELD = "localname";
+	public static final String LABEL_FIELD = "label";
+	
+	public static final String URI_PREFIX = "http://";
 	
 }

@@ -279,21 +279,23 @@ public class FastIndexBuilder {
 						&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.RELATION)) {
 					type = TypeUtil.RELATION;
 				}
-				else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(predicate, object).equals(TypeUtil.LITERAL)
+				else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY) 
+						&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.LITERAL)
 						&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.ATTRIBUTE)) {
 					type = TypeUtil.ATTRIBUTE;
 				}
 				else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY)
-						&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.CONCEPT)) {
+						&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.CONCEPT)
+						&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.TYPE)) {
 					type = TypeUtil.TYPE;
+				}
+				else if (predicate.equals(RDFS.LABEL.toString())) {
+					type = TypeUtil.LABEL;
 				}
 				else {
 					type = "";
 				}
 				
-				if(type.equals(TypeUtil.ATTRIBUTE) && predicate.equals(RDFS.LABEL.toString())) {
-					type = TypeUtil.LABEL;
-				}
 				ds.addTriple(subject, predicate, object, type);
 				triple++;
 			}

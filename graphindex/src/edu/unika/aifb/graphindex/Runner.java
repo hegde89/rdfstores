@@ -289,7 +289,7 @@ public class Runner {
 			KeywordSearcher ks = new KeywordSearcher(outputDirectory + "/keyword");
 			List<String> queries = new ArrayList<String>();
 			queries.add("professor");
-			ks.searchElements(queries);
+			ks.searchKeywordElements(queries);
 		}
 		
 		log.info("total time: " + (System.currentTimeMillis() - start) / 60000.0 + " minutes");

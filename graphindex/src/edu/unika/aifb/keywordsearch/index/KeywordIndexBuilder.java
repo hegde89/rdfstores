@@ -169,7 +169,7 @@ public class KeywordIndexBuilder {
 					continue;
 				}
 				
-				log.info("Indexing entity " + localName);
+				log.info("Indexing entity " + uri);
 				
 				localName = localName.toLowerCase();
 				/* Write Index */

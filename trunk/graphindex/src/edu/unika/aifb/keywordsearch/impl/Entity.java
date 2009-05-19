@@ -1,5 +1,7 @@
 package edu.unika.aifb.keywordsearch.impl;
 
+import it.unimi.dsi.util.BloomFilter;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -21,7 +23,7 @@ public class Entity implements IEntity {
 	private String uri;
 	private String extension;
 	private INamedConcept type;
-	private Set<IEntity> reachableEntities;
+	private BloomFilter reachableEntities;
 	private Set<IAttributeValueCompound> attributeValueCompounds;
 	private Set<IValue> values;
 	
@@ -58,29 +60,22 @@ public class Entity implements IEntity {
 		return extension;
 	}
 	
-	public void addReachableEntity(IEntity entity) {
-		if(reachableEntities == null) {
-			reachableEntities = new HashSet<IEntity>();
-		}
-		reachableEntities.add(entity);	
-	}
-	
-	public void setReachaleEntities(Set<IEntity> entities) {
+	public void setReachaleEntities(BloomFilter entities) {
 		reachableEntities = entities;
 	}
 	
-	public Set<IEntity> getReachaleEntities() {
+	public BloomFilter getReachaleEntities() {
 		return reachableEntities;
 	}
 	
 	public boolean isReachable(IEntity entity) {
-		return reachableEntities.contains(entity);
+		return reachableEntities.contains(entity.getUri());
 	}
 	
 	public boolean isReachable(KeywordElement ele) {
 		if(ele.getType() != KeywordElement.ENTITY)
 			return false;
-		return reachableEntities.contains(ele.getResource());
+		return reachableEntities.contains(ele.getResource().getUri());
 	}
 	
 	public boolean isReachable(Collection<KeywordElement> elements) {

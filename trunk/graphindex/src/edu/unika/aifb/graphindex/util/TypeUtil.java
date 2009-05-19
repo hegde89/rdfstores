@@ -26,7 +26,7 @@ public class TypeUtil {
 			RDF.LIST.stringValue(), RDF.FIRST.stringValue(), RDF.REST.stringValue(), RDF.NIL.stringValue()};
 
 	private final static String[] rdfsEdges = {RDF.TYPE.stringValue(), RDFS.SUBCLASSOF.stringValue(), RDFS.DOMAIN.stringValue(),
-			RDFS.RANGE.stringValue(), RDFS.SUBPROPERTYOF.stringValue(), /*RDFS.LABEL.stringValue(),*/ RDFS.COMMENT.stringValue(),
+			RDFS.RANGE.stringValue(), RDFS.SUBPROPERTYOF.stringValue(), RDFS.LABEL.stringValue(), RDFS.COMMENT.stringValue(),
 			RDFS.CLASS.stringValue(), OWL.CLASS.stringValue(), OWL.OBJECTPROPERTY.stringValue(), OWL.DATATYPEPROPERTY.stringValue(),
 			RDFS.SEEALSO.stringValue(), RDFS.ISDEFINEDBY.stringValue(), OWL.ONTOLOGY.stringValue(), OWL.ANNOTATIONPROPERTY.stringValue(),
 			RDFS.MEMBER.stringValue(), RDFS.CONTAINER.stringValue()};
@@ -72,6 +72,10 @@ public class TypeUtil {
 	}
 
 	public static String getPredicateType(String pred, String obj) {
+		if (pred.equals(RDFS.LABEL.toString())) 
+			return LABEL;
+		if (pred.equals(RDF.TYPE.toString())) 
+			return TYPE;
 		if (m_rdfsEdgeSet.contains(pred)) {
 			return RDFSPROP;
 		} else if (obj.startsWith("http://")) {

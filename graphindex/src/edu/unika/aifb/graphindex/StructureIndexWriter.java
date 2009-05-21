@@ -17,6 +17,7 @@ import edu.unika.aifb.graphindex.data.ListVertexCollection;
 import edu.unika.aifb.graphindex.data.VertexFactory;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
+import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.importer.TriplesImporter;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
 import edu.unika.aifb.graphindex.preprocessing.FileHashValueProvider;
@@ -89,11 +90,18 @@ public class StructureIndexWriter {
 		log.debug("sorting...");
 		Util.sortFile(m_directory + "/input.ht", m_directory + "/input_sorted.ht");
 		log.debug("sorting complete");
+		
+		if (m_index.getBackwardEdges().size() == 0 && m_index.getForwardEdges().size() == 0) {
+			log.debug("edge sets empty, setting to full");
+			m_index.setForwardEdges(tc.getEdgeSet());
+			m_index.setBackwardEdges(tc.getEdgeSet());
+		}
 	}
 	
 	private void partition() throws IOException {
 		// PARTITION: compute the connected components and store the nodes of them in files '/components/componentID'.
 		TriplesPartitioner tp = new TriplesPartitioner(m_directory + "/components");
+		tp.disablePartitioning(true);
 		
 		Importer importer = new TriplesImporter();
 		importer.addImport(m_directory + "/input_sorted.ht");

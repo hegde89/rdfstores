@@ -66,7 +66,15 @@ public class Util {
 		
 		return uri.replaceAll("\\/|:|\\.|#|\\?|&|\\+|-|~", "_");
 	}
-
+	
+	public static final int bytesToInt(byte[] b) {
+		return b[0]<<24 | (b[1]&0xff)<<16 | (b[2]&0xff)<<8 | (b[3]&0xff);
+	}
+	
+	public static final byte[] intToBytes(int i) {
+		return new byte[] { (byte)(i>>24), (byte)(i>>16), (byte)(i>>8), (byte)i };
+	}
+	
 	public static String truncateUri(String uri) {
 		if (uri == null)
 			return null;
@@ -105,27 +113,31 @@ public class Util {
 		return uri;
 	}
 	
-	public static Set<String> readEdgeSet(File file) throws IOException {
+	public static Set<String> readEdgeSet(File file) {
 		Set<String> edgeSet = new HashSet<String>();
-		BufferedReader in = new BufferedReader(new FileReader(file));
-		String input;
-		Map<String,String> namespaces = new HashMap<String,String>();
-		while ((input = in.readLine()) != null) {
-			input = input.trim();
-			
-			if (input.startsWith("ns:")) {
-				String[] t = input.split(" ");
-				namespaces.put(t[1], t[2]);
-				continue;
+		try {
+			BufferedReader in = new BufferedReader(new FileReader(file));
+			String input;
+			Map<String,String> namespaces = new HashMap<String,String>();
+			while ((input = in.readLine()) != null) {
+				input = input.trim();
+				
+				if (input.startsWith("ns:")) {
+					String[] t = input.split(" ");
+					namespaces.put(t[1], t[2]);
+					continue;
+				}
+				
+				edgeSet.add(resolveNamespace(input, namespaces));
 			}
-			
-			edgeSet.add(resolveNamespace(input, namespaces));
+			in.close();
+		} catch (FileNotFoundException e) {
+		} catch (IOException e) {
 		}
-		in.close();
 		return edgeSet;
 	}
 	
-	public static Set<String> readEdgeSet(String file) throws IOException {
+	public static Set<String> readEdgeSet(String file) {
 		return readEdgeSet(new File(file));
 	}
 	
@@ -348,5 +360,9 @@ public class Util {
 
 	public static boolean isConstant(String label) {
 		return !isVariable(label);
+	}
+	
+	public static boolean isEntity(String label) {
+		return label.startsWith("http") || label.startsWith("_:");
 	}
 }

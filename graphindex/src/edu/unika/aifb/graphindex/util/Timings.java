@@ -8,6 +8,7 @@ public class Timings {
 	public static final int LOAD_DATA_SET = 1;
 	public static final int LOAD_HT = 2;
 	public static final int LOAD_IT = 3;
+	public static final int LOAD_ITS = 16;
 	public static final int LOAD_EXT_OBJECT = 10;
 	public static final int LOAD_EXT_SUBJECT = 11;
 	public static final int JOIN_MERGE = 4;

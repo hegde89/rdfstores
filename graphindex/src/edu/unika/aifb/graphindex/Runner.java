@@ -76,7 +76,7 @@ public class Runner {
 		}
 		else if (dataset.equals("wordnet")) {
 			importer = new NTriplesImporter();
-			importer.addImport(datasetDir + "/wordnet.nt");
+			importer.addImport(datasetDir + "/wordnet/wordnet_1k.nt");
 		}
 		else if (dataset.equals("freebase")) {
 			importer = new NTriplesImporter();
@@ -173,7 +173,7 @@ public class Runner {
 		String prefix = (String)os.valueOf("p");
 		String dataset = (String)os.valueOf("d");
 		String queryName = (String)os.valueOf("q");
-		int pathLength = os.valueOf("k") == null ? 10 : (Integer)os.valueOf("k");
+		int pathLength = os.valueOf("k") == null ? -1 : (Integer)os.valueOf("k");
 		boolean dstUnmappedES = !os.has("nodstes");
 		boolean srcUnmappedES = !os.has("nosrces");
 
@@ -187,7 +187,7 @@ public class Runner {
 		long start = System.currentTimeMillis();
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			Map options = new HashMap();
-			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
+			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, false);
 			options.put(StructureIndex.OPT_PATH_LENGTH, pathLength);
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
 			iw.setOptions(options);

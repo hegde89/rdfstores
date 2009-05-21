@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
@@ -25,6 +26,7 @@ public class TripleConverter implements TripleSink {
 	private String m_outputDirectory;
 	private Map<Long,String> m_propertyHashes;
 	private Map<Long,String> m_hashes;
+	private Set<String> m_edgeSet = new HashSet<String>();
 	private TreeSet<String> m_conSet, m_relSet, m_attrSet, m_entSet;
 	private PrintWriter m_out;
 	private int m_triples;
@@ -65,6 +67,8 @@ public class TripleConverter implements TripleSink {
 			m_attrSet.add(p);
 			m_entSet.add(s);
 		}
+		
+		m_edgeSet.add(p);
 		
 		long sh = Util.hash(s);
 		long ph = Util.hash(p);
@@ -125,5 +129,9 @@ public class TripleConverter implements TripleSink {
 			out.println(ent);
 		}
 		out.close();
+	}
+
+	public Set<String> getEdgeSet() {
+		return m_edgeSet;
 	}
 }

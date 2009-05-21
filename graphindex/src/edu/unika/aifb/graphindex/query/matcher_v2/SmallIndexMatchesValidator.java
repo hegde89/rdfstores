@@ -349,9 +349,9 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
 				GTable<String> sourceTable = ec.findResult(srcLabel);
-				ec.getResults().remove(sourceTable);
-				
 				GTable<String> targetTable = ec.findResult(trgLabel);
+
+				ec.getResults().remove(sourceTable);
 				ec.getResults().remove(targetTable);
 				
 				GTable<String> table = new GTable<String>(srcLabel, trgLabel);

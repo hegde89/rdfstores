@@ -38,27 +38,6 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		m_ls = ls;
 	}
 
-	private GTable<String> getTable(String subject, String property, String object) throws IOException, StorageException {
-		t.start(Timings.VP_LOAD);
-		GTable<String> table;
-		if (isVariable(subject) && isVariable(object)) {
-			List<GTable<String>> tables = m_ls.getIndexTables(LuceneStorage.Index.PO, property);
-			table = Tables.mergeTables(tables, 0);
-			table.setSortedColumn(0);
-		} else if (isVariable(subject)) {
-			table = m_ls.getIndexTable(LuceneStorage.Index.PO, property, object);
-			table.setSortedColumn(0);
-		} else {
-			table = m_ls.getIndexTable(LuceneStorage.Index.PS, property, subject);
-			table.setSortedColumn(1);
-		}
-
-		table.setColumnName(0, subject);
-		table.setColumnName(1, object);
-		t.end(Timings.VP_LOAD);
-		return table;
-	}
-
 	int loaded = 0;
 	private GTable<String> getTable(Index index, String p, String so, String col1, String col2) throws IOException, StorageException {
 		t.start(Timings.VP_LOAD);

@@ -51,6 +51,7 @@ public class StatisticsCollector {
 		log.debug(" load data set:  " + (timings[Timings.LOAD_DATA_SET]));
 		log.debug(" load ht:        " + (timings[Timings.LOAD_HT]));
 		log.debug(" load it:        " + (timings[Timings.LOAD_IT]));
+		log.debug(" load its:       " + (timings[Timings.LOAD_ITS]));
 		log.debug(" join merge:     " + (timings[Timings.JOIN_MERGE]));
 		log.debug(" tbl sort:       " + (timings[Timings.TBL_SORT]));
 		log.debug(" im purge:       " + (timings[Timings.IM_PURGE]));

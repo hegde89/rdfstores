@@ -50,9 +50,12 @@ public class QueryExecution {
 	private static final Logger log = Logger.getLogger(QueryExecution.class);
 	
 	public QueryExecution(Query query, StructureIndex index) {
+		m_index = index;
 		m_query = query;
 		m_queryGraph = query.getGraph();
 		m_proximities = query.calculateConstantProximities();
+		m_toVisit = m_queryGraph.edges();
+		m_visitedEdges = new ArrayList<GraphEdge<QueryNode>>();
 		
 		m_removedProperties = new HashMap<String,String>();
 		
@@ -91,6 +94,13 @@ public class QueryExecution {
 	public void setToVisit(List<GraphEdge<QueryNode>> toVisit) {
 		m_toVisit = toVisit;
 	}
+	
+	public void visited(GraphEdge<QueryNode> edge) {
+		m_toVisit.remove(edge);
+		m_visitedEdges.add(edge);
+	}
+	
+	// common -----------------------
 	
 	public Map<String,Integer> getProximities() {
 		return m_proximities;

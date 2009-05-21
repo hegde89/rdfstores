@@ -222,14 +222,14 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 //				m_validator = null;
 			
 			if (sourceTable == null && targetTable != null) {
-				// cases 1 a,b: edge has one unprocessed node, the source
+				// cases 1 a,d: edge has one unprocessed node, the source
 				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
 				
 				targetTable.sort(trgLabel, true);
 				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel, m_validator);
 			}
 			else if (sourceTable != null && targetTable == null) {
-				// cases 1 c,d: edge has one unprocessed node, the target
+				// cases 1 b,c: edge has one unprocessed node, the target
 				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0, sourceTable);
 				
 				sourceTable.sort(srcLabel, true);

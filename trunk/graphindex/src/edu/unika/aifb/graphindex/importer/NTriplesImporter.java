@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.importer;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -23,6 +24,7 @@ import org.openrdf.rio.RDFParseException;
 
 public class NTriplesImporter extends Importer {
 
+	private boolean m_removeBN = true;
 	private int m_triplesTotal = 0, m_triplesAdded = 0;
 	
 	private class TriplesHandler implements RDFHandler {
@@ -53,7 +55,10 @@ public class NTriplesImporter extends Importer {
 			}
 			else if (st.getSubject() instanceof BNode) {
 				BNode bn = (BNode)st.getSubject();
-				source = "BLANKNODE";
+				source = bn.getID();
+//				log.debug(source);
+				if (!source.startsWith("http"))
+					source = "_:" + source;
 			}
 			else {
 				log.warn("subject is not an URI or a blank node, ignoring " + st.getSubject().getClass());
@@ -74,7 +79,10 @@ public class NTriplesImporter extends Importer {
 			}
 			else if (st.getObject() instanceof BNode) {
 				BNode bn = (BNode)st.getObject();
-				target = "BLANKNODE";
+				target = bn.getID();
+				if (!target.startsWith("http"))
+					target = "_:" + target;
+//				log.debug(target + " " + label + " " + source);
 			}
 			else {
 				log.warn("object is not an URI, a literal or a blank node, ignoring " + st);
@@ -97,8 +105,12 @@ public class NTriplesImporter extends Importer {
 	}
 	
 	public NTriplesImporter() {
+		this(true);
+	}
+	
+	public NTriplesImporter(boolean rmBN) {
 		super();
-		
+		m_removeBN = rmBN;
 		log = Logger.getLogger(NTriplesImporter.class);
 	}
 	
@@ -116,9 +128,10 @@ public class NTriplesImporter extends Importer {
 		for (String e : containerEdge) {
 			conEdgeSet.add(e);
 		}
-		String blankNode = "_:node";
-		String blankNodeFile = fn.substring(0, fn.lastIndexOf('.'))+".blanknodes";
-		String noBlankNodeFile = fn.substring(0, fn.lastIndexOf('.'))+".noblanknode.nt";
+		String blankNode = "_:";
+		String fileName = new File(fn).getName();
+		String blankNodeFile = fileName + ".blanknodes";//fn.substring(0, fn.lastIndexOf('.'))+".blanknodes";
+		String noBlankNodeFile = fileName + ".noblanknode.nt";//fn.substring(0, fn.lastIndexOf('.'))+".noblanknode.nt";
 		Map<String, String> blankNodeMap = new HashMap<String, String>();
 		Set<String> bnMeansCollection = new HashSet<String>();
 		BufferedReader br = new BufferedReader(new FileReader(fn));
@@ -166,12 +179,17 @@ public class NTriplesImporter extends Importer {
 		for (String file : m_files) {
 			
 			try {
-				file = removeBlankNode(file);
+				if (m_removeBN) {
+					log.debug("removing blank nodes...");
+					file = removeBlankNode(file);
+					log.debug("done");
+				}
 				
 				NTriplesParser parser = new NTriplesParser();
 				parser.setDatatypeHandling(DatatypeHandling.VERIFY);
 				parser.setStopAtFirstError(false);
 				parser.setRDFHandler(handler);
+				parser.setPreserveBNodeIDs(true);
 				
 				parser.parse(new BufferedReader(new FileReader(file), 10000000), "");
 			} catch (RDFParseException e) {

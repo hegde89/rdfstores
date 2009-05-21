@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -49,7 +51,7 @@ public class RCPFast {
 	public void setIgnoreDataValues(boolean ignore) {
 		m_ignoreDataValues = ignore;
 	}
-	
+
 	/**
 	 * Refines the partition <code>p</code> with respect to the vertex set <code>image</code>, which in most
 	 * cases is the image of a block in <code>p</code>. This operation splits blocks in <code>p</code> so that
@@ -64,6 +66,7 @@ public class RCPFast {
 	 */
 	private void refinePartition(Partition p, Set<IVertex> image, Splitters w, Integer currentIteration) {
 		List<Block> splitBlocks = new LinkedList<Block>();
+		log.debug("image size: " + image.size());
 		for (IVertex x : image) {
 			if (m_ignoreDataValues && x.isDataValue())
 				continue;
@@ -129,10 +132,16 @@ public class RCPFast {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Set<XBlock> cbs = new HashSet<XBlock>();
-		Set<Long> labels = new TreeSet<Long>();
+		List<Long> labels = new ArrayList<Long>();
 
 		for (String edge : edges) 
 			labels.add(new Long(Util.hash(edge)));
+		
+		Collections.sort(labels, new Comparator<Long>() {
+			public int compare(Long o1, Long o2) {
+				return m_hashes.getValue(o1).compareTo(m_hashes.getValue(o2));
+			}
+		});
 		
 		for (Block b : p.getBlocks())
 			startXB.addBlock(b);
@@ -160,13 +169,21 @@ public class RCPFast {
 			for (long label : labels) {
 				refinePartition(p, imageOf(b_, label), w, movedIn);
 				movedIn++;
+				for (Block b : p.getBlocks())
+					System.out.print(b.size() + " ");
+				System.out.println();
 			}
 		}
 		
 		steps++;
+		log.debug(p.getBlocks().size());
 			
 		while (w.size() > 0 && (pathLength == -1 || steps < pathLength)) {
 			XBlock s = w.remove();
+			
+			for (Block b : p.getBlocks())
+				System.out.print(b.size() + " ");
+			System.out.println();
 			
 			Block b;
 			if (s.getFirstBlock().size() <= s.getSecondBlock().size())
@@ -377,8 +394,8 @@ public class RCPFast {
 		for (Block b : p.getBlocks()) {
 			for (IVertex v : b) {
 				vertices++;
-				if (v.isDataValue())
-					log.debug("data");
+//				if (v.isDataValue())
+//					log.debug("data");
 				for (Long label : v.getEdgeLabels()) {
 					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
 						continue;

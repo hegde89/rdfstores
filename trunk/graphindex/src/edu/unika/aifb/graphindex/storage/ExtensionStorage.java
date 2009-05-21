@@ -194,4 +194,5 @@ public interface ExtensionStorage {
 	public void addData(IndexDescription index, String indexKey, Collection<String> set) throws StorageException;
 	public List<String> getData(IndexDescription index, String... indexFields) throws StorageException;
 	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException;
+	public GTable<String> getIndexTable(String col1, String col2, IndexDescription index, String... indexFields) throws StorageException;
 }

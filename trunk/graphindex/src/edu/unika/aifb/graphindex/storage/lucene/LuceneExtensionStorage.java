@@ -449,6 +449,30 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 	}
 	
+	public GTable<String> getIndexTable(String col1, String col2, IndexDescription index, String... indexFields) throws StorageException {
+		m_timings.start(Timings.LOAD_ITS);
+		GTable<String> table = new GTable<String>(col1, col2);
+
+		String so = null;
+		for (int i = 0; i < indexFields.length; i++)
+			if ((index.getValueField() == DataField.OBJECT && index.getIndexFields().get(i) == DataField.SUBJECT) ||
+				(index.getValueField() == DataField.SUBJECT && index.getIndexFields().get(i) == DataField.OBJECT))
+				so = indexFields[i];
+			
+
+		Query q;
+		if (indexFields.length < index.getIndexFields().size()) 
+			q = new PrefixQuery(getTerm(index, indexFields));
+		else
+			q = new TermQuery(getTerm(index, indexFields));
+		
+		List<Integer> docIds = getDocumentIds(q);
+		loadDocuments(table, docIds, index, so);
+		
+		m_timings.end(Timings.LOAD_ITS);
+		return table;
+	}
+	
 	public List<GTable<String>> getIndexTables(IndexDescription index, String ext, String property) throws StorageException {
 //		m_timings.start(Timings.DATA);
 		long start = System.currentTimeMillis();

@@ -86,6 +86,33 @@ public class TypeUtil {
 		return "";
 	}
 	
+	public static String checkType(String predicate, String object) {
+		String type = null; 
+		
+		if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY)
+				&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.ENTITY)
+				&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.RELATION)) {
+			type = TypeUtil.RELATION;
+		}
+		else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY) 
+				&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.LITERAL)
+				&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.ATTRIBUTE)) {
+			type = TypeUtil.ATTRIBUTE;
+		}
+		else if (TypeUtil.getSubjectType(predicate, object).equals(TypeUtil.ENTITY)
+				&& TypeUtil.getObjectType(predicate, object).equals(TypeUtil.CONCEPT)
+				&& TypeUtil.getPredicateType(predicate, object).equals(TypeUtil.TYPE)) {
+			type = TypeUtil.TYPE;
+		}
+		else if (predicate.equals(RDFS.LABEL.toString())) {
+			type = TypeUtil.LABEL;
+		}
+		else {
+			type = "";
+		}
+		return type;
+	}
+	
 	public static String getLocalName(String uri) {
 		if( uri.lastIndexOf("#") != -1 ) {
 			return uri.substring(uri.lastIndexOf("#") + 1);

@@ -52,6 +52,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	private final String FIELD_SRC = "src";
 	private final String FIELD_EDGE = "edge";
 	private final String FIELD_DST = "dst";
+	private final String FIELD_TYPE = "type"; 
 	public int m_docCacheMisses;
 	public int m_docCacheHits;
 	
@@ -372,6 +373,29 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 
 	public IndexSearcher getIndexSearcher() {
 		return m_searcher;
+	}
+
+	public void addEdge(String graphName, String source, String edge, String target, String type) throws StorageException {
+		try {
+			Document doc = createDocument(graphName, source, edge, target, type);
+			m_writer.addDocument(doc);
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		
+	}
+
+	private Document createDocument(String graphName, String source, String edge, String target, String type) {
+		Document doc = new Document();
+		if (m_storeGraphName)
+			doc.add(new Field(FIELD_GRAPH, graphName, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_SRC, source, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_EDGE, edge, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_DST, target, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(new Field(FIELD_TYPE, type, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		return doc;
 	}
 	
 }

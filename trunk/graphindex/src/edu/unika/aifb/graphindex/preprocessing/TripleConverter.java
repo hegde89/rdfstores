@@ -51,21 +51,21 @@ public class TripleConverter implements TripleSink {
 		if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
 				&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
 				&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
-			m_conSet.add(o);
-			m_entSet.add(s);
+				m_conSet.add(o);
+				m_entSet.add(s);
 		}
 		if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
 				&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
 				&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
-			m_relSet.add(p);
-			m_entSet.add(s);
-			m_entSet.add(o);
+				m_relSet.add(p);
+				m_entSet.add(s);
+				m_entSet.add(o);
 		}
 		if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
 				&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
 				&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
-			m_attrSet.add(p);
-			m_entSet.add(s);
+				m_attrSet.add(p);
+				m_entSet.add(s);
 		}
 		
 		m_edgeSet.add(p);

@@ -83,10 +83,6 @@ public class LuceneBlockStorage extends AbstractBlockStorage {
 		Document doc = new Document();
 		doc.add(new Field(BLOCK_FIELD, block, Field.Store.YES, Field.Index.NO));
 		doc.add(new Field(ELE_FIELD, element, Field.Store.YES, Field.Index.UN_TOKENIZED));
-		if(element.startsWith("http://"))
-			doc.add(new Field(LIT_FIELD, "false", Field.Store.YES, Field.Index.NO));
-		else
-			doc.add(new Field(LIT_FIELD, "true", Field.Store.YES, Field.Index.NO));
 		return doc;
 	}
 

@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexReader;
 import org.openrdf.model.vocabulary.RDFS;
 
 import com.sleepycat.je.DatabaseException;
@@ -54,99 +57,49 @@ public class BTCImport {
 		}
 		
 		String action = (String)os.valueOf("a");
-		String file = (String)os.valueOf("f");
-		final String outputDirectory = (String)os.valueOf("o");
-		boolean rmBN = os.has("bn");
-		
-		
-		log.debug(Util.memory());
-		
-		
-		if (action.equals("import")) {
-			final TreeSet<String> conSet = new TreeSet<String>();
-			final TreeSet<String> relSet = new TreeSet<String>();
-			final TreeSet<String> attrSet = new TreeSet<String>();
-			final TreeSet<String> entSet = new TreeSet<String>();
-			
-			final LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory + "/data");
+        String file = (String)os.valueOf("f");
+        String outputDirectory = (String)os.valueOf("o");
+        boolean rmBN = os.has("bn");
+        
+        
+        log.debug(Util.memory());
+        
+        if (action.equals("import")) {
+			final LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
 			gs.initialize(false, false);
 			gs.setStoreGraphName(false);
 			Importer importer = new NTriplesImporter(rmBN);
 			importer.addImport(file);
 			importer.setTripleSink(new TripleSink() {
 				int triples = 0;
+
 				public void triple(String s, String p, String o, String objectType) {
 					try {
-						String type = null; 
-						
-						if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-								&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
-								&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
-							type = TypeUtil.RELATION;
-							relSet.add(p);
-							entSet.add(s);
-							entSet.add(o);
-							if(entSet.size() > MAX_CACHE_SIZE) {
-								writeEntities(entSet, outputDirectory);
-							}
-						}
-						else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) 
-								&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
-								&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
-							type = TypeUtil.ATTRIBUTE;
-							attrSet.add(p);
-							entSet.add(s);
-							if(entSet.size() > MAX_CACHE_SIZE) {
-								writeEntities(entSet, outputDirectory);
-							}
-						}
-						else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-								&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
-								&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
-							type = TypeUtil.TYPE;
-							conSet.add(o);
-							entSet.add(s);
-							if(entSet.size() > MAX_CACHE_SIZE) {
-								writeEntities(entSet, outputDirectory);
-							}
-						}
-						else if (p.equals(RDFS.LABEL.toString())) {
-							type = TypeUtil.LABEL;
-						}
-						else {
-							type = "";
-						}
-						
-						gs.addEdge("btc", s, p, o, type);
+						gs.addEdge("btc", s, p, o);
 						triples++;
 						if (triples % 1000000 == 0)
 							System.out.println(triples);
 					} catch (StorageException e) {
 						e.printStackTrace();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					}
 				}
 			});
-			
+
 			try {
 				importer.doImport();
-				writeAll(conSet, relSet, attrSet, entSet, outputDirectory);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			
-//			gs.optimize();
+
+			// gs.optimize();
 			gs.close();
 		}
 		
-		if (action.equals("index")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory + "/data");
+		 if (action.equals("index")) {
+			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
-			
+
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
 			config.setAllowCreate(true);
@@ -154,9 +107,9 @@ public class BTCImport {
 			Set<String> edges = gs.getEdges();
 			log.debug(Util.memory());
 			log.debug(edges.size());
-			
+
 			new File(outputDirectory + "/bdb").mkdir();
-			
+
 			Environment env = new Environment(new File(outputDirectory + "/bdb"), config);
 
 			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
@@ -168,9 +121,11 @@ public class BTCImport {
 		}
 		
 		if(action.equals("keywordindex")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory + "/data");
+			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
+			
+			prepareKeywordIndex(gs, outputDirectory + "/temp");
 			
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
@@ -191,9 +146,69 @@ public class BTCImport {
 			gs.close();
 			env.close();
 		}
-		
-		
 	}
+	
+	public static void prepareKeywordIndex(LuceneGraphStorage gs,String outputDirectory) {
+		File file = new File(outputDirectory);
+		if(!file.exists())
+			file.mkdirs();
+		IndexReader indexReader = gs.getIndexSearcher().getIndexReader();
+
+		TreeSet<String> conSet = new TreeSet<String>();
+		TreeSet<String> relSet = new TreeSet<String>();
+		TreeSet<String> attrSet = new TreeSet<String>();
+		TreeSet<String> entSet = new TreeSet<String>();
+
+		int triples = 0;
+
+		try {
+			for (int i = 0; i < indexReader.numDocs(); i++) {
+				Document doc = indexReader.document(i);
+				if (doc != null) {
+					String s = doc.get(LuceneGraphStorage.FIELD_SRC);
+					String p = doc.get(LuceneGraphStorage.FIELD_EDGE);
+					String o = doc.get(LuceneGraphStorage.FIELD_DST);
+
+					if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
+							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
+						relSet.add(p);
+						entSet.add(s);
+						entSet.add(o);
+						if (entSet.size() > MAX_CACHE_SIZE) {
+							writeEntities(entSet, outputDirectory);
+						}
+					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
+							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
+						attrSet.add(p);
+						entSet.add(s);
+						if (entSet.size() > MAX_CACHE_SIZE) {
+							writeEntities(entSet, outputDirectory);
+						}
+					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
+							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
+						conSet.add(o);
+						entSet.add(s);
+						if (entSet.size() > MAX_CACHE_SIZE) {
+							writeEntities(entSet, outputDirectory);
+						}
+					}
+					triples++;
+					if (triples % 1000000 == 0)
+						System.out.println(triples);
+				}
+			}
+			writeAll(conSet, relSet, attrSet, entSet, outputDirectory);
+		} catch (CorruptIndexException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	} 
 	
 	public static void writeEntities(Set<String> entSet, String outputDirectory) throws IOException {
 		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outputDirectory + "/entities", true)));

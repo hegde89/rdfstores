@@ -48,11 +48,11 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	private boolean m_storeGraphName = true;
 	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(10000);
 	
-	private final String FIELD_GRAPH = "graph";
-	private final String FIELD_SRC = "src";
-	private final String FIELD_EDGE = "edge";
-	private final String FIELD_DST = "dst";
-	private final String FIELD_TYPE = "type"; 
+	public static final String FIELD_GRAPH = "graph";
+	public static final String FIELD_SRC = "src";
+	public static final String FIELD_EDGE = "edge";
+	public static final String FIELD_DST = "dst";
+	public static final String FIELD_TYPE = "type"; 
 	public int m_docCacheMisses;
 	public int m_docCacheHits;
 	

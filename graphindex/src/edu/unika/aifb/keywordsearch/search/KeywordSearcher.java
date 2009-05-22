@@ -535,7 +535,7 @@ public class KeywordSearcher {
 	}
 	
 	public static void main(String[] args) {
-		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/output/aifb/l1r/keyword"); 
+		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/test/keyword"); 
 		
 		System.out.println("******************** Input Example ********************");
 		System.out.println("name::Thanh publication AIFB");

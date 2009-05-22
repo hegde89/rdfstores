@@ -81,13 +81,13 @@ public class KeywordIndexBuilder {
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer,true);
 			indexWriter.setMaxFieldLength(MAXFIELDLENGTH);
 			log.info("Indexing concepts");
-			indexSchema(indexWriter, outputDir + "/concepts", TypeUtil.CONCEPT, CONCEPT_BOOST);
+			indexSchema(indexWriter, outputDir + "/temp/concepts", TypeUtil.CONCEPT, CONCEPT_BOOST);
 			log.info("Indexing attributes");
-			indexSchema(indexWriter, outputDir + "/attributes", TypeUtil.ATTRIBUTE, ATTRIBUTE_BOOST);
+			indexSchema(indexWriter, outputDir + "/temp/attributes", TypeUtil.ATTRIBUTE, ATTRIBUTE_BOOST);
 			log.info("Indexing relations");
-			indexSchema(indexWriter, outputDir + "/relations", TypeUtil.RELATION, RELATION_BOOST);	
+			indexSchema(indexWriter, outputDir + "/temp/relations", TypeUtil.RELATION, RELATION_BOOST);	
 			log.info("Indexing entities");
-			indexEntity(indexWriter, outputDir + "/entities");
+			indexEntity(indexWriter, outputDir + "/temp/entities");
 			indexWriter.optimize();
 			indexWriter.close();
 			
@@ -128,16 +128,16 @@ public class KeywordIndexBuilder {
 				
 				// indexing label 
 				BooleanQuery bq = new BooleanQuery();
-				TermQuery tq = new TermQuery(new Term(DataStorage.SRC_FIELD, uri));
+				TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, uri));
 				bq.add(tq, BooleanClause.Occur.MUST);
-				tq = new TermQuery(new Term(DataStorage.EDGE_FIELD, RDFS.LABEL.stringValue()));
+				tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDFS.LABEL.stringValue()));
 				bq.add(tq, BooleanClause.Occur.MUST);
 				Hits lhits = dataSearcher.search(bq);
 				if(lhits != null && lhits.length() != 0) {
 					Iterator iter = lhits.iterator();
 					while(iter.hasNext()) {
 						Document ldoc = ((Hit)iter.next()).getDocument();
-						String label = ldoc.get(DataStorage.DST_FIELD);
+						String label = ldoc.get(LuceneGraphStorage.FIELD_DST);
 						doc.add(new Field(Constant.SCHEMA_FIELD, label, Field.Store.YES,Field.Index.TOKENIZED));
 					}
 				} 
@@ -198,50 +198,33 @@ public class KeywordIndexBuilder {
 				
 				// indexing label
 				Set<String> labels = computeLabels(uri);
-				if(labels != null && labels.size() != 0)
-				for(String label : labels){
-					field = new Field(Constant.LABEL_FIELD, label, Field.Store.YES, Field.Index.TOKENIZED);
-					field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
-					doc.add(field);
-				} 
+				if(labels != null && labels.size() != 0) {
+					for(String label : labels){
+						field = new Field(Constant.LABEL_FIELD, label, Field.Store.YES, Field.Index.TOKENIZED);
+						field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+						doc.add(field);
+					} 
+				}	
 				
-				// indexing attribute-value compounds
-				Set<String> compounds = computeAttributeValueCompounds(uri);
-				if(compounds != null && compounds.size() != 0)
-				for(String compound : compounds){
-					String[] str = compound.trim().split(SEPARATOR);
-					String attribute,value;
-					if(str.length == 2) {
-						attribute = str[1];
-						value = str[0]; 
-					}
-					else {
-						continue;
-					}
-					
-					field = new Field(attribute, value, Field.Store.YES, Field.Index.TOKENIZED);
-					field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
-					doc.add(field);
-				} 
-				
-				// indexing relation-entityID compounds
-				compounds = computeRelationEntityCompounds(uri);
-				if(compounds != null && compounds.size() != 0)
-				for(String compound : compounds){
-					String[] str = compound.trim().split(SEPARATOR);
-					String relation,entityId;
-					if(str.length == 2) {
-						relation = str[1];
-						entityId = str[0]; 
-					}
-					else {
-						continue;
-					}
-					
-					field = new Field(relation, entityId, Field.Store.YES,Field.Index.TOKENIZED);
-					field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
-					doc.add(field);
-				} 
+				// indexing attribute-value and relation-entityID compounds
+				Set<String> compounds = computeEntityDescriptions(uri);
+				if(compounds != null && compounds.size() != 0) {
+					for(String compound : compounds){
+						String[] str = compound.trim().split(SEPARATOR);
+						String attributeOrRelation,valueOrEntitiyId;
+						if(str.length == 2) {
+							attributeOrRelation = str[1];
+							valueOrEntitiyId = str[0]; 
+						}
+						else {
+							continue;
+						}
+						
+						field = new Field(attributeOrRelation, valueOrEntitiyId, Field.Store.YES, Field.Index.TOKENIZED);
+						field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
+						doc.add(field);
+					} 
+				}	
 				
 				// indexing reachable entities
 				Set<String> reachableEntities = computeReachableEntities(uri);
@@ -264,44 +247,12 @@ public class KeywordIndexBuilder {
 		}
 	}
 	
-	public Set<String> computeRelationEntityCompounds(String entityUri) throws IOException {
-		HashSet<String> set = new HashSet<String>(); 
-		
-		BooleanQuery bq = new BooleanQuery();
-		TermQuery tq = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
-		bq.add(tq, BooleanClause.Occur.MUST);
-		tq = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.RELATION));
-		bq.add(tq, BooleanClause.Occur.MUST);
-		
-		Hits hits = dataSearcher.search(bq);
-		if(hits != null && hits.length() != 0) {
-			Iterator iter = hits.iterator();
-			while(iter.hasNext()) {
-				Document doc = ((Hit)iter.next()).getDocument();
-				String relation = doc.get(DataStorage.EDGE_FIELD);
-				String entity = doc.get(DataStorage.DST_FIELD);
-				
-				String localname = TypeUtil.getLocalName(entity).trim();
-				set.add(localname + SEPARATOR + relation);
-				
-				Set<String> entitylabels = computeLabels(entity);
-				if(entitylabels != null && entitylabels.size() != 0) {
-					for(String label : entitylabels) {
-						set.add(label + SEPARATOR + relation);
-					}
-				}
-			}
-			return set;
-		} else 
-			return null;
-	}
-	
 	public Set<String> computeLabels(String entityUri) throws IOException {
 		HashSet<String> set = new HashSet<String>(); 
 		BooleanQuery bq = new BooleanQuery();
-		TermQuery tq = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
+		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
 		bq.add(tq, BooleanClause.Occur.MUST);
-		tq = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.LABEL));
+		tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDFS.LABEL.stringValue()));
 		bq.add(tq, BooleanClause.Occur.MUST);
 		
 		Hits hits = dataSearcher.search(bq);
@@ -309,8 +260,8 @@ public class KeywordIndexBuilder {
 			Iterator iter = hits.iterator();
 			while(iter.hasNext()) {
 				Document doc = ((Hit)iter.next()).getDocument();
-				String attribute = doc.get(DataStorage.EDGE_FIELD);
-				String value = doc.get(DataStorage.DST_FIELD);
+				String attribute = doc.get(LuceneGraphStorage.FIELD_EDGE);
+				String value = doc.get(LuceneGraphStorage.FIELD_DST);
 				if(attribute.equals(RDFS.LABEL.toString()))
 					set.add(value);
 			}
@@ -319,60 +270,68 @@ public class KeywordIndexBuilder {
 			return null;
 	} 
 	
-	public Set<String> computeAttributeValueCompounds(String entityUri) throws IOException {
+	private Set<String> computeEntityDescriptions(String entityUri) throws IOException {
 		HashSet<String> set = new HashSet<String>(); 
-		BooleanQuery bq = new BooleanQuery();
-		TermQuery tq = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
-		bq.add(tq, BooleanClause.Occur.MUST);
-		tq = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.ATTRIBUTE));
-		bq.add(tq, BooleanClause.Occur.MUST);
 		
-		Hits hits = dataSearcher.search(bq);
+		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
+		Hits hits = dataSearcher.search(tq);
 		if(hits != null && hits.length() != 0) {
 			Iterator iter = hits.iterator();
 			while(iter.hasNext()) {
 				Document doc = ((Hit)iter.next()).getDocument();
-				String attribute = doc.get(DataStorage.EDGE_FIELD);
-				String value = doc.get(DataStorage.DST_FIELD);
-				set.add(value + SEPARATOR + attribute);
-			}
+				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
+				String object = doc.get(LuceneGraphStorage.FIELD_DST);
+				
+				String type = TypeUtil.checkType(predicate, object);
+				if(type.equals(TypeUtil.ATTRIBUTE)) {
+					set.add(object + SEPARATOR + predicate);
+				}
+				else if(type.equals(TypeUtil.RELATION)) {
+					String localname = TypeUtil.getLocalName(object).trim();
+					set.add(localname + SEPARATOR + predicate);
+					
+					Set<String> entitylabels = computeLabels(object);
+					if(entitylabels != null && entitylabels.size() != 0) {
+						for(String label : entitylabels) {
+							set.add(label + SEPARATOR + predicate);
+						}
+					}
+				}   
+			} 
 			return set;
 		} else 
 			return null;
-	} 
+	}
 	
 	public Set<String> computeNeighbors(String entityUri) throws IOException {
 		HashSet<String> set = new HashSet<String>(); 
 
-		BooleanQuery bqfw = new BooleanQuery();
-		TermQuery tqfw = new TermQuery(new Term(DataStorage.SRC_FIELD, entityUri));
-		bqfw.add(tqfw, BooleanClause.Occur.MUST);
-		tqfw = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.RELATION));
-		bqfw.add(tqfw, BooleanClause.Occur.MUST);
+		TermQuery tqfw = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
+		TermQuery tqbw = new TermQuery(new Term(LuceneGraphStorage.FIELD_DST, entityUri));
 		
-		BooleanQuery bqbw = new BooleanQuery();
-		TermQuery tqbw = new TermQuery(new Term(DataStorage.DST_FIELD, entityUri));
-		bqbw.add(tqbw, BooleanClause.Occur.MUST);
-		tqbw = new TermQuery(new Term(DataStorage.TYPE_FIELD, TypeUtil.RELATION));
-		bqbw.add(tqbw, BooleanClause.Occur.MUST);
-		
-		Hits hits = dataSearcher.search(bqfw);
+		Hits hits = dataSearcher.search(tqfw);
 		if(hits != null && hits.length() != 0) {
 			Iterator iter = hits.iterator();
 			while(iter.hasNext()) {
 				Document doc = ((Hit)iter.next()).getDocument();
-				String entity = doc.get(DataStorage.DST_FIELD);
-				set.add(entity);
+				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
+				String object = doc.get(LuceneGraphStorage.FIELD_DST);
+				String type = TypeUtil.checkType(predicate, object);
+				if(type.equals(TypeUtil.RELATION))
+					set.add(object);
 			}
 		} 
 		
-		hits = dataSearcher.search(bqbw);
+		hits = dataSearcher.search(tqbw);
 		if(hits != null && hits.length() != 0) {
 			Iterator iter = hits.iterator();
 			while(iter.hasNext()) {
 				Document doc = ((Hit)iter.next()).getDocument();
-				String entity = doc.get(DataStorage.SRC_FIELD);
-				set.add(entity);
+				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
+				String subject = doc.get(LuceneGraphStorage.FIELD_SRC);
+				String type = TypeUtil.checkType(predicate, entityUri);
+				if(type.equals(TypeUtil.RELATION))
+					set.add(subject);
 			}
 		} 
 		

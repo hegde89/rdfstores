@@ -26,12 +26,17 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.openrdf.model.vocabulary.RDFS;
 
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Environment;
+
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.StructureIndexReader;
+import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.storage.BlockStorage;
 import edu.unika.aifb.graphindex.storage.DataStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.keywordsearch.Constant;
 
@@ -49,23 +54,23 @@ public class KeywordIndexBuilder {
 	private static final int HOP = 5;  
 	private static final int MAXFIELDLENGTH = 100;
 	
-	private StructureIndexReader structureIndexReader;
-	private StructureIndex index;
 	private IndexSearcher dataSearcher;
-	private IndexSearcher blockSearcher;
+	private BlockCache  blockSearcher;
 	private String outputDir;
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);
 	
-	public KeywordIndexBuilder(String outputDir) throws StorageException, IOException {
-		this.outputDir = outputDir;
-		this.structureIndexReader = new StructureIndexReader(outputDir);
-		this.index = this.structureIndexReader.getIndex();
-		index.getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
-		this.dataSearcher = this.index.getDataManager().getDataStorage().getIndexSearcher();
-		this.blockSearcher = this.index.getBlockManager().getBlockStorage().getIndexSearcher();
+	public KeywordIndexBuilder(String outputDirectory, LuceneGraphStorage gs, Environment env) {
+		this.outputDir = outputDirectory;
+		this.dataSearcher = gs.getIndexSearcher();
+		try {
+			this.blockSearcher = new BlockCache(env);
+		} catch (DatabaseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		};	
 	}
-	
+
 	public void indexKeywords() {
 		File indexDir = new File(this.outputDir + "/keyword");
 		if (!indexDir.exists()) {
@@ -85,8 +90,13 @@ public class KeywordIndexBuilder {
 			indexEntity(indexWriter, outputDir + "/entities");
 			indexWriter.optimize();
 			indexWriter.close();
+			
+			blockSearcher.close();
 		} 
 		catch (IOException e) {
+			e.printStackTrace();
+		} catch (DatabaseException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -137,12 +147,8 @@ public class KeywordIndexBuilder {
 				
 				// indexing extension id for concept
 				if(type.equals(TypeUtil.CONCEPT)){
-					TermQuery q = new TermQuery(new Term(BlockStorage.ELE_FIELD, uri));
-					Hits hits = blockSearcher.search(q);
-					if(hits != null && hits.length() != 0) {
-						Document edoc = ((Hit)hits.iterator().next()).getDocument();
-						doc.add(new Field(Constant.EXTENSION_FIELD, edoc.get(BlockStorage.BLOCK_FIELD), Field.Store.YES, Field.Index.NO));
-					} 
+					String blockName = blockSearcher.getBlockName(uri);
+					doc.add(new Field(Constant.EXTENSION_FIELD, blockName, Field.Store.YES, Field.Index.NO));
 				}
 				doc.setBoost(boost);
 				indexWriter.addDocument(doc);
@@ -187,12 +193,8 @@ public class KeywordIndexBuilder {
 				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NO));
 				
 				// indexing extension id 
-				TermQuery q = new TermQuery(new Term(BlockStorage.ELE_FIELD, uri));
-				Hits hits = blockSearcher.search(q);
-				if (hits != null && hits.length() != 0) {
-					Document edoc = ((Hit) hits.iterator().next()).getDocument();
-					doc.add(new Field(Constant.EXTENSION_FIELD, edoc.get(BlockStorage.BLOCK_FIELD), Field.Store.YES, Field.Index.NO));
-				}
+				String blockName = blockSearcher.getBlockName(uri);
+				doc.add(new Field(Constant.EXTENSION_FIELD, blockName, Field.Store.YES, Field.Index.NO));
 				
 				// indexing label
 				Set<String> labels = computeLabels(uri);

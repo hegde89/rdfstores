@@ -19,6 +19,7 @@ public interface GraphStorage {
 	public Set<LabeledEdge<String>> loadEdges(String graphName) throws StorageException;
 	public void saveEdges(String graphName, Set<LabeledEdge<String>> edges) throws StorageException;
 	public void addEdge(String graphName, String source, String edge, String target) throws StorageException;
+	public void addEdge(String graphName, String source, String edge, String target, String type) throws StorageException;
 	
 	public Set<String> loadGraphList() throws StorageException;
 	public void saveGraphList(Set<String> graphs) throws StorageException;

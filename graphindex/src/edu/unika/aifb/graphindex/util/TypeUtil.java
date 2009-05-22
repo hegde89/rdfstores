@@ -78,9 +78,9 @@ public class TypeUtil {
 			return TYPE;
 		if (m_rdfsEdgeSet.contains(pred)) {
 			return RDFSPROP;
-		} else if (obj.startsWith("http://")) {
+		} else if (obj.startsWith("http://") || obj.startsWith("_:")) {
 			return RELATION;
-		} else if (!obj.startsWith("http://")) {
+		} else if (!obj.startsWith("http://") && !obj.startsWith("_:")) {
 			return ATTRIBUTE;
 		}
 		return "";

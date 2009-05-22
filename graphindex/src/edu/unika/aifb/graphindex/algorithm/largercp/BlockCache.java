@@ -108,6 +108,17 @@ public class BlockCache {
 		return null;
 	}
 	
+	public String getBlockName(String node) {
+		try {
+			DatabaseEntry out = new DatabaseEntry();
+			m_nodeDb.get(null, new DatabaseEntry(node.getBytes()), out, null);
+			return "b" + Util.bytesToInt(out.getData());
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	public Set<String> getNodes(Block block) {
 		Set<String> nodes = m_nodeCache.get(block.getId());
 		if (nodes != null)

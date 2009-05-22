@@ -6,7 +6,6 @@ public interface BlockStorage {
 	
 	public final String BLOCK_FIELD = "block";
 	public final String ELE_FIELD = "ele";
-	public final String LIT_FIELD = "lit";
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException;
 	

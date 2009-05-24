@@ -5,14 +5,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
-import org.openrdf.model.vocabulary.RDFS;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.store.FSDirectory;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -57,14 +60,20 @@ public class BTCImport {
 		}
 		
 		String action = (String)os.valueOf("a");
-        String file = (String)os.valueOf("f");
-        String outputDirectory = (String)os.valueOf("o");
-        boolean rmBN = os.has("bn");
-        
-        
-        log.debug(Util.memory());
-        
-        if (action.equals("import")) {
+		String file = (String)os.valueOf("f");
+		String outputDirectory = (String)os.valueOf("o");
+		boolean rmBN = os.has("bn");
+		
+		
+		log.debug(Util.memory());
+		
+		if (action.equals("optimize")) {
+			IndexWriter iw = new IndexWriter(FSDirectory.getDirectory(outputDirectory), new WhitespaceAnalyzer(), false);
+			iw.optimize();
+			iw.close();
+		}
+		
+		if (action.equals("import")) {
 			final LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
 			gs.initialize(false, false);
 			gs.setStoreGraphName(false);
@@ -72,7 +81,6 @@ public class BTCImport {
 			importer.addImport(file);
 			importer.setTripleSink(new TripleSink() {
 				int triples = 0;
-
 				public void triple(String s, String p, String o, String objectType) {
 					try {
 						gs.addEdge("btc", s, p, o);
@@ -84,37 +92,75 @@ public class BTCImport {
 					}
 				}
 			});
-
+			
 			try {
 				importer.doImport();
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				e.printStackTrace();
 			}
-
-			// gs.optimize();
+			
+//			gs.optimize();
 			gs.close();
 		}
 		
-		 if (action.equals("index")) {
+		if (action.equals("dataprops")) {
+			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
+			gs.initialize(false, true);
+			
+			Set<String> properties = gs.getEdges();
+			Set<String> dataProperties = new HashSet<String>();
+			for (String property : properties) {
+				log.debug(property);
+				Set<String> nodes = gs.getNodes(1, property, true);
+				log.debug(nodes.size());
+//				log.debug(nodes);
+				if (nodes.size() == 0)
+					dataProperties.add(property);
+			}
+			
+			log.debug(dataProperties.size());
+			log.debug(dataProperties);
+			
+			PrintWriter pw = new PrintWriter(new FileWriter(outputDirectory + "/dataproperties"));
+			for (String property : dataProperties)
+				pw.println(property);
+			pw.close();
+		}
+		
+		if (action.equals("index")) {
 			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
-
+			
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
 			config.setAllowCreate(true);
 
 			Set<String> edges = gs.getEdges();
 			log.debug(Util.memory());
-			log.debug(edges.size());
+			log.debug("properties: " + edges.size());
+			
+			File f = new File(outputDirectory + "/dataproperties");
+			if (f.exists()) {
+				Set<String> dataProperties = Util.readEdgeSet(f);
+				edges.removeAll(dataProperties);
+				log.debug("data properties: " + dataProperties.size() + ", properties now: " + edges.size());
+			}
+			
+			File bdb;
+			if (os.has("bdb"))
+				bdb = new File((String)os.valueOf("bdb"));
+			else
+				bdb = new File(outputDirectory + "/bdb");
+			log.debug("bdb dir: " + bdb);
+			bdb.mkdir();
 
-			new File(outputDirectory + "/bdb").mkdir();
-
-			Environment env = new Environment(new File(outputDirectory + "/bdb"), config);
+			Environment env = new Environment(bdb, config);
 
 			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
 			rcp.setIgnoreDataValues(true);
-			rcp.createIndexGraph(5);
+			rcp.createIndexGraph(10);
 
 			gs.close();
 			env.close();

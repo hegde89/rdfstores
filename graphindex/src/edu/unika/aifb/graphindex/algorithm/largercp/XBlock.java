@@ -103,7 +103,10 @@ public class XBlock {
 	
 	public void calcInfo(boolean preimage) throws StorageException {
 		for (Block block : m_blocks) {
-			for (String node : block.getNodes()) {
+			Set<String> blockNodes = block.getNodes();
+			System.out.println("block size: " + blockNodes.size());
+			int nodes = 0;
+			for (String node : blockNodes) {
 //				System.out.print(node);
 				Map<String,Set<String>> image = m_gs.getImage(node, preimage);
 //				System.out.print(" image");
@@ -130,6 +133,9 @@ public class XBlock {
 					}
 				}
 //				System.out.println(" done");
+				nodes++;
+				if (nodes % 10000 == 0)
+					System.out.println(" " + nodes);
 			}
 		}
 	}

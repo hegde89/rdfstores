@@ -63,8 +63,61 @@ public class LargeRCP {
 	public void setIgnoreDataValues(boolean ignore) {
 		m_ignoreDataValues = ignore;
 	}
-	
-	Map<String,Integer> mvIn = new HashMap<String,Integer>();
+
+	private boolean refinePartitionSimple(List<Block> blocks, Collection<String> nodes, boolean useMove) {
+		// TODO check if nodes should be moved multiple times in one refinement step, on subsequent properties
+		List<Block> splitBlocks = new LinkedList<Block>();
+		log.debug("image size: " + nodes.size());
+		int nodeCount = 0;
+		float[] intervals = {0.2f, 0.4f, 0.6f, 0.8f};
+		int interval = 0;
+		m_bc.setNodeCacheActive(true);
+		for (String node : nodes) {
+			if (m_ignoreDataValues && !Util.isEntity(node))
+				continue;
+			
+			Block block = m_bc.getBlock(node);
+			Block splitBlock = block.getSplitBlock();
+			if (splitBlock == null) {
+				splitBlock = m_bc.createBlock();
+				block.setSplitBlock(splitBlock);
+				splitBlocks.add(block);
+			}
+
+			splitBlock.add(node);
+			
+			nodeCount++;
+			if (interval < intervals.length && nodeCount > intervals[interval] * (float)nodes.size()) {
+				interval++;
+				log.debug(nodeCount);
+			}
+		}
+		
+		for (Block block : splitBlocks) {
+			Block splitBlock = block.getSplitBlock();
+			blocks.add(splitBlock);
+			block.setSplitBlock(null);
+			
+			if (block.size() == splitBlock.size()) {
+				m_bc.removeBlock(block);
+				blocks.remove(block);
+			}
+			else {
+				block.setSize(block.size() - splitBlock.size());
+				Set<String> blockNodes = m_bc.getNodes(block);
+				blockNodes.removeAll(m_bc.getNodes(splitBlock));
+				m_bc.putNodes(block, blockNodes);
+//				log.debug("block: "+ block + " " + block.getNodes().size());
+//				log.debug("splitblock: "+ splitBlock + " " + splitBlock.getNodes().size());
+			}
+		}
+		
+		m_bc.setNodeCacheActive(false);
+		
+		return true;
+	}
+
+	private Set<String> moved = new HashSet<String>();
 	/**
 	 * Refines the partition <code>p</code> with respect to the vertex set <code>image</code>, which in most
 	 * cases is the image of a block in <code>p</code>. This operation splits blocks in <code>p</code> so that
@@ -77,84 +130,159 @@ public class LargeRCP {
 	 * @param image
 	 * @param w
 	 */
-	private void refinePartition(List<Block> blocks, Collection<String> nodes, Splitters w, Integer currentIteration, boolean useMove) {
+	private void refinePartition(List<Block> blocks, Collection<String> nodes, Splitters w) {
 		List<Block> splitBlocks = new LinkedList<Block>();
-		log.debug("image size: " + nodes.size());
+//		log.debug("image size: " + nodes.size());
 		int nodeCount = 0;
-		float[] intervals = {0.2f, 0.4f, 0.6f, 0.8f};
+		float[] intervals = {0.3f, 0.6f};
 		int interval = 0;
 		m_bc.setNodeCacheActive(true);
 		for (String node : nodes) {
 			if (m_ignoreDataValues && !Util.isEntity(node))
 				continue;
 			
-//			if (currentIteration != null && mvIn.get(node) == currentIteration)
-//				continue;
-			
 			Block block = m_bc.getBlock(node);
-			if (block.getSplitBlock() == null) {
-				Block splitBlock = m_bc.createBlock();
+			Block splitBlock = block.getSplitBlock();
+			if (splitBlock == null) {
+				splitBlock = m_bc.createBlock();
 				block.setSplitBlock(splitBlock);
 				splitBlocks.add(block);
 			}
-			
-			if (useMove)
-				block.moveNode(node, block.getSplitBlock());
-			else {
-				block.getSplitBlock().add(node);
-			}
-			
-//			if (currentIteration != null)
-//				mvIn.put(node, currentIteration);
+			splitBlock.add(node);
 			
 			nodeCount++;
-			if (interval < intervals.length && nodeCount > intervals[interval] * (float)nodes.size()) {
+			if (nodes.size() > 10000 & interval < intervals.length && nodeCount > intervals[interval] * (float)nodes.size()) {
 				interval++;
 				log.debug(nodeCount);
 			}
 		}
-		m_bc.setNodeCacheActive(false);
 		
-		for (Block sb : splitBlocks) {
-			if (sb.size() == 0) {
-				Block newBlock = sb.getSplitBlock();
-				sb.setSplitBlock(null);
-				sb.getXBlock().addBlock(newBlock);
-				sb.getXBlock().remove(sb);
-				m_bc.removeBlock(sb);
-				blocks.remove(sb);
-				blocks.add(newBlock);
+		for (Block block : splitBlocks) {
+			Block splitBlock = block.getSplitBlock();
+			block.getXBlock().addBlock(splitBlock);
+			blocks.add(splitBlock);
+			block.setSplitBlock(null);
+			
+			if (block.size() == splitBlock.size()) {
+				block.getXBlock().remove(block);
+				m_bc.removeBlock(block);
+				blocks.remove(block);
 			}
 			else {
-				Block newBlock = sb.getSplitBlock();
-				sb.setSplitBlock(null);
-				sb.getXBlock().addBlock(newBlock);
-				blocks.add(newBlock);
+				block.setSize(block.size() - splitBlock.size());
+				Set<String> blockNodes = m_bc.getNodes(block);
+				blockNodes.removeAll(m_bc.getNodes(splitBlock));
+				m_bc.putNodes(block, blockNodes);
 				
-				if (!w.contains(sb.getXBlock()))
-					w.add(sb.getXBlock());
+				if (!w.contains(block.getXBlock()))
+					w.add(block.getXBlock());
 			}
 		}
+		
+		m_bc.setNodeCacheActive(false);
 	}
 	
-	/**
-	 * Calculate the image set of a set of vertices. Only edges with the specified
-	 * label will be taken into account.
-	 * 
-	 * @param vertices
-	 * @param label
-	 * @return
-	 * @throws StorageException 
-	 */
-	private Set<String> imageOf(Collection<String> nodes, String property, boolean preimage) throws StorageException {
-		Set<String> image = new HashSet<String>();
-		for (String node :nodes) {
-			image.addAll(m_gs.getImage(node, property, preimage));
+	private void createPartitionSimple(List<Block> blocks, List<String> edges, int pathLength, boolean forward) throws StorageException {
+		int steps = 0;
+		
+		if (blocks.size() == 0) {
+			Block b = m_bc.createBlock();
+			blocks.add(b);
+
+			// start
+			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
+			// the nodes, which will be fixed after the first splitting
+			m_gs.addNodesToBC(m_bc, b, m_ignoreDataValues);
+			b.setSize((int)m_bc.getNodeCount());
+			log.debug("nodes: " + b.size());
+			
+			// load image directly from the graph (image == all nodes with incoming edges)
+			moved = new HashSet<String>();
+			for (String property : edges) {
+				log.debug(property);
+				Set<String> image = m_gs.getNodes(1, property);
+				refinePartitionSimple(blocks, image, false);
+				log.debug("blocks: " + blocks.size());
+			}
+			moved = new HashSet<String>();
+			
+			// add all nodes in the start block to the start block
+			m_bc.addNodesToBlock(b);
+			
+			steps++;
+			log.debug("steps: " + steps + ", blocks: " + blocks.size());
 		}
-		return image;
+		
+		while (steps < pathLength) {
+			for (String property : edges) {
+				m_bc.setNodeCacheActive(true);
+				
+				log.debug(property);
+				int maxBlockId = Block.m_blockId;
+				List<Block> splitBlocks = new ArrayList<Block>();
+				List<Block> oldBlocks = new ArrayList<Block>(blocks);
+				for (Block b : oldBlocks) {
+					log.debug(b);
+					int nodeCount = 0;
+					float[] intervals = {0.2f, 0.4f, 0.6f, 0.8f};
+					int interval = 0;
+
+					Set<String> blockNodes = b.getNodes();
+					for (String node : blockNodes) {
+						Set<String> image = m_gs.getImage(node, property, forward);
+
+						for (String imageNode : image) {
+							if (m_ignoreDataValues && !Util.isEntity(imageNode))
+								continue;
+							
+							Block block = m_bc.getBlock(imageNode);
+							if (block.getId() > maxBlockId)
+								 // node was already moved, because it was part of the image of a previous node in this block
+								continue;
+							
+							Block splitBlock = block.getSplitBlock();
+							if (splitBlock == null) {
+								splitBlock = m_bc.createBlock();
+								block.setSplitBlock(splitBlock);
+								splitBlocks.add(block);
+							}
+							splitBlock.add(imageNode);
+						}
+
+						nodeCount++;
+						if (blockNodes.size() > 10000 && interval < intervals.length && nodeCount > intervals[interval] * (float)blockNodes.size()) {
+							interval++;
+							log.debug(nodeCount);
+						}
+					}
+				}
+				
+				for (Block block : splitBlocks) {
+					Block splitBlock = block.getSplitBlock();
+					blocks.add(splitBlock);
+					block.setSplitBlock(null);
+					
+					if (block.size() == splitBlock.size()) {
+						blocks.remove(block);
+					}
+					else {
+						block.setSize(block.size() - splitBlock.size());
+						Set<String> blockNodes = new HashSet<String>(m_bc.getNodes(block));
+						blockNodes.removeAll(m_bc.getNodes(splitBlock));
+						m_bc.putNodes(block, blockNodes);
+					}
+				}
+				
+				m_bc.setNodeCacheActive(false);
+				log.debug("blocks: " + blocks.size());
+			}
+			
+			steps++;
+			log.debug("steps: " + steps + ", blocks: " + blocks.size());
+		}
 	}
 	
-	private List<Block> createPartition(List<Block> blocks, List<String> edges, int pathLength, boolean preimage) throws StorageException, DatabaseException {
+	private void createPartition(List<Block> blocks, List<String> properties, int pathLength, boolean preimage) throws StorageException, DatabaseException {
 		Splitters w = new Splitters();
 		XBlock startXB = new XBlock();
 		Set<XBlock> cbs = new HashSet<XBlock>();
@@ -166,6 +294,7 @@ public class LargeRCP {
 			Block b = m_bc.createBlock();
 			blocks.add(b);
 			startXB.addBlock(b);
+			
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
@@ -175,15 +304,20 @@ public class LargeRCP {
 			
 			// load image directly from the graph (image == all nodes with incoming edges)
 			int movedIn = 0;
-			for (String property : edges) {
+			moved = new HashSet<String>();
+			for (String property : properties) {
 				log.debug(property);
 				Set<String> image = m_gs.getNodes(1, property);
-				refinePartition(blocks, image, w, movedIn, false);
+				refinePartition(blocks, image, w);
 				movedIn++;
 			}
+			moved = new HashSet<String>();
 			
 			// add all nodes in the start block to the start block
 			m_bc.addNodesToBlock(b);
+			
+			for (Block block : blocks)
+				log.debug(block);
 		}
 		else {
 			log.debug(blocks.size() + " " + m_bc.getBlockCount());
@@ -191,7 +325,8 @@ public class LargeRCP {
 				startXB.addBlock(b);
 		}
 		
-		w.add(startXB);
+		if (w.size() == 0)
+			w.add(startXB);
 		cbs.add(startXB);
 		
 		System.gc();
@@ -210,10 +345,6 @@ public class LargeRCP {
 		log.debug(blocks.size());
 			
 		while (w.size() > 0 && (pathLength == -1 || steps < pathLength)) {
-//			for (Block b : blocks)
-//				System.out.print(b.size() + " ");
-//			System.out.println();
-
 			XBlock s = w.remove();
 			
 			Block b;
@@ -234,7 +365,7 @@ public class LargeRCP {
 			List<String> b_ = new ArrayList<String>(b.size());
 			b_.addAll(b.getNodes());
 			
-			for (String property : edges) {
+			for (String property : properties) {
 //				log.debug("LABEL " + label);
 
 				// calculate E(B) and LD
@@ -253,7 +384,7 @@ public class LargeRCP {
 					}
 				}
 
-				refinePartition(blocks, imageB, w, null, true);
+				refinePartition(blocks, imageB, w);
 //				log.debug("blocks1: " + blocks.size());
 
 				// calculate E(B) - E(S - B)
@@ -276,8 +407,7 @@ public class LargeRCP {
 						imageBSB.add(v);
 				}
 
-				refinePartition(blocks, imageBSB, w, null, true);
-//				log.debug("blocks2: " + blocks.size());
+				refinePartition(blocks, imageBSB, w);
 
 				// update info map of S
 				for (String v : ld.keySet())
@@ -292,18 +422,12 @@ public class LargeRCP {
 			if (steps % 500 == 0)
 				log.info(" steps: " + steps + ", psize: " + blocks.size() + ", duration: " + duration + " seconds, " + Util.memory());
 		}
-//		log.debug(p.stable());
-//		log.debug(p);
+
 		log.info("partition size: " + blocks.size());
 		log.info("steps: " + steps);
 
-//		purgeSelfloops(p);
-
-//		if (preimage)
-			for (XBlock xb : cbs)
-				xb.close();
-		
-		return blocks;
+		for (XBlock xb : cbs)
+			xb.close();
 	}
 	
 	public void createIndexGraph(int pathLength) throws StorageException, IOException, InterruptedException, DatabaseException {
@@ -332,7 +456,8 @@ public class LargeRCP {
 
 		List<String> edges = new ArrayList<String>(m_backwardEdges);
 		Collections.sort(edges);
-		blocks = createPartition(blocks, edges, pathLength, false);
+		createPartition(blocks, edges, pathLength, false);
+//		createPartitionSimple(blocks, edges, pathLength, false);
 
 		System.gc();
 
@@ -342,7 +467,8 @@ public class LargeRCP {
 		
 		edges = new ArrayList<String>(m_forwardEdges);
 		Collections.sort(edges);
-		blocks = createPartition(blocks, edges, pathLength, true);
+		createPartition(blocks, edges, pathLength, true);
+//		createPartitionSimple(blocks, edges, pathLength, false);
 
 //		writePartition(p, partitionFile, graphFile, blockFile, true);
 //		if (m_ignoreDataValues)

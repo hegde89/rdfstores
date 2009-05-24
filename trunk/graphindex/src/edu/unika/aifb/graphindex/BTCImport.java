@@ -112,10 +112,7 @@ public class BTCImport {
 			Set<String> dataProperties = new HashSet<String>();
 			for (String property : properties) {
 				log.debug(property);
-				Set<String> nodes = gs.getNodes(1, property, true);
-				log.debug(nodes.size());
-//				log.debug(nodes);
-				if (nodes.size() == 0)
+				if (!gs.hasEntityNodes(1, property))
 					dataProperties.add(property);
 			}
 			

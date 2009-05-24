@@ -316,8 +316,8 @@ public class LargeRCP {
 			// add all nodes in the start block to the start block
 			m_bc.addNodesToBlock(b);
 			
-			for (Block block : blocks)
-				log.debug(block);
+//			for (Block block : blocks)
+//				log.debug(block);
 		}
 		else {
 			log.debug(blocks.size() + " " + m_bc.getBlockCount());
@@ -454,9 +454,9 @@ public class LargeRCP {
 		List<Block> blocks = new ArrayList<Block>();
 //		blocks.add(b);
 
-		List<String> edges = new ArrayList<String>(m_backwardEdges);
-		Collections.sort(edges);
-		createPartition(blocks, edges, pathLength, false);
+		List<String> properties = new ArrayList<String>(m_backwardEdges);
+		Collections.sort(properties);
+		createPartition(blocks, properties, pathLength, false);
 //		createPartitionSimple(blocks, edges, pathLength, false);
 
 		System.gc();
@@ -465,9 +465,9 @@ public class LargeRCP {
 		log.debug("forward edges: " + m_forwardEdges.size());
 		log.debug(Util.memory());
 		
-		edges = new ArrayList<String>(m_forwardEdges);
-		Collections.sort(edges);
-		createPartition(blocks, edges, pathLength, true);
+		properties = new ArrayList<String>(m_forwardEdges);
+		Collections.sort(properties);
+		createPartition(blocks, properties, pathLength, true);
 //		createPartitionSimple(blocks, edges, pathLength, false);
 
 //		writePartition(p, partitionFile, graphFile, blockFile, true);

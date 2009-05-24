@@ -46,7 +46,9 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	private IndexReader m_reader;
 	private IndexSearcher m_searcher;
 	private boolean m_storeGraphName = true;
-	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(10000);
+	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(5000000);
+	private LRUCache<String,Boolean> m_imageZeroCache = new LRUCache<String,Boolean>(5000000);
+	private LRUCache<String,Boolean> m_preimageZeroCache = new LRUCache<String,Boolean>(5000000);
 	
 	public static final String FIELD_GRAPH = "graph";
 	public static final String FIELD_SRC = "src";
@@ -66,6 +68,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			if (!m_readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
 				m_writer.setRAMBufferSizeMB(4096);
+				m_writer.setMergeFactor(50);
 			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
@@ -269,7 +272,12 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	}
 	
 	public Set<String> getImage(String node, String property, boolean preimage) throws StorageException {
-		Set<String> image = new HashSet<String>();
+		String key = node + "__" + property;
+		Boolean isEmpty = preimage ? m_preimageZeroCache.get(key) : m_imageZeroCache.get(key);
+		if (isEmpty != null && isEmpty.booleanValue() == true)
+			return new HashSet<String>();
+		
+		Set<String> image = new HashSet<String>(5000);
 		String idxField = preimage ? FIELD_DST : FIELD_SRC;
 		String dataField = preimage ? FIELD_SRC : FIELD_DST;
 		
@@ -284,19 +292,29 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			String d = doc.getField(dataField).stringValue();
 			image.add(d);
 		}
+		
+		Boolean val = image.size() == 0;
+		if (preimage)
+			m_preimageZeroCache.put(key, val);
+		else
+			m_imageZeroCache.put(key, val);
+		
 		return image;
 	}
 	
 	public Set<String> getEdges() throws StorageException {
 		Set<String> edges = new HashSet<String>();
 		try {
-			TermEnum te = m_reader.terms();
-			while (te.next()) {
+			TermEnum te = m_reader.terms(new Term(FIELD_EDGE, ""));
+			do {
 				Term t = te.term();
 				String field = t.field();
 				if (field.equals(FIELD_EDGE))
 					edges.add(t.text());
+				else
+					break;
 			}
+			while (te.next());
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -307,7 +325,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		Set<String> nodes = new HashSet<String>();
 		try {
 			TermEnum te = m_reader.terms();
-			while (te.next()) {
+			while (te.next()){
 				Term t = te.term();
 				String field = t.field();
 				if (field.equals(FIELD_DST) || field.equals(FIELD_SRC))
@@ -323,13 +341,16 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		Set<String> nodes = new HashSet<String>();
 		String f = pos == 0 ? FIELD_SRC : FIELD_DST;
 		try {
-			TermEnum te = m_reader.terms();
-			while (te.next()) {
+			TermEnum te = m_reader.terms(new Term(f, ""));
+			do {
 				Term t = te.term();
 				String field = t.field();
 				if (field.equals(f))
 					nodes.add(t.text());
+				else
+					break;
 			}
+			while (te.next());
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -349,7 +370,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
 			String val = doc.getField(f).stringValue();
-			if (ignoreDataValues || Util.isEntity(val))
+			if (!ignoreDataValues || Util.isEntity(val))
 				nodes.add(val);
 		}
 		

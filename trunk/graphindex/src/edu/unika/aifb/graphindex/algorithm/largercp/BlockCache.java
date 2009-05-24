@@ -121,7 +121,7 @@ public class BlockCache {
 	
 	public Set<String> getNodes(Block block) {
 		Set<String> nodes = m_nodeCache.get(block.getId());
-		if (nodes != null)
+		if (m_nodeCacheActive && nodes != null)
 			return nodes;
 		else
 			nodes = new HashSet<String>();
@@ -138,10 +138,13 @@ public class BlockCache {
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}
+		if (m_nodeCacheActive)
+			m_nodeCache.put(block.getId(), nodes);
+		
 		return nodes;
 	}
 	
-	private void putNodes(Block block, Set<String> nodes) {
+	public void putNodes(Block block, Set<String> nodes) {
 		if (m_nodeCacheActive) {
 			m_nodeCache.put(block.getId(), nodes);
 			return;
@@ -192,7 +195,7 @@ public class BlockCache {
 			c.close();
 			putNodes(b, nodes);
 			b.setSize(nodes.size());
-			log.debug(nodes.size() + " add to " + b);
+			log.debug(nodes.size() + " added to " + b);
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}

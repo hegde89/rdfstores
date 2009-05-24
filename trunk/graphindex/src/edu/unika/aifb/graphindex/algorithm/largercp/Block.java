@@ -17,7 +17,7 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 public class Block {
 	public static LuceneGraphStorage m_gs;
 	public static BlockCache m_bc;
-	private static int m_blockId = 0;
+	public static int m_blockId = 0;
 
 	private int m_size;
 	private XBlock m_parent;

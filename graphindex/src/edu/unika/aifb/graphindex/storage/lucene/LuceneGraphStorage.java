@@ -336,6 +336,19 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		}
 		return nodes;
 	}
+	
+	public boolean hasEntityNodes(int pos, String property) throws StorageException {
+		String f = pos == 0 ? FIELD_SRC : FIELD_DST;
+		Query q = new TermQuery(new Term(FIELD_EDGE, property));
+		List<Integer> docIds = getDocumentIds(q);
+		for (int docId : docIds) {
+			Document doc = getDocument(docId);
+			String val = doc.getField(f).stringValue();
+			if (Util.isEntity(val))
+				return true;
+		}
+		return false;
+ 	}
 
 	public Set<String> getNodes(int pos) throws StorageException {
 		Set<String> nodes = new HashSet<String>();

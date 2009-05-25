@@ -54,6 +54,10 @@ public class StructureIndexWriter {
 		m_index.setOptions(options);
 	}
 	
+	public StructureIndex getIndex() {
+		return m_index;
+	}
+	
 	public void setImporter(Importer importer) {
 		m_importer = importer;
 	}

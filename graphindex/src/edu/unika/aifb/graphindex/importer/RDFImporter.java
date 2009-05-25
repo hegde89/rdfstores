@@ -18,79 +18,6 @@ import org.openrdf.rio.RDFParseException;
 
 public class RDFImporter extends Importer {
 
-	private int m_triplesTotal = 0, m_triplesAdded = 0;
-	
-	private class TriplesHandler implements RDFHandler {
-		public void endRDF() throws RDFHandlerException {
-		}
-
-		public void handleComment(String arg0) throws RDFHandlerException {
-		}
-
-		public void handleNamespace(String arg0, String arg1) throws RDFHandlerException {
-		}
-
-		public void handleStatement(Statement st) throws RDFHandlerException {
-			m_triplesTotal++;
-			
-			if (!(st.getSubject() instanceof org.openrdf.model.URI)) {
-			}
-			
-			if (st.getSubject() instanceof BNode) {
-				
-			}
-
-			String label = st.getPredicate().toString();
-			String source = null; 
-			
-			if (st.getSubject() instanceof org.openrdf.model.URI) {
-				source = ((org.openrdf.model.URI)st.getSubject()).toString();
-			}
-			else if (st.getSubject() instanceof BNode) {
-				BNode bn = (BNode)st.getSubject();
-				source = "BLANKNODE";
-			}
-			else {
-				log.warn("subject is not an URI or a blank node, ignoring " + st.getSubject().getClass());
-				return;
-			}
-			
-			String target = null;
-			if (st.getObject() instanceof org.openrdf.model.URI) {
-				target = ((org.openrdf.model.URI)st.getObject()).toString();
-			}
-			else if (st.getObject() instanceof Literal) {
-				Literal l = (Literal)st.getObject();
-//				log.debug("datatype: " + l.getDatatype());
-//				if (l.getDatatype() != null)
-//					target = l.getDatatype().toString();
-				target = l.stringValue();
-				target = target.replaceAll("\n", "\\\\" + "n");
-			}
-			else if (st.getObject() instanceof BNode) {
-				BNode bn = (BNode)st.getObject();
-				target = "BLANKNODE";
-			}
-			else {
-				log.warn("object is not an URI, a literal or a blank node, ignoring " + st);
-				return;
-			}
-			
-			if (source != null && target != null && label != null) {
-				m_sink.triple(source, label, target, null);
-				m_triplesAdded++;
-//				if (m_triplesAdded % 500000 == 0)
-//					log.debug("nt importer: " + m_triplesAdded + " triples imported");
-			}
-			else {
-				log.debug(source + " " + label + " " + target);
-			}
-		}
-
-		public void startRDF() throws RDFHandlerException {
-		}
-	}
-	
 	public RDFImporter() {
 		super();
 		log = Logger.getLogger(RDFImporter.class);
@@ -98,7 +25,7 @@ public class RDFImporter extends Importer {
 	
 	@Override
 	public void doImport() {
-		RDFHandler handler = new TriplesHandler();
+		RDFHandler handler = new TriplesHandler(m_sink);
 		
 		for (String file : m_files) {
 			RDFXMLParser parser = new RDFXMLParser();
@@ -118,9 +45,6 @@ public class RDFImporter extends Importer {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
-//			log.info("triples: " + m_triplesAdded + "/" + m_triplesTotal);
-			m_triplesAdded = m_triplesTotal = 0;
 		}
 	}
 

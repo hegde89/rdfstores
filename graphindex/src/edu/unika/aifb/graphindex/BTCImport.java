@@ -5,7 +5,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -22,11 +28,19 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
+import edu.unika.aifb.graphindex.importer.OntologyImporter;
+import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
+import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage;
+import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
@@ -40,12 +54,11 @@ public class BTCImport {
 	
 	public static final int MAX_CACHE_SIZE = 1000000; 
 	
-	public static void main(String[] args) throws IOException, StorageException, EnvironmentLockedException, DatabaseException, InterruptedException {
+	@SuppressWarnings("unchecked")
+	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
 		op.accepts("a", "action to perform, comma separated list of: import")
 			.withRequiredArg().ofType(String.class).describedAs("action").withValuesSeparatedBy(',');
-		op.accepts("f", "file to import")
-			.withRequiredArg().ofType(String.class).describedAs("file");
 		op.accepts("o", "output directory")
 			.withRequiredArg().ofType(String.class).describedAs("directory");
 		op.accepts("bn", "remove bn");
@@ -60,25 +73,52 @@ public class BTCImport {
 		}
 		
 		String action = (String)os.valueOf("a");
-		String file = (String)os.valueOf("f");
 		String outputDirectory = (String)os.valueOf("o");
 		boolean rmBN = os.has("bn");
+		rmBN = false;
+		
+		String importDirectory = outputDirectory + "/tripleimport";
+		String spDirectory = outputDirectory + "/sidx";
+		String bdbDirectory = outputDirectory + "/bdb";
 		
 		
 		log.debug(Util.memory());
 		
 		if (action.equals("optimize")) {
-			IndexWriter iw = new IndexWriter(FSDirectory.getDirectory(outputDirectory), new WhitespaceAnalyzer(), false);
-			iw.optimize();
-			iw.close();
+//			IndexWriter iw = new IndexWriter(FSDirectory.getDirectory(outputDirectory), new WhitespaceAnalyzer(), false);
+//			iw.optimize();
+//			iw.close();
 		}
 		
 		if (action.equals("import")) {
-			final LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
+			List<String> files = os.nonOptionArguments();
+			
+			final LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, false);
 			gs.setStoreGraphName(false);
-			Importer importer = new NTriplesImporter(rmBN);
-			importer.addImport(file);
+			
+			if (files.size() == 1) {
+				// check if file is a directory, if yes, import all files in the directory
+				File f = new File(files.get(0));
+				if (f.isDirectory()) {
+					files = new ArrayList<String>();	
+					for (File file : f.listFiles())
+						files.add(file.getAbsolutePath());
+				}
+			}
+			
+			Importer importer;
+			if (files.get(0).contains(".nt"))
+				importer = new NTriplesImporter(rmBN);
+			else if (files.get(0).contains(".owl"))
+				importer = new OntologyImporter();
+			else if (files.get(0).contains(".rdf") || files.get(0).contains(".xml"))
+				importer = new RDFImporter();
+			else
+				throw new Exception("file type unknown");
+			
+			importer.addImports(files);
+			
 			importer.setTripleSink(new TripleSink() {
 				int triples = 0;
 				public void triple(String s, String p, String o, String objectType) {
@@ -100,12 +140,11 @@ public class BTCImport {
 				e.printStackTrace();
 			}
 			
-//			gs.optimize();
 			gs.close();
 		}
 		
 		if (action.equals("dataprops")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
+			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, true);
 			
 			Set<String> properties = gs.getEdges();
@@ -116,44 +155,35 @@ public class BTCImport {
 					dataProperties.add(property);
 			}
 			
-			log.debug(dataProperties.size());
-			log.debug(dataProperties);
-			
 			PrintWriter pw = new PrintWriter(new FileWriter(outputDirectory + "/dataproperties"));
 			for (String property : dataProperties)
 				pw.println(property);
 			pw.close();
+
+			properties.removeAll(dataProperties);
+			
+			pw = new PrintWriter(new FileWriter(outputDirectory + "/properties"));
+			for (String property : properties)
+				pw.println(property);
+			pw.close();
+			
+			log.debug("data properties: " + dataProperties.size() + ", properties: " + properties.size());
 		}
 		
 		if (action.equals("index")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
+			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
+			
+			Set<String> edges = Util.readEdgeSet(outputDirectory + "/properties");
+			log.debug(Util.memory());
+			log.debug("properties: " + edges.size());
 			
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
 			config.setAllowCreate(true);
 
-			Set<String> edges = gs.getEdges();
-			log.debug(Util.memory());
-			log.debug("properties: " + edges.size());
-			
-			File f = new File(outputDirectory + "/dataproperties");
-			if (f.exists()) {
-				Set<String> dataProperties = Util.readEdgeSet(f);
-				edges.removeAll(dataProperties);
-				log.debug("data properties: " + dataProperties.size() + ", properties now: " + edges.size());
-			}
-			
-			File bdb;
-			if (os.has("bdb"))
-				bdb = new File((String)os.valueOf("bdb"));
-			else
-				bdb = new File(outputDirectory + "/bdb");
-			log.debug("bdb dir: " + bdb);
-			bdb.mkdir();
-
-			Environment env = new Environment(bdb, config);
+			Environment env = new Environment(new File(bdbDirectory), config);
 
 			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
 			rcp.setIgnoreDataValues(true);
@@ -163,8 +193,99 @@ public class BTCImport {
 			env.close();
 		}
 		
-		if(action.equals("keywordindex")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(outputDirectory);
+		if (action.equals("create")) {
+			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
+			gs.initialize(false, true);
+			gs.setStoreGraphName(false);
+			
+			Set<String> properties = Util.readEdgeSet(outputDirectory + "/properties");
+			
+			File bdb;
+			if (os.has("bdb"))
+				bdb = new File((String)os.valueOf("bdb"));
+			else
+				bdb = new File(outputDirectory + "/bdb");
+			log.debug("bdb dir: " + bdb);
+			
+			EnvironmentConfig config = new EnvironmentConfig();
+			config.setTransactional(false);
+			config.setAllowCreate(false);
+
+			Environment env = new Environment(bdb, config);
+			BlockCache bc = new BlockCache(env);
+
+			StructureIndexWriter idxWriter = new StructureIndexWriter(spDirectory, true);
+			idxWriter.setBackwardEdgeSet(properties);
+			idxWriter.setForwardEdgeSet(properties);
+			Map options = new HashMap();
+			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
+			options.put(StructureIndex.OPT_PATH_LENGTH, 10);
+			idxWriter.setOptions(options);
+			
+			StructureIndex index = idxWriter.getIndex();
+
+			ExtensionStorage es = index.getExtensionManager().getExtensionStorage();
+			GraphStorage igs = index.getGraphManager().getGraphStorage();
+			
+			Set<String> indexEdges = new HashSet<String>();
+			int triples = 0;
+			for (String property : properties) {
+				for (Iterator<String[]> ti = gs.iterator(property); ti.hasNext(); ) {
+					String[] triple = ti.next();
+					String s = triple[0];
+					String o = triple[2];
+					
+					String subExt = bc.getBlockName(s);
+					String objExt = bc.getBlockName(o);
+					
+					// build index graph
+					String indexEdge = new StringBuilder().append(subExt).append("__").append(property).append("__").append(objExt).toString();
+					if (indexEdges.add(indexEdge)) {
+						igs.addEdge("g1", subExt, property, objExt);
+					}
+					
+					// add triples to extensions
+					es.addTriples(IndexDescription.PSESO, subExt, property, s, Arrays.asList(o));
+					es.addTriples(IndexDescription.POESS, subExt, property, o, Arrays.asList(s));
+					es.addData(IndexDescription.PSES, es.concat(new String[] { property, s }, 2), Arrays.asList(subExt) , false);
+					es.addData(IndexDescription.POES, es.concat(new String[] { property, o }, 2), Arrays.asList(subExt) , false);
+					
+					triples++;
+					
+					if (triples % 100000 == 0)
+						log.debug("triples: " + triples);
+				}
+			}
+			
+			log.debug("index graph edges: " + indexEdges.size());
+			
+			index.addIndex(IndexDescription.PSESO);
+			index.addIndex(IndexDescription.POESS);
+			index.addIndex(IndexDescription.PSES);
+			index.addIndex(IndexDescription.POES);
+			
+			igs.optimize();
+			
+			idxWriter.close();
+		}
+		
+		if (action.equals("mergedocs")) {
+			LuceneExtensionStorage les = new LuceneExtensionStorage(spDirectory + "/index");
+			les.initialize(false, false);
+
+			for (IndexDescription index : Arrays.asList(IndexDescription.PSESO, IndexDescription.POESS, IndexDescription.PSES, IndexDescription.POES)) {
+				log.debug(index.getIndexFieldName());
+				les.mergeIndexDocuments(index);
+			}
+			
+			log.debug("optimizing");
+			les.optimize();
+			
+			les.close();
+		}
+		
+		if (action.equals("keywordindex")) {
+			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
 			
@@ -178,9 +299,7 @@ public class BTCImport {
 			log.debug(Util.memory());
 			log.debug(edges.size());
 			
-			new File(outputDirectory + "/bdb").mkdir();
-			
-			Environment env = new Environment(new File(outputDirectory + "/bdb"), config);
+			Environment env = new Environment(new File(bdbDirectory), config);
 
 			
 			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env); 
@@ -191,7 +310,7 @@ public class BTCImport {
 		}
 	}
 	
-	public static void prepareKeywordIndex(LuceneGraphStorage gs,String outputDirectory) {
+	public static void prepareKeywordIndex(LuceneGraphStorage gs, String outputDirectory) {
 		File file = new File(outputDirectory);
 		if(!file.exists())
 			file.mkdirs();

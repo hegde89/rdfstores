@@ -46,9 +46,9 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	private IndexReader m_reader;
 	private IndexSearcher m_searcher;
 	private boolean m_storeGraphName = true;
-	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(5000000);
-	private LRUCache<String,Boolean> m_imageZeroCache = new LRUCache<String,Boolean>(5000000);
-	private LRUCache<String,Boolean> m_preimageZeroCache = new LRUCache<String,Boolean>(5000000);
+	private LRUCache<Integer,Document> m_docCache = new LRUCache<Integer,Document>(500000);
+	private LRUCache<String,Boolean> m_imageZeroCache = new LRUCache<String,Boolean>(500000);
+	private LRUCache<String,Boolean> m_preimageZeroCache = new LRUCache<String,Boolean>(500000);
 	
 	public static final String FIELD_GRAPH = "graph";
 	public static final String FIELD_SRC = "src";
@@ -109,7 +109,11 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	public void optimize() throws StorageException {
 		if (!m_readonly) {
 			try {
+				m_searcher.close();
+				m_reader.close();
 				m_writer.optimize();
+				m_reader = IndexReader.open(m_directory);
+				m_searcher = new IndexSearcher(m_reader);
 			} catch (CorruptIndexException e) {
 				throw new StorageException(e);
 			} catch (IOException e) {
@@ -389,7 +393,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		
 		return nodes;
 	}
-
+	
 	public void addNodesToBC(BlockCache bc, Block block, boolean ignoreDataValues) throws StorageException {
 		try {
 			TermEnum te = m_reader.terms();
@@ -431,5 +435,41 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		doc.add(new Field(FIELD_TYPE, type, Field.Store.YES, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 		return doc;
 	}
+
+	private class TriplesIterator implements Iterator<String[]> {
+
+		private List<Integer> m_docIds;
+		private int m_pos = 0;
+		
+		public TriplesIterator(List<Integer> docIds) {
+			m_docIds = docIds;
+		}
+		
+		public boolean hasNext() {
+			return m_pos < m_docIds.size() - 1;
+		}
+
+		public String[] next() {
+			try {
+				Document doc = getDocument(m_docIds.get(m_pos));
+				String[] triple = new String[] { doc.getField(FIELD_SRC).stringValue(), doc.getField(FIELD_EDGE).stringValue(), doc.getField(FIELD_DST).stringValue() };
+				m_pos++;
+				return triple;
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+
+		public void remove() {
+			throw new UnsupportedOperationException("not implemented");
+		}
+		
+	}
 	
+	public Iterator<String[]> iterator(String property) throws StorageException {
+		Query q = new TermQuery(new Term(FIELD_EDGE, property));
+		List<Integer> docIds = getDocumentIds(q);
+		return new TriplesIterator(docIds);
+	}
 }

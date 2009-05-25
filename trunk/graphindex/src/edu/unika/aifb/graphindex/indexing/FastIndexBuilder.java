@@ -188,43 +188,39 @@ public class FastIndexBuilder {
 		}
 	}
 	
-	private void createExtensions(Map<String,String> mergeMap) throws StorageException, IOException {
+	public void createExtensions(String partitionFile) throws StorageException, IOException {
 		m_em.setMode(ExtensionManager.MODE_NOCACHE);
 		m_em.startBulkUpdate();
 		
 		m_index.clearIndexes();
 		
 		log.info("creating extensions... (" + Util.memory() + ")");
-		for (File componentFile : m_componentFiles) {
-			log.info(" " + componentFile + ".partition");
-			
-			String partitionFile = componentFile.getAbsolutePath() + ".partition";
-			if (!new File(partitionFile).exists()) {
-				log.debug(" ...not found");
-				continue;
-			}
+		log.info("partition file: " + partitionFile); 
+		if (!new File(partitionFile).exists()) {
+			log.debug(" ...not found");
+			return;
+		}
 
-			// "traditional"
+		// "traditional"
 //			sortPartitionFile(partitionFile, StructureIndex.ORIENTATION_OBJ);
 //			importTriples(partitionFile, 4, Index.EPO, 3, 1, Index.EPS, 1, 3);
 //			m_index.addIndex(new IndexDescription(Index.EPO.getIndexField(), Index.EPO.getValField(), DataField.EXT_OBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT));
 //			m_index.addIndex(new IndexDescription(Index.EPS.getIndexField(), Index.EPS.getValField(), DataField.EXT_OBJECT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT));
 			
-			// new
-			sortPartitionFile(partitionFile, 0);
-			importTriples(partitionFile, 0, IndexDescription.PSESO, 1, 3, IndexDescription.POESS, 3, 1, false);
-			m_index.addIndex(IndexDescription.PSESO);
-			m_index.addIndex(IndexDescription.POESS);
+		// new
+		sortPartitionFile(partitionFile, 0);
+		importTriples(partitionFile, 0, IndexDescription.PSESO, 1, 3, IndexDescription.POESS, 3, 1, false);
+		m_index.addIndex(IndexDescription.PSESO);
+		m_index.addIndex(IndexDescription.POESS);
 
-			secondaryIndex(partitionFile, IndexDescription.PSES, 2, 1, 0);
-			secondaryIndex(partitionFile, IndexDescription.POES, 2, 3, 0);
-			m_index.addIndex(IndexDescription.PSES);
-			m_index.addIndex(IndexDescription.POES);
+		secondaryIndex(partitionFile, IndexDescription.PSES, 2, 1, 0);
+		secondaryIndex(partitionFile, IndexDescription.POES, 2, 3, 0);
+		m_index.addIndex(IndexDescription.PSES);
+		m_index.addIndex(IndexDescription.POES);
 			
 //			sortPartitionFile(partitionFile, 1);
 //			importTriples(partitionFile, 4, IndexDescription.EOPO, 3, 1, null, -1, -1, true);
 //			m_index.addIndex(IndexDescription.EOPO);
-		}
 		
 //		m_em.flushAllCaches();
 		m_em.finishBulkUpdate();
@@ -338,15 +334,11 @@ public class FastIndexBuilder {
 		int cnr = 0;
 
 		while (m_vlp.nextComponent()) {
-//			log.info("component size: " + component.size() + " vertices");
 			log.info("unique edges: " + m_hashProvider.getEdges().size());
 	
 			m_componentFiles.add(m_vlp.getComponentFile());
 			rcp.createIndexGraph(m_index.getPathLength(),m_vlp, m_vlp.getComponentFile().getAbsolutePath() + ".partition", m_vlp.getComponentFile().getAbsolutePath() + ".graph", m_vlp.getComponentFile().getAbsolutePath() + ".block");
-//			if (g == null)
-//				continue;
-//			log.info("index graph vertices: " + g.nodeCount() + ", edges: " + g.edgeCount());
-//			list.add(g);
+
 			cnr++;
 
 			if (Util.freeMemory() < 100000) {
@@ -359,8 +351,9 @@ public class FastIndexBuilder {
 		
 		rcp = null;
 		System.gc();
-		
-		createExtensions(merger.getMergeMap());
+
+		for (File componentFile : m_componentFiles) 
+			createExtensions(componentFile.getAbsolutePath() + ".partition");
 		createGraph(m_vlp.getComponentFile().getAbsolutePath() + ".graph");
 		createBlocks(m_vlp.getComponentFile().getAbsolutePath() + ".block");
 		createData();

@@ -50,7 +50,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 		return m_mlv;
 	}
 	
-	public List<String[]> evaluate(Query query) throws StorageException, InterruptedException, ExecutionException {
+	public List<String[]> evaluate(Query query) throws StorageException {
 		log.info("evaluating...");
 
 		m_index.getCollector().reset();

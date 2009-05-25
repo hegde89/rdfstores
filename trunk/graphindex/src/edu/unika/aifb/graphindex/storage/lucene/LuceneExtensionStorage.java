@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -88,8 +89,12 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 			
-			log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
-			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
+			if (m_manager != null && m_manager.getIndex() != null) {
+				log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
+				m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
+			}
+			else
+				m_docCache = new LRUCache<Integer,Document>(5000);
 			
 			m_dataSetCache = new LRUCache<String,Set<String>>(50000);
 			m_dataListCache = new LRUCache<String,List<String>>(50000);
@@ -99,7 +104,9 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			e.printStackTrace();
 		}
 		
-		m_manager.getIndex().getCollector().addTimings(m_timings);
+		if (m_manager != null && m_manager.getIndex() != null) {
+			m_manager.getIndex().getCollector().addTimings(m_timings);
+		}
 		BooleanQuery.setMaxClauseCount(1048576);
 	}
 	
@@ -126,7 +133,11 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	public void optimize() throws StorageException {
 		if (!m_readonly) {
 			try {
+				m_searcher.close();
+				m_reader.close();
 				m_writer.optimize();
+				m_reader = IndexReader.open(m_directory);
+				m_searcher = new IndexSearcher(m_reader);
 			} catch (CorruptIndexException e) {
 				throw new StorageException(e);
 			} catch (IOException e) {
@@ -649,6 +660,42 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		m_timings.end(Timings.LOAD_EXT_SUBJECT);
 		
 		return exts;
+	}
+	
+	public void mergeIndexDocuments(IndexDescription index) throws StorageException {
+		try {
+			TermEnum te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
+			do {
+				Term t = te.term();
+				
+				if (!t.field().equals(index.getIndexFieldName()))
+					break;
+				
+				List<Integer> docIds = getDocumentIds(new TermQuery(t));
+				if (docIds.size() == 1)
+					continue;
+				
+				TreeSet<String> values = new TreeSet<String>();
+				for (int docId : docIds) {
+					Document doc = getDocument(docId);
+					values.add(doc.getField(index.getValueFieldName()).stringValue().trim());
+				}
+				m_writer.deleteDocuments(t);
+				
+				StringBuilder sb = new StringBuilder();
+				for (String s : values)
+					sb.append(s).append('\n');
+				
+				Document doc = new Document();
+				doc.add(new Field(index.getIndexFieldName(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
+				m_writer.addDocument(doc);
+			}
+			while (te.next());
+		}
+		catch (IOException e) {
+			throw new StorageException(e);
+		}
 	}
 	
 	public void mergeExtensions() throws StorageException, IOException {

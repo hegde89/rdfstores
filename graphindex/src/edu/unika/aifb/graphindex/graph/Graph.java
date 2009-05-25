@@ -256,6 +256,14 @@ public class Graph<V extends Comparable<V>> {
 	public V getNode(int node) {
 		return (V)m_nodeObjects[node];
 	}
+	
+	public V getSourceNode(GraphEdge<V> edge) {
+		return getNode(edge.getSrc());
+	}
+
+	public V getTargetNode(GraphEdge<V> edge) {
+		return getNode(edge.getDst());
+	}
 
 	public int outDegreeOf(int node) {
 		return m_successors[node] == null ? 0 : m_successors[node].size();

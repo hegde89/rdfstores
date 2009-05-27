@@ -237,6 +237,7 @@ public class EntitySearcher {
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
+		log.debug(q + ", docs: " + docIdsAndScores.size());
 		
 		return docIdsAndScores;
 	}

@@ -89,7 +89,7 @@ public class BTCImport {
 		String importDirectory = outputDirectory + "/tripleimport";
 		String spDirectory = outputDirectory + "/sidx";
 		String bdbDirectory = outputDirectory + "/bdb";
-		
+		String keywordIndexDirectory = outputDirectory + "/keyword";
 		
 		log.debug(Util.memory());
 		
@@ -101,10 +101,6 @@ public class BTCImport {
 		
 		if (action.equals("import")) {
 			List<String> files = os.nonOptionArguments();
-			
-			final LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
-			gs.initialize(false, false);
-			gs.setStoreGraphName(false);
 			
 			if (files.size() == 1) {
 				// check if file is a directory, if yes, import all files in the directory
@@ -127,6 +123,10 @@ public class BTCImport {
 				throw new Exception("file type unknown");
 			
 			importer.addImports(files);
+			
+			final LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
+			gs.initialize(false, false);
+			gs.setStoreGraphName(false);
 			
 			importer.setTripleSink(new TripleSink() {
 				int triples = 0;
@@ -309,7 +309,7 @@ public class BTCImport {
 			
 			StructureIndexReader reader = new StructureIndexReader(spDirectory);
 			
-			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader);
+			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, keywordIndexDirectory);
 			for (Query q : queries) {
 				if (queryName != null && !q.getName().equals(queryName))
 					continue;
@@ -332,12 +332,7 @@ public class BTCImport {
 			config.setTransactional(false);
 			config.setAllowCreate(true);
 
-			Set<String> edges = gs.getEdges();
-			log.debug(Util.memory());
-			log.debug(edges.size());
-			
 			Environment env = new Environment(new File(bdbDirectory), config);
-
 			
 			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env); 
 			kb.indexKeywords();

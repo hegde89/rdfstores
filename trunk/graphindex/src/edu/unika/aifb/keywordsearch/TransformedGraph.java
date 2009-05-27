@@ -2,6 +2,7 @@ package edu.unika.aifb.keywordsearch;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +18,16 @@ public class TransformedGraph {
 	private Collection<TransformedGraphNode> m_centricNodes;
 	
 	public TransformedGraph(Graph<QueryNode> queryGraph) {
-		QueryNode[] nodes = queryGraph.nodes();
+		m_nodeObject = new HashMap<Integer,TransformedGraphNode>();
+		m_centricNodes = new HashSet<TransformedGraphNode>();
+
+		Object[] os = queryGraph.nodes();
+		QueryNode[] nodes = new QueryNode [os.length];
 		int length = nodes.length;
+		for (int i = 0; i < length; i++) {
+			nodes[i] = (QueryNode)os[i];
+		}
+		
 		for (int i = 0; i < length; i++) {
 			if(Util.isVariable(nodes[i].getName())) {
 				TransformedGraphNode tfNode = m_nodeObject.get(i);

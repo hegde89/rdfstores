@@ -1,10 +1,18 @@
 package edu.unika.aifb.keywordsearch;
 
+import it.unimi.dsi.util.BloomFilter;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.lucene.document.Document;
+
+import edu.unika.aifb.keywordsearch.api.IEntity;
 import edu.unika.aifb.keywordsearch.api.IResource;
 import edu.unika.aifb.keywordsearch.impl.Attribute;
 import edu.unika.aifb.keywordsearch.impl.Entity;
@@ -28,33 +36,47 @@ public class KeywordElement implements Serializable {
 	private double matchingScore;
 //	private String query;
 	private Set<String> keywords;
+	private int docId;
+	private Document doc;
+	private BloomFilter bloomFilter;
 
 	protected int type;
 	
-	public KeywordElement(){}
-
-	public KeywordElement(IResource resource, int type) {
-		this.resource = resource;
-		this.type = type;
-	}
-
-	public KeywordElement(IResource resource, int type, double score) {
+	public KeywordElement(IResource resource, int type, Document doc, double score) {
 		this.resource = resource;
 		this.type = type;
 		this.matchingScore = score;
+		this.doc = doc;
 	}
 	
-	public KeywordElement(IResource resource, int type, double score, String keyword) {
+	public KeywordElement(){}
+	
+	public KeywordElement(IResource resource, int type, int docID) {
 		this.resource = resource;
 		this.type = type;
+		this.docId = docID;
+	}
+
+	public KeywordElement(IResource resource, int type, int docID, double score) {
+		this.resource = resource;
+		this.type = type;
+		this.docId = docID;
+		this.matchingScore = score;
+	}
+	
+	public KeywordElement(IResource resource, int type, int docID, double score, String keyword) {
+		this.resource = resource;
+		this.type = type;
+		this.docId = docID;
 		this.matchingScore = score;
 		this.keywords = new HashSet<String>();
 		this.keywords.add(keyword);
 	}
 	
-	public KeywordElement(IResource resource, int type, double score, Collection<String> keywords) {
+	public KeywordElement(IResource resource, int type, int docID, double score, Collection<String> keywords) {
 		this.resource = resource;
 		this.type = type;
+		this.docId = docID;
 		this.matchingScore = score;
 		this.keywords = new HashSet<String>();
 		this.keywords.addAll(keywords);
@@ -66,6 +88,18 @@ public class KeywordElement implements Serializable {
 	
 	public void setType(int type) {
 		this.type = type;
+	}
+	
+	public void clearDoc() {
+		this.doc = null;
+	}
+	
+	public void setDocId(int docId) {
+		this.docId = docId;
+	}
+	
+	public int getDocId() {
+		return docId;
 	}
 	
 	public Collection<String> getKeywords() {
@@ -116,6 +150,54 @@ public class KeywordElement implements Serializable {
 	public double getMatchingScore(){
 		return matchingScore;
 	}
+	
+	public void setBloomFilter(BloomFilter bf) {
+		bloomFilter = bf;
+	}
+	
+	public BloomFilter getBloomFilter() {
+		if(bloomFilter == null) {
+			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
+			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
+			try {
+				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
+				bloomFilter = (BloomFilter)objectInput.readObject();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+		}
+		return bloomFilter;
+	}
+	
+	public boolean isReachable(IEntity entity) {
+		return getBloomFilter().contains(entity.getUri());
+	}
+	
+	public boolean isReachable(KeywordElement ele) {
+		if(ele.getType() != KeywordElement.ENTITY)
+			return false;
+		return getBloomFilter().contains(ele.getResource().getUri());
+	}
+	
+	public boolean isReachable(Collection<KeywordElement> elements) {
+		for(KeywordElement ele : elements) {
+			if(isReachable(ele)) 
+				return true;
+		}
+		return false;
+	}
+	
+	public boolean isAllReachable(Collection<Collection<KeywordElement>> colls) {
+		for(Collection<KeywordElement> coll : colls) {
+			if(!isReachable(coll))
+				return false;
+		}
+		return true;
+	}
 		
 	public String toString(){
 		if(resource == null)return null;
@@ -125,6 +207,8 @@ public class KeywordElement implements Serializable {
 			return ((Attribute)resource).getUri();
 		else if(resource instanceof Entity )
 			return ((Entity)resource).getUri();
+		else if(resource instanceof Relation )
+			return ((Relation)resource).getUri();
 		else return super.toString();
 	}
 

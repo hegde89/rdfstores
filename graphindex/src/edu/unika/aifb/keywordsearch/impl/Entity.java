@@ -23,7 +23,6 @@ public class Entity implements IEntity {
 	private String uri;
 	private String extension;
 	private INamedConcept type;
-	private BloomFilter reachableEntities;
 	private Set<IAttributeValueCompound> attributeValueCompounds;
 	private Set<IValue> values;
 	
@@ -58,40 +57,6 @@ public class Entity implements IEntity {
 	
 	public String getExtension() {
 		return extension;
-	}
-	
-	public void setReachaleEntities(BloomFilter entities) {
-		reachableEntities = entities;
-	}
-	
-	public BloomFilter getReachaleEntities() {
-		return reachableEntities;
-	}
-	
-	public boolean isReachable(IEntity entity) {
-		return reachableEntities.contains(entity.getUri());
-	}
-	
-	public boolean isReachable(KeywordElement ele) {
-		if(ele.getType() != KeywordElement.ENTITY)
-			return false;
-		return reachableEntities.contains(ele.getResource().getUri());
-	}
-	
-	public boolean isReachable(Collection<KeywordElement> elements) {
-		for(KeywordElement ele : elements) {
-			if(isReachable(ele)) 
-				return true;
-		}
-		return false;
-	}
-	
-	public boolean isAllReachable(Collection<Collection<KeywordElement>> colls) {
-		for(Collection<KeywordElement> coll : colls) {
-			if(!isReachable(coll))
-				return false;
-		}
-		return true;
 	}
 	
 	public void addAttributeValueCompound(IAttributeValueCompound compound) {

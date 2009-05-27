@@ -17,18 +17,6 @@ public interface IEntity  extends IResource {
 	
 	public String getExtension();
 	
-	public void setReachaleEntities(BloomFilter entities);
-	
-	public BloomFilter getReachaleEntities();
-	
-	public boolean isReachable(IEntity entity);
-	
-	public boolean isReachable(KeywordElement ele);
-	
-	public boolean isReachable(Collection<KeywordElement> elements);
-	
-	public boolean isAllReachable(Collection<Collection<KeywordElement>> colls);
-	
 	public void addAttributeValueCompound(IAttributeValueCompound compound);
 	
 	public void setAttributeValueCompounds(Set<IAttributeValueCompound> compounds);

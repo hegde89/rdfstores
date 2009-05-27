@@ -179,7 +179,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 				visited.add(getSourceLabel(edge));
 				visited.add(getTargetLabel(edge));
 			}
-			toVisit.addAll(m_qe.toVisit());
+			toVisit.addAll(m_qe.imToVisit());
+			resultTables.addAll(m_qe.getMatchTables());
 		}
 		else 
 			toVisit.addAll(m_queryGraph.edges());

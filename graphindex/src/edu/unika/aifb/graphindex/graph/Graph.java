@@ -199,9 +199,8 @@ public class Graph<V extends Comparable<V>> {
 		return m_nodeCount;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public V[] nodes() {
-		return (V[])m_nodeObjects;
+	public Object[] nodes() {
+		return m_nodeObjects;
 	}
 
 	public List<Integer> predecessors(int node) {

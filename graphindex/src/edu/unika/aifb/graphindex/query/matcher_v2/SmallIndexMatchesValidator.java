@@ -66,15 +66,21 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 		final Set<String> matchedNodes = new HashSet<String>();
 
-		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
-		EvaluationClass evc = new EvaluationClass(m_qe.getIndexMatches());
-		classes.add(evc);
 
+		List<EvaluationClass> classes = m_qe.getEvaluationClasses();
+		EvaluationClass evc = new EvaluationClass(m_qe.getIndexMatches());
+		if (classes == null || classes.size() == 0) {
+			classes = new ArrayList<EvaluationClass>();
+			classes.add(evc);
+		}
+			
+		
 		final Map<String,Integer> matchCardinalities = evc.getCardinalityMap(new HashSet<String>());//query.getRemovedNodes());
 		for (String node : matchCardinalities.keySet())
 			if (Util.isConstant(node))
 				matchCardinalities.put(node, 1);
 		log.debug("match cardinalities: " + matchCardinalities);
+		evc = null;
 
 		PriorityQueue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
 			public int compare(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
@@ -118,11 +124,22 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			}
 		});
 		
+		List<GraphEdge<QueryNode>> edges;
+		if (m_qe.getVisited().size() > 0) {
+			edges = m_qe.toVisit();
+			for (GraphEdge<QueryNode> edge : m_qe.getVisited()) {
+				matchedNodes.add(queryGraph.getSourceNode(edge).getName());
+				matchedNodes.add(queryGraph.getTargetNode(edge).getName());
+			}
+		}
+		else
+			edges = queryGraph.edges();;
+		
 		Set<String> sourcesOfRemoved = query.getForwardSources();
 		
 		Map<String,String> removedProperties = new HashMap<String,String>();
 		log.debug("remove nodes: " + query.getRemovedNodes());
-		for (GraphEdge<QueryNode> e : queryGraph.edges()) {
+		for (GraphEdge<QueryNode> e : edges) {
 			if (!query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
 				&& !query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember())) {
 				toVisit.add(e);

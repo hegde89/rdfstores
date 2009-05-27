@@ -386,6 +386,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		List<Integer> docIds = getDocumentIds(q);
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
+
 			String val = doc.getField(f).stringValue();
 			if (!ignoreDataValues || Util.isEntity(val))
 				nodes.add(val);
@@ -394,18 +395,30 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		return nodes;
 	}
 	
-	public void addNodesToBC(BlockCache bc, Block block, boolean ignoreDataValues) throws StorageException {
-		try {
-			TermEnum te = m_reader.terms();
-			while (te.next()) {
-				Term t = te.term();
-				String field = t.field();
-				if ((field.equals(FIELD_DST) || field.equals(FIELD_SRC)) && (!ignoreDataValues || Util.isEntity(t.text())))
-					bc.setBlock(t.text(), block);
+	public void addNodesToBC(BlockCache bc, Block block, List<String> properties) throws StorageException {
+		for (String property : properties) {
+			Set<String> nodes = new HashSet<String>();
+			for (Iterator<String[]> i = iterator(property); i.hasNext(); ) {
+				String[] triple = i.next();
+
+				if (nodes.add(triple[0]))
+					bc.setBlock(triple[0], block);
+				if (nodes.add(triple[2]))
+					bc.setBlock(triple[2], block);
 			}
-		} catch (IOException e) {
-			throw new StorageException(e);
 		}
+
+//		try {
+//			TermEnum te = m_reader.terms();
+//			while (te.next()) {
+//				Term t = te.term();
+//				String field = t.field();
+//				if ((field.equals(FIELD_DST) || field.equals(FIELD_SRC)) && (!ignoreDataValues || Util.isEntity(t.text())))
+//					bc.setBlock(t.text(), block);
+//			}
+//		} catch (IOException e) {
+//			throw new StorageException(e);
+//		}
 		
 	}
 
@@ -446,7 +459,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 		}
 		
 		public boolean hasNext() {
-			return m_pos < m_docIds.size() - 1;
+			return m_pos < m_docIds.size();
 		}
 
 		public String[] next() {

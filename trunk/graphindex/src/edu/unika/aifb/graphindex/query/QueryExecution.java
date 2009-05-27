@@ -21,6 +21,9 @@ public class QueryExecution {
 	private Query m_query;
 	private Graph<QueryNode> m_queryGraph;
 	
+	private List<GraphEdge<QueryNode>> m_imVisitedEdges;
+	private List<GraphEdge<QueryNode>> m_imToVisit;
+	
 	private List<GraphEdge<QueryNode>> m_visitedEdges;
 	private List<GraphEdge<QueryNode>> m_toVisit;
 	
@@ -56,6 +59,8 @@ public class QueryExecution {
 		m_proximities = query.calculateConstantProximities();
 		m_toVisit = m_queryGraph.edges();
 		m_visitedEdges = new ArrayList<GraphEdge<QueryNode>>();
+		m_imToVisit = m_queryGraph.edges();
+		m_imVisitedEdges = new ArrayList<GraphEdge<QueryNode>>();
 		
 		m_removedProperties = new HashMap<String,String>();
 		
@@ -95,6 +100,10 @@ public class QueryExecution {
 		m_toVisit = toVisit;
 	}
 	
+	public List<GraphEdge<QueryNode>> getVisited() {
+		return m_visitedEdges;
+	}
+	
 	public void visited(GraphEdge<QueryNode> edge) {
 		m_toVisit.remove(edge);
 		m_visitedEdges.add(edge);
@@ -121,6 +130,19 @@ public class QueryExecution {
 	}
 	
 	// im ---------------------------
+	
+	public List<GraphEdge<QueryNode>> imToVisit() {
+		return m_imToVisit;
+	}
+	
+	public List<GraphEdge<QueryNode>> getIMVisited() {
+		return m_imVisitedEdges;
+	}
+	
+	public void imVisited(GraphEdge<QueryNode> edge) {
+		m_imToVisit.remove(edge);
+		m_imVisitedEdges.add(edge);
+	}
 	
 	public void setMatchTables(List<GTable<String>> tables) {
 		m_matchTables = tables;

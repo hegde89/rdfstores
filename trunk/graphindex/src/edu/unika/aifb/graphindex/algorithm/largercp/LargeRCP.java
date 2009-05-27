@@ -138,8 +138,8 @@ public class LargeRCP {
 		int interval = 0;
 		m_bc.setNodeCacheActive(true);
 		for (String node : nodes) {
-			if (m_ignoreDataValues && !Util.isEntity(node))
-				continue;
+//			if (m_ignoreDataValues && !Util.isEntity(node))
+//				continue;
 			
 			Block block = m_bc.getBlock(node);
 			Block splitBlock = block.getSplitBlock();
@@ -192,7 +192,8 @@ public class LargeRCP {
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
-			m_gs.addNodesToBC(m_bc, b, m_ignoreDataValues);
+//			m_gs.addNodesToBC(m_bc, b, m_ignoreDataValues);
+			System.exit(-1);
 			b.setSize((int)m_bc.getNodeCount());
 			log.debug("nodes: " + b.size());
 			
@@ -298,7 +299,7 @@ public class LargeRCP {
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
-			m_gs.addNodesToBC(m_bc, b, m_ignoreDataValues);
+			m_gs.addNodesToBC(m_bc, b, properties);
 			b.setSize((int)m_bc.getNodeCount());
 			log.debug("nodes: " + b.size());
 			
@@ -315,9 +316,6 @@ public class LargeRCP {
 			
 			// add all nodes in the start block to the start block
 			m_bc.addNodesToBlock(b);
-			
-//			for (Block block : blocks)
-//				log.debug(block);
 		}
 		else {
 			log.debug(blocks.size() + " " + m_bc.getBlockCount());
@@ -361,7 +359,7 @@ public class LargeRCP {
 			XBlock s_ = new XBlock(b);
 //			s_.calcInfo(); // TODO is not really necessary, as we compute info for b below
 			cbs.add(s_);
-			
+			log.debug(b);
 			List<String> b_ = new ArrayList<String>(b.size());
 			b_.addAll(b.getNodes());
 			

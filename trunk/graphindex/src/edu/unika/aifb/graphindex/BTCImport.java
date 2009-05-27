@@ -36,12 +36,17 @@ import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.query.IQueryEvaluator;
+import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
+import edu.unika.aifb.graphindex.query.QueryEvaluator;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneExtensionStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
+import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
@@ -64,6 +69,10 @@ public class BTCImport {
 		op.accepts("bn", "remove bn");
 		op.accepts("bdb", "bdb dir")
 			.withRequiredArg().ofType(String.class).describedAs("bdb dir");
+		op.accepts("qf", "query file")
+			.withRequiredArg().ofType(String.class);
+		op.accepts("q", "query name")
+			.withRequiredArg().ofType(String.class);
 		
 		OptionSet os = op.parse(args);
 		
@@ -235,6 +244,9 @@ public class BTCImport {
 					String s = triple[0];
 					String o = triple[2];
 					
+					if (!Util.isEntity(o))
+						continue;
+					
 					String subExt = bc.getBlockName(s);
 					String objExt = bc.getBlockName(o);
 					
@@ -282,6 +294,31 @@ public class BTCImport {
 			les.optimize();
 			
 			les.close();
+		}
+		
+		if (action.equals("query")) {
+			String queryFile = (String)os.valueOf("qf");
+			String queryName = (String)os.valueOf("q");
+			
+			if (queryFile == null) {
+				log.error("no query file specified");
+			}
+			
+			QueryLoader loader = new QueryLoader();
+			List<Query> queries = loader.loadQueryFile(queryFile);
+			
+			StructureIndexReader reader = new StructureIndexReader(spDirectory);
+			
+			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader);
+			for (Query q : queries) {
+				if (queryName != null && !q.getName().equals(queryName))
+					continue;
+				
+				List<String[]> results = qe.evaluate(q);
+				log.info("query " + q.getName() + ": " + results.size() + " results");
+			}
+			
+			reader.close();
 		}
 		
 		if (action.equals("keywordindex")) {

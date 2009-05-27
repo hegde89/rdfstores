@@ -334,7 +334,8 @@ public class BTCImport {
 
 			Environment env = new Environment(new File(bdbDirectory), config);
 			
-			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env); 
+			int hop = 2;
+			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env, hop); 
 			kb.indexKeywords();
 			
 			gs.close();

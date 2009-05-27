@@ -45,8 +45,8 @@ public class KeywordIndexBuilder {
 	
 	private static final String SEPARATOR = "__";
 	
-	private static final int HOP = 2;  
-	private static final int MAXFIELDLENGTH = 100;
+	private static int HOP;  
+	private static int MAXFIELDLENGTH = 50;
 	
 	private IndexSearcher dataSearcher;
 	private BlockCache  blockSearcher;
@@ -54,9 +54,10 @@ public class KeywordIndexBuilder {
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);
 	
-	public KeywordIndexBuilder(String outputDirectory, LuceneGraphStorage gs, Environment env) {
+	public KeywordIndexBuilder(String outputDirectory, LuceneGraphStorage gs, Environment env, int hop) {
 		this.outputDir = outputDirectory;
 		this.dataSearcher = gs.getIndexSearcher();
+		HOP = hop;
 		try {
 			this.blockSearcher = new BlockCache(env);
 		} catch (DatabaseException e) {

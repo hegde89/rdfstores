@@ -172,7 +172,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		m_validator.validateIndexMatches();
 		
 		qe.finished();
-		
+		log.debug(qe.getResult().toDataString());
 		return qe.getResult().getRows();
 	}
 

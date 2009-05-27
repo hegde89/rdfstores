@@ -20,8 +20,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.Hit;
+import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.openrdf.model.vocabulary.RDFS;
@@ -29,25 +29,19 @@ import org.openrdf.model.vocabulary.RDFS;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 
-import edu.unika.aifb.graphindex.StructureIndex;
-import edu.unika.aifb.graphindex.StructureIndexReader;
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
-import edu.unika.aifb.graphindex.storage.BlockStorage;
-import edu.unika.aifb.graphindex.storage.DataStorage;
-import edu.unika.aifb.graphindex.storage.ExtensionManager;
-import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.keywordsearch.Constant;
 
 public class KeywordIndexBuilder {
 	
-	private static final float CONCEPT_BOOST = 10.0f;
-	private static final float RELATION_BOOST = 5.0f;
-	private static final float ATTRIBUTE_BOOST = 5.0f;
-	private static final float ENTITY_BOOST = 10.0f;
-	private static final float ENTITY_DISCRIMINATIVE_BOOST = 10.0f;
-	private static final float ENTITY_DESCRIPTIVE_BOOST = 5.0f;
+	private static final float CONCEPT_BOOST = 1.0f;
+	private static final float RELATION_BOOST = 0.5f;
+	private static final float ATTRIBUTE_BOOST = 0.5f;
+	private static final float ENTITY_BOOST = 1.0f;
+	private static final float ENTITY_DISCRIMINATIVE_BOOST = 1.0f;
+	private static final float ENTITY_DESCRIPTIVE_BOOST = 0.5f;
 	
 	private static final String SEPARATOR = "__";
 	

@@ -170,11 +170,20 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			}
 		});
 		
-		toVisit.addAll(m_queryGraph.edges());
-
 		List<GTable<String>> resultTables = new ArrayList<GTable<String>>();
 		Set<String> visited = new HashSet<String>();
 		
+		if (m_qe.getIMVisited().size() > 0) {
+			// probably from ASM
+			for (GraphEdge<QueryNode> edge : m_qe.getIMVisited()) {
+				visited.add(getSourceLabel(edge));
+				visited.add(getTargetLabel(edge));
+			}
+			toVisit.addAll(m_qe.toVisit());
+		}
+		else 
+			toVisit.addAll(m_queryGraph.edges());
+
 		while (toVisit.size() > 0) {
 			GraphEdge<QueryNode> currentEdge;
 			String srcLabel, trgLabel, property;

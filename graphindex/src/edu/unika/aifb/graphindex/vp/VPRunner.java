@@ -2,7 +2,11 @@ package edu.unika.aifb.graphindex.vp;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
 
 import org.apache.log4j.Logger;
 
@@ -101,28 +105,57 @@ public class VPRunner {
 		return importer;
  	}
 
-	public static void main(String[] args) throws StorageException, IOException {
-		String dir = "/data/sp/indexes/vp/" + args[1];
-		String dataset = args[2];
+	public static void main(String[] args) throws Exception {
+		OptionParser op = new OptionParser();
+		op.accepts("a", "action to perform, comma separated list of: import")
+			.withRequiredArg().ofType(String.class).describedAs("action").withValuesSeparatedBy(',');
+		op.accepts("o", "output directory")
+			.withRequiredArg().ofType(String.class).describedAs("directory");
+		op.accepts("sp", "remove bn");
+		op.accepts("qf", "query file")
+			.withRequiredArg().ofType(String.class);
+		op.accepts("q", "query name")
+			.withRequiredArg().ofType(String.class);
 		
-//		String dir = args[1];
-		String htDir = args[2];
+		OptionSet os = op.parse(args);
 		
-		if (args[0].equals("merge")) {
-//			final LuceneStorage ls = new LuceneStorage(dir);
-//			ls.initialize(false, true);
-//			ls.merge();
-//			
-//			ls.close();
+		if (!os.has("a") || !os.has("o")) {
+			op.printHelpOn(System.out);
+			return;
 		}
-		else if (args[0].equals("import")) {
-			final LuceneStorage ls = new LuceneStorage(dir);
+		
+		String action = (String)os.valueOf("a");
+		String outputDirectory = (String)os.valueOf("o");
+
+		if (action.equals("import")) {
+			final LuceneStorage ls = new LuceneStorage(outputDirectory);
 			ls.initialize(true, false);
+
+			List<String> files = os.nonOptionArguments();
+			if (files.size() == 1) {
+				// check if file is a directory, if yes, import all files in the directory
+				File f = new File(files.get(0));
+				if (f.isDirectory()) {
+					files = new ArrayList<String>();	
+					for (File file : f.listFiles())
+						files.add(file.getAbsolutePath());
+				}
+			}
 			
+			Importer importer;
+			if (files.get(0).contains(".nt"))
+				importer = new NTriplesImporter(false);
+			else if (files.get(0).contains(".owl"))
+				importer = new OntologyImporter();
+			else if (files.get(0).contains(".rdf") || files.get(0).contains(".xml"))
+				importer = new RDFImporter();
+			else
+				throw new Exception("file type unknown");
+			
+			importer.addImports(files);
+
 			final Util.Counter c = new Util.Counter();
-//			Importer importer = getImporter(args[2]);
-			Importer importer = new HashedTriplesImporter(htDir + "/hashes", htDir + "/propertyhashes"); 
-			importer.addImport(htDir + "/input.ht");
+
 			importer.setTripleSink(new TripleSink() {
 				public void triple(String s, String p, String o, String objectType) {
 					ls.addTriple(s, p, o);
@@ -143,53 +176,36 @@ public class VPRunner {
 			
 			ls.close();
 		}
-		else if (args[0].equals("query")) {
-			final LuceneStorage ls = new LuceneStorage(dir + "_merged");
+		else if (action.equals("query")) {
+			String queryFile = (String)os.valueOf("qf");
+			String queryName = (String)os.valueOf("q");
+			
+			if (queryFile == null) {
+				log.error("no query file specified");
+			}
+			
+			QueryLoader loader = new QueryLoader();
+			List<Query> queries = loader.loadQueryFile(queryFile);
+
+			final LuceneStorage ls = new LuceneStorage(outputDirectory);
 			ls.initialize(false, true);
 			VPQueryEvaluator qe = new VPQueryEvaluator(ls);
 			
-			if (dataset.equals("sweto")) {
-				QueryLoader ql = new QueryLoader();
-				List<Query> queries = ql.loadQueryFile("/Users/gl/Studium/diplomarbeit/graphindex evaluation/dblpeva.txt");
+			for (Query q : queries) {
+				if (queryName != null && !q.getName().equals(queryName))
+					continue;
 				
-				for (Query q : queries) {
-					if (!q.getName().equals("q13"))
-						continue;
-					log.debug("--------------------------------------------");
-					log.debug("query: " + q.getName());
-					log.debug(q);
-					qe.evaluate(q);
-//					break;
-				}
-			}
-			else if (dataset.equals("lubm")) {
-				QueryLoader ql = new QueryLoader();
-//				String queriesFile = "/Users/gl/Studium/diplomarbeit/graphindex evaluation/lubmeva.txt";
-				String queriesFile = "/Users/gla/Projects/sp/evaluation/queries/lubm/PathQuery.txt";
-				List<Query> queries = ql.loadQueryFile(queriesFile);
-				
-				for (Query q : queries) {
-					if (!q.getName().equals("q100"))
-						continue;
-					log.debug("--------------------------------------------");
-					log.debug("query: " + q.getName());
-					log.debug(q);
-					qe.evaluate(q);
-//					break;
-				}
+				log.debug("--------------------------------------------");
+				log.debug("query: " + q.getName());
+				log.debug(q);
+				List<String[]> results = qe.evaluate(q);
+				log.info("query " + q.getName() + ": " + results.size() + " results");
 			}
 			
 			Timings t = qe.getT();
 			StatisticsCollector sc = new StatisticsCollector();
 			sc.addTimings(t);
 			sc.logStats();
-			
-//			GTable<String> res = ls.getTable(null, "http://example.org/simple#k", null);
-//			for (String[] row : res) {
-//				for (String s : row)
-//					System.out.print(s + " ");
-//				System.out.println();
-//			}
 			
 			ls.close();
 		}

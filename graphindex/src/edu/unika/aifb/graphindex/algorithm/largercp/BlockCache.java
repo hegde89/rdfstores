@@ -101,6 +101,8 @@ public class BlockCache {
 		try {
 			DatabaseEntry out = new DatabaseEntry();
 			m_nodeDb.get(null, new DatabaseEntry(node.getBytes()), out, null);
+			if (out.getData() == null)
+				System.out.println(node);
 			return m_blocks.get(Util.bytesToInt(out.getData()));
 		} catch (DatabaseException e) {
 			e.printStackTrace();
@@ -112,6 +114,10 @@ public class BlockCache {
 		try {
 			DatabaseEntry out = new DatabaseEntry();
 			m_nodeDb.get(null, new DatabaseEntry(node.getBytes()), out, null);
+			if (out.getData() == null)
+				System.out.println(node);
+			if (out.getData().length < 4)
+				System.out.println(node);
 			return "b" + Util.bytesToInt(out.getData());
 		} catch (DatabaseException e) {
 			e.printStackTrace();

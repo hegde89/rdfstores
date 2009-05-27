@@ -62,10 +62,10 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		Set<String> constants = new HashSet<String>();
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
-				qe.visited(edge);
-				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
-			}
+//			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
+//				qe.imVisited(edge);
+//				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
+//			}
 		}
 
 		// TODO modify SIGMatcher to work with partial matches

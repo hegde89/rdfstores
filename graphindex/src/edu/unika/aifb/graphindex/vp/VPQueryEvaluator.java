@@ -580,6 +580,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			List<String[]> result = new ArrayList<String[]>();
 			Set<String> sigs = new HashSet<String>();
 			GTable<String> table = results.get(0).getResult();
+//			log.debug(table.toDataString(500));
 			int[] cols = new int [q.getSelectVariables().size()];
 			for (int i = 0; i < q.getSelectVariables().size(); i++)
 				cols[i] = table.getColumn(q.getSelectVariables().get(i));

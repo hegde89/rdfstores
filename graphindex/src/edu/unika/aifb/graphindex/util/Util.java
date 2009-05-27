@@ -362,7 +362,11 @@ public class Util {
 		return !isVariable(label);
 	}
 	
+	public static boolean isDataValue(String label) {
+		return !isEntity(label);
+	}
+	
 	public static boolean isEntity(String label) {
-		return label.startsWith("http") || label.startsWith("_:");
+		return label.startsWith("http") || label.startsWith("_:") || label.startsWith("ttp://");
 	}
 }

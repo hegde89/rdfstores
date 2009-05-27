@@ -38,6 +38,14 @@ public class EvaluationClass {
 		return m_empty;
 	}
 	
+	public Map<String,String> getMatches() {
+		return m_matches;
+	}
+	
+	public GTable<String> getMappings() {
+		return m_mappings;
+	}
+	
 	public void addMapping(String[] mapping) {
 		m_mappings.addRow(mapping);
 	}

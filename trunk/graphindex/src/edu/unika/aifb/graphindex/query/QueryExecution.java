@@ -219,6 +219,7 @@ public class QueryExecution {
 	}
 	
 	public void finished() {
-		log.info("compaction: " + m_rowsBeforeCompaction + " => " + m_result.rowCount());
+		if (m_result != null)
+			log.info("compaction: " + m_rowsBeforeCompaction + " => " + m_result.rowCount());
 	}
 } 

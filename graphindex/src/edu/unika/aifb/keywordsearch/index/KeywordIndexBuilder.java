@@ -45,7 +45,7 @@ public class KeywordIndexBuilder {
 	
 	private static final String SEPARATOR = "__";
 	
-	private static final int HOP = 5;  
+	private static final int HOP = 2;  
 	private static final int MAXFIELDLENGTH = 100;
 	
 	private IndexSearcher dataSearcher;

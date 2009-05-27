@@ -18,6 +18,8 @@ import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.TransformedGraph;
+import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
 public class IncrementalQueryEvaluator implements IQueryEvaluator {
 
@@ -25,8 +27,9 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 	private StructureIndex m_index;
 	private IndexGraphMatcher m_matcher;
 	private IndexMatchesValidator m_validator;
+	private EntitySearcher m_searcher;
 	
-	public IncrementalQueryEvaluator(StructureIndexReader reader) throws StorageException {
+	public IncrementalQueryEvaluator(StructureIndexReader reader, String keywordIndexDirectory) throws StorageException {
 		m_indexReader = reader;
 		m_index = reader.getIndex();
 		
@@ -36,12 +39,16 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		}
 
 		m_validator = new SmallIndexMatchesValidator(m_index, m_index.getCollector());
+		
+		m_searcher = new EntitySearcher(keywordIndexDirectory);
 	}
 	
 	public List<String[]> evaluate(Query q) throws StorageException {
 		Graph<QueryNode> queryGraph = q.getGraph();
+		TransformedGraph transformedGraph = new TransformedGraph(queryGraph);
 		
 		// step 1: entity search
+		transformedGraph = m_searcher.searchEntities(transformedGraph);
 		
 		// step 2: approximate structure matching
 		

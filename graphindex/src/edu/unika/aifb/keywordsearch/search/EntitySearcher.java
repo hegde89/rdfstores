@@ -25,6 +25,7 @@ import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.BooleanClause.Occur;
 
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -61,7 +62,14 @@ public class EntitySearcher {
 	
 	public TransformedGraph searchEntities(TransformedGraph graph) {
 		for(TransformedGraphNode node : graph.getNodes()) {
-			node.setEntities(searchEntities(node.getEntityQuery()));
+			if(node.getType() == TransformedGraphNode.ENTITY_QUERY_NODE) {
+				Map<String, Collection<String>> queries = node.getAttributeQueries();
+				if(queries != null && queries.keySet().size() != 0)
+					node.setEntities(searchEntities(queries));
+			}	
+			else if(node.getType() == TransformedGraphNode.ENTITY_NODE) {
+				node.setEntities(searchEntities(node.getUriQuery()));
+			}	
 		}
 		
 		return graph;
@@ -74,6 +82,14 @@ public class EntitySearcher {
 		searchAttributes(searcher, queries.keySet(), attributes);
 		if(attributes != null && attributes.size() != 0)
 			searchEntitiesByAttributeVauleCompounds(searcher, queries, attributes, entities);
+		
+		return entities;
+	}
+	
+	public Collection<KeywordElement> searchEntities(String uriQuery) {
+		Collection<KeywordElement> entities = new HashSet<KeywordElement>();
+		
+		searchEntitiesByUri(searcher, uriQuery, entities);
 		
 		return entities;
 	}
@@ -157,6 +173,39 @@ public class EntitySearcher {
 		return result;
 	}
 	
+	private void searchEntitiesByUri(IndexSearcher searcher, String query, Collection<KeywordElement> entities) {
+		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, query));
+		try {
+			Map<Integer, Float> docIdsAndScores = getDocumentIds(tq);
+			Set<String> loadFieldNames = new HashSet<String>();
+		    loadFieldNames.add(Constant.URI_FIELD);
+		    loadFieldNames.add(Constant.TYPE_FIELD);
+		    loadFieldNames.add(Constant.EXTENSION_FIELD);
+		    Set<String> lazyFieldNames = new HashSet<String>();
+		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
+		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
+			
+		    for(Integer docId : docIdsAndScores.keySet()) {
+		    	Document doc = reader.document(docId, fieldSelector);
+		    	float score = docIdsAndScores.get(docId);
+		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
+				if(type == null) {
+					System.err.println("type is null!");
+					continue;
+				}
+
+				if(type.equals(TypeUtil.ENTITY)){
+					IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+					KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+					entities.add(ele);
+				}
+		    }
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	private void searchEntitiesByAttributeVauleCompounds(IndexSearcher searcher, Map<String, Collection<String>> queries, 
 			Map<String, Collection<String>> attributes, Collection<KeywordElement> entities) {
 		BooleanQuery entityQuery = new BooleanQuery(); 
@@ -205,18 +254,16 @@ public class EntitySearcher {
 		    for(Integer docId : docIdsAndScores.keySet()) {
 		    	Document doc = reader.document(docId, fieldSelector);
 		    	float score = docIdsAndScores.get(docId);
-		    	if(score >= ENTITY_THRESHOLD){
-		    		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
-					if(type == null) {
-						System.err.println("type is null!");
-						continue;
-					}
+		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
+				if(type == null) {
+					System.err.println("type is null!");
+					continue;
+				}
 
-					if(type.equals(TypeUtil.ENTITY)){
-						IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-						KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
-						result.add(ele);
-					}
+				if(type.equals(TypeUtil.ENTITY)){
+					IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+					KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+					result.add(ele);
 				}
 		    }
 		}

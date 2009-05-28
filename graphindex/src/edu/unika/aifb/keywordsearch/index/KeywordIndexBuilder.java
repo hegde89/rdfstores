@@ -48,6 +48,11 @@ public class KeywordIndexBuilder {
 	private static int HOP;  
 	private static int MAXFIELDLENGTH = 50;
 	
+	/*
+	 * False positives will happen with probability 2<sup>-<var>NUMBER_HASHFUNCTION</var></sup>
+	 * */
+	private static int NUMBER_HASHFUNCTION = 5;
+	
 	private IndexSearcher dataSearcher;
 	private BlockCache  blockSearcher;
 	private String outputDir;
@@ -185,7 +190,7 @@ public class KeywordIndexBuilder {
 				doc.add(field);
 				
 				// indexing uri
-				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NO));
+				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.UN_TOKENIZED));
 				
 				// indexing extension id 
 				String blockName = blockSearcher.getBlockName(uri);
@@ -223,7 +228,7 @@ public class KeywordIndexBuilder {
 				
 				// indexing reachable entities
 				Set<String> reachableEntities = computeReachableEntities(uri);
-				BloomFilter bf = new BloomFilter(reachableEntities.size());
+				BloomFilter bf = new BloomFilter(reachableEntities.size(), NUMBER_HASHFUNCTION);
 				for(String entity : reachableEntities){
 					bf.add(entity);
 				} 
@@ -340,7 +345,7 @@ public class KeywordIndexBuilder {
 		currentLayer.add(entityUri);
 		
 		int i = 0;
-		while(i <= HOP && !currentLayer.isEmpty()) {
+		while(i < HOP && !currentLayer.isEmpty()) {
 			for(String entity : currentLayer) {
 				Set<String> neighbors = computeNeighbors(entity);
 				if(neighbors != null && neighbors.size() != 0) {

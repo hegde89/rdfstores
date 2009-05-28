@@ -1,19 +1,15 @@
 package edu.unika.aifb.keywordsearch.impl;
 
-import it.unimi.dsi.util.BloomFilter;
-
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.StructureGraphUtil;
 import edu.unika.aifb.keywordsearch.api.IAttributeValueCompound;
 import edu.unika.aifb.keywordsearch.api.IEntity;
 import edu.unika.aifb.keywordsearch.api.INamedConcept;
 import edu.unika.aifb.keywordsearch.api.IValue;
 
-public class Entity implements IEntity {
+public class Entity extends EntityComparator implements IEntity {
 
 	/**
 	 * 

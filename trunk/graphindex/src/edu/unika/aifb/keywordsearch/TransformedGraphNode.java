@@ -7,79 +7,105 @@ import java.util.Map;
 
 public class TransformedGraphNode {
 	
-	private int nodeId;
-	private Map<Integer,Integer> distances;
-	private Map<String, Collection<String>> entityQuery;
-	private Collection<TransformedGraphNode> neighbors;
-	private Collection<KeywordElement> entities;
-	private int maxDistance;
+	public static final int ENTITY_QUERY_NODE = 0;
+	public static final int ENTITY_NODE = 1;
+	public static final int CONCEPT_NODE = 2;
 	
-	public TransformedGraphNode(int node) {
-		this.nodeId = node;
-		this.distances = new HashMap<Integer, Integer>();
-		this.entityQuery = new HashMap<String, Collection<String>>();
-		this.neighbors = new HashSet<TransformedGraphNode>();
-		this.maxDistance = 0;
+	private int m_type;
+	
+	private int m_nodeId;
+	private String m_name;
+	private Map<Integer,Integer> m_distances;
+	private Map<String, Collection<String>> m_attributeQueries;
+	private Collection<TransformedGraphNode> m_neighbors;
+	private Collection<KeywordElement> m_entities;
+	private int m_maxDistance;
+	
+	public TransformedGraphNode(int node, String name, int type) {
+		this.m_nodeId = node;
+		this.m_name = name;
+		this.m_type = type;
+		this.m_distances = new HashMap<Integer, Integer>();
+		this.m_attributeQueries = new HashMap<String, Collection<String>>();
+		this.m_neighbors = new HashSet<TransformedGraphNode>();
+		this.m_maxDistance = 0;
 	}
 	
 	public int getNodeId() {
-		return this.nodeId;
+		return this.m_nodeId;
+	}
+	
+	public String getNodeName() {
+		return m_name;
+	}
+	
+	public int getType() {
+		return m_type; 
 	}
 	
 	public void setEntities(Collection<KeywordElement> entities) {
-		this.entities = entities;
+		this.m_entities = entities;
 	}
 	
 	public Collection<KeywordElement> getEntities() {
-		return this.entities;
+		return this.m_entities;
 	} 
 	
-	public void addEntityQuery(String predicate, String object) {
-		Collection<String> coll = this.entityQuery.get(predicate);
+	public void addAttributeQuery(String predicate, String object) {
+		Collection<String> coll = this.m_attributeQueries.get(predicate);
 		if(coll == null) {
 			coll = new HashSet<String>();
-			entityQuery.put(predicate, coll);
+			m_attributeQueries.put(predicate, coll);
 		}
 		coll.add(object);
 	}
 	
-	public Map<String, Collection<String>> getEntityQuery() {
-		return this.entityQuery;
+	public Map<String, Collection<String>> getAttributeQueries() {
+		return this.m_attributeQueries;
+	}
+	
+	public String getUriQuery() {
+		if(m_type == ENTITY_NODE)
+			return m_name;
+		else 
+			return null;
 	}
 	
 	public void setDistance(int nodeId, int dis) {
-		if(!distances.containsKey(nodeId)) {
-			distances.put(nodeId, dis);
-			if(dis > maxDistance)
-				maxDistance = dis;
+		if(!m_distances.containsKey(nodeId)) {
+			m_distances.put(nodeId, dis);
+			if(dis > m_maxDistance)
+				m_maxDistance = dis;
 		}	
 	}
 	
 	public int getDistance(int nodeId) {
-		return distances.get(nodeId); 
+		return m_distances.get(nodeId); 
 	}
 	
 	public int getMaxDistance() {
-		return maxDistance;
+		return m_maxDistance;
 	}
 	
 	public void addNeighbor(TransformedGraphNode node) {
-		this.neighbors.add(node);
+		this.m_neighbors.add(node);
 	}
 	
 	public Collection<TransformedGraphNode> getNeighbors() {
-		return this.neighbors;
+		return this.m_neighbors;
 	}
 	
-	public int getEntitySize() {
-		return entities.size();
+	public int getNumOfEntities() {
+		if(m_entities == null)
+			return 0;
+		return m_entities.size();
 	}
 	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + new Integer(nodeId).hashCode();
+		result = prime * result + new Integer(m_nodeId).hashCode();
 		return result;
 	}
 
@@ -92,7 +118,7 @@ public class TransformedGraphNode {
 		if (getClass() != obj.getClass())
 			return false;
 		TransformedGraphNode other = (TransformedGraphNode)obj;
-		if (nodeId != other.getNodeId())
+		if (m_nodeId != other.getNodeId())
 			return false;
 		return true;
 	}

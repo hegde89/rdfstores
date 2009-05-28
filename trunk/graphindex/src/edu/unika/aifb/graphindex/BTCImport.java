@@ -73,6 +73,10 @@ public class BTCImport {
 			.withRequiredArg().ofType(String.class);
 		op.accepts("q", "query name")
 			.withRequiredArg().ofType(String.class);
+		op.accepts("nk", "neighborhood distance")
+			.withRequiredArg().ofType(Integer.class);
+		op.accepts("bk", "bisim path length")
+			.withRequiredArg().ofType(Integer.class);
 		
 		OptionSet os = op.parse(args);
 		
@@ -90,6 +94,8 @@ public class BTCImport {
 		String spDirectory = outputDirectory + "/sidx";
 		String bdbDirectory = outputDirectory + "/bdb";
 		String keywordIndexDirectory = outputDirectory + "/keyword";
+		int neighborhoodDistance = os.has("nk") ? (Integer)os.valueOf("nk") : 2;
+		int pathLength = os.has("bk") ? (Integer)os.valueOf("bk") : 10;
 		
 		log.debug(Util.memory());
 		
@@ -196,7 +202,7 @@ public class BTCImport {
 
 			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
 			rcp.setIgnoreDataValues(true);
-			rcp.createIndexGraph(10);
+			rcp.createIndexGraph(pathLength);
 
 			gs.close();
 			env.close();
@@ -334,8 +340,7 @@ public class BTCImport {
 
 			Environment env = new Environment(new File(bdbDirectory), config);
 			
-			int hop = 2;
-			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env, hop); 
+			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory, gs, env, neighborhoodDistance); 
 			kb.indexKeywords();
 			
 			gs.close();

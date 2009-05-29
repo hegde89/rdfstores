@@ -9,7 +9,6 @@ public class TransformedGraphNode {
 	
 	public static final int ENTITY_QUERY_NODE = 0;
 	public static final int ENTITY_NODE = 1;
-	public static final int CONCEPT_NODE = 2;
 	
 	private int m_type;
 	
@@ -21,6 +20,11 @@ public class TransformedGraphNode {
 	private Collection<KeywordElement> m_entities;
 	private int m_maxDistance;
 	
+	private boolean m_isVisisted;
+	private TransformedGraphNode m_filter;
+	private int m_pathLength;
+	
+	
 	public TransformedGraphNode(int node, String name, int type) {
 		this.m_nodeId = node;
 		this.m_name = name;
@@ -29,6 +33,32 @@ public class TransformedGraphNode {
 		this.m_attributeQueries = new HashMap<String, Collection<String>>();
 		this.m_neighbors = new HashSet<TransformedGraphNode>();
 		this.m_maxDistance = 0;
+		this.m_isVisisted = false;
+		this.m_pathLength = -1;
+	}
+	
+	public void setPathLength(int length) {
+		m_pathLength = length;
+	}
+	
+	public int getPathLength() {
+		return m_pathLength;
+	}
+	
+	public void setFilter(TransformedGraphNode node) {
+		m_filter = node;
+	}
+	
+	public TransformedGraphNode getFilter() {
+		return m_filter;
+	} 
+	
+	public void setVisisted() {
+		m_isVisisted = true;
+	}
+	
+	public boolean isVisited() {
+		return m_isVisisted;
 	}
 	
 	public int getNodeId() {

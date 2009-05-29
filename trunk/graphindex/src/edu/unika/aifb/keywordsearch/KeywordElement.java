@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -20,7 +21,7 @@ import edu.unika.aifb.keywordsearch.impl.Relation;
 import edu.unika.aifb.keywordsearch.impl.NamedConcept;
 
 
-public class KeywordElement implements Serializable {
+public class KeywordElement extends ElementComparator implements Serializable {
 
 	/**
 	 * 
@@ -173,6 +174,15 @@ public class KeywordElement implements Serializable {
 		return bloomFilter;
 	}
 	
+	public Collection<KeywordElement> getReachable(Collection<KeywordElement> elements) {
+		Collection<KeywordElement> result = new ArrayList<KeywordElement>();
+		for(KeywordElement ele : elements) {
+			if(isReachable(ele))
+				result.add(ele);
+		}
+		return result;
+	}
+	
 	public boolean isReachable(IEntity entity) {
 		return getBloomFilter().contains(entity.getUri());
 	}
@@ -198,6 +208,18 @@ public class KeywordElement implements Serializable {
 		}
 		return true;
 	}
+	
+	public String getUri() {
+		return resource.getUri(); 
+	} 
+	
+	public String getExtensionId() {
+		if(resource instanceof Entity) {
+			return ((Entity)resource).getExtension(); 	
+		}
+		else 
+			return null;
+	} 
 		
 	public String toString(){
 		if(resource == null)return null;

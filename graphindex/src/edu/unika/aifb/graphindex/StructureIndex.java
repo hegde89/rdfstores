@@ -47,12 +47,15 @@ public class StructureIndex {
 	private Set<String> m_forwardEdges, m_backwardEdges;
 	private Map<String,Integer> m_objectCardinalities;
 	private List<IndexDescription> m_indexes;
-	private boolean m_ignoreDataValues = false;
+
+	private boolean m_createIGWithDataNodes = false;
+	private boolean m_indexDataNodes = true;
 	private int m_pathLength = -1;
 	private String m_metaFile;
 	
 	private static final String META_FILENAME = "index.yml";
-	public static final String OPT_IGNORE_DATA_VALUES = "ignore_data_values";
+	public static final String OPT_IG_WITH_DATA_NODES = "ig_with_data_nodes";
+	public static final String OPT_INDEX_DATA_NODES = "index_data_nodes";
 	public static final String OPT_PATH_LENGTH = "path_length";
 	public static final String OPT_INDEXES = "indexes";
 	
@@ -180,8 +183,12 @@ public class StructureIndex {
 		m_em.getExtensionStorage().clearCaches();
 	}
 
-	public boolean ignoreDataValues() {
-		return m_ignoreDataValues;
+	public boolean indexGraphWithDataNodes() {
+		return m_createIGWithDataNodes;
+	}
+	
+	public boolean indexDataNodes() {
+		return m_indexDataNodes;
 	}
 	
 	public int getPathLength() {
@@ -226,8 +233,10 @@ public class StructureIndex {
 
 	@SuppressWarnings("unchecked")
 	public void setOptions(Map options) throws FileNotFoundException {
-		if (options.containsKey(OPT_IGNORE_DATA_VALUES))
-			m_ignoreDataValues = (Boolean)options.get(OPT_IGNORE_DATA_VALUES);
+		if (options.containsKey(OPT_IG_WITH_DATA_NODES))
+			m_createIGWithDataNodes = (Boolean)options.get(OPT_IG_WITH_DATA_NODES);
+		if (options.containsKey(OPT_INDEX_DATA_NODES))
+			m_indexDataNodes = (Boolean)options.get(OPT_INDEX_DATA_NODES);
 		if (options.containsKey(OPT_PATH_LENGTH))
 			m_pathLength = (Integer)options.get(OPT_PATH_LENGTH);
 		if (options.containsKey(OPT_INDEXES)) {
@@ -240,7 +249,10 @@ public class StructureIndex {
 	@SuppressWarnings("unchecked")
 	private void readMetaData() throws FileNotFoundException {
 		Map meta = (Map)Yaml.load(new File(m_metaFile));
-		m_ignoreDataValues = (Boolean)meta.get(OPT_IGNORE_DATA_VALUES);
+		if (meta.get(OPT_IG_WITH_DATA_NODES) != null)
+			m_createIGWithDataNodes = (Boolean)meta.get(OPT_IG_WITH_DATA_NODES);
+		if (meta.get(OPT_INDEX_DATA_NODES) != null)
+			m_indexDataNodes = (Boolean)meta.get(OPT_INDEX_DATA_NODES);
 		if (meta.get(OPT_PATH_LENGTH) != null)
 			m_pathLength = (Integer)meta.get(OPT_PATH_LENGTH);
 		m_indexes = toIndexDescriptions((List<Map<String,String>>)meta.get(OPT_INDEXES));
@@ -249,7 +261,8 @@ public class StructureIndex {
 	@SuppressWarnings("unchecked")
 	private void writeMetaData() throws FileNotFoundException {
 		Map options = new HashMap();
-		options.put(OPT_IGNORE_DATA_VALUES, m_ignoreDataValues);
+		options.put(OPT_IG_WITH_DATA_NODES, m_createIGWithDataNodes);
+		options.put(OPT_INDEX_DATA_NODES, m_indexDataNodes);
 		options.put(OPT_PATH_LENGTH, m_pathLength);
 		List<Map<String,String>> indexMaps = new ArrayList<Map<String,String>>();
 		for (IndexDescription idx : m_indexes)

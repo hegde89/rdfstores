@@ -51,10 +51,10 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 	
 	public List<String[]> evaluate(Query q) throws StorageException {
 		Graph<QueryNode> queryGraph = q.getGraph();
-//		TransformedGraph transformedGraph = new TransformedGraph(queryGraph);
+		TransformedGraph transformedGraph = new TransformedGraph(queryGraph);
 		
 		// step 1: entity search
-//		transformedGraph = m_searcher.searchEntities(transformedGraph);
+		transformedGraph = m_searcher.searchEntities(transformedGraph);
 		
 		// step 2: approximate structure matching
 		

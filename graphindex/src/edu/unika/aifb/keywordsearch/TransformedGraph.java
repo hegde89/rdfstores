@@ -1,5 +1,6 @@
 package edu.unika.aifb.keywordsearch;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,14 +19,10 @@ import edu.unika.aifb.keywordsearch.impl.Entity;
 
 public class TransformedGraph {
 	
-	private Map<Integer,TransformedGraphNode> m_nodeObjects;
-	private Map<String, Integer> m_name2id;
-	private Set<String> m_nodesWithNoEntities;
+	private Map<String,TransformedGraphNode> m_nodeObjects;
 	
 	public TransformedGraph(Graph<QueryNode> queryGraph) {
-		m_nodeObjects = new HashMap<Integer,TransformedGraphNode>();
-		m_name2id = new HashMap<String, Integer>();
-		m_nodesWithNoEntities = new HashSet<String>();
+		m_nodeObjects = new HashMap<String,TransformedGraphNode>();
 
 		Object[] os = queryGraph.nodes();
 		QueryNode[] nodes = new QueryNode [os.length];
@@ -39,7 +36,7 @@ public class TransformedGraph {
 				TransformedGraphNode tfNode = m_nodeObjects.get(i);
 				if(tfNode == null) {
 					tfNode = new TransformedGraphNode(i, nodes[i].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
-					m_nodeObjects.put(i, tfNode);
+					m_nodeObjects.put(nodes[i].getName(), tfNode);
 				}
 				Map<Integer,List<GraphEdge<QueryNode>>> succEdges = queryGraph.successorEdges(i);
 				for(Integer suc : succEdges.keySet()) {
@@ -47,7 +44,7 @@ public class TransformedGraph {
 						TransformedGraphNode sucTfNode = m_nodeObjects.get(suc);
 						if(sucTfNode == null) {
 							sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
-							m_nodeObjects.put(suc, sucTfNode);
+							m_nodeObjects.put(nodes[suc].getName(), sucTfNode);
 						}
 						tfNode.addNeighbor(sucTfNode);
 						sucTfNode.addNeighbor(tfNode);
@@ -55,13 +52,14 @@ public class TransformedGraph {
 					else if(Util.isEntity(nodes[suc].getName())) {
 						TransformedGraphNode sucTfNode = m_nodeObjects.get(suc);
 						if(sucTfNode == null) {
-							if(succEdges.get(suc).iterator().next().getLabel().equals(RDF.TYPE.stringValue())) {
-								sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.CONCEPT_NODE);
-								m_nodeObjects.put(suc, sucTfNode);
+							boolean isConcept = false;
+							for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {
+								if(edge.getLabel().equals(RDF.TYPE.stringValue()))
+									isConcept = true;
 							}
-							else {
+							if(isConcept == false) {
 								sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.ENTITY_NODE);
-								m_nodeObjects.put(suc, sucTfNode);
+								m_nodeObjects.put(nodes[suc].getName(), sucTfNode);
 							}
 						}
 						tfNode.addNeighbor(sucTfNode);
@@ -80,7 +78,7 @@ public class TransformedGraph {
 						TransformedGraphNode predTfNode = m_nodeObjects.get(pred);
 						if(predTfNode == null) {
 							predTfNode = new TransformedGraphNode(pred, nodes[pred].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
-							m_nodeObjects.put(pred, predTfNode);
+							m_nodeObjects.put(nodes[pred].getName(), predTfNode);
 						}
 						tfNode.addNeighbor(predTfNode);
 						predTfNode.addNeighbor(tfNode);
@@ -89,7 +87,7 @@ public class TransformedGraph {
 						TransformedGraphNode predTfNode = m_nodeObjects.get(pred);
 						if(predTfNode == null) {
 							predTfNode = new TransformedGraphNode(pred, nodes[pred].getName(), TransformedGraphNode.ENTITY_NODE);
-							m_nodeObjects.put(pred, predTfNode);
+							m_nodeObjects.put(nodes[pred].getName(), predTfNode);
 						}
 						tfNode.addNeighbor(predTfNode);
 						predTfNode.addNeighbor(tfNode);
@@ -133,42 +131,8 @@ public class TransformedGraph {
 		return m_nodeObjects.values();
 	}
 	
-	public TransformedGraphNode computeCentricNode() {
-		int minDistance = 0;
-		int minNumOfEntities = 0;
-		TransformedGraphNode centricNode = null; 
-		for(TransformedGraphNode node : getNodes()) {
-			int size = node.getNumOfEntities();
-			if(size != 0) {
-				if(node.getMaxDistance() < minDistance || minDistance == 0) {
-					minDistance = node.getMaxDistance();
-					minNumOfEntities = size; 
-					centricNode = node; 
-				}
-				else if(node.getMaxDistance() == minDistance) {
-					if(size < minNumOfEntities || minNumOfEntities == 0) {
-						minNumOfEntities = size;
-						centricNode = node; 
-					}
-				}
-			}
-			else {
-				m_nodesWithNoEntities.add(node.getNodeName());
-			}
-		}
-		
-		return centricNode;
-	}
-	
-	public GTable<Entity> approximateStructureMatching() {
-		TransformedGraphNode startNode = computeCentricNode();
-		if(startNode == null)
-			return null;
-		
-		
-		
-		return null;
-		
+	public Collection<String> getNodeNames() {
+		return m_nodeObjects.keySet();
 	}
 
 }

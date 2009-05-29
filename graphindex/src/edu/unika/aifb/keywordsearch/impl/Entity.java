@@ -9,7 +9,7 @@ import edu.unika.aifb.keywordsearch.api.IEntity;
 import edu.unika.aifb.keywordsearch.api.INamedConcept;
 import edu.unika.aifb.keywordsearch.api.IValue;
 
-public class Entity extends EntityComparator implements IEntity {
+public class Entity implements IEntity {
 
 	/**
 	 * 

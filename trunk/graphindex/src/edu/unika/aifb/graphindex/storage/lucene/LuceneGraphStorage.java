@@ -59,7 +59,14 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	public int m_docCacheHits;
 	
 	public LuceneGraphStorage(String directory) {
+		this(directory, 500000);
+	}
+	
+	public LuceneGraphStorage(String directory, int cacheSize) {
 		m_directory = directory;
+		m_docCache = new LRUCache<Integer,Document>(cacheSize);
+		m_imageZeroCache = new LRUCache<String,Boolean>(cacheSize);
+		m_preimageZeroCache = new LRUCache<String,Boolean>(cacheSize);
 	}
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
@@ -121,7 +128,7 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			}
 		}
 	}
-
+	
 	private void reopen() throws CorruptIndexException, IOException {
 		m_reader = m_reader.reopen();
 		m_searcher = new IndexSearcher(m_reader);

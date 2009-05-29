@@ -115,9 +115,7 @@ public class BlockCache {
 			DatabaseEntry out = new DatabaseEntry();
 			m_nodeDb.get(null, new DatabaseEntry(node.getBytes()), out, null);
 			if (out.getData() == null)
-				System.out.println(node);
-			if (out.getData().length < 4)
-				System.out.println(node);
+				return null;
 			return "b" + Util.bytesToInt(out.getData());
 		} catch (DatabaseException e) {
 			e.printStackTrace();

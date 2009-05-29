@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -77,6 +78,7 @@ public class BTCImport {
 			.withRequiredArg().ofType(Integer.class);
 		op.accepts("bk", "bisim path length")
 			.withRequiredArg().ofType(Integer.class);
+		op.accepts("idxdata", "if specified, data nodes will be indexed");
 		
 		OptionSet os = op.parse(args);
 		
@@ -94,6 +96,7 @@ public class BTCImport {
 		String spDirectory = outputDirectory + "/sidx";
 		String bdbDirectory = outputDirectory + "/bdb";
 		String keywordIndexDirectory = outputDirectory + "/keyword";
+		boolean indexDataValues = os.has("idxdata");
 		int neighborhoodDistance = os.has("nk") ? (Integer)os.valueOf("nk") : 2;
 		int pathLength = os.has("bk") ? (Integer)os.valueOf("bk") : 10;
 		
@@ -159,15 +162,20 @@ public class BTCImport {
 		}
 		
 		if (action.equals("dataprops")) {
-			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
+			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory, 10);
 			gs.initialize(false, true);
 			
 			Set<String> properties = gs.getEdges();
 			Set<String> dataProperties = new HashSet<String>();
+			log.debug("properties: " + properties.size());
+			int done = 0;
 			for (String property : properties) {
 				log.debug(property);
 				if (!gs.hasEntityNodes(1, property))
 					dataProperties.add(property);
+				done++;
+				if (done % 10000 == 0)
+					log.debug("processed: " + done + ", dataprops: " + dataProperties.size());
 			}
 			
 			PrintWriter pw = new PrintWriter(new FileWriter(outputDirectory + "/dataproperties"));
@@ -214,6 +222,7 @@ public class BTCImport {
 			gs.setStoreGraphName(false);
 			
 			Set<String> properties = Util.readEdgeSet(outputDirectory + "/properties");
+			Set<String> dataProperties = Util.readEdgeSet(outputDirectory + "/dataproperties");
 			
 			File bdb;
 			if (os.has("bdb"))
@@ -233,7 +242,8 @@ public class BTCImport {
 			idxWriter.setBackwardEdgeSet(properties);
 			idxWriter.setForwardEdgeSet(properties);
 			Map options = new HashMap();
-			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, true);
+			options.put(StructureIndex.OPT_IG_WITH_DATA_NODES, false);
+			options.put(StructureIndex.OPT_INDEX_DATA_NODES, indexDataValues);
 			options.put(StructureIndex.OPT_PATH_LENGTH, 10);
 			idxWriter.setOptions(options);
 			
@@ -245,6 +255,7 @@ public class BTCImport {
 			Set<String> indexEdges = new HashSet<String>();
 			int triples = 0;
 			for (String property : properties) {
+				log.debug("object prop: " + property);
 				for (Iterator<String[]> ti = gs.iterator(property); ti.hasNext(); ) {
 					String[] triple = ti.next();
 					String s = triple[0];
@@ -276,6 +287,33 @@ public class BTCImport {
 			}
 			
 			log.debug("index graph edges: " + indexEdges.size());
+			
+			if (indexDataValues) {
+				triples = 0;
+				for (String property : dataProperties) {
+					log.debug("data prop: " + property);
+					for (Iterator<String[]> ti = gs.iterator(property); ti.hasNext(); ) {
+						String[] triple = ti.next();
+						String s = triple[0];
+						String o = triple[2];
+						
+						String subExt = bc.getBlockName(s);
+						
+						if (subExt == null)
+							continue;
+						
+						// add triples to extensions
+						es.addTriples(IndexDescription.PSESO, subExt, property, s, Arrays.asList(o));
+						es.addTriples(IndexDescription.POESS, subExt, property, o, Arrays.asList(s));
+						
+						triples++;
+						
+						if (triples % 100000 == 0)
+							log.debug("triples: " + triples);
+					}
+				}
+				log.debug("data triples: " + triples);
+			}
 			
 			index.addIndex(IndexDescription.PSESO);
 			index.addIndex(IndexDescription.POESS);
@@ -325,6 +363,21 @@ public class BTCImport {
 			}
 			
 			reader.close();
+		}
+		
+		// for keystruc
+		if (action.equals("keywordquery")) {
+			Scanner scanner = new Scanner(System.in);
+			while (true) {
+				System.out.println("Keyword query:");
+				String line = scanner.nextLine();
+				String tokens[] = line.split(" ");
+				List<String> keywordList = new ArrayList<String>();
+				for (int i = 0; i < tokens.length; i++) {
+					keywordList.add(tokens[i]);
+				}
+			}
+			
 		}
 		
 		if (action.equals("keywordindex")) {

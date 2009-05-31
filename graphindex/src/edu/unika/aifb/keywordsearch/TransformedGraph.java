@@ -33,7 +33,7 @@ public class TransformedGraph {
 		
 		for (int i = 0; i < length; i++) {
 			if(Util.isVariable(nodes[i].getName())) {
-				TransformedGraphNode tfNode = m_nodeObjects.get(i);
+				TransformedGraphNode tfNode = m_nodeObjects.get(nodes[i].getName());
 				if(tfNode == null) {
 					tfNode = new TransformedGraphNode(i, nodes[i].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
 					m_nodeObjects.put(nodes[i].getName(), tfNode);
@@ -41,7 +41,7 @@ public class TransformedGraph {
 				Map<Integer,List<GraphEdge<QueryNode>>> succEdges = queryGraph.successorEdges(i);
 				for(Integer suc : succEdges.keySet()) {
 					if(Util.isVariable(nodes[suc].getName())) {
-						TransformedGraphNode sucTfNode = m_nodeObjects.get(suc);
+						TransformedGraphNode sucTfNode = m_nodeObjects.get(nodes[suc].getName());
 						if(sucTfNode == null) {
 							sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
 							m_nodeObjects.put(nodes[suc].getName(), sucTfNode);
@@ -50,12 +50,14 @@ public class TransformedGraph {
 						sucTfNode.addNeighbor(tfNode);
 					}	
 					else if(Util.isEntity(nodes[suc].getName())) {
-						TransformedGraphNode sucTfNode = m_nodeObjects.get(suc);
+						TransformedGraphNode sucTfNode = m_nodeObjects.get(nodes[suc].getName());
 						if(sucTfNode == null) {
 							boolean isConcept = false;
 							for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {
-								if(edge.getLabel().equals(RDF.TYPE.stringValue()))
+								if(edge.getLabel().equals(RDF.TYPE.stringValue())) {
 									isConcept = true;
+									break;
+								} 
 							}
 							if(isConcept == false) {
 								sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.ENTITY_NODE);
@@ -75,7 +77,7 @@ public class TransformedGraph {
 				Map<Integer,List<GraphEdge<QueryNode>>> predEdges = queryGraph.predecessorEdges(i);
 				for(Integer pred : predEdges.keySet()) {
 					if(Util.isVariable(nodes[pred].getName())) {
-						TransformedGraphNode predTfNode = m_nodeObjects.get(pred);
+						TransformedGraphNode predTfNode = m_nodeObjects.get(nodes[pred].getName());
 						if(predTfNode == null) {
 							predTfNode = new TransformedGraphNode(pred, nodes[pred].getName(), TransformedGraphNode.ENTITY_QUERY_NODE);
 							m_nodeObjects.put(nodes[pred].getName(), predTfNode);
@@ -84,7 +86,7 @@ public class TransformedGraph {
 						predTfNode.addNeighbor(tfNode);
 					}	
 					else if(Util.isEntity(nodes[pred].getName())) {
-						TransformedGraphNode predTfNode = m_nodeObjects.get(pred);
+						TransformedGraphNode predTfNode = m_nodeObjects.get(nodes[pred].getName());
 						if(predTfNode == null) {
 							predTfNode = new TransformedGraphNode(pred, nodes[pred].getName(), TransformedGraphNode.ENTITY_NODE);
 							m_nodeObjects.put(nodes[pred].getName(), predTfNode);

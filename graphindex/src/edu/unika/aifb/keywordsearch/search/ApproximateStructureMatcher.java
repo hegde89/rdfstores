@@ -2,10 +2,8 @@ package edu.unika.aifb.keywordsearch.search;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.data.GTable;
@@ -20,18 +18,18 @@ public class ApproximateStructureMatcher {
 	private TransformedGraph m_graph;
 	private Set<String> m_nodesWithNoEntities;
 	private TransformedGraphNode m_startNode;
-	private Map<KeywordElement, Collection<KeywordElement[]>> m_ele2rows;
+	private Set<KeywordElement[]> m_rows;
 	private GTable<KeywordElement> m_table;
 	private int m_columnSize;
+	
+	private boolean m_noResults = false;
 	
 	
 	public ApproximateStructureMatcher(TransformedGraph graph, int hops) {
 		m_graph = graph;
 		m_nodesWithNoEntities = new HashSet<String>();
-		m_ele2rows = new HashMap<KeywordElement, Collection<KeywordElement[]>>();
+		m_rows = new HashSet<KeywordElement[]>();
 		m_startNode = computeCentricNode();
-		m_startNode.setPathLength(0);
-		m_startNode.setFilter(m_startNode);
 		List<String> columnNames = new ArrayList<String>();
 		columnNames.addAll(graph.getNodeNames());
 		m_table = new GTable<KeywordElement>(columnNames);
@@ -70,42 +68,67 @@ public class ApproximateStructureMatcher {
 		return m_table.getColumn(node.getNodeName());
 	}
 	
-	public void addToRows(KeywordElement filterElement, Collection<KeywordElement> elements, int column) {
-		Collection<KeywordElement[]> rows = m_ele2rows.get(filterElement);
-		Collection<KeywordElement[]> newRows = new ArrayList<KeywordElement[]>();
-		for(KeywordElement[] row : rows) {
-			for(KeywordElement element : elements) {
-				KeywordElement[] newRow = (KeywordElement[])row.clone();
-				newRow[column] = element;
-				newRows.add(newRow);
+	public Collection<KeywordElement[]> getRows(KeywordElement element, int column) {
+		Collection<KeywordElement[]> rows = new ArrayList<KeywordElement[]>();
+		for(KeywordElement[] row : m_rows) {
+			if(row[column].equals(element))
+				rows.add(row);
+		}
+		return rows;
+	}
+	
+	public void addRows(KeywordElement filterElement, int filterColumn, Collection<KeywordElement> elements, int elementColumn) {
+		Collection<KeywordElement[]> rows = getRows(filterElement, filterColumn);
+		
+		if(elements.size() == 1) {
+			KeywordElement element = elements.iterator().next();
+			for(KeywordElement[] row : rows) {
+				row[elementColumn] = element;
 			}
 		}
-		m_ele2rows.remove(filterElement);
-		m_ele2rows.put(filterElement, newRows);
-		for(KeywordElement element : elements) {
-			m_ele2rows.put(element, newRows);
+		else {
+			Collection<KeywordElement[]> newRows = new ArrayList<KeywordElement[]>();
+			for(KeywordElement[] row : rows) {
+				for(KeywordElement element : elements) {
+					KeywordElement[] newRow = (KeywordElement[])row.clone();
+					newRow[elementColumn] = element;
+					newRows.add(newRow);
+				}
+			}
+			m_rows.removeAll(rows);
+			m_rows.addAll(newRows);
 		}
 	}
 	
-	public void removeRows(KeywordElement element) {
-		m_ele2rows.remove(element);
+	public void removeRows(KeywordElement element, int column) {
+		m_rows.removeAll(getRows(element, column));
 	}
 	
 	public void neighborhoodJoin(TransformedGraphNode filterNode, TransformedGraphNode node) {
 		if(filterNode.equals(node)) {
 		}
 		else {
-			Collection<KeywordElement> elementsToRemove = new ArrayList<KeywordElement>();
+			Collection<KeywordElement> removeFilterElements = new ArrayList<KeywordElement>();
+			Collection<KeywordElement> allJoinElements = new ArrayList<KeywordElement>();
 			Collection<KeywordElement> elements = node.getEntities();
+			
 			for(KeywordElement filterElement : filterNode.getEntities()) {
 				Collection<KeywordElement> joinElements = filterElement.getReachable(elements);
-				if(joinElements == null || joinElements.size() == 0)
-					elementsToRemove.add(filterElement);
-				else
-					addToRows(filterElement, joinElements, getColumn(node));
+				if(joinElements == null || joinElements.size() == 0) {
+					removeFilterElements.add(filterElement);
+					removeRows(filterElement, getColumn(filterNode));
+				}	
+				else {
+					allJoinElements.addAll(joinElements);
+					addRows(filterElement, getColumn(filterNode), joinElements, getColumn(node));
+				}	
 			}
-			for(KeywordElement elementToRemove : elementsToRemove)
-				removeRows(elementToRemove);
+			elements.retainAll(allJoinElements);
+			if(node.getNumOfEntities() == 0)
+				m_nodesWithNoEntities.add(filterNode.getNodeName());
+			filterNode.removeEntities(removeFilterElements);
+			if(filterNode.getNumOfEntities() == 0)
+				m_nodesWithNoEntities.add(filterNode.getNodeName());
 		}
 	}
 	
@@ -114,18 +137,23 @@ public class ApproximateStructureMatcher {
 		for(TransformedGraphNode neighbor : node.getNeighbors()) {
 			if(neighbor.isVisited() == true 
 					|| (m_startNode.getDistance(neighbor.getNodeId()) < node.getPathLength() + 1 
-							&& neighbor.getDistance(node.getFilter().getNodeId()) > m_hops))
+							&& (neighbor.getDistance(node.getFilter().getNodeId()) > m_hops 
+									|| m_nodesWithNoEntities.contains(node.getFilter().getNodeName()))))
 				continue;
+			
 			neighbor.setPathLength(node.getPathLength() + 1);
-			if(neighbor.getDistance(node.getFilter().getNodeId()) > m_hops)  {
-				if(!m_nodesWithNoEntities.contains(node))
+			if(neighbor.getDistance(node.getFilter().getNodeId()) > m_hops || m_nodesWithNoEntities.contains(node.getFilter().getNodeName()))  {
+				if(!m_nodesWithNoEntities.contains(node.getNodeName())) {
 					neighbor.setFilter(node);
-				else 
+				}	
+				else { 
 					neighbor.setFilter(neighbor);
+				}	
 			}
-			else 
+			else {
 				neighbor.setFilter(node.getFilter());
-			if(!m_nodesWithNoEntities.contains(neighbor))
+			}	
+			if(!m_nodesWithNoEntities.contains(neighbor.getNodeName()))
 				neighborhoodJoin(neighbor.getFilter(), neighbor);
 			DFS(neighbor);	
 		}
@@ -135,24 +163,20 @@ public class ApproximateStructureMatcher {
 		if(m_startNode == null)
 			return null;
 		
+		m_startNode.setPathLength(0);
+		m_startNode.setFilter(m_startNode);
+		
 		int column = getColumn(m_startNode);
 		for(KeywordElement ele : m_startNode.getEntities()) {
 			KeywordElement[] row = new KeywordElement[m_columnSize];
 			row[column] = ele;
-			Collection<KeywordElement[]> coll = m_ele2rows.get(ele);
-			if(coll == null) {
-				coll = new ArrayList<KeywordElement[]>();
-				m_ele2rows.put(ele, coll);
-			}
-			coll.add(row);
+			m_rows.add(row);
 		}
 		
 		DFS(m_startNode);
 		
 		List<KeywordElement[]> list = new ArrayList<KeywordElement[]>();
-		for(Collection<KeywordElement[]> coll : m_ele2rows.values()) {
-			list.addAll(coll);
-		}
+		list.addAll(m_rows);
 		m_table.setRows(list);
 		return m_table;
 		

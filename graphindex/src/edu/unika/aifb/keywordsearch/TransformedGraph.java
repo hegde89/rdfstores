@@ -50,22 +50,22 @@ public class TransformedGraph {
 						sucTfNode.addNeighbor(tfNode);
 					}	
 					else if(Util.isEntity(nodes[suc].getName())) {
-						TransformedGraphNode sucTfNode = m_nodeObjects.get(nodes[suc].getName());
-						if(sucTfNode == null) {
-							boolean isConcept = false;
-							for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {
-								if(edge.getLabel().equals(RDF.TYPE.stringValue())) {
-									isConcept = true;
-									break;
-								} 
-							}
-							if(isConcept == false) {
+						boolean isConcept = false;
+						for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {
+							if(edge.getLabel().equals(RDF.TYPE.stringValue())) {
+								isConcept = true;
+								break;
+							} 
+						}
+						if (isConcept == false) {
+							TransformedGraphNode sucTfNode = m_nodeObjects.get(nodes[suc].getName());
+							if (sucTfNode == null) {
 								sucTfNode = new TransformedGraphNode(suc, nodes[suc].getName(), TransformedGraphNode.ENTITY_NODE);
 								m_nodeObjects.put(nodes[suc].getName(), sucTfNode);
 							}
+							tfNode.addNeighbor(sucTfNode);
+							sucTfNode.addNeighbor(tfNode);
 						}
-						tfNode.addNeighbor(sucTfNode);
-						sucTfNode.addNeighbor(tfNode);
 					}
 					else if(Util.isConstant(nodes[suc].getName())) {
 						for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {

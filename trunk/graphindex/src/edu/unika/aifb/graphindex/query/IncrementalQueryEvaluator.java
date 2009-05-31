@@ -21,7 +21,9 @@ import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.TransformedGraph;
+import edu.unika.aifb.keywordsearch.search.ApproximateStructureMatcher;
 import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
 public class IncrementalQueryEvaluator implements IQueryEvaluator {
@@ -57,6 +59,8 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		transformedGraph = m_searcher.searchEntities(transformedGraph);
 		
 		// step 2: approximate structure matching
+		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, 2);
+		GTable<KeywordElement> result = asm.matching();
 		
 		// result of ASM step, mapping query node labels to extensions
 		// list of entities with associated extensions

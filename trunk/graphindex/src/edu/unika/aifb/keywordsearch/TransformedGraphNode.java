@@ -81,6 +81,16 @@ public class TransformedGraphNode {
 		return this.m_entities;
 	} 
 	
+	public void removeEntity(KeywordElement element) {
+		if(m_entities != null)
+			m_entities.remove(element);
+	}
+	
+	public void removeEntities(Collection<KeywordElement> elements) {
+		if(m_entities != null)
+			m_entities.removeAll(elements);
+	}
+	
 	public void addAttributeQuery(String predicate, String object) {
 		Collection<String> coll = this.m_attributeQueries.get(predicate);
 		if(coll == null) {

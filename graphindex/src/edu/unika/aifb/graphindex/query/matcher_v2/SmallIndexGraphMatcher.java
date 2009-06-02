@@ -314,6 +314,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			m_qe.setIndexMatches(resultTables.get(0));
 		else
 			m_qe.setIndexMatches(null);
+		log.debug(m_qe.getIndexMatches().toDataString());
 	}
 	
 	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {

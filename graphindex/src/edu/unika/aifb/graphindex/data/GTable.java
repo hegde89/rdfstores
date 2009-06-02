@@ -255,13 +255,19 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		return toDataString(rowCount());
 	}
 	
-	public String toDataString(int rows) {
+	public String toDataString(boolean printHeader) {
+		return toDataString(rowCount(), printHeader);
+	}
+	
+	public String toDataString(int rows, boolean printHeader) {
 		StringBuilder sb = new StringBuilder();
 		List<String> sorted = getColumnNamesSorted();
-		for (String col : sorted) {
-			sb.append(col).append("\t");
+		if (printHeader) {
+			for (String col : sorted) {
+				sb.append(col).append("\t");
+			}
+			sb.append("\n");
 		}
-		sb.append("\n");
 		
 		for (int i = 0; i < Math.min(rows, m_rows.size()); i++) {
 			for (String col : sorted)
@@ -270,6 +276,10 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		}
 		
 		return sb.toString();
+	}
+	
+	public String toDataString(int rows) {
+		return toDataString(rows, true);
 	}
 	
 	public String toString() {

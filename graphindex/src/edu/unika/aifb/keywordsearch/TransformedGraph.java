@@ -129,6 +129,10 @@ public class TransformedGraph {
 		}
 	}
 	
+	public TransformedGraphNode getNode(String label) {
+		return m_nodeObjects.get(label);
+	}
+	
 	public Collection<TransformedGraphNode> getNodes() {
 		return m_nodeObjects.values();
 	}

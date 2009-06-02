@@ -63,32 +63,32 @@ public class QueryEvaluator implements IQueryEvaluator {
 		for (String indexGraph : m_indexReader.getGraphNames()) {
 			QueryExecution qe = new QueryExecution(query, m_index);
 			
-			VPEvaluator vpe = new VPEvaluator();
-			vpe.setQueryExecution(qe);
-			vpe.evaluate();
+//			VPEvaluator vpe = new VPEvaluator();
+//			vpe.setQueryExecution(qe);
+//			vpe.evaluate();
 			
-//			IndexGraphMatcher matcher = m_matchers.get(indexGraph);
-//			
-//			matcher.setTimings(m_timings);
-//			matcher.setQueryExecution(qe);
-//
-//			GTable.timings = m_timings;
-//			Tables.timings = m_timings;
-//			
-//			m_timings.start(Timings.STEP_IM);
-//			matcher.match();
-//			m_timings.end(Timings.STEP_IM);
-//			
-//			m_index.getCollector().logStats();
-//			
-//			if (qe.getIndexMatches() == null || qe.getIndexMatches().rowCount() == 0)
-//				continue;
-//			
-//			m_mlv.setQueryExecution(qe);
-//			
-//			m_timings.start(Timings.STEP_DM);
-//			m_mlv.validateIndexMatches();
-//			m_timings.end(Timings.STEP_DM);
+			IndexGraphMatcher matcher = m_matchers.get(indexGraph);
+			
+			matcher.setTimings(m_timings);
+			matcher.setQueryExecution(qe);
+
+			GTable.timings = m_timings;
+			Tables.timings = m_timings;
+			
+			m_timings.start(Timings.STEP_IM);
+			matcher.match();
+			m_timings.end(Timings.STEP_IM);
+			
+			m_index.getCollector().logStats();
+			
+			if (qe.getIndexMatches() == null || qe.getIndexMatches().rowCount() == 0)
+				continue;
+			
+			m_mlv.setQueryExecution(qe);
+			
+			m_timings.start(Timings.STEP_DM);
+			m_mlv.validateIndexMatches();
+			m_timings.end(Timings.STEP_DM);
 
 			m_index.getCollector().addTimings(m_mlv.getTimings());
 			m_index.getCollector().logStats();

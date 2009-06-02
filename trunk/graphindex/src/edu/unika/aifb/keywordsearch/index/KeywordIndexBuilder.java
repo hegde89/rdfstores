@@ -24,6 +24,7 @@ import org.apache.lucene.search.Hit;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
+import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 
 import com.sleepycat.je.DatabaseException;
@@ -120,7 +121,7 @@ public class KeywordIndexBuilder {
 				/* Write Index */
 				Document doc = new Document();
 				
-				// indexing type of the schema element
+				// indexing type of the element
 				doc.add(new Field(Constant.TYPE_FIELD, type, Field.Store.YES, Field.Index.UN_TOKENIZED));
 				
 				// indexing local name
@@ -181,7 +182,7 @@ public class KeywordIndexBuilder {
 				/* Write Index */
 				Document doc = new Document();
 				
-				// indexing type of the entity element
+				// indexing type of the element
 				doc.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NO));
 				
 				// indexing local name
@@ -195,6 +196,16 @@ public class KeywordIndexBuilder {
 				// indexing extension id 
 				String blockName = blockSearcher.getBlockName(uri);
 				doc.add(new Field(Constant.EXTENSION_FIELD, blockName, Field.Store.YES, Field.Index.NO));
+				
+				// indexing concept of the entity element
+				Set<String> concepts = computeConcepts(uri);
+				if(concepts != null && concepts.size() != 0) {
+					for(String concept : concepts) {
+						field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.UN_TOKENIZED);
+						field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+						doc.add(field);
+					}
+				}
 				
 				// indexing label
 				Set<String> labels = computeLabels(uri);
@@ -246,6 +257,29 @@ public class KeywordIndexBuilder {
 			e.printStackTrace();
 		}
 	}
+	
+	public Set<String> computeConcepts(String entityUri)  throws IOException {
+		HashSet<String> set = new HashSet<String>(); 
+		BooleanQuery bq = new BooleanQuery();
+		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
+		bq.add(tq, BooleanClause.Occur.MUST);
+		tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDF.TYPE.stringValue()));
+		bq.add(tq, BooleanClause.Occur.MUST);
+		
+		Hits hits = dataSearcher.search(bq);
+		if(hits != null && hits.length() != 0) {
+			Iterator iter = hits.iterator();
+			while(iter.hasNext()) {
+				Document doc = ((Hit)iter.next()).getDocument();
+				String typeEdge = doc.get(LuceneGraphStorage.FIELD_EDGE);
+				String concept = doc.get(LuceneGraphStorage.FIELD_DST);
+				if(typeEdge.equals(RDF.TYPE.stringValue()))
+					set.add(concept);
+			}
+			return set;
+		} else 
+			return null;
+	}  
 	
 	public Set<String> computeLabels(String entityUri) throws IOException {
 		HashSet<String> set = new HashSet<String>(); 

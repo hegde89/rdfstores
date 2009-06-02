@@ -57,6 +57,8 @@ public class StatisticsCollector {
 		log.debug(" im purge:       " + (timings[Timings.IM_PURGE]));
 		log.debug(" dm filter:      " + (timings[Timings.DM_FILTER]));
 		log.debug(" dm classes:     " + (timings[Timings.DM_CLASSES]));
+		log.debug(" kw entity:      " + (timings[Timings.KW_ENTITY_SEARCH]));
+		log.debug(" kw asm:         " + (timings[Timings.KW_ASM]));
 		log.debug(" IM total:       " + (timings[Timings.STEP_IM]));
 		log.debug(" DM total:       " + (timings[Timings.STEP_DM]));
 	}

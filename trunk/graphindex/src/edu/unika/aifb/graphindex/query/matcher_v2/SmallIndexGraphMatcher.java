@@ -36,6 +36,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		private boolean nopurge = true;
 		public int purged = 0, total = 0;
 		
+		public boolean alwaysPurge = false;
+		
 		public void setTables(GTable<String> left, GTable<String> right) {
 			leftSigCols = getSignatureColumns(left);
 			rightSigCols = getSignatureColumns(right);
@@ -47,9 +49,9 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			purged = 0;
 			total = 0;
 			
-			if (leftSigCols.size() + rightSigCols.size() == 0 
+			if (!alwaysPurge && (leftSigCols.size() + rightSigCols.size() == 0 
 				|| (leftSigCols.size() == left.columnCount() && rightSigCols.size() == right.columnCount())
-				|| left.rowCount() > 5000 || right.rowCount() > 5000) {
+				|| left.rowCount() > 5000 || right.rowCount() > 5000)) {
 				nopurge = true;
 				log.debug("no purge");
 				return;
@@ -230,7 +232,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 //			}
 //			else
 //				m_validator = null;
-			
+			m_validator.alwaysPurge = true;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
 				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
@@ -314,7 +316,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			m_qe.setIndexMatches(resultTables.get(0));
 		else
 			m_qe.setIndexMatches(null);
-		log.debug(m_qe.getIndexMatches().toDataString());
+//		log.debug(m_qe.getIndexMatches().toDataString());
 	}
 	
 	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {

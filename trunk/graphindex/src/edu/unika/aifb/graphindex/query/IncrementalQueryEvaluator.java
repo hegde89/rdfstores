@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.openrdf.model.vocabulary.RDF;
 
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.StructureIndexReader;
@@ -22,6 +23,7 @@ import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Timings;
+import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.TransformedGraph;
@@ -58,19 +60,28 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		Timings timings = new Timings();
 		
 		m_matcher.setTimings(timings);
+		m_index.getCollector().addTimings(timings);
+		
+		log.info("evaluating...");
 		
 		Graph<QueryNode> queryGraph = q.getGraph();
 		TransformedGraph transformedGraph = new TransformedGraph(queryGraph);
 		
 		// step 1: entity search
+		timings.start(Timings.KW_ENTITY_SEARCH);
 		transformedGraph = m_searcher.searchEntities(transformedGraph);
+		timings.end(Timings.KW_ENTITY_SEARCH);
 		
 		// step 2: approximate structure matching
+		timings.start(Timings.KW_ASM);
 		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, 2);
 		GTable<KeywordElement> asmResult = asm.matching();
+		timings.end(Timings.KW_ASM);
 		
-		log.debug(asmResult.toDataString());
+		log.debug("asm result table: " + asmResult);
 		
+		m_index.getCollector().logStats();
+
 		// result of ASM step, mapping query node labels to extensions
 		// list of entities with associated extensions
 		
@@ -89,18 +100,18 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				
 				String nodeLabel = asmResult.getColumnName(i);
 
-				if (!node2exts.containsKey(nodeLabel))
-					node2exts.put(nodeLabel, new HashSet<String>());
-				
-				if (!node2exts.get(nodeLabel).add(ele.getExtensionId()))
-					continue;
-				
 				String extNode = ele.getExtensionId() + nodeLabel;
 				
 				if (!extNode2entity.containsKey(extNode)) 
 					extNode2entity.put(extNode, new HashSet<String>());
 				extNode2entity.get(extNode).add(ele.getUri());
 				
+				if (!node2exts.containsKey(nodeLabel))
+				node2exts.put(nodeLabel, new HashSet<String>());
+			
+				if (!node2exts.get(nodeLabel).add(ele.getExtensionId()))
+					continue;
+			
 				if (!node2columns.containsKey(nodeLabel)) {
 					List<String> columns = new ArrayList<String>();
 					
@@ -132,7 +143,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 			if (table != null)
 				matchTables.add(table);
 		
-		log.debug(matchTables);
+		log.debug("match tables: " + matchTables);
 		
 		// step 3: structure-based refinement
 		QueryExecution qe = new QueryExecution(q, m_index);
@@ -144,7 +155,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		Map<String,Set<String>> entity2constants = new HashMap<String,Set<String>>();
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
+			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !edge.getLabel().equals(RDF.TYPE.toString())) {
 				qe.imVisited(edge);
 				
 				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
@@ -157,70 +168,62 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		}
 
 		m_matcher.setQueryExecution(qe);
+		
+		timings.start(Timings.STEP_IM);
 		m_matcher.match();
+		timings.end(Timings.STEP_IM);
 		
 		// TODO print intermediate results
 		
-		List<String> refinedColumns = new ArrayList<String>();
-		refinedColumns.addAll(constants);
-		refinedColumns.addAll(entityNodes);
-		log.debug(refinedColumns);
+//		List<String> refinedColumns = new ArrayList<String>();
+//		refinedColumns.addAll(constants);
+//		refinedColumns.addAll(entityNodes);
 		
-		GTable<String> refinedResults = new GTable<String>(refinedColumns);
-		for (KeywordElement[] row : asmResult) {
-			boolean found = true;
-			String[] newRow = new String [refinedResults.columnCount()];
-			for (String[] matchedRow : qe.getIndexMatches()) {
-
-				for (int i = 0; i < row.length; i++) {
-					if (row[i] == null)
-						continue;
-					int matchedCol = qe.getIndexMatches().getColumn(asmResult.getColumnName(i));
-					newRow[refinedResults.getColumn(asmResult.getColumnName(i))] = row[i].getUri();
-					
-					if (!matchedRow[matchedCol].equals(row[i].getExtensionId())) {
-						found = false;
-						break;
-					}
-				}
-				if (found)
-					break;
-			}
-			
-			if (found) {
-				for (String constant : constants)
-					newRow[refinedResults.getColumn(constant)] = constant;
-				refinedResults.addRow(newRow);
-				for (int i = 0; i < row.length; i++) {
-					if (row[i] != null)
-						System.out.print(asmResult.getColumnName(i) + ":" + row[i].getExtensionId() + " ");
-				}
-				System.out.println(" f");
-			}
-			else {
-				for (int i = 0; i < row.length; i++) {
-					if (row[i] != null)
-						System.out.print(asmResult.getColumnName(i) + ":" + row[i].getExtensionId() + " ");
-				}
-				System.out.println(" nf");
-			}
-		}
-		
-		log.debug(refinedResults);
-		log.debug(refinedResults.toDataString());
+//		GTable<KeywordElement> refinedResults = new GTable<KeywordElement>(refinedColumns);
+//		for (KeywordElement[] row : asmResult) {
+//			boolean found = true;
+//			KeywordElement[] newRow = new KeywordElement [refinedResults.columnCount()];
+//			int j = 0;
+//			for (String[] matchedRow : qe.getIndexMatches()) {
+//				found = true;
+//				for (int i = 0; i < row.length; i++) {
+//					if (row[i] == null)
+//						continue;
+//					
+//					int matchedCol = qe.getIndexMatches().getColumn(asmResult.getColumnName(i));
+//					newRow[refinedResults.getColumn(asmResult.getColumnName(i))] = row[i];
+//					
+//					if (!matchedRow[matchedCol].equals(row[i].getExtensionId())) {
+//						found = false;
+//						break;
+//					}
+//				}
+//				j++;
+//				if (found)
+//					break;
+//			}
+//			
+//			if (found) {
+//				for (String constant : constants)
+//					newRow[refinedResults.getColumn(constant)] = null;
+//				refinedResults.addRow(newRow);
+//			}
+//		}
+//		
+//		log.debug(asmResult + " " + refinedResults);
 		
 		// step 4: result computation
 		// add entites from remaining extensions to an intermediate result set
 		
 		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
 		classes.add(new EvaluationClass(qe.getIndexMatches()));
-		log.debug(qe.getIndexMatches());
+//		log.debug(qe.getIndexMatches().toDataString());
 		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
+			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !edge.getLabel().equals(RDF.TYPE.toString())) {
 				qe.imVisited(edge);
-//				qe.visited(edge);
+				qe.visited(edge);
 				List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 				for (EvaluationClass ec : classes) {
 					newClasses.addAll(ec.addMatch(queryGraph.getTargetNode(edge).getName(), true, null, null));
@@ -234,10 +237,10 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 			} 
 		}
 		
-		int rows = 0;
+		int rows = 0, rows2 = 0;
 		for (EvaluationClass ec : classes) {
-			log.debug(ec.getMatches());
-			log.debug(ec.getMappings());
+//			log.debug(ec.getMatches());
+//			log.debug(ec.getMappings());
 			
 			for (String entityNode : entityNodes) {
 				if (!ec.getMappings().hasColumn(entityNode))
@@ -247,6 +250,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				columns.add(entityNode);
 				GTable<String> table = new GTable<String>(columns);
 				int col = table.getColumn(entityNode);
+
 				for (String entity : extNode2entity.get(ec.getMatch(entityNode) + entityNode)) {
 					String[] row = new String [entity2constants.get(entityNode).size() + 1];
 					row[col] = entity;
@@ -256,17 +260,54 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				}
 				ec.getResults().add(table);
 				rows += table.rowCount();
-				log.debug(table.toDataString());
+//				log.debug(table.toDataString(false));
 			}
+			
+//			GTable<String> table = new GTable<String>(refinedResults.getColumnNames());
+//			for (KeywordElement[] row : refinedResults) {
+//				boolean fits = true;
+//				for (String entityNode : entityNodes) {
+//					if (!row[refinedResults.getColumn(entityNode)].getExtensionId().equals(ec.getMatch(entityNode))) {
+//						fits = false;
+//						break;
+//					}
+//				}
+//				
+//				if (fits) {
+//					String[] newRow = new String [refinedResults.columnCount()];
+//					for (int i = 0; i < newRow.length; i++) {
+//						if (entityNodes.contains(refinedResults.getColumnName(i))) {
+//							newRow[i] = row[i].getUri();
+//						}
+//						else
+//							newRow[i] = refinedResults.getColumnName(i);
+//					}
+//					table.addRow(newRow);
+//				}
+//			}
+//			ec.getResults().add(table);
+//			log.debug(table.rowCount());
+//			rows2 += table.rowCount();
+			
+//			log.debug(table.toDataString(false));
+//			log.debug("----");
 		}
-		log.debug(rows);
+//		log.debug(rows + " " + rows2);
 		qe.setEvaluationClasses(classes);
 		
 		m_validator.setQueryExecution(qe);
+
+		timings.start(Timings.STEP_DM);
 		m_validator.validateIndexMatches();
+		timings.end(Timings.STEP_DM);
+		
+		m_index.getCollector().addTimings(m_validator.getTimings());
 		
 		qe.finished();
-		log.debug(qe.getResult().toDataString());
+		log.debug(qe.getResult());
+		
+		m_index.getCollector().logStats();
+		
 		return qe.getResult().getRows();
 	}
 

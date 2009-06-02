@@ -263,7 +263,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-//		log.debug("  " + docIds.size() + " docs");
+//		log.debug(q + "  " + docIds.size() + " docs");
 		
 		Collections.sort(docIds);
 		

@@ -581,16 +581,16 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 			Set<String> sigs = new HashSet<String>();
 			GTable<String> table = results.get(0).getResult();
 			
-			Map<String,Set<String>> node2entity = new HashMap<String,Set<String>>();
-			node2entity.put("?x2", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course0", "http://www.Department10.University0.edu/Course51", "http://www.Department10.University0.edu/Course53")));
-			node2entity.put("?x3", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course50", "http://www.Department10.University0.edu/Course50")));
-			for (String[] row : table) {
-				if (node2entity.get("?x2").contains(row[table.getColumn("?x2")]) && node2entity.get("?x3").contains(row[table.getColumn("?x3")])) {
-					for (String s : row)
-						System.out.print(s + " ");
-					System.out.println();
-				}
-			}
+//			Map<String,Set<String>> node2entity = new HashMap<String,Set<String>>();
+//			node2entity.put("?x2", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course0", "http://www.Department10.University0.edu/Course51", "http://www.Department10.University0.edu/Course53")));
+//			node2entity.put("?x3", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course50", "http://www.Department10.University0.edu/Course50")));
+//			for (String[] row : table) {
+//				if (node2entity.get("?x2").contains(row[table.getColumn("?x2")]) && node2entity.get("?x3").contains(row[table.getColumn("?x3")])) {
+//					for (String s : row)
+//						System.out.print(s + " ");
+//					System.out.println();
+//				}
+//			}
 			
 			int[] cols = new int [q.getSelectVariables().size()];
 			for (int i = 0; i < q.getSelectVariables().size(); i++)

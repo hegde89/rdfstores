@@ -24,6 +24,9 @@ public class Timings {
 	
 	public static final int VP_LOAD = 15;
 	
+	public static final int KW_ENTITY_SEARCH = 17;
+	public static final int KW_ASM = 18;
+	
 	public Timings() {
 		
 	}

@@ -68,8 +68,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 
 		List<EvaluationClass> classes = m_qe.getEvaluationClasses();
-		List<EvaluationClass> prevClasses = m_qe.getEvaluationClasses();
-		classes = null;
+//		List<EvaluationClass> prevClasses = m_qe.getEvaluationClasses();
+//		classes = null;
 		EvaluationClass evc = new EvaluationClass(m_qe.getIndexMatches());
 		if (classes == null || classes.size() == 0) {
 			classes = new ArrayList<EvaluationClass>();
@@ -207,13 +207,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			matchedNodes.add(srcLabel);
 			matchedNodes.add(trgLabel);
 			
-			int rows = 0;
-			for (EvaluationClass ec : classes) {
-				log.debug(ec);
-				for (GTable<String> t : ec.getResults())
-					rows += t.rowCount();
-			}
-			log.debug(rows);
+//			int rows = 0;
+//			for (EvaluationClass ec : classes) {
+//				log.debug(ec);
+//				for (GTable<String> t : ec.getResults())
+//					rows += t.rowCount();
+//			}
+//			log.debug(rows);
 			log.debug("classes: " + classes.size());
 			log.debug("time: " + (System.currentTimeMillis() - start));
 			log.debug("");
@@ -223,7 +223,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			if (ec.getResults().size() == 0)
 				continue;
 //			log.debug(ec.getMappings().toDataString(false));
-			log.debug(ec.getResults().get(0).toDataString(false));
+//			log.debug(ec.getResults().get(0).toDataString(false));
 			m_qe.addResult(ec.getResults().get(0), true);
 		}
 	}

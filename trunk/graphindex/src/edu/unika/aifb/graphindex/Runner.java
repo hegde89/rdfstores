@@ -187,7 +187,8 @@ public class Runner {
 		long start = System.currentTimeMillis();
 		if (stages.contains("convert") || stages.contains("partition") || stages.contains("transform") || stages.contains("index")) {
 			Map options = new HashMap();
-			options.put(StructureIndex.OPT_IGNORE_DATA_VALUES, false);
+			options.put(StructureIndex.OPT_IG_WITH_DATA_NODES, false);
+			options.put(StructureIndex.OPT_INDEX_DATA_NODES, true);
 			options.put(StructureIndex.OPT_PATH_LENGTH, pathLength);
 			StructureIndexWriter iw = new StructureIndexWriter(outputDirectory, true);
 			iw.setOptions(options);
@@ -200,8 +201,8 @@ public class Runner {
 		}
 		
 		if (stages.contains("keywordindex")) {
-			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory); 
-			kb.indexKeywords();
+//			KeywordIndexBuilder kb = new KeywordIndexBuilder(outputDirectory); 
+//			kb.indexKeywords();
 		}
 		
 		if (stages.contains("temp")) {

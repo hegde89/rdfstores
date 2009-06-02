@@ -41,6 +41,7 @@ import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -305,6 +306,7 @@ public class BTCImport {
 						// add triples to extensions
 						es.addTriples(IndexDescription.PSESO, subExt, property, s, Arrays.asList(o));
 						es.addTriples(IndexDescription.POESS, subExt, property, o, Arrays.asList(s));
+						es.addData(IndexDescription.POES, es.concat(new String[] { property, o }, 2), Arrays.asList(subExt) , false);
 						
 						triples++;
 						
@@ -340,7 +342,7 @@ public class BTCImport {
 			les.close();
 		}
 		
-		if (action.equals("query")) {
+		if (action.equals("query") || action.equals("spquery")) {
 			String queryFile = (String)os.valueOf("qf");
 			String queryName = (String)os.valueOf("q");
 			
@@ -354,6 +356,8 @@ public class BTCImport {
 			StructureIndexReader reader = new StructureIndexReader(spDirectory);
 			
 			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, keywordIndexDirectory);
+			if (action.equals("spquery"))
+				qe = new QueryEvaluator(reader);
 			for (Query q : queries) {
 				if (queryName != null && !q.getName().equals(queryName))
 					continue;
@@ -361,7 +365,7 @@ public class BTCImport {
 				List<String[]> results = qe.evaluate(q);
 				log.info("query " + q.getName() + ": " + results.size() + " results");
 			}
-			
+			reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
 			reader.close();
 		}
 		

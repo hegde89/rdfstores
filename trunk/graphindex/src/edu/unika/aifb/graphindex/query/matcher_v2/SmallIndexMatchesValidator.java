@@ -68,6 +68,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 
 		List<EvaluationClass> classes = m_qe.getEvaluationClasses();
+		List<EvaluationClass> prevClasses = m_qe.getEvaluationClasses();
+		classes = null;
 		EvaluationClass evc = new EvaluationClass(m_qe.getIndexMatches());
 		if (classes == null || classes.size() == 0) {
 			classes = new ArrayList<EvaluationClass>();
@@ -133,7 +135,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			}
 		}
 		else
-			edges = queryGraph.edges();;
+			edges = queryGraph.edges();
 		
 		Set<String> sourcesOfRemoved = query.getForwardSources();
 		
@@ -205,6 +207,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			matchedNodes.add(srcLabel);
 			matchedNodes.add(trgLabel);
 			
+			int rows = 0;
+			for (EvaluationClass ec : classes) {
+				log.debug(ec);
+				for (GTable<String> t : ec.getResults())
+					rows += t.rowCount();
+			}
+			log.debug(rows);
 			log.debug("classes: " + classes.size());
 			log.debug("time: " + (System.currentTimeMillis() - start));
 			log.debug("");
@@ -213,7 +222,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		for (EvaluationClass ec : classes) {
 			if (ec.getResults().size() == 0)
 				continue;
-
+//			log.debug(ec.getMappings().toDataString(false));
+			log.debug(ec.getResults().get(0).toDataString(false));
 			m_qe.addResult(ec.getResults().get(0), true);
 		}
 	}
@@ -370,7 +380,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 				ec.getResults().remove(sourceTable);
 				ec.getResults().remove(targetTable);
-				
+
 				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
 				Set<String> values = new HashSet<String>();
 				
@@ -415,7 +425,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						values.add(row[col]);
 					}
 				}
-				
+
 				if (table.rowCount() == 0)
 					continue;
 				
@@ -426,7 +436,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				targetTable.sort(trgLabel, true);
 				table.sort(trgLabel);
 				table = Tables.mergeJoin(targetTable, table, trgLabel);
-				
+
 				if (table.rowCount() > 0) {
 					ec.getResults().add(table);
 					remainingClasses.add(ec);

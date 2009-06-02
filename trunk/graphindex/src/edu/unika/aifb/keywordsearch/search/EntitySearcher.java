@@ -147,6 +147,7 @@ public class EntitySearcher {
 						query.add(new FuzzyQuery(term, 0.8f, 1), Occur.MUST);
 					}
 					hits = searcher.search(query);
+					log.debug(query + " " + hits);
 				}
 			}
 			/************************************************/

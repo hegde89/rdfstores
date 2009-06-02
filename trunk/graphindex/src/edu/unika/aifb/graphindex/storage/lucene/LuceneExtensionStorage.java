@@ -542,19 +542,19 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public GTable<String> getIndexTable(IndexDescription index, String ext, String property, String so) throws StorageException {
 		m_timings.start(Timings.LOAD_IT);
-//		long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis();
 
 		TermQuery tq = new TermQuery(getTerm(index, property, so, ext));
 			
 		GTable<String> table = new GTable<String>("source", "target");
 		int docs = 0;
 		
-//		long ds = System.currentTimeMillis();
+		long ds = System.currentTimeMillis();
 		
 		List<Integer> docIds = getDocumentIds(tq);
-//		ds = System.currentTimeMillis() - ds;
+		ds = System.currentTimeMillis() - ds;
 		
-//		long dr = 0;
+		long dr = 0;
 		if (docIds.size() > 0) {
 			docs += docIds.size();
 			

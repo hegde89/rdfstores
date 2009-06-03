@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.TransformedGraph;
@@ -21,6 +23,8 @@ public class ApproximateStructureMatcher {
 	private Set<KeywordElement[]> m_rows;
 	private GTable<KeywordElement> m_table;
 	private int m_columnSize;
+	
+	private static final Logger log = Logger.getLogger(ApproximateStructureMatcher.class);
 	
 	public ApproximateStructureMatcher(TransformedGraph graph, int hops) {
 		m_graph = graph;
@@ -120,16 +124,21 @@ public class ApproximateStructureMatcher {
 					addRows(filterElement, getColumn(filterNode), joinElements, getColumn(node));
 				}	
 			}
+			log.debug("join/filter done");
+			log.debug(elements.size() + " " + allJoinElements.size());
 			elements.retainAll(allJoinElements);
+			log.debug("retain done");
 			if(node.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());
 			filterNode.removeEntities(removeFilterElements);
+			log.debug("remove done");
 			if(filterNode.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());
 		}
 	}
 	
 	public void DFS(TransformedGraphNode node) {
+		log.debug(" DFS: " + node.getNodeName());
 		node.setVisisted();
 		for(TransformedGraphNode neighbor : node.getNeighbors()) {
 			if(neighbor.isVisited() == true 
@@ -150,6 +159,7 @@ public class ApproximateStructureMatcher {
 			else {
 				neighbor.setFilter(node.getFilter());
 			}	
+			log.debug(" neighbor: " + neighbor);
 			if(!m_nodesWithNoEntities.contains(neighbor.getNodeName()))
 				neighborhoodJoin(neighbor.getFilter(), neighbor);
 			DFS(neighbor);	
@@ -169,7 +179,7 @@ public class ApproximateStructureMatcher {
 			row[column] = ele;
 			m_rows.add(row);
 		}
-		
+		log.debug(" start node: " + m_startNode.getNodeName());
 		DFS(m_startNode);
 		
 		List<KeywordElement[]> list = new ArrayList<KeywordElement[]>();

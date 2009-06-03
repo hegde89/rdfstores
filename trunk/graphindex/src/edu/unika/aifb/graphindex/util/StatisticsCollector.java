@@ -6,45 +6,42 @@ import java.util.Vector;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.util.Counters;
+
 public class StatisticsCollector {
 	private List<Timings> m_timings;
+	private List<Counters> m_counters;
 	
 	private final static Logger log = Logger.getLogger(StatisticsCollector.class);
 	
 	public StatisticsCollector() {
 		m_timings = new Vector<Timings>();
+		m_counters = new Vector<Counters>();
 	}
 	
 	public void addTimings(Timings t) {
 		m_timings.add(t);
 	}
 	
+	public void addCounters(Counters c) {
+		m_counters.add(c);
+	}
+	
 	public void logStats() {
 		long[] timings = new long[20];
-		int[] counts = new int[20];
+
 		for (Timings t : m_timings) {
 			for (int i = 0; i < t.getTimings().length; i++) {
 				timings[i] += t.getTimings()[i];
-				counts[i] += t.getCounts()[i];
 			}
-			
 		}
-//		public static final int LOAD_DATA_LIST = 0;
-//		public static final int LOAD_DATA_SET = 1;
-//		public static final int LOAD_HT = 2;
-//		public static final int LOAD_IT = 3;
-//		public static final int LOAD_EXT_OBJECT = 10;
-//		public static final int LOAD_EXT_SUBJECT = 11;
-//		public static final int JOIN_MERGE = 4;
-//		public static final int JOIN_HASH = 5;
-//		public static final int TBL_SORT = 6;
-//		public static final int TBL_MERGE = 7;
-//		public static final int IM_PURGE = 8;
-//		public static final int DM_FILTER = 9;
-//		public static final int DM_CLASSES = 14;
-//		
-//		public static final int STEP_IM = 12;
-//		public static final int STEP_DM = 13;
+		
+		long[] counts = new long [20];
+		for (Counters c : m_counters) {
+			for (int i = 0; i < c.getCounts().length; i++) {
+				counts[i] += c.getCounts()[i];
+			}
+		}
 		
 		log.debug("time spent");
 		log.debug(" load data list: " + (timings[Timings.LOAD_DATA_LIST]));
@@ -61,17 +58,30 @@ public class StatisticsCollector {
 		log.debug(" kw asm:         " + (timings[Timings.KW_ASM]));
 		log.debug(" IM total:       " + (timings[Timings.STEP_IM]));
 		log.debug(" DM total:       " + (timings[Timings.STEP_DM]));
+		log.debug(" query total:    " + (timings[Timings.TOTAL_QUERY_EVAL]));
+		
+		log.debug("counters");
+		for (Stat s : Counters.stats) {
+			log.debug(" " + s.name + "\t" + counts[s.idx]);
+		}
+		
 	}
 	
 	public long[] getConsolidated() {
 		long[] timings = new long[20];
-		int[] counts = new int[20];
+
 		for (Timings t : m_timings) {
 			for (int i = 0; i < t.getTimings().length; i++) {
 				timings[i] += t.getTimings()[i];
-				counts[i] += t.getCounts()[i];
 			}
 			
+		}
+		
+		long[] counts = new long [20];
+		for (Counters c : m_counters) {
+			for (int i = 0; i < c.getCounts().length; i++) {
+				counts[i] += c.getCounts()[i];
+			}
 		}
 		
 		return timings;

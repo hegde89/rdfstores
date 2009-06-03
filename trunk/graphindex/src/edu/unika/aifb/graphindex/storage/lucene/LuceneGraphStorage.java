@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -57,6 +58,8 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 	public static final String FIELD_TYPE = "type"; 
 	public int m_docCacheMisses;
 	public int m_docCacheHits;
+	
+	private static final Logger log = Logger.getLogger(LuceneGraphStorage.class);
 	
 	public LuceneGraphStorage(String directory) {
 		this(directory, 500000);
@@ -485,6 +488,14 @@ public class LuceneGraphStorage extends AbstractGraphStorage {
 			throw new UnsupportedOperationException("not implemented");
 		}
 		
+	}
+	
+	public Iterator<String[]> iterator() throws StorageException {
+		List<Integer> docIds = new ArrayList<Integer>(m_reader.maxDoc());
+		for (int i = 0; i < m_reader.maxDoc(); i++)
+			docIds.add(i);
+		log.debug("doc ids: " + docIds.size());
+		return new TriplesIterator(docIds);
 	}
 	
 	public Iterator<String[]> iterator(String property) throws StorageException {

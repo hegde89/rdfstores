@@ -10,6 +10,7 @@ import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
 
@@ -20,6 +21,7 @@ public abstract class AbstractIndexMatchesValidator implements IndexMatchesValid
 	protected ExtensionManager m_em;
 	protected ExtensionStorage m_es;
 	protected Timings t;
+	protected Counters m_counters;
 	
 	public AbstractIndexMatchesValidator(StructureIndex index, StatisticsCollector collector) {
 		m_index = index;
@@ -34,6 +36,14 @@ public abstract class AbstractIndexMatchesValidator implements IndexMatchesValid
 
 	public Timings getTimings() {
 		return t;
+	}
+	
+	public void setTimings(Timings timings) {
+		t = timings;
+	}
+	
+	public void setCounters(Counters c) {
+		m_counters = c;
 	}
 	
 	public void setQueryExecution(QueryExecution qe) {

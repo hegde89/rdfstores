@@ -26,6 +26,7 @@ import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -186,6 +187,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		}
 		else 
 			toVisit.addAll(m_queryGraph.edges());
+		
+		m_counters.set(Counters.IM_PROCESSED_EDGES, toVisit.size());
 
 		while (toVisit.size() > 0) {
 			GraphEdge<QueryNode> currentEdge;
@@ -305,6 +308,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			}
 			
 			resultTables.add(result);
+			
+			m_counters.set(Counters.IM_INDEX_MATCHES, result.rowCount());
 			
 			log.debug("tables: " + resultTables);
 			if (m_validator != null)

@@ -79,6 +79,7 @@ public class ApproximateStructureMatcher {
 	}
 	
 	public void addRows(KeywordElement filterElement, int filterColumn, Collection<KeywordElement> elements, int elementColumn) {
+		long start = System.currentTimeMillis();
 		Collection<KeywordElement[]> rows = getRows(filterElement, filterColumn);
 		
 		if(elements.size() == 1) {
@@ -99,13 +100,20 @@ public class ApproximateStructureMatcher {
 			m_rows.removeAll(rows);
 			m_rows.addAll(newRows);
 		}
+		t_add += System.currentTimeMillis() - start;
 	}
+	long t_rem = 0;
+	long t_add = 0;
+	long t_reachable = 0;
 	
 	public void removeRows(KeywordElement element, int column) {
+		long start = System.currentTimeMillis();
 		m_rows.removeAll(getRows(element, column));
+		t_rem += System.currentTimeMillis() - start;
 	}
 	
 	public void neighborhoodJoin(TransformedGraphNode filterNode, TransformedGraphNode node) {
+		t_rem = t_add = t_reachable = 0;
 		if(filterNode.equals(node)) {
 		}
 		else {
@@ -114,7 +122,9 @@ public class ApproximateStructureMatcher {
 			Collection<KeywordElement> elements = node.getEntities();
 			
 			for(KeywordElement filterElement : filterNode.getEntities()) {
+				long start = System.currentTimeMillis();
 				Collection<KeywordElement> joinElements = filterElement.getReachable(elements);
+				t_reachable += System.currentTimeMillis() - start;
 				if(joinElements == null || joinElements.size() == 0) {
 					removeFilterElements.add(filterElement);
 					removeRows(filterElement, getColumn(filterNode));
@@ -134,6 +144,8 @@ public class ApproximateStructureMatcher {
 			log.debug("remove done");
 			if(filterNode.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());
+			
+			log.debug("t_rem: " + t_rem + ", t_add: " + t_add + ", t_reach: " + t_reachable);
 		}
 	}
 	

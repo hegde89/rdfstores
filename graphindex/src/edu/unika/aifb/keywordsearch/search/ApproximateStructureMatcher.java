@@ -22,9 +22,6 @@ public class ApproximateStructureMatcher {
 	private GTable<KeywordElement> m_table;
 	private int m_columnSize;
 	
-	private boolean m_noResults = false;
-	
-	
 	public ApproximateStructureMatcher(TransformedGraph graph, int hops) {
 		m_graph = graph;
 		m_nodesWithNoEntities = new HashSet<String>();

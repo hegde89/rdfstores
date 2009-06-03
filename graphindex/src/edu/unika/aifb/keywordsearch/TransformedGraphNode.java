@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class TransformedGraphNode {
 	
@@ -13,12 +14,13 @@ public class TransformedGraphNode {
 	private int m_type;
 	
 	private int m_nodeId;
-	private String m_name;
+	private String m_nodeName;
 	private Map<Integer,Integer> m_distances;
 	private Map<String, Collection<String>> m_attributeQueries;
 	private Collection<TransformedGraphNode> m_neighbors;
 	private Collection<KeywordElement> m_entities;
 	private int m_maxDistance;
+	private Set<String> m_typeQueries; 
 	
 	private boolean m_isVisisted;
 	private TransformedGraphNode m_filter;
@@ -27,10 +29,11 @@ public class TransformedGraphNode {
 	
 	public TransformedGraphNode(int node, String name, int type) {
 		this.m_nodeId = node;
-		this.m_name = name;
+		this.m_nodeName = name;
 		this.m_type = type;
 		this.m_distances = new HashMap<Integer, Integer>();
 		this.m_attributeQueries = new HashMap<String, Collection<String>>();
+		this.m_typeQueries = new HashSet<String>();
 		this.m_neighbors = new HashSet<TransformedGraphNode>();
 		this.m_maxDistance = 0;
 		this.m_isVisisted = false;
@@ -66,7 +69,7 @@ public class TransformedGraphNode {
 	}
 	
 	public String getNodeName() {
-		return m_name;
+		return m_nodeName;
 	}
 	
 	public int getType() {
@@ -91,6 +94,14 @@ public class TransformedGraphNode {
 			m_entities.removeAll(elements);
 	}
 	
+	public void addTypeQuery(String type) {
+		m_typeQueries.add(type);
+	}
+	
+	public Collection<String> getTypeQueries() {
+		return m_typeQueries;
+	}
+	
 	public void addAttributeQuery(String predicate, String object) {
 		Collection<String> coll = this.m_attributeQueries.get(predicate);
 		if(coll == null) {
@@ -106,7 +117,7 @@ public class TransformedGraphNode {
 	
 	public String getUriQuery() {
 		if(m_type == ENTITY_NODE)
-			return m_name;
+			return m_nodeName;
 		else 
 			return null;
 	}

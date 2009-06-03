@@ -52,7 +52,7 @@ public class TransformedGraph {
 					else if(Util.isEntity(nodes[suc].getName())) {
 						boolean isConcept = false;
 						for(GraphEdge<QueryNode> edge : succEdges.get(suc)) {
-							if(edge.getLabel().equals(RDF.TYPE.stringValue())) {
+							if(edge.getLabel().equals(RDF.TYPE.stringValue()) || edge.getLabel().equals("type")) {
 								isConcept = true;
 								break;
 							} 
@@ -65,6 +65,9 @@ public class TransformedGraph {
 							}
 							tfNode.addNeighbor(sucTfNode);
 							sucTfNode.addNeighbor(tfNode);
+						}
+						else {
+							tfNode.addTypeQuery(nodes[suc].getName());
 						}
 					}
 					else if(Util.isConstant(nodes[suc].getName())) {

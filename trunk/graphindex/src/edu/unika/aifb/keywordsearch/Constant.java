@@ -7,7 +7,7 @@ public class Constant {
 	public static final String URI_FIELD = "uri";
 	public static final String EXTENSION_FIELD = "extension";
 	public static final String NEIGHBORHOOD_FIELD = "neighbor";
-	
+	public static final String CONCEPT_FIELD = "concept";
 	public static final String LOCALNAME_FIELD = "localname";
 	public static final String LABEL_FIELD = "label";
 	

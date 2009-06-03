@@ -174,4 +174,7 @@ public class TransformedGraphNode {
 		return true;
 	}
 
+	public String toString() {
+		return getNodeName();
+	}
 }

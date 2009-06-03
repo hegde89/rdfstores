@@ -62,7 +62,6 @@ public class EntitySearcher {
 	
 	public TransformedGraph searchEntities(TransformedGraph graph) {
 		for(TransformedGraphNode node : graph.getNodes()) {
-			log.debug("variable: " + node.getNodeName());
 			if(node.getType() == TransformedGraphNode.ENTITY_QUERY_NODE) {
 				Map<String, Collection<String>> attributeQueries = node.getAttributeQueries();
 				if(attributeQueries != null && attributeQueries.keySet().size() != 0)
@@ -71,6 +70,10 @@ public class EntitySearcher {
 			else if(node.getType() == TransformedGraphNode.ENTITY_NODE) {
 				node.setEntities(searchEntities(node.getUriQuery()));
 			}	
+			if (node.getEntities() != null)
+				log.debug("variable: " + node.getNodeName() + ", entities: " + node.getEntities().size());
+			else
+				log.debug("variable: " + node.getNodeName() + ", no entities");
 		}
 		
 		return graph;
@@ -98,7 +101,7 @@ public class EntitySearcher {
 				}
 
 				if(type.equals(TypeUtil.ENTITY)){
-					if(doc.getFieldable(Constant.CONCEPT_FIELD).equals(concept))
+					if(doc.getFieldable(Constant.CONCEPT_FIELD).stringValue().equals(concept))
 						return true; 
 				}
 		    }
@@ -355,7 +358,7 @@ public class EntitySearcher {
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-		log.debug(q + ", docs: " + docIdsAndScores.size());
+//		log.debug(q + ", docs: " + docIdsAndScores.size());
 		
 		return docIdsAndScores;
 	}
@@ -364,32 +367,32 @@ public class EntitySearcher {
 		return str.replaceAll("\"", "");
 	}
 	
-	public static void main(String[] args) {
-		EntitySearcher searcher = new EntitySearcher("D://QueryGenerator/BTC/index/aifb-/keyword"); 
-		
-		System.out.println("******************** Input Example ********************");
-		System.out.println("name::Thanh publication AIFB");
-		System.out.println("******************** Input Example ********************");
-		Scanner scanner = new Scanner(System.in);
-		while (true) {
-			System.out.println("Please input the keywords:");
-			String line = scanner.nextLine();
-			
-			if(line.trim().equals("exit")) return;
-			
-			LinkedList<String> keywordList = getKeywordList(line);
-			Map<String, Collection<String>> map = parseQueries(keywordList);
-			
-			long start = System.currentTimeMillis();
-			Collection<KeywordElement> results = searcher.searchEntities(map, null);
-			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
-			
-			for(KeywordElement ele : results) {
-				log.info("Elements :" + ele);
-				log.info("\n");
-			}
-		}
-	} 
+//	public static void main(String[] args) {
+//		EntitySearcher searcher = new EntitySearcher("D://QueryGenerator/BTC/index/aifb-/keyword"); 
+//		
+//		System.out.println("******************** Input Example ********************");
+//		System.out.println("name::Thanh publication AIFB");
+//		System.out.println("******************** Input Example ********************");
+//		Scanner scanner = new Scanner(System.in);
+//		while (true) {
+//			System.out.println("Please input the keywords:");
+//			String line = scanner.nextLine();
+//			
+//			if(line.trim().equals("exit")) return;
+//			
+//			LinkedList<String> keywordList = getKeywordList(line);
+//			Map<String, Collection<String>> map = parseQueries(keywordList);
+//			
+//			long start = System.currentTimeMillis();
+//			Collection<KeywordElement> results = searcher.searchEntities(map, null);
+//			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
+//			
+//			for(KeywordElement ele : results) {
+//				log.info("Elements :" + ele);
+//				log.info("\n");
+//			}
+//		}
+//	} 
 	
 	public static Map<String, Collection<String>> parseQueries(Collection<String> queries) {
 		Map<String, Collection<String>> keywordCompounds = new HashMap<String, Collection<String>>();

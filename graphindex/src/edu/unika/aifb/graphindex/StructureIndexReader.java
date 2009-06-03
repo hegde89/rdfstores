@@ -42,13 +42,13 @@ public class StructureIndexReader {
 		File edgeSetFile = new File(directory + "/forward_edgeset");
 		if (edgeSetFile.exists()) {
 			Set<String> edgeSet = Util.readEdgeSet(edgeSetFile);
-			log.debug("fw: " + edgeSet);
+//			log.debug("fw: " + edgeSet);
 			m_index.setForwardEdges(edgeSet);
 		}
 		edgeSetFile = new File(directory + "/backward_edgeset");
 		if (edgeSetFile.exists()) {
 			Set<String> edgeSet = Util.readEdgeSet(edgeSetFile);
-			log.debug("bw: " + edgeSet);
+//			log.debug("bw: " + edgeSet);
 			m_index.setBackwardEdges(edgeSet);
 		}
 		

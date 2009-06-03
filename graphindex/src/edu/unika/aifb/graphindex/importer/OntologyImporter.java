@@ -45,14 +45,17 @@ public class OntologyImporter extends Importer {
 		m_datatypes = new HashMap<String,String>();
 	}
 	
-	private void loadOntology() throws KAON2Exception, InterruptedException {
+	private void loadOntology(int startIdx, int length) throws KAON2Exception, InterruptedException {
 		m_resolver = new DefaultOntologyResolver();
+		if (m_ontoManager != null)
+			m_ontoManager.close();
 		m_ontoManager = KAON2Manager.newOntologyManager();
 		m_ontoManager.setOntologyResolver(m_resolver);
+		System.gc();
 
-		for (String fileName : m_files) {
-			m_ontoManager.openOntology(((DefaultOntologyResolver)m_ontoManager.getOntologyResolver()).registerOntology(new File(fileName)), new HashMap<String,Object>());
-			log.debug("opened " + fileName);
+		for (int i = startIdx; i < startIdx + length && i < m_files.size(); i++) {
+			m_ontoManager.openOntology(((DefaultOntologyResolver)m_ontoManager.getOntologyResolver()).registerOntology(new File(m_files.get(i))), new HashMap<String,Object>());
+			log.debug("opened " + m_files.get(i));
 		}
 		
 		((DefaultOntologyResolver)m_ontoManager.getOntologyResolver()).registerReplacement("http://example.org/import_ontology", "file:import_ontology.owl");
@@ -91,75 +94,79 @@ public class OntologyImporter extends Importer {
 	@Override
 	public void doImport() {
 		try {
-			loadOntology();
-			log.info("ontologies loaded");
-			
+			int startIdx = 0, length = 100;
 			int axioms = 0, totalAxioms = 0;
-			Set<String> classes = new HashSet<String>();
-			
-			for (Axiom a : m_ontology.createAxiomRequest().getAll()) {
-				totalAxioms++;
-				classes.add(a.getClass().getCanonicalName());
-				if (a instanceof EntityAnnotation)
-					continue;
+			while (startIdx < m_files.size()) {
+				loadOntology(startIdx, length);
+				log.info(startIdx + ":" + length  + " files loaded");
 				
-				if (!(a instanceof OWLClass || a instanceof SubClassOf || a instanceof ObjectPropertyMember || a instanceof ClassMember
-						|| a instanceof DataPropertyMember || a instanceof SubObjectPropertyOf || a instanceof SubDataPropertyOf))
-					continue;
+				startIdx += length;
 				
-				if (a instanceof SubClassOf) {
-					SubClassOf sco = (SubClassOf)a;
-					if (sco.getSubDescription() instanceof OWLClass && sco.getSuperDescription() instanceof OWLClass) {
-						OWLClass sub = (OWLClass)sco.getSubDescription();
-						OWLClass sup = (OWLClass)sco.getSuperDescription();
-						
-						m_sink.triple(sub.getURI(), SUBCLASSOF, sup.getURI(), null);
-						axioms++;
-					}
-				}
+				Set<String> classes = new HashSet<String>();
 				
-				if (a instanceof SubObjectPropertyOf) {
-					SubObjectPropertyOf sop = (SubObjectPropertyOf)a;
-//					log.debug(sop);
-				}
-				
-				if (a instanceof SubDataPropertyOf) {
+				for (Axiom a : m_ontology.createAxiomRequest().getAll()) {
+					totalAxioms++;
+					classes.add(a.getClass().getCanonicalName());
+					if (a instanceof EntityAnnotation)
+						continue;
 					
-				}
-				
-				if (a instanceof ObjectPropertyMember) {
-					ObjectPropertyMember opm = (ObjectPropertyMember)a;
-					m_sink.triple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI(), null);
-					axioms++;
-				}
-				
-				if (a instanceof DataPropertyMember) {
-					DataPropertyMember dpm = (DataPropertyMember)a;
-					String datatype = getDatatype((DataProperty)dpm.getDataProperty());
-//					log.debug(dpm);
-					if (datatype != null) {
-						m_sink.triple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString(), null);
+					if (!(a instanceof OWLClass || a instanceof SubClassOf || a instanceof ObjectPropertyMember || a instanceof ClassMember
+							|| a instanceof DataPropertyMember || a instanceof SubObjectPropertyOf || a instanceof SubDataPropertyOf))
+						continue;
+					
+					if (a instanceof SubClassOf) {
+						SubClassOf sco = (SubClassOf)a;
+						if (sco.getSubDescription() instanceof OWLClass && sco.getSuperDescription() instanceof OWLClass) {
+							OWLClass sub = (OWLClass)sco.getSubDescription();
+							OWLClass sup = (OWLClass)sco.getSuperDescription();
+							
+							m_sink.triple(sub.getURI(), SUBCLASSOF, sup.getURI(), null);
+							axioms++;
+						}
+					}
+					
+					if (a instanceof SubObjectPropertyOf) {
+						SubObjectPropertyOf sop = (SubObjectPropertyOf)a;
+	//					log.debug(sop);
+					}
+					
+					if (a instanceof SubDataPropertyOf) {
+						
+					}
+					
+					if (a instanceof ObjectPropertyMember) {
+						ObjectPropertyMember opm = (ObjectPropertyMember)a;
+						m_sink.triple(opm.getSourceIndividual().getURI(), ((ObjectProperty)opm.getObjectProperty()).getURI(), opm.getTargetIndividual().getURI(), null);
 						axioms++;
 					}
-				}
-				
-				if (a instanceof ClassMember) {
-					ClassMember cm = (ClassMember)a;
-					if (cm.getDescription() instanceof OWLClass) {
-						OWLClass c = (OWLClass)cm.getDescription();
-						m_sink.triple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI(), null);
-						axioms++;
+					
+					if (a instanceof DataPropertyMember) {
+						DataPropertyMember dpm = (DataPropertyMember)a;
+						String datatype = getDatatype((DataProperty)dpm.getDataProperty());
+	//					log.debug(dpm);
+						if (datatype != null) {
+							m_sink.triple(dpm.getSourceIndividual().getURI(), ((DataProperty)dpm.getDataProperty()).getURI(), dpm.getTargetValue().getValue().toString(), null);
+							axioms++;
+						}
 					}
+					
+					if (a instanceof ClassMember) {
+						ClassMember cm = (ClassMember)a;
+						if (cm.getDescription() instanceof OWLClass) {
+							OWLClass c = (OWLClass)cm.getDescription();
+							m_sink.triple(cm.getIndividual().getURI(), RDF_TYPE, c.getURI(), null);
+							axioms++;
+						}
+					}
+					
+	//				log.debug(a + " " + a.getClass());
 				}
+				log.debug("axioms: " + axioms + "/" + totalAxioms);
+	//			log.debug(classes);
 				
-//				log.debug(a + " " + a.getClass());
+	//			for (Axiom a : m_ontology.createAxiomRequest().setCondition("superDescription", OWLClass.OWL_THING).getAll())
+	//				log.debug(a);
 			}
-			log.debug("axioms: " + axioms + "/" + totalAxioms);
-//			log.debug(classes);
-			
-//			for (Axiom a : m_ontology.createAxiomRequest().setCondition("superDescription", OWLClass.OWL_THING).getAll())
-//				log.debug(a);
-			
 			m_ontoManager.close();
 			m_ontology = null;
 			m_resolver = null;

@@ -118,10 +118,11 @@ public class BTCImport {
 				if (f.isDirectory()) {
 					files = new ArrayList<String>();	
 					for (File file : f.listFiles())
-						files.add(file.getAbsolutePath());
+						if (!file.getName().startsWith("."))
+							files.add(file.getAbsolutePath());
 				}
 			}
-			
+
 			Importer importer;
 			if (files.get(0).contains(".nt"))
 				importer = new NTriplesImporter(rmBN);
@@ -179,17 +180,30 @@ public class BTCImport {
 					log.debug("processed: " + done + ", dataprops: " + dataProperties.size());
 			}
 			
+			new File(spDirectory).mkdir();
+			
 			PrintWriter pw = new PrintWriter(new FileWriter(outputDirectory + "/dataproperties"));
-			for (String property : dataProperties)
+			PrintWriter pwfw = new PrintWriter(new FileWriter(spDirectory + "/forward_edgeset"));
+			PrintWriter pwbw = new PrintWriter(new FileWriter(spDirectory + "/backward_edgeset"));
+			for (String property : dataProperties) {
 				pw.println(property);
+				pwfw.println(property);
+				pwbw.println(property);
+			}
 			pw.close();
 
 			properties.removeAll(dataProperties);
 			
 			pw = new PrintWriter(new FileWriter(outputDirectory + "/properties"));
-			for (String property : properties)
+			for (String property : properties) {
 				pw.println(property);
+				pwfw.println(property);
+				pwbw.println(property);
+			}
 			pw.close();
+			
+			pwfw.close();
+			pwbw.close();
 			
 			log.debug("data properties: " + dataProperties.size() + ", properties: " + properties.size());
 		}
@@ -202,6 +216,7 @@ public class BTCImport {
 			Set<String> edges = Util.readEdgeSet(outputDirectory + "/properties");
 			log.debug(Util.memory());
 			log.debug("properties: " + edges.size());
+			log.debug("path length: " + pathLength);
 			
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
@@ -349,11 +364,12 @@ public class BTCImport {
 			if (queryFile == null) {
 				log.error("no query file specified");
 			}
+
+			StructureIndexReader reader = new StructureIndexReader(spDirectory);
 			
-			QueryLoader loader = new QueryLoader();
+			QueryLoader loader = new QueryLoader(reader.getIndex());
 			List<Query> queries = loader.loadQueryFile(queryFile);
 			
-			StructureIndexReader reader = new StructureIndexReader(spDirectory);
 			
 			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, keywordIndexDirectory);
 			if (action.equals("spquery"))
@@ -388,6 +404,8 @@ public class BTCImport {
 			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);
+			
+			log.debug("neighborhood: " + neighborhoodDistance);
 			
 			prepareKeywordIndex(gs, outputDirectory + "/temp");
 			

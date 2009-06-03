@@ -157,12 +157,12 @@ public class QueryLoader {
 		
 		// the "requested" edge sets are the minimal sets to support maximal pruning 
 		// for all queries in the query file
-		log.debug("req bw edge set " + m_requiredBwEdgeSet.size());
-		for (String s : m_requiredBwEdgeSet)
-			System.out.println(s);
-		log.debug("req fw edge set " + m_requiredFwEdgeSet.size());
-		for (String s : m_requiredFwEdgeSet)
-			System.out.println(s);
+//		log.debug("req bw edge set " + m_requiredBwEdgeSet.size());
+//		for (String s : m_requiredBwEdgeSet)
+//			System.out.println(s);
+//		log.debug("req fw edge set " + m_requiredFwEdgeSet.size());
+//		for (String s : m_requiredFwEdgeSet)
+//			System.out.println(s);
 		log.debug("prunable: " + prunableQueries + "/" + queries.size());
 		return queries;
 	}

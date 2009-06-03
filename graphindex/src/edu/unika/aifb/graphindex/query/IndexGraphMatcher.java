@@ -5,6 +5,7 @@ import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public interface IndexGraphMatcher {
@@ -13,4 +14,5 @@ public interface IndexGraphMatcher {
 	public void setQueryExecution(QueryExecution qe);
 	
 	public void setTimings(Timings t);
+	public void setCounters(Counters c);
 }

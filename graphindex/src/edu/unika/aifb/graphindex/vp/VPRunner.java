@@ -15,6 +15,7 @@ import edu.unika.aifb.graphindex.data.HashValueProvider;
 import edu.unika.aifb.graphindex.importer.ComponentImporter;
 import edu.unika.aifb.graphindex.importer.HashedTripleSink;
 import edu.unika.aifb.graphindex.importer.Importer;
+import edu.unika.aifb.graphindex.importer.LuceneTripleImporter;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.ParsingTripleConverter;
@@ -55,56 +56,6 @@ public class VPRunner {
 		}
 	}
 	
-	private static Importer getImporter(String dataset) throws IOException {
-		Importer importer = null;
-		
-		if (dataset.equals("simple")) {
-			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/simple.nt");
-		}
-		else if (dataset.equals("wordnet")) {
-			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/wordnet/wordnet.nt");
-		}
-		else if (dataset.equals("freebase")) {
-			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/freebase/freebase_1m.nt");
-		}
-		else if (dataset.equals("lubm")) {
-			String dir = "/Users/gl/Studium/diplomarbeit/datasets/lubm50/hashed_triples";
-			importer = new HashedTriplesImporter(dir + "/hashes", dir + "/propertyhashes"); 
-			importer.addImport(dir + "/input.ht");
-
-//			importer = new OntologyImporter();
-//			for (File f : new File("/Users/gl/Studium/diplomarbeit/datasets/lubm1/").listFiles()) {
-//				if (f.getName().startsWith("University")) {
-//					importer.addImport(f.getAbsolutePath());
-//				}
-//			}
-		}
-		else if (dataset.equals("swrc")) {
-			importer = new OntologyImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swrc/swrc_updated_v0.7.1.owl");
-		}
-		else if (dataset.equals("dbpedia")) {
-			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/dbpedia/infobox_500k.nt");
-		}
-		else if (dataset.equals("sweto")) {
-			importer = new NTriplesImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/swetodblp/swetodblp_april_2008-mod.nt");
-		}
-		else if (dataset.equals("simple_components")) {
-			importer = new ComponentImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/components/simple");
-		}
-		else if (dataset.equals("chefmoz")) {
-			importer = new RDFImporter();
-			importer.addImport("/Users/gl/Studium/diplomarbeit/datasets/chefmoz.rest.rdf");
-		}
-		return importer;
- 	}
-
 	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
 		op.accepts("a", "action to perform, comma separated list of: import")
@@ -116,6 +67,7 @@ public class VPRunner {
 			.withRequiredArg().ofType(String.class);
 		op.accepts("q", "query name")
 			.withRequiredArg().ofType(String.class);
+		op.accepts("ti", "triple import (lucene");
 		
 		OptionSet os = op.parse(args);
 		
@@ -132,7 +84,7 @@ public class VPRunner {
 			ls.initialize(true, false);
 
 			List<String> files = os.nonOptionArguments();
-			if (files.size() == 1) {
+			if (files.size() == 1 && !os.has("ti")) {
 				// check if file is a directory, if yes, import all files in the directory
 				File f = new File(files.get(0));
 				if (f.isDirectory()) {
@@ -143,7 +95,9 @@ public class VPRunner {
 			}
 			
 			Importer importer;
-			if (files.get(0).contains(".nt"))
+			if (os.has("ti") && files.size() == 1)
+				importer = new LuceneTripleImporter();
+			else if (files.get(0).contains(".nt"))
 				importer = new NTriplesImporter(false);
 			else if (files.get(0).contains(".owl"))
 				importer = new OntologyImporter();

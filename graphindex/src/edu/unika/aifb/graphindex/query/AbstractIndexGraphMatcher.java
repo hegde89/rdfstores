@@ -13,6 +13,7 @@ import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.GraphStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
@@ -29,12 +30,16 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 	protected HashMap<String,Integer> m_inDegree;
 
 	protected Timings m_timings;
+	protected Counters m_counters;
 	
 	protected AbstractIndexGraphMatcher(StructureIndex index, String graphName) {
 		m_index = index;
 		m_graphName = graphName;
 		m_es = index.getExtensionManager().getExtensionStorage();
 		m_gs = index.getGraphManager().getGraphStorage();
+		
+		m_timings = new Timings();
+		m_counters = new Counters();
 		
 		if (!isCompatibleWithIndex())
 			throw new UnsupportedOperationException("this index matcher is incompatible with the index");
@@ -98,5 +103,9 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 
 	public void setTimings(Timings timings) {
 		m_timings = timings;
+	}
+	
+	public void setCounters(Counters c) {
+		m_counters = c;
 	}
 }

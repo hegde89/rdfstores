@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.openrdf.model.vocabulary.RDF;
 
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.data.GTable;
@@ -24,15 +25,19 @@ import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.DataField;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
 public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	private IndexDescription m_idxPSESO;
 	private IndexDescription m_idxPOESS;
 	private IndexDescription m_idxPOES;
 	private IndexDescription m_idxPSES;
+	private EntitySearcher m_entitySearcher;
+	private List<GraphEdge<QueryNode>> m_deferredTypeEdges;
 
 	private static final Logger log = Logger.getLogger(SmallIndexMatchesValidator.class);
 
@@ -50,6 +55,11 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			return false;
 		
 		return true;
+	}
+	
+	public void setIncrementalState(EntitySearcher es, List<GraphEdge<QueryNode>> deferredTypeEdges) {
+		m_entitySearcher = es;
+		m_deferredTypeEdges = deferredTypeEdges;
 	}
 
 	public void validateIndexMatches() throws StorageException {
@@ -83,6 +93,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				matchCardinalities.put(node, 1);
 		log.debug("match cardinalities: " + matchCardinalities);
 		evc = null;
+		
+		final List<GraphEdge<QueryNode>> deferred = m_deferredTypeEdges;
 
 		PriorityQueue<GraphEdge<QueryNode>> toVisit = new PriorityQueue<GraphEdge<QueryNode>>(queryGraph.edgeCount(), new Comparator<GraphEdge<QueryNode>>() {
 			public int compare(GraphEdge<QueryNode> e1, GraphEdge<QueryNode> e2) {
@@ -90,6 +102,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				String s2 = queryGraph.getNode(e2.getSrc()).getSingleMember();
 				String d1 = queryGraph.getNode(e1.getDst()).getSingleMember();
 				String d2 = queryGraph.getNode(e2.getDst()).getSingleMember();
+				
+				if (deferred != null) {
+					if (deferred.contains(e1) && !deferred.contains(e2))
+						return 1;
+					else if (!deferred.contains(e1) && deferred.contains(e2))
+						return -1;
+				}
 			
 				int e1score = scores.get(s1) * scores.get(d1);
 				int e2score = scores.get(s2) * scores.get(d2);
@@ -154,7 +173,10 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		log.debug("remaining edges: " + toVisit.size() + "/" + queryGraph.edgeCount());
 
 		// disable merge join logging
-		Tables.log.setLevel(Level.OFF);
+//		Tables.log.setLevel(Level.OFF);
+		
+		m_counters.set(Counters.DM_REM_NODES, query.getRemovedNodes().size());
+		m_counters.set(Counters.DM_PROCESSED_EDGES, toVisit.size());
 		
 		log.debug("");
 		while (toVisit.size() > 0) {
@@ -178,42 +200,57 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			
 			log.debug(srcLabel + " -> " + trgLabel + " (" + property + ") (classes: " + classes.size() + ")");
 			
-			Map<String,List<EvaluationClass>> ext2ec = new HashMap<String,List<EvaluationClass>>();
-			if (!matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel)) {
-				// cases 1 a,d: edge has one unprocessed node, the source
-				updateClasses(classes, srcLabel, srcLabel, ext2ec);
+			if (m_entitySearcher != null && deferred.contains(currentEdge)) {
+				log.debug("edge is rdf:type and deferred, skip normal processing");
+				if (!matchedNodes.contains(srcLabel))
+					throw new UnsupportedOperationException("deferred edge should have processed node...");
 				
-				classes = evaluateTargetMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
-			}
-			else if (matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
-				// cases 1 b,c: edge has one unprocessed node, the target
-				updateClasses(classes, trgLabel, srcLabel, ext2ec);
-				
-				classes = evaluateSourceMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false, sourcesOfRemoved, removedProperties);
-			}
-			else if (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
-				// case 2: edge has two unprocessed nodes
-				updateClasses(classes, trgLabel, null, null);
-				updateClasses(classes, srcLabel, srcLabel, ext2ec);
-				
-				classes = evaluateUnmatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec);
+				for (EvaluationClass ec : classes) {
+					GTable<String> ecTable = ec.findResult(srcLabel);
+					ec.getResults().remove(ecTable);
+					
+					GTable<String> table = new GTable<String>(ecTable, false);
+					int col = ecTable.getColumn(srcLabel);
+					for (String[] row : ecTable) {
+						if (m_entitySearcher.isType(row[col], trgLabel))
+							table.addRow(row);
+					}
+					
+					log.debug("entity filter: " + ecTable.rowCount() + " => " + table.rowCount());
+					ec.getResults().add(table);
+				}
 			}
 			else {
-				// case 3: both nodes already processed
-				ext2ec = getValueMap(classes, srcLabel); // no updateClasses, have to generate explicitly
-				classes = evaluateBothMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
+				Map<String,List<EvaluationClass>> ext2ec = new HashMap<String,List<EvaluationClass>>();
+				if (!matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel)) {
+					// cases 1 a,d: edge has one unprocessed node, the source
+					updateClasses(classes, srcLabel, srcLabel, ext2ec);
+					
+					classes = evaluateTargetMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
+				}
+				else if (matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
+					// cases 1 b,c: edge has one unprocessed node, the target
+					updateClasses(classes, trgLabel, srcLabel, ext2ec);
+					
+					classes = evaluateSourceMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false, sourcesOfRemoved, removedProperties);
+				}
+				else if (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
+					// case 2: edge has two unprocessed nodes
+					updateClasses(classes, trgLabel, null, null);
+					updateClasses(classes, srcLabel, srcLabel, ext2ec);
+					
+					classes = evaluateUnmatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec);
+				}
+				else {
+					// case 3: both nodes already processed
+					ext2ec = getValueMap(classes, srcLabel); // no updateClasses, have to generate explicitly
+					classes = evaluateBothMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
+				}
 			}
 			
 			matchedNodes.add(srcLabel);
 			matchedNodes.add(trgLabel);
 			
-//			int rows = 0;
-//			for (EvaluationClass ec : classes) {
-//				log.debug(ec);
-//				for (GTable<String> t : ec.getResults())
-//					rows += t.rowCount();
-//			}
-//			log.debug(rows);
 			log.debug("classes: " + classes.size());
 			log.debug("time: " + (System.currentTimeMillis() - start));
 			log.debug("");
@@ -222,8 +259,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		for (EvaluationClass ec : classes) {
 			if (ec.getResults().size() == 0)
 				continue;
-//			log.debug(ec.getMappings().toDataString(false));
-//			log.debug(ec.getResults().get(0).toDataString(false));
+
 			m_qe.addResult(ec.getResults().get(0), true);
 		}
 	}

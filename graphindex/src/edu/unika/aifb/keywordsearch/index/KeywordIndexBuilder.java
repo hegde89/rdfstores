@@ -165,6 +165,7 @@ public class KeywordIndexBuilder {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			String line;
+			int entities = 0;
 			while ((line = br.readLine()) != null) {
 				String tokens [] = line.split("\t");
 				String uri,localName;
@@ -176,7 +177,7 @@ public class KeywordIndexBuilder {
 					continue;
 				}
 				
-				log.info("Indexing entity " + uri);
+//				log.info("Indexing entity " + uri);
 				
 				localName = localName.toLowerCase();
 				/* Write Index */
@@ -250,6 +251,10 @@ public class KeywordIndexBuilder {
 				doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.YES));
 				doc.setBoost(ENTITY_BOOST);
 				indexWriter.addDocument(doc);
+				
+				entities++;
+				if (entities % 1000000 == 0)
+					log.debug("entities indexed: " + entities);
 			}
 			br.close();
 		}

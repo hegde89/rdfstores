@@ -3,7 +3,6 @@ package edu.unika.aifb.graphindex.util;
 public class Timings {
 	private long[] starts = new long[20];
 	private long[] timings = new long[20];
-	private int[] counts = new int[20];
 	public static final int LOAD_DATA_LIST = 0;
 	public static final int LOAD_DATA_SET = 1;
 	public static final int LOAD_HT = 2;
@@ -27,13 +26,14 @@ public class Timings {
 	public static final int KW_ENTITY_SEARCH = 17;
 	public static final int KW_ASM = 18;
 	
+	public static final int TOTAL_QUERY_EVAL = 19;
+	
 	public Timings() {
 		
 	}
 	
 	public void start(int timer) {
 		starts[timer] = System.currentTimeMillis();
-		counts[timer]++;
 	}
 	
 	public void end(int timer) {
@@ -46,11 +46,7 @@ public class Timings {
 
 	public void reset() {
 		for (int i = 0; i < starts.length; i++) {
-			starts[i] = timings[i] = counts[i] = 0;
+			starts[i] = timings[i] = 0;
 		}
-	}
-
-	public int[] getCounts() {
-		return counts;
 	}
 }

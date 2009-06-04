@@ -21,7 +21,7 @@ import edu.unika.aifb.keywordsearch.impl.Relation;
 import edu.unika.aifb.keywordsearch.impl.NamedConcept;
 
 
-public class KeywordElement extends ElementComparator implements Serializable {
+public class KeywordElement implements Comparable<KeywordElement>, Serializable {
 
 	/**
 	 * 
@@ -252,6 +252,10 @@ public class KeywordElement extends ElementComparator implements Serializable {
 	
 	public int hashCode(){
 		return resource.hashCode();
+	}
+
+	public int compareTo(KeywordElement o) {
+		return this.getResource().getUri().compareTo(o.getResource().getUri());
 	}
 
 }

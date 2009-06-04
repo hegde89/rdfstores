@@ -1,6 +1,7 @@
 package edu.unika.aifb.keywordsearch.search;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -114,8 +115,8 @@ public class EntitySearcher {
 	
 	public Collection<KeywordElement> searchEntities(Map<String, Collection<String>> attributeQueries, Collection<String> typeQueries) {
 		Map<String, Collection<String>> attributes = new HashMap<String, Collection<String>>();
-		Collection<String> concepts = new HashSet<String>();
-		Collection<KeywordElement> entities = new HashSet<KeywordElement>();
+		Collection<String> concepts = new ArrayList<String>();
+		Collection<KeywordElement> entities = new ArrayList<KeywordElement>();
 		
 		searchConcepts(searcher, typeQueries, concepts);
 		searchAttributes(searcher, attributeQueries.keySet(), attributes);
@@ -126,7 +127,7 @@ public class EntitySearcher {
 	}
 	
 	public Collection<KeywordElement> searchEntities(String uriQuery) {
-		Collection<KeywordElement> entities = new HashSet<KeywordElement>();
+		Collection<KeywordElement> entities = new ArrayList<KeywordElement>();
 		
 		searchEntitiesByUri(searcher, uriQuery, entities);
 		
@@ -166,11 +167,11 @@ public class EntitySearcher {
 				Query q;
 				Collection<String> tmp = null;
 				if(keyword.startsWith(Constant.URI_PREFIX)) {
-					tmp = new HashSet<String>();	
+					tmp = new ArrayList<String>();	
 					tmp.add(keyword);
 				}
 				else if(keyword.equals(Constant.LABEL_FIELD) || keyword.equals(Constant.LOCALNAME_FIELD) || keyword.equals(Constant.CONCEPT_FIELD)) {
-					tmp = new HashSet<String>();	
+					tmp = new ArrayList<String>();	
 					tmp.add(keyword);
 				}
 				else {	
@@ -183,7 +184,7 @@ public class EntitySearcher {
 					for (String resource : tmp) {
 						Collection<String> coll = attributes.get(keyword);
 						if (coll == null) {
-							coll = new HashSet<String>();
+							coll = new ArrayList<String>();
 							attributes.put(keyword, coll);
 						}
 						coll.add(resource);

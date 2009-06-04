@@ -89,11 +89,6 @@ public class TransformedGraphNode {
 			m_entities.remove(element);
 	}
 	
-	public void removeEntities(Collection<KeywordElement> elements) {
-		if(m_entities != null)
-			m_entities.removeAll(elements);
-	}
-	
 	public void addTypeQuery(String type) {
 		m_typeQueries.add(type);
 	}

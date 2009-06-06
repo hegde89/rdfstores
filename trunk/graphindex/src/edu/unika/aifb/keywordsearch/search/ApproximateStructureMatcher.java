@@ -21,20 +21,14 @@ public class ApproximateStructureMatcher {
 	private TransformedGraph m_graph;
 	private Set<String> m_nodesWithNoEntities;
 	private TransformedGraphNode m_startNode;
-	private Set<KeywordElement[]> m_rows;
 	private GTable<KeywordElement> m_table;
-	private int m_columnSize;
 	
 	private static final Logger log = Logger.getLogger(ApproximateStructureMatcher.class);
 	
 	public ApproximateStructureMatcher(TransformedGraph graph, int hops) {
 		m_graph = graph;
 		m_nodesWithNoEntities = new HashSet<String>();
-		m_rows = new HashSet<KeywordElement[]>();
 		m_startNode = computeCentricNode();
-		List<String> columnNames = new ArrayList<String>();
-		columnNames.addAll(graph.getNodeNames());
-		m_columnSize = columnNames.size();
 		m_hops = hops;
 	}
 	

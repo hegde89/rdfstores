@@ -3,6 +3,7 @@ package edu.unika.aifb.keywordsearch.search;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -61,12 +63,31 @@ public class EntitySearcher {
 		}
 	}
 	
+	public TransformedGraph searchEntities(TransformedGraph graph, int cutOff) {
+		for(TransformedGraphNode node : graph.getNodes()) {
+			if(node.getType() == TransformedGraphNode.ENTITY_QUERY_NODE) {
+				Map<String, Collection<String>> attributeQueries = node.getAttributeQueries();
+				if(attributeQueries != null && attributeQueries.keySet().size() != 0)
+					node.setEntities(searchEntities(attributeQueries, node.getTypeQueries(), cutOff));
+			}	
+			else if(node.getType() == TransformedGraphNode.ENTITY_NODE) {
+				node.setEntities(searchEntities(node.getUriQuery()));
+			}	
+			if (node.getEntities() != null)
+				log.debug("variable: " + node.getNodeName() + ", entities: " + node.getEntities().size());
+			else
+				log.debug("variable: " + node.getNodeName() + ", no entities");
+		}
+		
+		return graph;
+	}
+	
 	public TransformedGraph searchEntities(TransformedGraph graph) {
 		for(TransformedGraphNode node : graph.getNodes()) {
 			if(node.getType() == TransformedGraphNode.ENTITY_QUERY_NODE) {
 				Map<String, Collection<String>> attributeQueries = node.getAttributeQueries();
 				if(attributeQueries != null && attributeQueries.keySet().size() != 0)
-					node.setEntities(searchEntities(attributeQueries, node.getTypeQueries()));
+					node.setEntities(searchEntities(attributeQueries, node.getTypeQueries(), 0));
 			}	
 			else if(node.getType() == TransformedGraphNode.ENTITY_NODE) {
 				node.setEntities(searchEntities(node.getUriQuery()));
@@ -83,7 +104,7 @@ public class EntitySearcher {
 	public boolean isType(String entity, String concept) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, entity));
 		try {
-			Map<Integer, Float> docIdsAndScores = getDocumentIds(tq);
+			TreeSet<DocHit> docHits = getDocumentHits(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -93,8 +114,8 @@ public class EntitySearcher {
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 			
-		    for(Integer docId : docIdsAndScores.keySet()) {
-		    	Document doc = reader.document(docId, fieldSelector);
+		    for(DocHit docHit : docHits) {
+		    	Document doc = reader.document(docHit.getDocId(), fieldSelector);
 		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
 				if(type == null) {
 					System.err.println("type is null!");
@@ -113,7 +134,7 @@ public class EntitySearcher {
 		return false;
 	}
 	
-	public Collection<KeywordElement> searchEntities(Map<String, Collection<String>> attributeQueries, Collection<String> typeQueries) {
+	public Collection<KeywordElement> searchEntities(Map<String, Collection<String>> attributeQueries, Collection<String> typeQueries, int cutOff) {
 		Map<String, Collection<String>> attributes = new HashMap<String, Collection<String>>();
 		Collection<String> concepts = new ArrayList<String>();
 		Collection<KeywordElement> entities = new ArrayList<KeywordElement>();
@@ -121,7 +142,7 @@ public class EntitySearcher {
 		searchConcepts(searcher, typeQueries, concepts);
 		searchAttributes(searcher, attributeQueries.keySet(), attributes);
 		if(attributes != null && attributes.size() != 0)
-			searchEntitiesByAttributeVauleCompounds(searcher, attributeQueries, attributes, concepts, entities);
+			searchEntitiesByAttributeVauleCompounds(searcher, attributeQueries, attributes, concepts, entities, cutOff);
 		
 		return entities;
 	}
@@ -146,7 +167,7 @@ public class EntitySearcher {
 					} else {
 						QueryParser parser = new QueryParser(Constant.SCHEMA_FIELD, analyzer);
 						q = parser.parse(keyword);
-						Collection<String> tmp = searchAttributesWithClause(searcher, q);
+						Collection<String> tmp = searchConceptWithClause(searcher, q);
 						if (tmp != null && tmp.size() != 0) {
 							concepts.addAll(tmp);
 						}
@@ -157,6 +178,48 @@ public class EntitySearcher {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public Collection<String> searchConceptWithClause(IndexSearcher searcher, Query clause) {
+		Collection<String> result = new HashSet<String>();
+		try {
+			Hits hits = searcher.search(clause);
+			/********* add fuzzy query funtion here **************/
+			if (hits == null || hits.length() == 0){
+				Set<Term> terms = new HashSet<Term>();
+				clause.extractTerms(terms);
+				//if clause query is a term query
+				if(terms.size() != 0){
+					BooleanQuery query = new BooleanQuery();
+					for(Term term : terms) {
+						query.add(new FuzzyQuery(term, 0.8f, 1), Occur.MUST);
+					}
+					hits = searcher.search(query);
+					log.debug(query + " " + hits);
+				}
+			}
+			/************************************************/
+
+			for(int i = 0; i < hits.length(); i++){
+				Document doc = hits.doc(i);
+				float score = hits.score(i);
+				if(score >= SCHEMA_THRESHOLD){
+					String type = doc.get(Constant.TYPE_FIELD);
+					if(type == null) {
+						System.err.println("type is null!");
+						continue;
+					}
+
+					if(type.equals(TypeUtil.CONCEPT)){
+						result.add(doc.get(Constant.URI_FIELD));
+					}
+				}
+			}				
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return result;
 	}
 	
 	public void searchAttributes(IndexSearcher searcher, Collection<String> queries, Map<String, Collection<String>> attributes) {
@@ -242,7 +305,7 @@ public class EntitySearcher {
 	private void searchEntitiesByUri(IndexSearcher searcher, String query, Collection<KeywordElement> entities) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, query));
 		try {
-			Map<Integer, Float> docIdsAndScores = getDocumentIds(tq);
+			TreeSet<DocHit> docHits = getDocumentHits(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -252,9 +315,9 @@ public class EntitySearcher {
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 			
-		    for(Integer docId : docIdsAndScores.keySet()) {
-		    	Document doc = reader.document(docId, fieldSelector);
-		    	float score = docIdsAndScores.get(docId);
+		    for(DocHit docHit : docHits) {
+		    	Document doc = reader.document(docHit.getDocId(), fieldSelector);
+		    	float score = docHit.getScore();
 		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
 				if(type == null) {
 					System.err.println("type is null!");
@@ -274,7 +337,7 @@ public class EntitySearcher {
 	}
 	
 	private void searchEntitiesByAttributeVauleCompounds(IndexSearcher searcher, Map<String, Collection<String>> queries, 
-			Map<String, Collection<String>> attributes, Collection<String> concepts, Collection<KeywordElement> entities) {
+			Map<String, Collection<String>> attributes, Collection<String> concepts, Collection<KeywordElement> entities, int cutOff) {
 		BooleanQuery entityQuery = new BooleanQuery(); 
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
@@ -308,16 +371,16 @@ public class EntitySearcher {
 				entityQuery.add(typeQuery, BooleanClause.Occur.MUST);
 			}
 			
-			searchEntitiesWithClause(searcher, entityQuery, entities); 
+			searchEntitiesWithClause(searcher, entityQuery, entities, cutOff); 
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query query, Collection<KeywordElement> result) {
+	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query query, Collection<KeywordElement> result, int cutOff) {
 		try {
-			Map<Integer, Float> docIdsAndScores = getDocumentIds(query);
+			TreeSet<DocHit> docHits = getDocumentHits(query);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -325,21 +388,44 @@ public class EntitySearcher {
 		    Set<String> lazyFieldNames = new HashSet<String>();
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
-			
-		    for(Integer docId : docIdsAndScores.keySet()) {
-		    	Document doc = reader.document(docId, fieldSelector);
-		    	float score = docIdsAndScores.get(docId);
-		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
-				if(type == null) {
-					System.err.println("type is null!");
-					continue;
-				}
 
-				if(type.equals(TypeUtil.ENTITY)){
-					IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-					KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
-					result.add(ele);
-				}
+		    if(cutOff > 0) {
+		    	int i = docHits.size();
+		    	while(cutOff > 0 && i > 0) {
+		    		DocHit docHit = docHits.last();
+		    		Document doc = reader.document(docHit.getDocId(), fieldSelector);
+		    		float score = docHit.getScore();
+		    		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
+		    		if(type == null) {
+		    			System.err.println("type is null!");
+		    			continue;
+		    		}
+
+		    		if(type.equals(TypeUtil.ENTITY)){
+		    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+		    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+		    			result.add(ele);
+		    		}
+		    		cutOff--;
+		    		i--;
+		    	}   
+		    }
+		    else {
+		    	for(DocHit docHit : docHits) {
+		    		Document doc = reader.document(docHit.getDocId(), fieldSelector);
+		    		float score = docHit.getScore();
+		    		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
+		    		if(type == null) {
+		    			System.err.println("type is null!");
+		    			continue;
+		    		}
+
+		    		if(type.equals(TypeUtil.ENTITY)){
+		    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+		    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+		    			result.add(ele);
+		    		}
+		    	}
 		    }
 		}
 		catch (Exception e) {
@@ -348,12 +434,22 @@ public class EntitySearcher {
 		return result;
 	}
 	
-	public Map<Integer, Float> getDocumentIds(Query q) throws StorageException {
-		final Map<Integer, Float> docIdsAndScores = new TreeMap<Integer, Float>();
+	public TreeSet<DocHit> getDocumentHits(Query q) throws StorageException {
+		final TreeSet<DocHit> docHits = new TreeSet<DocHit>(new Comparator<DocHit>() {
+			public int compare(DocHit o1, DocHit o2) {
+				if(o1.getScore() < o2.getScore())
+					return -1;
+				else if(o1.getScore() > o2.getScore())
+					return 1;
+				else
+					return 0;
+			}
+		});
 		try {
 			searcher.search(q, new HitCollector() {
 				public void collect(int docId, float score) {
-					docIdsAndScores.put(docId, score);
+					docHits.add(new DocHit(docId, score));
+					log.debug("docId:" + docId + " score:" + score);
 				}
 			});
 		} catch (IOException e) {
@@ -361,39 +457,39 @@ public class EntitySearcher {
 		}
 //		log.debug(q + ", docs: " + docIdsAndScores.size());
 		
-		return docIdsAndScores;
+		return docHits;
 	}
 	
 	private String pruneString(String str) {
 		return str.replaceAll("\"", "");
 	}
 	
-//	public static void main(String[] args) {
-//		EntitySearcher searcher = new EntitySearcher("D://QueryGenerator/BTC/index/aifb-/keyword"); 
-//		
-//		System.out.println("******************** Input Example ********************");
-//		System.out.println("name::Thanh publication AIFB");
-//		System.out.println("******************** Input Example ********************");
-//		Scanner scanner = new Scanner(System.in);
-//		while (true) {
-//			System.out.println("Please input the keywords:");
-//			String line = scanner.nextLine();
-//			
-//			if(line.trim().equals("exit")) return;
-//			
-//			LinkedList<String> keywordList = getKeywordList(line);
-//			Map<String, Collection<String>> map = parseQueries(keywordList);
-//			
-//			long start = System.currentTimeMillis();
-//			Collection<KeywordElement> results = searcher.searchEntities(map, null);
-//			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
-//			
+	public static void main(String[] args) {
+		EntitySearcher searcher = new EntitySearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
+		
+		System.out.println("******************** Input Example ********************");
+		System.out.println("name::Thanh publication AIFB");
+		System.out.println("******************** Input Example ********************");
+		Scanner scanner = new Scanner(System.in);
+		while (true) {
+			System.out.println("Please input the keywords:");
+			String line = scanner.nextLine();
+			
+			if(line.trim().equals("exit")) return;
+			
+			LinkedList<String> keywordList = getKeywordList(line);
+			Map<String, Collection<String>> map = parseQueries(keywordList);
+			
+			long start = System.currentTimeMillis();
+			Collection<KeywordElement> results = searcher.searchEntities(map, null, 0);
+			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
+			
 //			for(KeywordElement ele : results) {
 //				log.info("Elements :" + ele);
 //				log.info("\n");
 //			}
-//		}
-//	} 
+		}
+	} 
 	
 	public static Map<String, Collection<String>> parseQueries(Collection<String> queries) {
 		Map<String, Collection<String>> keywordCompounds = new HashMap<String, Collection<String>>();

@@ -3,10 +3,12 @@ package edu.unika.aifb.keywordsearch.search;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -28,7 +30,9 @@ import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocCollector;
 import org.apache.lucene.search.BooleanClause.Occur;
 
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -104,7 +108,7 @@ public class EntitySearcher {
 	public boolean isType(String entity, String concept) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, entity));
 		try {
-			TreeSet<DocHit> docHits = getDocumentHits(tq);
+			List<ScoreDoc> docHits = getDocuments(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -114,8 +118,8 @@ public class EntitySearcher {
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 			
-		    for(DocHit docHit : docHits) {
-		    	Document doc = reader.document(docHit.getDocId(), fieldSelector);
+		    for(ScoreDoc docHit : docHits) {
+		    	Document doc = reader.document(docHit.doc, fieldSelector);
 		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
 				if(type == null) {
 					System.err.println("type is null!");
@@ -305,7 +309,7 @@ public class EntitySearcher {
 	private void searchEntitiesByUri(IndexSearcher searcher, String query, Collection<KeywordElement> entities) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, query));
 		try {
-			TreeSet<DocHit> docHits = getDocumentHits(tq);
+			List<ScoreDoc> docHits = getDocuments(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -315,9 +319,9 @@ public class EntitySearcher {
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 			
-		    for(DocHit docHit : docHits) {
-		    	Document doc = reader.document(docHit.getDocId(), fieldSelector);
-		    	float score = docHit.getScore();
+		    for(ScoreDoc docHit : docHits) {
+		    	Document doc = reader.document(docHit.doc, fieldSelector);
+		    	float score = docHit.score;
 		    	String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
 				if(type == null) {
 					System.err.println("type is null!");
@@ -380,7 +384,7 @@ public class EntitySearcher {
 	
 	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query query, Collection<KeywordElement> result, int cutOff) {
 		try {
-			TreeSet<DocHit> docHits = getDocumentHits(query);
+			ScoreDoc[] docHits = getTopDocuments(query, cutOff);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -389,44 +393,21 @@ public class EntitySearcher {
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 
-		    if(cutOff > 0) {
-		    	int i = docHits.size();
-		    	while(cutOff > 0 && i > 0) {
-		    		DocHit docHit = docHits.last();
-		    		Document doc = reader.document(docHit.getDocId(), fieldSelector);
-		    		float score = docHit.getScore();
-		    		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
-		    		if(type == null) {
-		    			System.err.println("type is null!");
-		    			continue;
-		    		}
+		   	for(ScoreDoc docHit : docHits) {
+		   		Document doc = reader.document(docHit.doc, fieldSelector);
+		   		float score = docHit.score;
+		   		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
+		   		if(type == null) {
+		   			System.err.println("type is null!");
+		   			continue;
+		   		}
 
-		    		if(type.equals(TypeUtil.ENTITY)){
-		    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-		    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
-		    			result.add(ele);
-		    		}
-		    		cutOff--;
-		    		i--;
-		    	}   
-		    }
-		    else {
-		    	for(DocHit docHit : docHits) {
-		    		Document doc = reader.document(docHit.getDocId(), fieldSelector);
-		    		float score = docHit.getScore();
-		    		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
-		    		if(type == null) {
-		    			System.err.println("type is null!");
-		    			continue;
-		    		}
-
-		    		if(type.equals(TypeUtil.ENTITY)){
-		    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-		    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
-		    			result.add(ele);
-		    		}
-		    	}
-		    }
+	    		if(type.equals(TypeUtil.ENTITY)){
+	    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+	    			result.add(ele);
+	    		}
+	    	}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -434,30 +415,35 @@ public class EntitySearcher {
 		return result;
 	}
 	
-	public TreeSet<DocHit> getDocumentHits(Query q) throws StorageException {
-		final TreeSet<DocHit> docHits = new TreeSet<DocHit>(new Comparator<DocHit>() {
-			public int compare(DocHit o1, DocHit o2) {
-				if(o1.getScore() < o2.getScore())
-					return -1;
-				else if(o1.getScore() > o2.getScore())
-					return 1;
-				else
-					return 0;
-			}
-		});
+	
+	public List<ScoreDoc> getDocuments(Query q) throws StorageException {
+		final List<ScoreDoc> docs = new ArrayList<ScoreDoc>();
 		try {
 			searcher.search(q, new HitCollector() {
 				public void collect(int docId, float score) {
-					docHits.add(new DocHit(docId, score));
-					log.debug("docId:" + docId + " score:" + score);
+					docs.add(new ScoreDoc(docId, score));
 				}
 			});
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-//		log.debug(q + ", docs: " + docIdsAndScores.size());
+//		log.debug("  " + docIds.size() + " docs");
 		
-		return docHits;
+		return docs;
+	}
+	
+	public ScoreDoc[] getTopDocuments(Query q, int top) throws StorageException {
+		ScoreDoc[] docs;
+		try {
+			TopDocCollector collector = new TopDocCollector(top);  
+			searcher.search(q, collector);
+			docs = collector.topDocs().scoreDocs;
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+//		log.debug("  " + docIds.size() + " docs");
+		
+		return docs;
 	}
 	
 	private String pruneString(String str) {

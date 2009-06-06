@@ -108,7 +108,7 @@ public class EntitySearcher {
 	public boolean isType(String entity, String concept) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, entity));
 		try {
-			List<ScoreDoc> docHits = getDocuments(tq);
+			ScoreDoc[] docHits = getDocuments(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -309,7 +309,7 @@ public class EntitySearcher {
 	private void searchEntitiesByUri(IndexSearcher searcher, String query, Collection<KeywordElement> entities) {
 		TermQuery tq = new TermQuery(new Term(Constant.URI_FIELD, query));
 		try {
-			List<ScoreDoc> docHits = getDocuments(tq);
+			ScoreDoc[] docHits = getDocuments(tq);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -384,7 +384,6 @@ public class EntitySearcher {
 	
 	public Collection<KeywordElement> searchEntitiesWithClause(IndexSearcher searcher, Query query, Collection<KeywordElement> result, int cutOff) {
 		try {
-			ScoreDoc[] docHits = getTopDocuments(query, cutOff);
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
 		    loadFieldNames.add(Constant.TYPE_FIELD);
@@ -392,6 +391,12 @@ public class EntitySearcher {
 		    Set<String> lazyFieldNames = new HashSet<String>();
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
+			
+		    ScoreDoc[] docHits;
+		    if(cutOff > 0)
+				docHits = getTopDocuments(query, cutOff);
+			else
+				docHits = getDocuments(query);
 
 		   	for(ScoreDoc docHit : docHits) {
 		   		Document doc = reader.document(docHit.doc, fieldSelector);
@@ -416,7 +421,7 @@ public class EntitySearcher {
 	}
 	
 	
-	public List<ScoreDoc> getDocuments(Query q) throws StorageException {
+	public ScoreDoc[] getDocuments(Query q) throws StorageException {
 		final List<ScoreDoc> docs = new ArrayList<ScoreDoc>();
 		try {
 			searcher.search(q, new HitCollector() {
@@ -429,7 +434,7 @@ public class EntitySearcher {
 		}
 //		log.debug("  " + docIds.size() + " docs");
 		
-		return docs;
+		return docs.toArray(new ScoreDoc[docs.size()]);
 	}
 	
 	public ScoreDoc[] getTopDocuments(Query q, int top) throws StorageException {

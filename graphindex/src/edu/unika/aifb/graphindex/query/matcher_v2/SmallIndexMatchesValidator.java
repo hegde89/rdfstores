@@ -157,18 +157,30 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			edges = queryGraph.edges();
 		
 		Set<String> sourcesOfRemoved = query.getForwardSources();
+		Set<String> targetsOfRemoved = query.getBackwardTargets();
 		
-		Map<String,String> removedProperties = new HashMap<String,String>();
+		Map<String,Set<String>> removedProperties = new HashMap<String,Set<String>>();
 		log.debug("remove nodes: " + query.getRemovedNodes());
 		for (GraphEdge<QueryNode> e : edges) {
-			if (!query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
-				&& !query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember())) {
+			if ((!query.getRemovedNodes().contains(queryGraph.getNode(e.getSrc()).getSingleMember())
+					&& !query.getRemovedNodes().contains(queryGraph.getNode(e.getDst()).getSingleMember()) 
+//				|| (queryGraph.getNode(e.getDst()).getSingleMember().equals("?x2") 
+//					|| queryGraph.getNode(e.getSrc()).getSingleMember().equals("?x5")) 
+					)){
 				toVisit.add(e);
 			}
-			else
-				removedProperties.put(queryGraph.getNode(e.getSrc()).getSingleMember(), e.getLabel());
+			else {
+				Set<String> properties = removedProperties.get(queryGraph.getNode(e.getSrc()).getSingleMember());
+				if (properties == null) {
+					properties = new HashSet<String>();
+					removedProperties.put(queryGraph.getNode(e.getSrc()).getSingleMember(), properties);
+				}
+				properties.add(e.getLabel());
+				m_counters.inc(Counters.DM_REM_EDGES);
+			}
 		}
 		log.debug("sources of removed edges: " + sourcesOfRemoved);
+		log.debug("targets of removed edges: " + targetsOfRemoved);
 		log.debug("removed properties: " + removedProperties);
 		log.debug("remaining edges: " + toVisit.size() + "/" + queryGraph.edgeCount());
 
@@ -193,7 +205,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				srcLabel = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
 				trgLabel = queryGraph.getNode(currentEdge.getDst()).getSingleMember();
 			}
-			while (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel));
+			while ((!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel)));
+//				|| (Util.isConstant(trgLabel) && !matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel)));
 			
 			skipped.remove(currentEdge);
 			toVisit.addAll(skipped);
@@ -222,11 +235,11 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			}
 			else {
 				Map<String,List<EvaluationClass>> ext2ec = new HashMap<String,List<EvaluationClass>>();
-				if (!matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel)) {
+				if (!matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel) && !Util.isConstant(trgLabel)) {
 					// cases 1 a,d: edge has one unprocessed node, the source
 					updateClasses(classes, srcLabel, srcLabel, ext2ec);
 					
-					classes = evaluateTargetMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
+					classes = evaluateTargetMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false, sourcesOfRemoved, removedProperties);
 				}
 				else if (matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
 					// cases 1 b,c: edge has one unprocessed node, the target
@@ -234,7 +247,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					
 					classes = evaluateSourceMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false, sourcesOfRemoved, removedProperties);
 				}
-				else if (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel)) {
+				else if (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel) || (!matchedNodes.contains(srcLabel) && Util.isConstant(trgLabel))) {
 					// case 2: edge has two unprocessed nodes
 					updateClasses(classes, trgLabel, null, null);
 					updateClasses(classes, srcLabel, srcLabel, ext2ec);
@@ -244,7 +257,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				else {
 					// case 3: both nodes already processed
 					ext2ec = getValueMap(classes, srcLabel); // no updateClasses, have to generate explicitly
-					classes = evaluateBothMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false);
+					classes = evaluateBothMatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, false, sourcesOfRemoved, removedProperties);
 				}
 			}
 			
@@ -259,13 +272,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		for (EvaluationClass ec : classes) {
 			if (ec.getResults().size() == 0)
 				continue;
-
+//			log.debug(ec.getMappings().toDataString());
 			m_qe.addResult(ec.getResults().get(0), true);
 		}
 	}
 	
 	// case 1 a,d: target node is matched, source is not
-	private List<EvaluationClass> evaluateTargetMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingTarget) throws StorageException {
+	private List<EvaluationClass> evaluateTargetMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingTarget, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
@@ -276,6 +289,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				int trgCol = targetTable.getColumn(trgLabel);
 				ec.getResults().remove(targetTable);
 				
+				String trgExt = ec.getMatch(trgLabel);
+
 				if (filterUsingTarget) {
 //					log.debug("filter: " + targetTable.rowCount() + " => " + filteredTable.rowCount());
 					GTable<String> filteredTable = filterTable(m_idxPOES, targetTable, srcExt, property, trgLabel);
@@ -292,7 +307,24 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				Set<String> values = new HashSet<String>();
 				for (String[] trgRow : targetTable) {
 					if (!values.contains(trgRow[trgCol])) {
-						table.addRows(m_es.getIndexTable(m_idxPOESS, srcExt, property, trgRow[trgCol]).getRows());
+						GTable<String> t2 = m_es.getIndexTable(m_idxPOESS, srcExt, property, trgRow[trgCol]);
+						if (sourcesOfRemoved.contains(trgLabel)) {
+							for (String[] row : t2) {
+								boolean all = true;
+								for (String p : removedProperties.get(trgLabel)) {
+									if (!m_es.getDataSet(m_idxPSES, p, row[1]).contains(trgExt)) {
+										all = false;
+										break;
+									}
+										
+								}
+								if (all)
+									table.addRow(row);
+							}
+						}
+						else
+							table.addRows(t2.getRows());
+						
 						values.add(trgRow[trgCol]);
 					}
 				}
@@ -318,7 +350,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	}
 
 	// case 1 b,c: source node is matched, target is not
-	private List<EvaluationClass> evaluateSourceMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingSource, Set<String> sourcesOfRemoved, Map<String,String> removedProperties) throws StorageException {
+	private List<EvaluationClass> evaluateSourceMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingSource, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
@@ -352,8 +384,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					if (!values.contains(srcRow[srcCol])) {
 						GTable<String> t2 = m_es.getIndexTable(m_idxPSESO, srcExt, property, srcRow[srcCol]);
 						for (String[] row : t2)
-							if (!sourcesOfRemoved.contains(trgLabel) || m_es.getDataSet(m_idxPSES, removedProperties.get(trgLabel), row[1]).contains(trgExt))
-								table.addRows(t2.getRows());
+//							if (!sourcesOfRemoved.contains(trgLabel) || m_es.getDataSet(m_idxPSES, removedProperties.get(trgLabel), row[1]).contains(trgExt))
+								table.addRow(row);
 						values.add(srcRow[srcCol]);
 					}
 				}
@@ -404,7 +436,9 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	}
 
 	// TODO handle sourceTable == targetTable (hash join or new multi-column merge join)
-	private List<EvaluationClass> evaluateBothMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filter) throws StorageException {
+	private List<EvaluationClass> evaluateBothMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filter, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
+		log.debug("both matched");
+		
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 		
 		int filteredRows = 0, totalRows = 0;
@@ -455,9 +489,31 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					}
 				}
 				
+				String trgExt = ec.getMatch(trgLabel);
+				
+//				log.debug(ec.getMappings().toDataString());
 				for (String[] row : prevTable) {
 					if (!values.contains(row[col])) {
-						table.addRows(m_es.getIndexTable(index, srcExt, property, row[col]).getRows());
+//						table.addRows(m_es.getIndexTable(index, srcExt, property, row[col]).getRows());
+						GTable<String> t2 = m_es.getIndexTable(index, srcExt, property, row[col]);
+						if (sourcesOfRemoved.contains(trgLabel)) {
+							for (String[] t2row : t2) {
+								boolean all = true;
+								for (String p : removedProperties.get(trgLabel)) {
+									if (!m_es.getDataSet(m_idxPSES, p, t2row[1]).contains(trgExt)) {
+										all = false;
+										break;
+									}
+										
+								}
+								
+								if (all)
+									table.addRow(t2row);
+							}
+						}
+						else
+							table.addRows(t2.getRows());
+						
 						values.add(row[col]);
 					}
 				}

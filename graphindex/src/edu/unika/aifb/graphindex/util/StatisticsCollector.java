@@ -28,7 +28,7 @@ public class StatisticsCollector {
 	}
 	
 	public void logStats() {
-		long[] timings = new long[20];
+		long[] timings = new long[Timings.stats.size()];
 
 		for (Timings t : m_timings) {
 			for (int i = 0; i < t.getTimings().length; i++) {
@@ -36,7 +36,7 @@ public class StatisticsCollector {
 			}
 		}
 		
-		long[] counts = new long [20];
+		long[] counts = new long [Counters.stats.size()];
 		for (Counters c : m_counters) {
 			for (int i = 0; i < c.getCounts().length; i++) {
 				counts[i] += c.getCounts()[i];
@@ -44,21 +44,9 @@ public class StatisticsCollector {
 		}
 		
 		log.debug("time spent");
-		log.debug(" load data list: " + (timings[Timings.LOAD_DATA_LIST]));
-		log.debug(" load data set:  " + (timings[Timings.LOAD_DATA_SET]));
-		log.debug(" load ht:        " + (timings[Timings.LOAD_HT]));
-		log.debug(" load it:        " + (timings[Timings.LOAD_IT]));
-		log.debug(" load its:       " + (timings[Timings.LOAD_ITS]));
-		log.debug(" join merge:     " + (timings[Timings.JOIN_MERGE]));
-		log.debug(" tbl sort:       " + (timings[Timings.TBL_SORT]));
-		log.debug(" im purge:       " + (timings[Timings.IM_PURGE]));
-		log.debug(" dm filter:      " + (timings[Timings.DM_FILTER]));
-		log.debug(" dm classes:     " + (timings[Timings.DM_CLASSES]));
-		log.debug(" kw entity:      " + (timings[Timings.KW_ENTITY_SEARCH]));
-		log.debug(" kw asm:         " + (timings[Timings.KW_ASM]));
-		log.debug(" IM total:       " + (timings[Timings.STEP_IM]));
-		log.debug(" DM total:       " + (timings[Timings.STEP_DM]));
-		log.debug(" query total:    " + (timings[Timings.TOTAL_QUERY_EVAL]));
+		for (Stat s : Timings.stats) {
+			log.debug(" " + s.name + "\t" + timings[s.idx]);
+		}
 		
 		log.debug("counters");
 		for (Stat s : Counters.stats) {
@@ -87,8 +75,27 @@ public class StatisticsCollector {
 		return timings;
 	}
 	
+	public void consolidate(Timings timings, Counters counters) {
+		for (Timings t : m_timings) {
+			for (Stat s : Timings.stats)
+				timings.set(s, timings.get(s) + t.get(s));
+		}
+		
+		for (Counters c : m_counters) {
+			for (Stat s : Counters.stats)
+				counters.set(s, counters.get(s) + c.get(s));
+		}
+	}
+	
 	public void reset() {
 		for (Timings t : m_timings) 
 			t.reset();
+		for (Counters c : m_counters) 
+			c.reset();
+	}
+	
+	public void clear() {
+		m_timings.clear();
+		m_counters.clear();
 	}
 }

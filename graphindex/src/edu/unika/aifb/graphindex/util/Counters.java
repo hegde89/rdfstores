@@ -3,6 +3,8 @@ package edu.unika.aifb.graphindex.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 public class Counters {
 	long[] counts = new long [20];
 
@@ -33,24 +35,40 @@ public class Counters {
 	
 	public static final Stat RESULTS = addStat("result_size");
 
+	private static final Logger log = Logger.getLogger(Counters.class);
 	
 	public Counters() {
-		
+		counts = new long [stats.size()];
 	}
 	
 	public void inc(Stat c) {
 		counts[c.idx]++;
 	}
 	
-	public void inc(Stat c, int amount) {
+	public void inc(Stat c, long amount) {
 		counts[c.idx] += amount;
 	}
 	
-	public void set(Stat c, int val) {
+	public void set(Stat c, long val) {
 		counts[c.idx] = val;
 	}
 
 	public long[] getCounts() {
 		return counts;
+	}
+
+	public long get(Stat s) {
+		return counts[s.idx];
+	}
+
+	public void reset() {
+		counts = new long [counts.length];
+	}
+	
+	public void logStats() {
+		log.debug("counters");
+		for (Stat s : Counters.stats) {
+			log.debug(" " + s.name + "\t" + counts[s.idx]);
+		}
 	}
 }

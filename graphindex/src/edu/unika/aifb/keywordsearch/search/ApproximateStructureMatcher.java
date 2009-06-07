@@ -10,6 +10,8 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.TransformedGraph;
 import edu.unika.aifb.keywordsearch.TransformedGraphNode;
@@ -22,6 +24,9 @@ public class ApproximateStructureMatcher {
 	private Set<String> m_nodesWithNoEntities;
 	private TransformedGraphNode m_startNode;
 	private GTable<KeywordElement> m_table;
+	
+	private Timings m_timings;
+	private Counters m_counters;
 	
 	private static final Logger log = Logger.getLogger(ApproximateStructureMatcher.class);
 	
@@ -161,7 +166,9 @@ public class ApproximateStructureMatcher {
 			
 			for(KeywordElement filterElement : filterNode.getEntities()) {
 				long start = System.currentTimeMillis();
+				m_timings.start(Timings.ASM_REACHABLE);
 				Collection<KeywordElement> joinedElements = filterElement.getReachable(elements);
+				m_timings.end(Timings.ASM_REACHABLE);
 				t_reachable += System.currentTimeMillis() - start;
 				if(joinedElements == null || joinedElements.size() == 0) {
 					removedFilterElements.add(filterElement);
@@ -254,6 +261,14 @@ public class ApproximateStructureMatcher {
 		
 		return m_table;
 		
+	}
+
+	public void setCounters(Counters counters) {
+		m_counters = counters;
+	}
+
+	public void setTimings(Timings timings) {
+		m_timings = timings;
 	}
 	
 	

@@ -179,6 +179,7 @@ public class BlockCache {
 	public void removeBlock(Block block) {
 		try {
 			m_blocks.remove(block.getId());
+			m_nodeCache.remove(block.getId());
 			m_blockDb.delete(null, new DatabaseEntry(Util.intToBytes(block.getId())));
 		} catch (DatabaseException e) {
 			e.printStackTrace();

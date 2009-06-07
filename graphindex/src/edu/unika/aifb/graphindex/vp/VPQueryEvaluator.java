@@ -25,17 +25,27 @@ import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
+import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.graphindex.vp.LuceneStorage.Index;
 
 public class VPQueryEvaluator implements IQueryEvaluator {
 	private LuceneStorage m_ls;
 	private Timings t;
+	private Counters m_counters;
+	private StatisticsCollector m_collector;
 
 	private final static Logger log = Logger.getLogger(VPQueryEvaluator.class);
 
 	public VPQueryEvaluator(LuceneStorage ls) {
 		m_ls = ls;
+	}
+
+	public VPQueryEvaluator(LuceneStorage ls, StatisticsCollector c) {
+		m_ls = ls;
+		m_collector = c;
 	}
 
 	int loaded = 0;
@@ -312,9 +322,14 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 	public List<String[]> evaluate(Query q) throws StorageException, IOException {
 		t = new Timings();
+		m_counters = new Counters();
+		m_collector.addTimings(t);
+		m_collector.addCounters(m_counters);
+		
 		GTable.timings = t;
 		Tables.timings = t;
 		long start = System.currentTimeMillis();
+		t.start(Timings.TOTAL_QUERY_EVAL);
 		final Graph<QueryNode> queryGraph = q.getGraph();
 
 		final Map<String,Integer> scores = getScores(queryGraph);
@@ -379,16 +394,34 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 
 		List<ResultArea> results = new ArrayList<ResultArea>();
 		boolean empty = false;
+		Set<String> visited = new HashSet<String>();
 
 		while (toVisit.size() > 0) {
 			long edgeStart = System.currentTimeMillis();
-			GraphEdge<QueryNode> currentEdge = toVisit.poll();
+			GraphEdge<QueryNode> currentEdge;
 
-			String srcNode = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
-			String dstNode = queryGraph.getNode(currentEdge.getDst()).getSingleMember();
-			String property = currentEdge.getLabel();
+			String srcNode;
+			String dstNode;
+			String property;
+
+			List<GraphEdge<QueryNode>> skipped = new ArrayList<GraphEdge<QueryNode>>();
+			do {
+				currentEdge = toVisit.poll();
+				skipped.add(currentEdge);
+				property = currentEdge.getLabel();
+				srcNode = queryGraph.getNode(currentEdge.getSrc()).getSingleMember();
+				dstNode = queryGraph.getNode(currentEdge.getDst()).getSingleMember();
+			}
+			while ((!visited.contains(srcNode) && !visited.contains(dstNode) && Util.isVariable(srcNode) && Util.isVariable(dstNode)));
+//				|| (Util.isConstant(dstNode) && !visited.contains(srcNode) && visited.contains(dstNode)));
+			
 			log.debug(" ");
 			log.debug(srcNode + " -> " + dstNode);
+			
+			skipped.remove(currentEdge);
+			toVisit.addAll(skipped);
+			visited.add(srcNode);
+			visited.add(dstNode);
 
 			// GTable<String> table = getTable(srcNode, property, dstNode);
 
@@ -400,6 +433,8 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 					rightArea = ra;
 			}
 
+			if (Util.isConstant(dstNode))
+				rightArea = null;
 			log.debug("la: " + leftArea + ", ra: " + rightArea);
 
 			ResultArea ra = new ResultArea(leftArea, rightArea);
@@ -574,6 +609,8 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		log.debug("duration: " + (System.currentTimeMillis() - start) / 1000.0);
 		if (empty) {
 			log.debug("size: 0");
+			m_counters.set(Counters.RESULTS, 0);
+			t.end(Timings.TOTAL_QUERY_EVAL);
 			return new ArrayList<String[]>();
 		} else {
 			log.debug("size: " + results.get(0).getResult().rowCount());
@@ -610,6 +647,8 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 					result.add(selectRow);
 				}
 			}
+			t.end(Timings.TOTAL_QUERY_EVAL);
+			m_counters.set(Counters.RESULTS, result.size());
 			log.debug("size: " + result.size());
 			return result;
 		}

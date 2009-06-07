@@ -142,7 +142,7 @@ public class ApproximateStructureMatcher {
 		return result;
 	}
 	
-	public void removeRows(Collection<KeywordElement> elements, int column) {
+	public void removeRows(Set<KeywordElement> elements, int column) {
 		long start = System.currentTimeMillis();
 		Iterator<KeywordElement[]> iter = m_table.iterator();
 		while(iter.hasNext()) {
@@ -158,13 +158,14 @@ public class ApproximateStructureMatcher {
 		if(filterNode.equals(node)) {
 		}
 		else {
-			Collection<KeywordElement> remainingFilterElements = new ArrayList<KeywordElement>();
-			Collection<KeywordElement> removedFilterElements = new HashSet<KeywordElement>();
-			Collection<KeywordElement> allJoinedElements = new ArrayList<KeywordElement>();
+			Collection<KeywordElement> filterElements = filterNode.getEntities();
 			Collection<KeywordElement> elements = node.getEntities();
+			List<KeywordElement> remainingFilterElements = new ArrayList<KeywordElement>(filterElements.size());
+			Set<KeywordElement> removedFilterElements = new HashSet<KeywordElement>(filterElements.size());
+			Set<KeywordElement> allJoinedElements = new HashSet<KeywordElement>(filterElements.size());
 			GTable<KeywordElement> joinedTable = new GTable<KeywordElement>(filterNode.getNodeName(), node.getNodeName());
 			
-			for(KeywordElement filterElement : filterNode.getEntities()) {
+			for(KeywordElement filterElement : filterElements) {
 				long start = System.currentTimeMillis();
 				m_timings.start(Timings.ASM_REACHABLE);
 				Collection<KeywordElement> joinedElements = filterElement.getReachable(elements);
@@ -191,17 +192,14 @@ public class ApproximateStructureMatcher {
 			m_table = mergeJoin(m_table, joinedTable, filterNode.getNodeName());
 			
 			log.debug("join/filter done");
+			log.debug(filterElements.size() + " " + remainingFilterElements.size());
 			log.debug(elements.size() + " " + allJoinedElements.size());
 			
 			node.setEntities(allJoinedElements);
 			
-			log.debug("retain done");
-			
 			if(node.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());
 			filterNode.setEntities(remainingFilterElements);
-			
-			log.debug("remove done");
 			
 			if(filterNode.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());

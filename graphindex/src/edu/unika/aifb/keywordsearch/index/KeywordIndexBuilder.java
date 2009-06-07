@@ -52,7 +52,7 @@ public class KeywordIndexBuilder {
 	/*
 	 * False positives will happen with probability 2<sup>-<var>NUMBER_HASHFUNCTION</var></sup>
 	 * */
-	private static int NUMBER_HASHFUNCTION = 5;
+//	private static int NUMBER_HASHFUNCTION = 5;
 	
 	private IndexSearcher dataSearcher;
 	private BlockCache  blockSearcher;
@@ -240,7 +240,8 @@ public class KeywordIndexBuilder {
 				
 				// indexing reachable entities
 				Set<String> reachableEntities = computeReachableEntities(uri);
-				BloomFilter bf = new BloomFilter(reachableEntities.size(), NUMBER_HASHFUNCTION);
+//				BloomFilter bf = new BloomFilter(reachableEntities.size(), NUMBER_HASHFUNCTION);
+				BloomFilter bf = new BloomFilter(reachableEntities.size());
 				for(String entity : reachableEntities){
 					bf.add(entity);
 				} 

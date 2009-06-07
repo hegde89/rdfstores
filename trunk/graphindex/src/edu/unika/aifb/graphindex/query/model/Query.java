@@ -22,6 +22,7 @@ import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.LabeledQueryEdge;
 import edu.unika.aifb.graphindex.query.NamedQueryGraph;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class Query {
 	private List<Literal> m_literals;
@@ -33,6 +34,7 @@ public class Query {
 	private Graph<QueryNode> m_queryGraph;
 	private Set<String> m_backwardTargets;
 	private Set<String> m_forwardSources;
+	private int m_longestPathFromConstant = 0;
 	private boolean m_ignoreIndexEdgeSets = false;
 	private static final Logger log = Logger.getLogger(Query.class);
 	
@@ -99,6 +101,10 @@ public class Query {
 		m_e2s = e2s;
 	}
 	
+	public int getLongestPathFromConstant() {
+		return m_longestPathFromConstant;
+	}
+	
 	public String toSPARQL() {
 		String s = "SELECT ";
 		for (String sv : m_selectVariables)
@@ -135,6 +141,7 @@ public class Query {
 		DirectedGraph<QueryNode,LabeledEdge<QueryNode>> g = new DirectedMultigraph<QueryNode,LabeledEdge<QueryNode>>(new ClassBasedEdgeFactory<QueryNode,LabeledEdge<QueryNode>>((Class<? extends LabeledEdge<QueryNode>>)LabeledEdge.class));
 		Map<String,QueryNode> t2qn = new HashMap<String,QueryNode>();
 		Set<String> edgeLabels = new HashSet<String>();
+		Set<QueryNode> constants = new HashSet<QueryNode>();
 		for (Literal l : m_literals) {
 			QueryNode src = t2qn.get(l.getSubject().toString());
 			if (src == null) {
@@ -154,6 +161,9 @@ public class Query {
 				g.addVertex(dst);
 			}
 			
+			if (Util.isConstant(dst.getName()))
+				constants.add(dst);
+			
 			edgeLabels.add(l.getPredicate().getUri());
 			g.addEdge(src, dst, new LabeledEdge<QueryNode>(src, dst, l.getPredicate().getUri()));
 		}
@@ -169,6 +179,33 @@ public class Query {
 			else
 				pruneQueryGraph(m_queryGraph, index);
 		}
+		
+		int longestPath = 0;
+		for (QueryNode constant : constants) {
+			Stack<List<Integer>> toVisit = new Stack<List<Integer>>();
+			toVisit.push(Arrays.asList(m_queryGraph.getNodeId(constant)));
+			while (toVisit.size() > 0) {
+				List<Integer> path = toVisit.pop();
+				
+				if (path.size() - 1 > longestPath)
+					longestPath = path.size() - 1;
+				
+				for (int succ : m_queryGraph.successors(path.get(path.size() - 1)))
+					if (!path.contains(succ)) {
+						List<Integer> next = new ArrayList<Integer>(path);
+						next.add(succ);
+						toVisit.push(next);
+					}
+				
+				for (int pred : m_queryGraph.predecessors(path.get(path.size() - 1)))
+					if (!path.contains(pred)) {
+						List<Integer> next = new ArrayList<Integer>(path);
+						next.add(pred);
+						toVisit.push(next);
+					}
+			}
+		}
+		m_longestPathFromConstant = longestPath;
 	}
 	
 	public Graph<QueryNode> getGraph() {
@@ -486,6 +523,10 @@ public class Query {
 	
 	public Set<String> getForwardSources() {
 		return m_forwardSources;
+	}
+	
+	public void setForwardSources(Set<String> sources) {
+		m_forwardSources = sources;
 	}
 
 	public void setIgnoreIndexEdgeSets(boolean m_ignoreIndexEdgeSets) {

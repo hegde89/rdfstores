@@ -141,12 +141,14 @@ public class VPEvaluator {
 				result = evaluateBothMatched(property, srcLabel, trgLabel, sourceTable, targetTable);
 			}
 			
+			log.debug("res: " + result);
+			
 			resultTables.add(result);
 			m_qe.visited(currentEdge);
-			
+
 			log.debug("");
 		}
-		
+
 		m_qe.addResult(resultTables.get(0), true);
 	}
 	
@@ -178,8 +180,15 @@ public class VPEvaluator {
 			throw new UnsupportedOperationException("edges with two variables and both unprocessed should not happen");
 	}
 	
-	private GTable<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, GTable<String> sourceTable, GTable<String> targetTable) {
-		// TODO Auto-generated method stub
-		return null;
+	private GTable<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, GTable<String> sourceTable, GTable<String> targetTable) throws StorageException {
+
+		GTable<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSESO, sourceTable.getColumn(srcLabel));
+		
+		table.sort(trgLabel, true);
+		targetTable.sort(trgLabel, true);
+		
+		table = Tables.mergeJoin(table, targetTable, trgLabel);
+		
+		return table;
 	}
 }

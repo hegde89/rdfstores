@@ -15,6 +15,7 @@ import org.openrdf.model.vocabulary.RDF;
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.StructureIndexReader;
 import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
@@ -67,7 +68,9 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		m_validator.setCounters(counters);
 		m_index.getCollector().addTimings(timings);
 		m_index.getCollector().addCounters(counters);
-		
+		GTable.timings = timings;
+		Tables.timings = timings;
+
 		log.info("evaluating...");
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 		
@@ -78,20 +81,22 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		counters.set(Counters.QUERY_NODES, queryGraph.nodeCount());
 		
 		// step 1: entity search
-		timings.start(Timings.KW_ENTITY_SEARCH);
+		timings.start(Timings.STEP_ES);
 		transformedGraph = m_searcher.searchEntities(transformedGraph);
-		timings.end(Timings.KW_ENTITY_SEARCH);
+		timings.end(Timings.STEP_ES);
 		
 		// step 2: approximate structure matching
-		timings.start(Timings.KW_ASM);
+		timings.start(Timings.STEP_ASM);
 		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, 2);
+		asm.setTimings(timings);
+		asm.setCounters(counters);
 		GTable<KeywordElement> asmResult = asm.matching();
-		timings.end(Timings.KW_ASM);
+		timings.end(Timings.STEP_ASM);
 		
 		counters.set(Counters.ASM_RESULT_SIZE, asmResult.rowCount());
 		log.debug("asm result table: " + asmResult);
-		
-		m_index.getCollector().logStats();
+
+		timings.start(Timings.STEP_ASM2IM);
 		
 		List<GraphEdge<QueryNode>> deferredTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
 		List<GraphEdge<QueryNode>> processedTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
@@ -188,7 +193,8 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		// step 3: structure-based refinement
 		QueryExecution qe = new QueryExecution(q, m_index);
-		
+//		qe.getQuery().setRemoveNodes(new HashSet<String>());
+//		qe.getQuery().setForwardSources(new HashSet<String>());
 		qe.setMatchTables(matchTables);
 		
 		Set<String> constants = new HashSet<String>();
@@ -210,6 +216,8 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		log.debug("im visited: " + qe.getIMVisited().size() + ", " + qe.getIMVisited());
 
+		timings.end(Timings.STEP_ASM2IM);
+
 		m_matcher.setQueryExecution(qe);
 		
 		timings.start(Timings.STEP_IM);
@@ -217,77 +225,88 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		timings.end(Timings.STEP_IM);
 
 		log.debug(qe.getIndexMatches());
+		
+		if (qe.getIndexMatches() != null) {
+			timings.start(Timings.STEP_IM2DM);
 
-		// step 4: result computation
-		// add entites from remaining extensions to an intermediate result set
-		
-		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
-		classes.add(new EvaluationClass(qe.getIndexMatches()));
-		
-		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !deferredTypeEdges.contains(edge)) {
-				qe.visited(edge);
-				
-				// update classes
-				List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
-				for (EvaluationClass ec : classes) {
-					newClasses.addAll(ec.addMatch(queryGraph.getTargetNode(edge).getName(), true, null, null));
-				}
-				classes.addAll(newClasses);
-				newClasses.clear();
-				for (EvaluationClass ec : classes) {
-					newClasses.addAll(ec.addMatch(queryGraph.getSourceNode(edge).getName(), false, null, null));
-				}
-				classes.addAll(newClasses);
-			} 
-		}
-		
-		log.debug("dm visited: " + qe.getVisited().size() + ", " + qe.getVisited());
-		
-		int rows = 0;
-		for (EvaluationClass ec : classes) {
-//			log.debug(ec.getMatches());
-//			log.debug(ec.getMappings());
+			// step 4: result computation
+			// add entites from remaining extensions to an intermediate result set
 			
-			for (String entityNode : entityNodes) {
-				if (!ec.getMappings().hasColumn(entityNode))
-					continue;
-				
-				List<String> columns = new ArrayList<String>(entity2constants.get(entityNode));
-				columns.add(entityNode);
-				GTable<String> table = new GTable<String>(columns);
-				int col = table.getColumn(entityNode);
-
-				for (String entity : extNode2entity.get(ec.getMatch(entityNode) + entityNode)) {
-					String[] row = new String [entity2constants.get(entityNode).size() + 1];
-					row[col] = entity;
-					for (String constant : entity2constants.get(entityNode))
-						row[table.getColumn(constant)] = constant;
-					table.addRow(row);
-				}
-				ec.getResults().add(table);
-				rows += table.rowCount();
-//				log.debug(table.toDataString(false));
+			List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
+			classes.add(new EvaluationClass(qe.getIndexMatches()));
+			
+			for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
+				// assume edges with constants to be already processed
+				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !deferredTypeEdges.contains(edge)) {
+					qe.visited(edge);
+					
+					// update classes
+					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
+					for (EvaluationClass ec : classes) {
+						newClasses.addAll(ec.addMatch(queryGraph.getTargetNode(edge).getName(), true, null, null));
+					}
+					classes.addAll(newClasses);
+					newClasses.clear();
+					for (EvaluationClass ec : classes) {
+						newClasses.addAll(ec.addMatch(queryGraph.getSourceNode(edge).getName(), false, null, null));
+					}
+					classes.addAll(newClasses);
+				} 
 			}
+			
+			log.debug("dm visited: " + qe.getVisited().size() + ", " + qe.getVisited());
+			
+			int rows = 0;
+			for (EvaluationClass ec : classes) {
+	//			log.debug(ec.getMatches());
+	//			log.debug(ec.getMappings());
+				
+				for (String entityNode : entityNodes) {
+					if (!ec.getMappings().hasColumn(entityNode))
+						continue;
+					if (qe.getQuery().getRemovedNodes().contains(entityNode))
+						continue;
+						
+					List<String> columns = new ArrayList<String>(entity2constants.get(entityNode));
+					columns.add(entityNode);
+					GTable<String> table = new GTable<String>(columns);
+					int col = table.getColumn(entityNode);
+	
+					for (String entity : extNode2entity.get(ec.getMatch(entityNode) + entityNode)) {
+						String[] row = new String [entity2constants.get(entityNode).size() + 1];
+						row[col] = entity;
+						for (String constant : entity2constants.get(entityNode))
+							row[table.getColumn(constant)] = constant;
+						table.addRow(row);
+					}
+					ec.getResults().add(table);
+					rows += table.rowCount();
+	//				log.debug(table.toDataString(false));
+				}
+			}
+	//		log.debug(rows + " " + rows2);
+			qe.setEvaluationClasses(classes);
+			
+			timings.end(Timings.STEP_IM2DM);
+			
+			m_validator.setQueryExecution(qe);
+			((SmallIndexMatchesValidator)m_validator).setIncrementalState(m_searcher, deferredTypeEdges);
+	
+			timings.start(Timings.STEP_DM);
+			m_validator.validateIndexMatches();
+			timings.end(Timings.STEP_DM);
 		}
-//		log.debug(rows + " " + rows2);
-		qe.setEvaluationClasses(classes);
-		
-		m_validator.setQueryExecution(qe);
-		((SmallIndexMatchesValidator)m_validator).setIncrementalState(m_searcher, deferredTypeEdges);
-
-		timings.start(Timings.STEP_DM);
-		m_validator.validateIndexMatches();
-		timings.end(Timings.STEP_DM);
+		else
+			qe.addResult(new GTable<String>(qe.getQuery().getSelectVariables()), false);
 		
 		qe.finished();
 		log.debug(qe.getResult());
+		
 		timings.end(Timings.TOTAL_QUERY_EVAL);
 		
 		counters.set(Counters.RESULTS, qe.getResult().rowCount());
 		
-		m_index.getCollector().logStats();
+//		m_index.getCollector().logStats();
 		
 		return qe.getResult().getRows();
 	}

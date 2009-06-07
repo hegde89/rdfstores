@@ -3,6 +3,8 @@ package edu.unika.aifb.graphindex.query;
 import java.util.HashMap;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.graph.Graph;
@@ -32,6 +34,8 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 	protected Timings m_timings;
 	protected Counters m_counters;
 	
+	private final static Logger log = Logger.getLogger(AbstractIndexGraphMatcher.class);
+	
 	protected AbstractIndexGraphMatcher(StructureIndex index, String graphName) {
 		m_index = index;
 		m_graphName = graphName;
@@ -53,8 +57,9 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 		
 		Set<LabeledEdge<String>> edges = m_gs.loadEdges(m_graphName);
 		
+		int igedges = 0;
 		for (LabeledEdge<String> e : edges) {
-
+			igedges++;
 			GTable<String> table = m_p2ts.get(e.getLabel());
 			if (table == null) {
 				table = new GTable<String>("source", "target");
@@ -78,6 +83,8 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 			else
 				m_inDegree.put(e.getDst(), deg + 1);
 		}
+		
+		log.debug("index graph edges: " + igedges);
 		
 		for (GTable<String> t : m_p2ts.values())
 			t.sort(0);

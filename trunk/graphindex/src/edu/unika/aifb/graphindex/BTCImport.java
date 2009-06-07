@@ -223,9 +223,13 @@ public class BTCImport {
 			config.setAllowCreate(true);
 
 			Environment env = new Environment(new File(bdbDirectory), config);
+			
+			new File(outputDirectory + "/temp").mkdir();
 
 			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
 			rcp.setIgnoreDataValues(true);
+			rcp.setTempDir(outputDirectory + "/temp");
+
 			rcp.createIndexGraph(pathLength);
 
 			gs.close();
@@ -401,6 +405,8 @@ public class BTCImport {
 		}
 		
 		if (action.equals("keywordindex")) {
+			removeTemporaryFiles(outputDirectory + "/temp");
+			
 			LuceneGraphStorage gs = new LuceneGraphStorage(importDirectory);
 			gs.initialize(false, true);
 			gs.setStoreGraphName(false);

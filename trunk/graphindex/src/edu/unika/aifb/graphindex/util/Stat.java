@@ -3,7 +3,7 @@
  */
 package edu.unika.aifb.graphindex.util;
 
-class Stat {
+public class Stat {
 	public int idx;
 	public String name;
 	

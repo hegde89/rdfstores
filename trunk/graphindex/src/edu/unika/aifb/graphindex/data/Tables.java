@@ -206,7 +206,10 @@ public class Tables {
 		int lc = left.getColumn(col);
 		int rc = right.getColumn(col);
 		
-		log.debug("merge join: " + left + " x " + right);
+//		log.debug("merge join: " + left + " x " + right);
+		
+//		log.debug(left.toDataString());
+//		log.debug(right.toDataString());
 		
 		if (validator != null)
 			validator.setTables(left, right);
@@ -250,7 +253,8 @@ public class Tables {
 		}
 	
 		result.setSortedColumn(lc);
-		log.debug("merge join: done in " + (System.currentTimeMillis() - start));
+//		log.debug(result.toDataString());
+//		log.debug("merge join: done in " + (System.currentTimeMillis() - start));
 //		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
 		if (timings != null)
 			timings.end(Timings.JOIN_MERGE);

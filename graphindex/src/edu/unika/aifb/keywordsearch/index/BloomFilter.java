@@ -29,7 +29,11 @@ import java.io.IOException;
 
 public class BloomFilter extends Filter
 {
-    static ICompactSerializer<BloomFilter> serializer_ = new BloomFilterSerializer();  
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1594779084793970830L;
+	static ICompactSerializer<BloomFilter> serializer_ = new BloomFilterSerializer();  
 
     public static ICompactSerializer<BloomFilter> serializer()
     {
@@ -74,7 +78,7 @@ public class BloomFilter extends Filter
         return filter_;
     }
 
-    public boolean isPresent(String key)
+    public boolean contains(String key)
     {
         for (int bucketIndex : getHashBuckets(key)) {
             if (!filter_.get(bucketIndex))

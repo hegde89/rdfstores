@@ -40,10 +40,11 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 	private IndexGraphMatcher m_matcher;
 	private IndexMatchesValidator m_validator;
 	private EntitySearcher m_searcher;
+	private int m_cutoff;
 	
 	private static final Logger log = Logger.getLogger(IncrementalQueryEvaluator.class);
 	
-	public IncrementalQueryEvaluator(StructureIndexReader reader, String keywordIndexDirectory) throws StorageException {
+	public IncrementalQueryEvaluator(StructureIndexReader reader, EntitySearcher es) throws StorageException {
 		m_indexReader = reader;
 		m_index = reader.getIndex();
 		
@@ -55,7 +56,11 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 
 		m_validator = new SmallIndexMatchesValidator(m_index, m_index.getCollector());
 		
-		m_searcher = new EntitySearcher(keywordIndexDirectory);
+		m_searcher = es;
+	}
+	
+	public void setCutoff(int cutoff) {
+		m_cutoff = cutoff;
 	}
 	
 	public List<String[]> evaluate(Query q) throws StorageException {
@@ -82,14 +87,18 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		// step 1: entity search
 		timings.start(Timings.STEP_ES);
-		transformedGraph = m_searcher.searchEntities(transformedGraph);
+		if (m_cutoff < 0)
+			transformedGraph = m_searcher.searchEntities(transformedGraph);
+		else
+			transformedGraph = m_searcher.searchEntities(transformedGraph, m_cutoff);
 		timings.end(Timings.STEP_ES);
 		
 		// step 2: approximate structure matching
-		timings.start(Timings.STEP_ASM);
 		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, 2);
 		asm.setTimings(timings);
 		asm.setCounters(counters);
+		
+		timings.start(Timings.STEP_ASM);
 		GTable<KeywordElement> asmResult = asm.matching();
 		timings.end(Timings.STEP_ASM);
 		

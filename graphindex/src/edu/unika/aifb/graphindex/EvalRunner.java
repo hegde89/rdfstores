@@ -35,6 +35,7 @@ import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.graphindex.util.Stat;
 import edu.unika.aifb.graphindex.vp.LuceneStorage;
 import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
+import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
 public class EvalRunner {
 	private static final Logger log = Logger.getLogger(EvalRunner.class);
@@ -55,6 +56,8 @@ public class EvalRunner {
 			.withRequiredArg().ofType(String.class);
 		op.accepts("r", "repeats")
 			.withRequiredArg().ofType(Integer.class);
+		op.accepts("c", "cutoff")
+			.withRequiredArg().ofType(Integer.class);
 		op.accepts("sf", "start from specified query");
 		
 		OptionSet os = op.parse(args);
@@ -69,6 +72,13 @@ public class EvalRunner {
 		String system = (String)os.valueOf("s");
 		String resultFile = (String)os.valueOf("f");
 		int reps = os.has("r") ? (Integer)os.valueOf("r") : 1;
+		int cutoff = os.has("c") ? (Integer)os.valueOf("c") : -1;
+		
+		log.debug("dir: " + outputDirectory);
+		log.debug("system: " + system);
+		log.debug("result file: " + resultFile);
+		log.debug("reps: " + reps);
+		log.debug("cutoff: " + cutoff);
 
 		String spDirectory = outputDirectory + "/sidx";
 		String keywordIndexDirectory = outputDirectory + "/keyword";
@@ -87,25 +97,58 @@ public class EvalRunner {
 
 			for (int i = 0; i < reps; i++) {
 				// clear caches
+				if (new File("drop_caches.sh").exists()) {
+					log.info("clearing caches...");
+					Runtime.getRuntime().exec("drop_caches.sh");
+				}
+				else
+					log.warn("no drop_caches.sh, caches not cleared");
 				
+				Set<String> dataWarmup = new HashSet<String>();
+				Set<String> keywordWarmup = new HashSet<String>();
+				
+				if (new File(outputDirectory + "/data_warmup").exists()) {
+					dataWarmup = Util.readEdgeSet(outputDirectory + "/data_warmup");
+				}
+				else
+					log.warn("no data warmup");
+				
+				if (new File(outputDirectory + "/keyword_warmup").exists()) {
+					keywordWarmup = Util.readEdgeSet(outputDirectory + "/keyword_warmup");
+				}
+				else if (system.equals("spe"))
+					log.warn("no keyword warmup");
+				
+				log.info("opening and warming up...");
 				StructureIndexReader reader = null;
 				LuceneStorage ls = null;
 				IQueryEvaluator qe = null;
 				StatisticsCollector collector = null;
 				if (system.equals("sp")) {
 					reader = new StructureIndexReader(outputDirectory);
+					reader.warmUp(dataWarmup);
+					
 					qe = new QueryEvaluator(reader);
 					collector = reader.getIndex().getCollector();
 				}
 				else if (system.equals("spe")) {
 					reader = new StructureIndexReader(spDirectory);
-					qe = new IncrementalQueryEvaluator(reader, keywordIndexDirectory);
+					reader.warmUp(dataWarmup);
+					
+					EntitySearcher es = new EntitySearcher(keywordIndexDirectory);
+					es.warmUp(keywordWarmup);
+					
+					qe = new IncrementalQueryEvaluator(reader, es);
+					((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
 					collector = reader.getIndex().getCollector();
 				}
 				else if (system.equals("vp")) {
 					collector = new StatisticsCollector();
 					ls = new LuceneStorage(outputDirectory);
 					ls.initialize(false, true);
+					
+					ls.warmUp(dataWarmup);
+					
 					qe = new VPQueryEvaluator(ls, collector);
 					reader = null;
 				}
@@ -115,6 +158,7 @@ public class EvalRunner {
 					collector = null;
 				}
 				
+				log.info("loading queries");
 				QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
 				List<Query> queries = loader.loadQueryFile(queryFile);
 				

@@ -106,4 +106,8 @@ public class StructureIndexReader {
 	public void setNumEvalThreads(int n) {
 		m_configEvalThreads = n;
 	}
+
+	public void warmUp(Set<String> queries) throws StorageException {
+		m_index.getExtensionManager().getExtensionStorage().warmUp(queries);
+	}
 }

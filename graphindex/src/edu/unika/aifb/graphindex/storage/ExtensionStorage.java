@@ -195,4 +195,5 @@ public interface ExtensionStorage {
 	public List<String> getData(IndexDescription index, String... indexFields) throws StorageException;
 	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException;
 	public GTable<String> getIndexTable(String col1, String col2, IndexDescription index, String... indexFields) throws StorageException;
+	public void warmUp(Set<String> queries) throws StorageException;
 }

@@ -17,8 +17,6 @@ package edu.unika.aifb.keywordsearch.index;
  * limitations under the License.
  */
 
-
-
 /**
  * This is a very fast, non-cryptographic hash suitable for general hash-based
  * lookup.  See http://murmurhash.googlepages.com/ for more details.

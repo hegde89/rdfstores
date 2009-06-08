@@ -17,7 +17,6 @@ package edu.unika.aifb.keywordsearch.index;
  * limitations under the License.
  */
 
-
 import java.io.*;
 import java.util.*;
 
@@ -70,12 +69,6 @@ public class BitSet implements Cloneable, java.io.Serializable
      */
     private static final ObjectStreamField[] serialPersistentFields = { new ObjectStreamField(
             "bits", long[].class), };
-    private static ICompactSerializer<BitSet> serializer_ = new BitSetSerializer();
-    
-    static ICompactSerializer<BitSet> serializer()
-    {
-        return serializer_;
-    }
     
     /**
      * The internal field corresponding to the serialField "bits".
@@ -1113,28 +1106,3 @@ public class BitSet implements Cloneable, java.io.Serializable
     }
 }
 
-class BitSetSerializer implements ICompactSerializer<BitSet>
-{
-    public void serialize(BitSet bs, DataOutputStream dos) throws IOException
-    {
-        dos.writeInt(bs.wordsInUse());
-        long[] words = bs.words();
-        dos.writeInt(words.length);
-        for ( int i = 0; i < words.length; ++i )
-        {            
-            dos.writeLong(words[i]);
-        }
-    }
-    
-    public BitSet deserialize(DataInputStream dis) throws IOException
-    {
-        int wordsInUse = dis.readInt();
-        int size = dis.readInt();
-        long[] words = new long[size];
-        for ( int i = 0; i < size; ++i )
-        {
-            words[i] = dis.readLong();            
-        }
-        return new BitSet(wordsInUse, words);
-    }
-}

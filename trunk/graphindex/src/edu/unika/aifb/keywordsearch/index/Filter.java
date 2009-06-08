@@ -1,7 +1,6 @@
 package edu.unika.aifb.keywordsearch.index;
 
 
-
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
@@ -24,7 +23,6 @@ public abstract class Filter implements Serializable {
     public abstract boolean contains(String key);
 
     // for testing
-    abstract ICompactSerializer tserializer();
     abstract int emptyBuckets();
 
     // adapted from hadoop-hbase/src/java/org/onelab/filter/HashFunction.java.

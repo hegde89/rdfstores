@@ -28,6 +28,7 @@ package edu.unika.aifb.keywordsearch.index;
  * 'number of hash functions, k'.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
+
 public class BloomCalculations {
 
     private static final int maxBuckets = 15;

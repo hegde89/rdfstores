@@ -1,6 +1,6 @@
 package edu.unika.aifb.keywordsearch;
 
-import it.unimi.dsi.util.BloomFilter;
+//import it.unimi.dsi.util.BloomFilter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,6 +19,7 @@ import edu.unika.aifb.keywordsearch.impl.Attribute;
 import edu.unika.aifb.keywordsearch.impl.Entity;
 import edu.unika.aifb.keywordsearch.impl.Relation;
 import edu.unika.aifb.keywordsearch.impl.NamedConcept;
+import edu.unika.aifb.keywordsearch.index.BloomFilter;
 
 
 public class KeywordElement implements Comparable<KeywordElement>, Serializable {

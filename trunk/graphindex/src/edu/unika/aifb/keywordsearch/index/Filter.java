@@ -21,7 +21,7 @@ public abstract class Filter implements Serializable {
 
     abstract int buckets();
     public abstract void add(String key);
-    public abstract boolean isPresent(String key);
+    public abstract boolean contains(String key);
 
     // for testing
     abstract ICompactSerializer tserializer();

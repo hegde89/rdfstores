@@ -52,6 +52,7 @@ import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
+import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -375,7 +376,7 @@ public class BTCImport {
 			List<Query> queries = loader.loadQueryFile(queryFile);
 			
 			
-			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, keywordIndexDirectory);
+			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, new EntitySearcher(keywordIndexDirectory));
 			if (action.equals("spquery"))
 				qe = new QueryEvaluator(reader);
 			for (Query q : queries) {

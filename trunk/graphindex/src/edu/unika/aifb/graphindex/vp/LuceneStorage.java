@@ -445,4 +445,13 @@ public class LuceneStorage {
 	public void clearCaches() {
 		m_docCache.clear();
 	}
+
+	public void warmUp(Set<String> queries) throws StorageException {
+		for (String query : queries) {
+			String[] t = query.split(" ", 2);
+			Query q = new PrefixQuery(new Term(t[0], t[1]));
+			List<Integer> docIds = getDocumentIds(q);
+//			log.debug("warmup: " + q + " => " + docIds.size() + " doc ids");
+		}
+	}
 }

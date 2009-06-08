@@ -29,6 +29,7 @@ import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
@@ -65,6 +66,16 @@ public class EntitySearcher {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void warmUp(Set<String> queries) throws StorageException {
+		for (String query : queries) {
+			String[] t = query.split(" ", 2);
+			Query q = new PrefixQuery(new Term(t[0], t[1]));
+			ScoreDoc[] docIds = getDocuments(q);
+//			log.debug("warmup: " + q + " => " + docIds.length + " doc ids");
+		}
+
 	}
 	
 	public TransformedGraph searchEntities(TransformedGraph graph, int cutOff) {

@@ -31,6 +31,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Hit;
@@ -760,6 +762,15 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		}
 		
 		warmup();
+	}
+	
+	public void warmUp(Set<String> queries) throws StorageException {
+		for (String query : queries) {
+			String[] t = query.split(" ", 2);
+			Query q = new PrefixQuery(new Term(t[0], t[1]));
+			List<Integer> docIds = getDocumentIds(q);
+//			log.debug("warmup: " + q + " => " + docIds.size() + " doc ids");
+		}
 	}
 	
 	public void warmup() throws StorageException {

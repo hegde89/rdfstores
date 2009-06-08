@@ -18,11 +18,6 @@ package edu.unika.aifb.keywordsearch.index;
  */
 
 
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -33,12 +28,6 @@ public class BloomFilter extends Filter
 	 * 
 	 */
 	private static final long serialVersionUID = 1594779084793970830L;
-	static ICompactSerializer<BloomFilter> serializer_ = new BloomFilterSerializer();  
-
-    public static ICompactSerializer<BloomFilter> serializer()
-    {
-        return serializer_;
-    }
 
     private BitSet filter_;
     
@@ -106,10 +95,6 @@ public class BloomFilter extends Filter
         return filter_.toString();
     }
 
-    ICompactSerializer tserializer() {
-        return serializer_;
-    }
-
     int emptyBuckets() {
         int n = 0;
         for (int i = 0; i < buckets(); i++) {
@@ -121,33 +106,3 @@ public class BloomFilter extends Filter
     }
 }
 
-class BloomFilterSerializer implements ICompactSerializer<BloomFilter>
-{
-    /* 
-     * The following methods are used for compact representation
-     * of BloomFilter. This is essential, since we want to determine
-     * the size of the serialized Bloom Filter blob before it is
-     * populated armed with the knowledge of how many elements are
-     * going to reside in it.
-     */
-
-    public void serialize(BloomFilter bf, DataOutputStream dos)
-            throws IOException
-    {
-        /* write the number of hash functions used */
-        dos.writeInt(bf.getHashCount());
-        /* write the size of the BloomFilter, for backwards compatibility. */
-        dos.writeInt(bf.buckets());
-        BitSet.serializer().serialize(bf.filter(), dos);
-    }
-
-    public BloomFilter deserialize(DataInputStream dis) throws IOException
-    {
-        /* read the number of hash functions */
-        int hashes = dis.readInt();
-        /* read the size of the bloom filter.  only for backwards compatibility, since we don't actually need it. */
-        dis.readInt();
-        BitSet bs = BitSet.serializer().deserialize(dis);
-        return new BloomFilter(hashes, bs);
-    }
-}

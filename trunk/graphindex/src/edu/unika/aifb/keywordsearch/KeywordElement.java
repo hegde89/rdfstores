@@ -185,13 +185,23 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	}
 	
 	public boolean isReachable(IEntity entity) {
-		return getBloomFilter().contains(entity.getUri());
+		String uri = entity.getUri();
+		if(uri.startsWith("http://www."))
+			uri = uri.substring(11);
+		else if(uri.startsWith("http://"))
+			uri = uri.substring(7);
+		return getBloomFilter().contains(uri);
 	}
 	
 	public boolean isReachable(KeywordElement ele) {
 		if(ele.getType() != KeywordElement.ENTITY)
 			return false;
-		return getBloomFilter().contains(ele.getResource().getUri());
+		String uri = ele.getResource().getUri();
+		if(uri.startsWith("http://www."))
+			uri = uri.substring(11);
+		else if(uri.startsWith("http://"))
+			uri = uri.substring(7);
+		return getBloomFilter().contains(uri);
 	}
 	
 	public boolean isReachable(Collection<KeywordElement> elements) {

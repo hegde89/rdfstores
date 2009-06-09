@@ -244,6 +244,10 @@ public class KeywordIndexBuilder {
 //				BloomFilter bf = new BloomFilter(reachableEntities.size(), NUMBER_HASHFUNCTION);
 				BloomFilter bf = new BloomFilter(reachableEntities.size(), FALSE_POSITIVE);
 				for(String entity : reachableEntities){
+					if(entity.startsWith("http://www."))
+						entity = entity.substring(11);
+					else if(entity.startsWith("http://"))
+						entity = entity.substring(7);
 					bf.add(entity);
 				} 
 				ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();

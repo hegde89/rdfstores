@@ -443,7 +443,6 @@ public class EntitySearcher {
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-//		log.debug("  " + docIds.size() + " docs");
 		
 		return docs.toArray(new ScoreDoc[docs.size()]);
 	}
@@ -457,7 +456,6 @@ public class EntitySearcher {
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-//		log.debug("  " + docIds.size() + " docs");
 		
 		return docs;
 	}
@@ -486,10 +484,9 @@ public class EntitySearcher {
 			Collection<KeywordElement> results = searcher.searchEntities(map, null, 0);
 			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
 			
-//			for(KeywordElement ele : results) {
-//				log.info("Elements :" + ele);
-//				log.info("\n");
-//			}
+			for(KeywordElement ele : results) {
+				log.info("Elements :" + ele);
+			}
 		}
 	} 
 	

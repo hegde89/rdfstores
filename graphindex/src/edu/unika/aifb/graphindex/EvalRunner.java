@@ -83,120 +83,128 @@ public class EvalRunner {
 		String spDirectory = outputDirectory + "/sidx";
 		String keywordIndexDirectory = outputDirectory + "/keyword";
 		
-		log.debug(Util.memory());
-		
 		List<QueryRun> queryRuns = new ArrayList<QueryRun>();
 
 		if (action.equals("query") || action.equals("spquery")) {
 			String queryFile = (String)os.valueOf("qf");
-			String queryName = (String)os.valueOf("q");
+			String qName = (String)os.valueOf("q");
 			
 			if (queryFile == null) {
 				log.error("no query file specified");
 			}
+			
+			List<Query> qs = new QueryLoader(null).loadQueryFile(queryFile);
+			List<String> queryNames = new ArrayList<String>();
+			for (Query q : qs)
+				if (qName == null || qName.equals(q.getName()))
+					queryNames.add(q.getName());
 
-			for (int i = 0; i < reps; i++) {
-				// clear caches
-				if (new File("drop_caches.sh").exists()) {
-					log.info("clearing caches...");
-					Runtime.getRuntime().exec("drop_caches.sh");
-				}
-				else
-					log.warn("no drop_caches.sh, caches not cleared");
-				
-				Set<String> dataWarmup = new HashSet<String>();
-				Set<String> keywordWarmup = new HashSet<String>();
-				
-				if (new File(outputDirectory + "/data_warmup").exists()) {
-					dataWarmup = Util.readEdgeSet(outputDirectory + "/data_warmup");
-				}
-				else
-					log.warn("no data warmup");
-				
-				if (new File(outputDirectory + "/keyword_warmup").exists()) {
-					keywordWarmup = Util.readEdgeSet(outputDirectory + "/keyword_warmup");
-				}
-				else if (system.equals("spe"))
-					log.warn("no keyword warmup");
-				
-				log.info("opening and warming up...");
-				StructureIndexReader reader = null;
-				LuceneStorage ls = null;
-				IQueryEvaluator qe = null;
-				StatisticsCollector collector = null;
-				if (system.equals("sp")) {
-					reader = new StructureIndexReader(outputDirectory);
-					reader.warmUp(dataWarmup);
-					
-					qe = new QueryEvaluator(reader);
-					collector = reader.getIndex().getCollector();
-				}
-				else if (system.equals("spe")) {
-					reader = new StructureIndexReader(spDirectory);
-					reader.warmUp(dataWarmup);
-					
-					EntitySearcher es = new EntitySearcher(keywordIndexDirectory);
-					es.warmUp(keywordWarmup);
-					
-					qe = new IncrementalQueryEvaluator(reader, es);
-					((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
-					collector = reader.getIndex().getCollector();
-				}
-				else if (system.equals("vp")) {
-					collector = new StatisticsCollector();
-					ls = new LuceneStorage(outputDirectory);
-					ls.initialize(false, true);
-					
-					ls.warmUp(dataWarmup);
-					
-					qe = new VPQueryEvaluator(ls, collector);
-					reader = null;
-				}
-				else {
-					qe = null;
-					reader = null;
-					collector = null;
-				}
-				
-				log.info("loading queries");
-				QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
-				List<Query> queries = loader.loadQueryFile(queryFile);
-				
-				boolean startFound = false;
-				for (Query q : queries) {
-					if (!startFound && queryName != null && !q.getName().equals(queryName))
-						continue;
-					startFound = os.has("sf");
-					log.info("query: " + q.getName());
-					
-					collector.reset();
-					
-					List<String[]> results = qe.evaluate(q);
-					log.info("query " + q.getName() + ": " + results.size() + " results");
-					
-					Timings t = new Timings();
-					Counters c = new Counters();
-					collector.consolidate(t, c);
-					
-					t.logStats();
-					c.logStats();
-					
-					queryRuns.add(new QueryRun(q.getName(), system, t, c));
-					System.out.print(q.getName() + ", " + system);
-					for (Stat s : Timings.stats) {
-						System.out.print(", " + t.get(s));
+			for (String queryName : queryNames) {
+				for (int i = 0; i < reps; i++) {
+					// clear caches
+					if (new File("drop_caches.sh").exists()) {
+						log.info("clearing caches...");
+						Runtime.getRuntime().exec("drop_caches.sh");
 					}
-					for (Stat s : Counters.stats) {
-						System.out.print(", " + c.get(s));
+					else
+						log.warn("no drop_caches.sh, caches not cleared");
+					
+					Set<String> dataWarmup = new HashSet<String>();
+					Set<String> keywordWarmup = new HashSet<String>();
+					
+					if (new File(outputDirectory + "/data_warmup").exists()) {
+						dataWarmup = Util.readEdgeSet(outputDirectory + "/data_warmup");
 					}
-					System.out.println();
-				}
-				if (reader != null) {
-					reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
-					reader.close();
-				}
-				if (ls != null) {
-					ls.close();
+					else
+						log.warn("no data warmup");
+					
+					if (new File(outputDirectory + "/keyword_warmup").exists()) {
+						keywordWarmup = Util.readEdgeSet(outputDirectory + "/keyword_warmup");
+					}
+					else if (system.equals("spe"))
+						log.warn("no keyword warmup");
+					
+					log.info("opening and warming up...");
+					StructureIndexReader reader = null;
+					LuceneStorage ls = null;
+					IQueryEvaluator qe = null;
+					StatisticsCollector collector = null;
+					if (system.equals("sp")) {
+						reader = new StructureIndexReader(outputDirectory);
+						reader.warmUp(dataWarmup);
+						
+						qe = new QueryEvaluator(reader);
+						collector = reader.getIndex().getCollector();
+					}
+					else if (system.equals("spe")) {
+						reader = new StructureIndexReader(spDirectory);
+						reader.warmUp(dataWarmup);
+						
+						EntitySearcher es = new EntitySearcher(keywordIndexDirectory);
+						es.warmUp(keywordWarmup);
+						
+						qe = new IncrementalQueryEvaluator(reader, es);
+						((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
+						collector = reader.getIndex().getCollector();
+					}
+					else if (system.equals("vp")) {
+						collector = new StatisticsCollector();
+						ls = new LuceneStorage(outputDirectory);
+						ls.initialize(false, true);
+						
+						ls.warmUp(dataWarmup);
+						
+						qe = new VPQueryEvaluator(ls, collector);
+						reader = null;
+					}
+					else {
+						qe = null;
+						reader = null;
+						collector = null;
+					}
+					
+					log.info("loading queries");
+					QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
+					List<Query> queries = loader.loadQueryFile(queryFile);
+					
+					boolean startFound = false;
+					for (Query q : queries) {
+						if (!startFound && queryName != null && !q.getName().equals(queryName))
+							continue;
+						startFound = os.has("sf");
+						log.info("query: " + q.getName());
+						
+						collector.reset();
+						
+						List<String[]> results = qe.evaluate(q);
+						log.info("query " + q.getName() + ": " + results.size() + " results");
+						
+						Timings t = new Timings();
+						Counters c = new Counters();
+						collector.consolidate(t, c);
+						
+						t.logStats();
+						c.logStats();
+						
+						queryRuns.add(new QueryRun(q.getName(), system, t, c));
+						System.out.print(q.getName() + ", " + system);
+						for (Stat s : Timings.stats) {
+							System.out.print(", " + t.get(s));
+						}
+						for (Stat s : Counters.stats) {
+							System.out.print(", " + c.get(s));
+						}
+						System.out.println();
+					}
+					
+					if (reader != null) {
+						reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
+						reader.close();
+					}
+					
+					if (ls != null) {
+						ls.close();
+					}
 				}
 			}
 			
@@ -205,7 +213,6 @@ public class EvalRunner {
 				ps = new PrintStream(new FileOutputStream(resultFile));
 			}
 			
-			String comma = "";
 			// column names
 			ps.print("query, system");
 			for (Stat s : Timings.stats) {

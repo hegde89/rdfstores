@@ -1,14 +1,20 @@
 package edu.unika.aifb.graphindex.query.exploring;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Cursor implements Comparable<Cursor> {
 
 	private String m_keyword;
 	private Cursor m_parent;
-	private GraphElement m_element;
+	private GraphElement m_element, m_startElement;
 	private int m_distance;
 	private int m_cost;
+	private List<GraphElement> m_path = null;
+	private Set<GraphElement> m_parents;
 	
 	public Cursor(String keyword, GraphElement element) {
 		m_keyword = keyword;
@@ -21,11 +27,11 @@ public class Cursor implements Comparable<Cursor> {
 	public Cursor(String keyword, GraphElement element, Cursor parent, int cost) {
 		this(keyword, element);
 		m_parent = parent;
-		m_cost = cost;
 		if (m_parent != null)
 			m_distance = m_parent.getDistance() + 1;
 		else
 			m_distance = 0;
+		m_cost = m_distance;
 	}
 	
 	public int getDistance() {
@@ -49,13 +55,75 @@ public class Cursor implements Comparable<Cursor> {
 	}
 
 	public int compareTo(Cursor o) {
-		// TODO Auto-generated method stub
-		return 0;
+		return ((Integer)m_cost).compareTo(o.getCost());
+	}
+	
+	public GraphElement getStartElement() {
+		if (m_parent == null)
+			m_startElement = m_element;
+		else
+			m_startElement =  m_parent.getStartElement();
+		return m_startElement;
+	}
+	
+	public List<GraphElement> getPath() {
+		if (m_path == null) {
+			if (m_parent == null) 
+				m_path = new ArrayList<GraphElement>();
+			else
+				m_path = new ArrayList<GraphElement>(m_parent.getPath());
+			m_path.add(m_element);
+		}
+		
+		return m_path;
 	}
 
 	public Set<GraphElement> getParents() {
-		// TODO Auto-generated method stub
-		return null;
+		if (m_parents == null) {
+			m_parents = new HashSet<GraphElement>();
+			List<GraphElement> path = getPath();
+			m_parents.addAll(path);
+			m_parents.remove(m_element);
+		}
+		
+		return m_parents;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((m_element == null) ? 0 : m_element.hashCode());
+		result = prime * result + ((m_keyword == null) ? 0 : m_keyword.hashCode());
+		result = prime * result + ((m_path == null) ? 0 : m_path.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Cursor other = (Cursor)obj;
+		if (m_element == null) {
+			if (other.m_element != null)
+				return false;
+		} else if (!m_element.equals(other.m_element))
+			return false;
+		if (m_keyword == null) {
+			if (other.m_keyword != null)
+				return false;
+		} else if (!m_keyword.equals(other.m_keyword))
+			return false;
+		if (!getPath().equals(other.getPath()))
+			return false;
+		return true;
+	}
+
+	public String toString() {
+		return "(" + m_keyword + "," + m_element + "," + m_distance + "," + m_cost + ")";
+	}
 }

@@ -56,7 +56,7 @@ public abstract class Filter implements Serializable
         byte[] b;
         try
         {
-            b = key.getBytes("UTF-16");
+            b = key.getBytes("UTF-8");
         }
         catch (UnsupportedEncodingException e)
         {

@@ -109,22 +109,28 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		List<GraphEdge<QueryNode>> deferredTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
 		List<GraphEdge<QueryNode>> processedTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
+		Set<String> entityNodes = new HashSet<String>();
 		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			if (edge.getLabel().equals(RDF.TYPE.toString())) {
 				String srcNode = queryGraph.getSourceNode(edge).getName();
 				TransformedGraphNode node = transformedGraph.getNode(srcNode);
 				log.debug(node.getAttributeQueries());
-				if (node.getAttributeQueries().size() > 0 && !node.getAttributeQueries().keySet().contains(RDF.TYPE.toString()))
+				if (node.getAttributeQueries().size() > 0 && !node.getAttributeQueries().keySet().contains(RDF.TYPE.toString())) {
 					processedTypeEdges.add(edge);
-				else
+					entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
+				}
+				else {
 					deferredTypeEdges.add(edge);
+				}
 			}
+			else if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()))
+				entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
 		}
 		
 		log.debug("processed type edges: " + processedTypeEdges);
 		log.debug("deferred type edges: " + deferredTypeEdges);
-		
+		log.debug("entity nodes: " + entityNodes);
 		counters.set(Counters.QUERY_DEFERRED_EDGES, deferredTypeEdges.size());
 		
 		// result of ASM step, mapping query node labels to extensions
@@ -200,6 +206,9 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		counters.set(Counters.ASM_INDEX_MATCHES, asmIndexMatches / matchTables.size());
 		log.debug("match tables: " + matchTables);
 		
+		q.setSelectVariables(new ArrayList<String>(entityNodes));
+		q.createQueryGraph(m_index);
+
 		// step 3: structure-based refinement
 		QueryExecution qe = new QueryExecution(q, m_index);
 //		qe.getQuery().setRemoveNodes(new HashSet<String>());
@@ -207,7 +216,6 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		qe.setMatchTables(matchTables);
 		
 		Set<String> constants = new HashSet<String>();
-		Set<String> entityNodes = new HashSet<String>();
 		Map<String,Set<String>> entity2constants = new HashMap<String,Set<String>>();
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			// assume edges with constants to be already processed
@@ -215,7 +223,6 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				qe.imVisited(edge);
 				
 				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
-				entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
 				
 				if (!entity2constants.containsKey(queryGraph.getSourceNode(edge).getName()))
 					entity2constants.put(queryGraph.getSourceNode(edge).getName(), new HashSet<String>());

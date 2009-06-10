@@ -37,6 +37,7 @@ import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.query.ExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
@@ -222,6 +223,7 @@ public class BTCImport {
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
 			config.setAllowCreate(true);
+			config.setCacheSize(1073741824);
 
 			Environment env = new Environment(new File(bdbDirectory), config);
 			
@@ -392,16 +394,22 @@ public class BTCImport {
 		
 		// for keystruc
 		if (action.equals("keywordquery")) {
-			Scanner scanner = new Scanner(System.in);
-			while (true) {
-				System.out.println("Keyword query:");
-				String line = scanner.nextLine();
-				String tokens[] = line.split(" ");
-				List<String> keywordList = new ArrayList<String>();
-				for (int i = 0; i < tokens.length; i++) {
-					keywordList.add(tokens[i]);
-				}
-			}
+			StructureIndexReader reader = new StructureIndexReader(spDirectory);
+
+			ExploringQueryEvaluator qe = new ExploringQueryEvaluator(reader, new EntitySearcher(keywordIndexDirectory));
+			
+			qe.evaluate(null);
+			
+//			Scanner scanner = new Scanner(System.in);
+//			while (true) {
+//				System.out.println("Keyword query:");
+//				String line = scanner.nextLine();
+//				String tokens[] = line.split(" ");
+//				List<String> keywordList = new ArrayList<String>();
+//				for (int i = 0; i < tokens.length; i++) {
+//					keywordList.add(tokens[i]);
+//				}
+//			}
 			
 		}
 		

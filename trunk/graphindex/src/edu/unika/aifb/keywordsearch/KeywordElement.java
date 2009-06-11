@@ -36,9 +36,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 
 	private IResource resource;
 	private double matchingScore;
-//	private String query;
 	private Set<String> keywords;
-	private int docId;
 	private Document doc;
 	private BloomFilter bloomFilter;
 
@@ -51,39 +49,25 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.doc = doc;
 	}
 	
-	public KeywordElement(){}
-	
-	public KeywordElement(IResource resource, int type, int docID) {
+	public KeywordElement(IResource resource, int type, Document doc, double score, String keyword) {
 		this.resource = resource;
 		this.type = type;
-		this.docId = docID;
-	}
-
-	public KeywordElement(IResource resource, int type, int docID, double score) {
-		this.resource = resource;
-		this.type = type;
-		this.docId = docID;
 		this.matchingScore = score;
+		this.doc = doc;
+		this.keywords = new HashSet<String>();
+		this.keywords.add(keyword);
 	}
 	
-	public KeywordElement(IResource resource, int type, int docID, double score, String keyword) {
+	public KeywordElement(IResource resource, int type, double score, String keyword) {
 		this.resource = resource;
 		this.type = type;
-		this.docId = docID;
 		this.matchingScore = score;
 		this.keywords = new HashSet<String>();
 		this.keywords.add(keyword);
 	}
 	
-	public KeywordElement(IResource resource, int type, int docID, double score, Collection<String> keywords) {
-		this.resource = resource;
-		this.type = type;
-		this.docId = docID;
-		this.matchingScore = score;
-		this.keywords = new HashSet<String>();
-		this.keywords.addAll(keywords);
-	}
-
+	public KeywordElement(){}
+	
 	public int getType(){
 		return type;
 	}
@@ -96,45 +80,12 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.doc = null;
 	}
 	
-	public void setDocId(int docId) {
-		this.docId = docId;
-	}
-	
-	public int getDocId() {
-		return docId;
+	public void setKeywords(Set<String> keywords) {
+		this.keywords = keywords;
 	}
 	
 	public Collection<String> getKeywords() {
 		return keywords;
-	}
-	
-//	public String getKeyword() {
-//		if(keywords == null || keywords.size() == 0) {
-//			return null;
-//		}
-//		else
-//			return keywords.iterator().next();
-//			
-//	}
-	
-	public void addKeyword(String keyword) {
-		if(keywords != null) {
-			keywords.add(keyword);
-		}	
-		else {
-			keywords = new HashSet<String>();
-			keywords.add(keyword);
-		}
-	}
-	
-	public void addKeywords(Collection<String> keywords) {
-		if(keywords != null) {
-			keywords.addAll(keywords);
-		}	
-		else {
-			keywords = new HashSet<String>();
-			keywords.addAll(keywords);
-		}
 	}
 	
 	public void setResource(IResource resource){

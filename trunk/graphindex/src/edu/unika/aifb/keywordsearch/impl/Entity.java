@@ -85,6 +85,10 @@ public class Entity implements IEntity {
 		return values;
 	}
 	
+	public String toString() {
+		return uri;
+	} 
+	
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;

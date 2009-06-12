@@ -19,13 +19,14 @@ public class MyQueryParser extends MultiFieldQueryParser {
 		BooleanQuery bQuery = new BooleanQuery();
 		for (int i = 0; i < fields.length; i++) {
 			QueryParser qp = new QueryParser(fields[i], getAnalyzer());
+			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
 			Query q = qp.parse(query);
-			if (q instanceof BooleanQuery) {
-				BooleanQuery bquery = (BooleanQuery) q;
-				for (BooleanClause clause : bquery.getClauses()) {
-					clause.setOccur(Occur.MUST);
-				}
-			}
+//			if (q instanceof BooleanQuery) {
+//				BooleanQuery bquery = (BooleanQuery) q;
+//				for (BooleanClause clause : bquery.getClauses()) {
+//					clause.setOccur(Occur.MUST);
+//				}
+//			}
 			bQuery.add(q, Occur.SHOULD);
 		}
 		return bQuery;
@@ -35,13 +36,14 @@ public class MyQueryParser extends MultiFieldQueryParser {
 		BooleanQuery bQuery = new BooleanQuery();
 		for (int i = 0; i < fields.length; i++) {
 			QueryParser qp = new QueryParser(fields[i], getAnalyzer());
+			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
 			Query q = qp.parse(query);
-			if (q instanceof BooleanQuery) {
-				BooleanQuery bquery = (BooleanQuery) q;
-				for (BooleanClause clause : bquery.getClauses()) {
-					clause.setOccur(Occur.MUST);
-				}
-			}
+//			if (q instanceof BooleanQuery) {
+//				BooleanQuery bquery = (BooleanQuery) q;
+//				for (BooleanClause clause : bquery.getClauses()) {
+//					clause.setOccur(Occur.MUST);
+//				}
+//			}
 			bQuery.add(q, Occur.SHOULD);
 		}
 		return bQuery;

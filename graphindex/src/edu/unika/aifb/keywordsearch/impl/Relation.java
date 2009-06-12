@@ -23,6 +23,10 @@ public class Relation implements IRelation {
 	public String getUri() {
 		return uri;
 	}
+	
+	public String toString() {
+		return uri; 
+	}
 
 	public int hashCode() {
 		final int prime = 31;

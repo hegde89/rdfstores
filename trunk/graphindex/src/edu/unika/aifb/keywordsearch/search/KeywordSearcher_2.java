@@ -370,7 +370,7 @@ public class KeywordSearcher_2 {
 					}
 				}
 			}
-			MyQueryParser parser = new MyQueryParser(fields.toArray(new String[fields.size()]), analyzer);
+			KeywordQueryParser parser = new KeywordQueryParser(fields.toArray(new String[fields.size()]), analyzer);
 			for (String keyword : queries) {
 				Query q = parser.parse(keyword);
 				searchEntitiesWithClause(searcher, q, keyword, null, entities);

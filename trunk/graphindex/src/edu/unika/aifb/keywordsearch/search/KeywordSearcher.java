@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -78,18 +79,40 @@ public class KeywordSearcher {
 		
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		
-		Map<String, Collection<KeywordElement>> entities = new HashMap<String, Collection<KeywordElement>>();
+		Map<String, Collection<KeywordElement>> keywordsWithEntities = new HashMap<String, Collection<KeywordElement>>();
 		Map<KeywordElement, KeywordSegement> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegement>();
 		Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities = new HashMap<KeywordSegement, Collection<KeywordElement>>();  
-		searchElementsByKeywords(keywordQueries, conceptsAndRelations, entitiesWithSegement, segementsWithEntities, entities);
-		searchElementsByKeywordCompounds(keywordCompoundQueries, entitiesWithSegement, segementsWithEntities, entities);
+		searchElementsByKeywords(keywordQueries, conceptsAndRelations, entitiesWithSegement, segementsWithEntities, keywordsWithEntities);
+		searchElementsByKeywordCompounds(keywordCompoundQueries, entitiesWithSegement, segementsWithEntities, keywordsWithEntities);
 		
-		overlapNeighborhoods(entities, entitiesWithSegement, segementsWithEntities);
-
-		for(String keyword : conceptsAndRelations.keySet()) {
-			segementsWithEntities.put(new KeywordSegement(keyword), conceptsAndRelations.get(keyword));
+		int size = 0;
+		for(Collection<KeywordElement> coll : segementsWithEntities.values()) {
+			size += coll.size();
+		}
+		System.out.println("------------- Before NeighborhoodJoin ------------ " 
+				+ "Size_of_segements:" + segementsWithEntities.size() 
+				+ "   Size_of_elements:" + size);	
+		for(KeywordSegement segement : segementsWithEntities.keySet()) {
+			System.out.println(segement);
+			for(KeywordElement ele : segementsWithEntities.get(segement))
+				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+			System.out.println();	
 		}
 		
+		Set<String> keywords = keywordsWithEntities.keySet();
+		overlapNeighborhoods(keywordsWithEntities, entitiesWithSegement, segementsWithEntities,  keywords);
+
+//		for(String keyword : conceptsAndRelations.keySet()) {
+//			segementsWithEntities.put(new KeywordSegement(keyword), conceptsAndRelations.get(keyword));
+//		}
+		
+		size = 0;
+		for(Collection<KeywordElement> coll : segementsWithEntities.values()) {
+			size += coll.size();
+		}
+		System.out.println("------------- After NeighborhoodJoin ------------ " 
+				+ "Size_of_segements:" + segementsWithEntities.size() 
+				+ "   Size_of_elements:" + size);
 		for(KeywordSegement segement : segementsWithEntities.keySet()) {
 			System.out.println(segement);
 			for(KeywordElement ele : segementsWithEntities.get(segement))
@@ -100,50 +123,40 @@ public class KeywordSearcher {
 		return segementsWithEntities;
 	}
 	
-	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> entities, Map<KeywordElement, KeywordSegement> entitiesWithSegement,
-			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities) {
+	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> keywordsWithEntities, Map<KeywordElement, KeywordSegement> entitiesWithSegement,
+			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities, Collection<String> keywords) {
 		
+		for(String keyword : keywordsWithEntities.keySet()) {
+			for(KeywordElement ele : keywordsWithEntities.get(keyword)) {
+				Collection<String> reachableKeywords = ele.getReachableKeywords();
+				for(String joinKey : keywords) {
+					if(!reachableKeywords.contains(joinKey)) {
+						Collection<KeywordElement> reachables = ele.getReachable(keywordsWithEntities.get(joinKey));	
+						if(reachables != null && reachables.size() != 0) {
+							for(KeywordElement reachable : reachables) {
+								Collection<String> keywords1 = ele.getReachableKeywords();
+								Collection<String> keywords2 = reachable.getReachableKeywords();
+								reachable.addReachableKeywords(keywords1);
+								ele.addReachableKeywords(keywords2);
+							}
+						}
+					}
+				}
+			}	
+		}
 		
-		
-		
-		
-//		Map<String, Collection<KeywordElement>> entitiesToBeRemoved = new HashMap<String, Collection<KeywordElement>>();
-//		for(String keyword : entities.keySet()) {
-//			for(KeywordElement ele : entities.get(keyword)) {
-//				if (ele.getType() == KeywordElement.ENTITY && ele.getResource() instanceof IEntity) {
-//					IEntity entity = (IEntity)ele.getResource();
-//					Collection<Collection<KeywordElement>> colls = new HashSet<Collection<KeywordElement>>();
-//					for (String key : entities.keySet()) {
-//						if(!keyword.equals(key) && !keyword.contains(key))
-//							colls.add(entities.get(key));
-//					}
-//					if(!entity.isAllReachable(colls)) {
-//						Collection<KeywordElement> coll = entitiesToBeRemoved.get(keyword);
-//						if (coll == null) {
-//							coll = new HashSet<KeywordElement>();
-//							entitiesToBeRemoved.put(keyword, coll);
-//						}
-//						coll.add(ele);
-//					}
-//				}
-//				else {
-//					log.error("--------------------- ERROR! ---------------------");
-//					Collection<KeywordElement> coll = entitiesToBeRemoved.get(keyword);
-//					if (coll == null) {
-//						coll = new HashSet<KeywordElement>();
-//						entitiesToBeRemoved.put(keyword, coll);
-//					}
-//					coll.add(ele);
-//				}
-//			}
-//		}
-//		
-//		for(String keyword : entitiesToBeRemoved.keySet()) {
-//			entities.get(keyword).removeAll((entitiesToBeRemoved.get(keyword)));
-//			if(entities.get(keyword).size() == 0) {
-//				entities.remove(keyword);
-//			}
-//		}
+		Iterator<KeywordSegement> iterSeg = segementsWithEntities.keySet().iterator();
+		while(iterSeg.hasNext()) {
+			Collection<KeywordElement> elements = segementsWithEntities.get(iterSeg.next());
+			Iterator<KeywordElement> iterEle = elements.iterator();
+			while(iterEle.hasNext()) {
+				if(!iterEle.next().getReachableKeywords().containsAll(keywords)) {
+					iterEle.remove();
+				}	
+			}
+			if(elements.size() == 0)
+				iterSeg.remove();
+		}
 	}
 	
 	public void parseQueries(Collection<String> queries, Set<String> keywords, Map<String, Set<String>> keywordCompounds) {
@@ -168,24 +181,24 @@ public class KeywordSearcher {
 	
 	public void searchElementsByKeywords(Set<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations, 
 			Map<KeywordElement, KeywordSegement> entitiesWithSegement, Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> entities) { 
+			Map<String, Collection<KeywordElement>> keywordsWithentities) { 
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(queries, conceptsAndRelations, attributes);
 		SortedSet<KeywordSegement> segements = KeywordPartitioner.getOrderedSegements(queries);
 		if(attributes != null && attributes.size() != 0)
-			searchEntitiesByAttributesAndValues(segements, attributes, entitiesWithSegement, segementsWithEntities, entities);
-		searchEntitiesByValues(segements, attributes, entitiesWithSegement, segementsWithEntities, entities);
+			searchEntitiesByAttributesAndValues(segements, attributes, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
+		searchEntitiesByValues(segements, attributes, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 		
 	}
 	
 	public void searchElementsByKeywordCompounds(Map<String, Set<String>> queries, Map<KeywordElement, KeywordSegement> entitiesWithSegement, 
-			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,	Map<String, Collection<KeywordElement>> entities) { 
+			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,	Map<String, Collection<KeywordElement>> keywordsWithentities) { 
 		Map<String, Collection<KeywordElement>> attributesAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(queries.keySet(), attributesAndRelations);
 		if(attributesAndRelations != null && attributesAndRelations.size() != 0)
-			searchEntitiesByCompounds(queries, attributesAndRelations, entitiesWithSegement, segementsWithEntities, entities);
+			searchEntitiesByCompounds(queries, attributesAndRelations, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 	}
 	
 	public void searchSchema(Collection<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations, 
@@ -198,12 +211,6 @@ public class KeywordSearcher {
 			parser.setDefaultOperator(QueryParser.AND_OPERATOR);
 			for(String keyword : queries) {
 				Query q = parser.parse(keyword);
-//				if(q instanceof BooleanQuery) {
-//					BooleanQuery bquery = (BooleanQuery)q;
-//					for(BooleanClause clause :  bquery.getClauses()) {
-//						clause.setOccur(Occur.MUST);
-//					}
-//				}
 				Collection<KeywordElement> tmp = searchSchemaWithClause(q, keyword);
 				if(tmp != null && tmp.size() != 0) {
 					queriesWithResults.add(keyword);
@@ -242,12 +249,6 @@ public class KeywordSearcher {
 			parser.setDefaultOperator(QueryParser.AND_OPERATOR);
 			for(String keyword : queries) {
 				Query q = parser.parse(keyword);
-//				if(q instanceof BooleanQuery) {
-//					BooleanQuery bquery = (BooleanQuery)q;
-//					for(BooleanClause clause :  bquery.getClauses()) {
-//						clause.setOccur(Occur.MUST);
-//					}
-//				}
 				Collection<KeywordElement> tmp = searchSchemaWithClause(q, keyword);
 				if(tmp != null && tmp.size() != 0) {
 					for(KeywordElement resource : tmp) {
@@ -325,7 +326,7 @@ public class KeywordSearcher {
 	
 	private void searchEntitiesByAttributesAndValues(SortedSet<KeywordSegement> segements, Map<String, Collection<KeywordElement>> attributes, 
 			Map<KeywordElement, KeywordSegement> entitiesWithSegement, Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> entities) {
+			Map<String, Collection<KeywordElement>> keywordsWithentities) {
 		Set<KeywordSegement> segementsWithResults = new HashSet<KeywordSegement>();
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
@@ -335,13 +336,7 @@ public class KeywordSearcher {
 					parser.setDefaultOperator(QueryParser.AND_OPERATOR);
 					for (KeywordSegement segement : segements) {
 						Query q = parser.parse(segement.getQuery());
-//						if (q instanceof BooleanQuery) {
-//							BooleanQuery bquery = (BooleanQuery) q;
-//							for (BooleanClause clause : bquery.getClauses()) {
-//								clause.setOccur(Occur.MUST);
-//							}
-//						}
-						boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute, entitiesWithSegement, segementsWithEntities, entities);
+						boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 						if(hasResults)
 							segementsWithResults.add(segement);
 					}
@@ -356,7 +351,7 @@ public class KeywordSearcher {
 	
 	public void searchEntitiesByValues(SortedSet<KeywordSegement> segements, Map<String, Collection<KeywordElement>> attributes, 
 			Map<KeywordElement, KeywordSegement> entitiesWithSegement, Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> entities) {
+			Map<String, Collection<KeywordElement>> keywordsWithentities) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			Set<String> fields = new HashSet<String>();
@@ -368,10 +363,10 @@ public class KeywordSearcher {
 					}
 				}
 			}
-			MyQueryParser parser = new MyQueryParser(fields.toArray(new String[fields.size()]), analyzer);
+			KeywordQueryParser parser = new KeywordQueryParser(fields.toArray(new String[fields.size()]), analyzer);
 			for (KeywordSegement segement : segements) {
 				Query q = parser.parse(segement.getQuery());
-				searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, entities);
+				searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -380,7 +375,7 @@ public class KeywordSearcher {
 	
 	private void searchEntitiesByCompounds(Map<String, Set<String>> queries, Map<String, Collection<KeywordElement>> attributesAndRelations, 
 			Map<KeywordElement, KeywordSegement> entitiesWithSegement, Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> entities) {
+			Map<String, Collection<KeywordElement>> keywordsWithentities) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			for (String keywordForAttributeAndRelation : queries.keySet()) {
@@ -391,15 +386,9 @@ public class KeywordSearcher {
 					parser.setDefaultOperator(QueryParser.AND_OPERATOR);
 					for(String keywordForValueAndEntityID : queries.get(keywordForAttributeAndRelation)) {
 						Query q = parser.parse(keywordForValueAndEntityID);
-//						if (q instanceof BooleanQuery) {
-//							BooleanQuery bquery = (BooleanQuery) q;
-//							for (BooleanClause clause : bquery.getClauses()) {
-//								clause.setOccur(Occur.MUST);
-//							}
-//						}
 						String compound = keywordForAttributeAndRelation + SEPARATOR + keywordForValueAndEntityID;
 						KeywordSegement segement = new KeywordSegement(compound);
-						searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, entities);
+						searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 					}	
 				}
 			}
@@ -411,7 +400,7 @@ public class KeywordSearcher {
 		
 	public boolean searchEntitiesWithClause(Query clause, KeywordSegement segement, String additionalKeyword, 
 			Map<KeywordElement, KeywordSegement> entitiesWithSegement, Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> entities) {
+			Map<String, Collection<KeywordElement>> keywordsWithentities) {
 		try {
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
@@ -449,6 +438,7 @@ public class KeywordSearcher {
 	    			
 	    			if(!entitiesWithSegement.keySet().contains(ele)) {
 	    				ele.setKeywords(ks.getKeywords());
+	    				ele.addReachableKeywords(ks.getKeywords());
 	    				entitiesWithSegement.put(ele, ks);
 	    				Collection<KeywordElement> coll = segementsWithEntities.get(ks);
 	    				if(coll == null) {
@@ -458,10 +448,10 @@ public class KeywordSearcher {
 	    				coll.add(ele);
 	    				
 	    				for(String keyword : ks.getKeywords()) {
-	    					coll = entities.get(keyword);
+	    					coll = keywordsWithentities.get(keyword);
 	    					if(coll == null) {
 		    					coll = new HashSet<KeywordElement>();
-		    					entities.put(keyword, coll);
+		    					keywordsWithentities.put(keyword, coll);
 		    				}
 		    				coll.add(ele);
 	    				}

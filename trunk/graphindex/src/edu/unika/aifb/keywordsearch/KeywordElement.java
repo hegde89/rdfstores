@@ -37,6 +37,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	private IResource resource;
 	private double matchingScore;
 	private Set<String> keywords;
+	private Set<String> reachableKeywords; 
 	private Document doc;
 	private BloomFilter bloomFilter;
 
@@ -47,15 +48,6 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.type = type;
 		this.matchingScore = score;
 		this.doc = doc;
-	}
-	
-	public KeywordElement(IResource resource, int type, Document doc, double score, String keyword) {
-		this.resource = resource;
-		this.type = type;
-		this.matchingScore = score;
-		this.doc = doc;
-		this.keywords = new HashSet<String>();
-		this.keywords.add(keyword);
 	}
 	
 	public KeywordElement(IResource resource, int type, double score, String keyword) {
@@ -86,6 +78,25 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public Collection<String> getKeywords() {
 		return keywords;
+	}
+	
+	public void addReachableKeywords(Collection<String> keywords) {
+		if(reachableKeywords == null) {
+			reachableKeywords = new HashSet<String>();
+		}
+		reachableKeywords.addAll(keywords);
+			
+	}
+	
+	public void addReachableKeyword(String keyword) {
+		if(reachableKeywords == null) {
+			reachableKeywords = new HashSet<String>();
+		}
+		reachableKeywords.add(keyword);
+	}
+	
+	public Collection<String> getReachableKeywords() {
+		return reachableKeywords;
 	}
 	
 	public void setResource(IResource resource){
@@ -135,18 +146,11 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		return result;
 	}
 	
-	public boolean isReachable(IEntity entity) {
-		String uri = entity.getUri();
-		if(uri.startsWith("http://www."))
-			uri = uri.substring(11);
-		else if(uri.startsWith("http://"))
-			uri = uri.substring(7);
-		return getBloomFilter().contains(uri);
-	}
-	
 	public boolean isReachable(KeywordElement ele) {
 		if(ele.getType() != KeywordElement.ENTITY)
 			return false;
+		if(this.equals(ele))
+			return true;
 		String uri = ele.getResource().getUri();
 		if(uri.startsWith("http://www."))
 			uri = uri.substring(11);
@@ -202,14 +206,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		if(!(object instanceof KeywordElement)) return false;
 		
 		KeywordElement vertex = (KeywordElement)object;
-		if(resource instanceof NamedConcept && vertex.getResource() instanceof NamedConcept)
-			return ((NamedConcept)resource).getUri().equals(((NamedConcept)vertex.getResource()).getUri());
-		else if(resource instanceof Relation && vertex.getResource() instanceof Relation)
-			return ((Relation)resource).getUri().equals(((Relation)vertex.getResource()).getUri());
-		else if(resource instanceof Entity && vertex.getResource() instanceof Entity) {
-			return ((Entity)resource).getUri().equals(((Entity)vertex.getResource()).getUri());
-		}
-		return false;
+		return getResource().getUri().equals(vertex.getResource().getUri());
 	}
 	
 	public int hashCode(){

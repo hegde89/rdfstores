@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -15,19 +16,24 @@ import org.apache.log4j.Logger;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.StructureIndex;
+import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
+import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
 	private PriorityQueue<PriorityQueue<Cursor>> m_queues;
-	private int m_maxDistance = 5; 
+	private int m_maxDistance = 4; 
 	private DirectedMultigraph<NodeElement,EdgeElement> m_indexGraph;
 	private Map<String,NodeElement> m_nodes;
 	private Map<String,List<GraphElement>> m_keywords;
 	private List<Subgraph> m_subgraphs;
-	private int m_k = 20;
+	private int m_k = 10;
+	private Map<String,PriorityQueue<Cursor>> m_keywordQueues;
+	private Map<String,Set<String>> m_edgeUri2Keywords; 
+	private Set<EdgeElement> m_edgesWithCursors;
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
 	
@@ -38,9 +44,18 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		m_nodes = new HashMap<String,NodeElement>();
 		m_queues = new PriorityQueue<PriorityQueue<Cursor>>(20, new Comparator<PriorityQueue<Cursor>>() {
 			public int compare(PriorityQueue<Cursor> o1, PriorityQueue<Cursor> o2) {
+				if (o1.peek() == null && o2.peek() == null)
+					return 0;
+				else if (o1.peek() == null && o2.peek() != null)
+					return 1;
+				else if (o1.peek() != null && o2.peek() == null)
+					return -1;
 				return o1.peek().compareTo(o2.peek());
 			}
 		});
+		m_keywordQueues = new HashMap<String,PriorityQueue<Cursor>>();
+		m_edgeUri2Keywords = new HashMap<String,Set<String>>();
+		m_edgesWithCursors = new HashSet<EdgeElement>();
 	}
 	
 	@Override
@@ -74,11 +89,28 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		for (String keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
 			for (GraphElement ele : keywords.get(keyword)) {
-				queue.add(new Cursor(keyword, m_nodes.get(ele.getLabel()), null, 0));
+				if (ele instanceof NodeElement) {
+					NodeElement node = m_nodes.get(ele.getLabel());
+					queue.add(new Cursor(keyword, node, null, 0));
+				}
+				else if (ele instanceof EdgeElement) {
+					Set<String> edgeKeywords = m_edgeUri2Keywords.get(ele.getLabel());
+					if (edgeKeywords == null) {
+						edgeKeywords = new HashSet<String>();
+						m_edgeUri2Keywords.put(ele.getLabel(), edgeKeywords);
+					}
+					edgeKeywords.add(keyword);
+				}
 			}
-			m_queues.add(queue);
+			if (!queue.isEmpty()) {
+				m_queues.add(queue);
+				m_keywordQueues.put(keyword, queue);
+			}
 		}
 		m_keywords = keywords;
+		log.debug(m_keywords);
+		log.debug(m_queues);
+		log.debug(m_edgeUri2Keywords);
 	}
 	
 	public void setK(int k) {
@@ -97,17 +129,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			for (List<Cursor> combination : combinations) {
 				Subgraph sg = new Subgraph(combination);
 
-				if (!m_subgraphs.contains(sg)) {
+				if (!m_subgraphs.contains(sg))
 					m_subgraphs.add(sg);
-					
-//					log.debug("connecting: " + currentElement + ", " + currentElement.getKeywords().size());
-//					for (String keyword : currentElement.getKeywords().keySet()) {
-//						log.debug("keyword: " + keyword);
-//						for (Cursor c : currentElement.getKeywords().get(keyword))
-//							log.debug(" " + c + " " + c.getPath().size());
-//					}
-//					log.debug(m_subgraphs.size());
-				}
 			}
 		}
 		
@@ -116,22 +139,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
 		Collections.sort(m_subgraphs);
 		
-//		int i = 0;
-//		Subgraph last = null;
-//		for (Subgraph sg : m_subgraphs) {
-//			if (i >= m_k) {
-//				last = sg;
-//				break;
-//			}
-//			i++;
-//		}
-
 		for (int i = m_subgraphs.size() - 1; i > m_k; i--)
 			m_subgraphs.remove(i);
 
-//		if (last != null)
-//			m_subgraphs = m_subgraphs.headSet(last);
-		
 		if (m_queues.peek() == null || m_queues.peek().peek() == null)
 			return true;
 		
@@ -148,6 +158,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	}
 	
 	public void match() throws StorageException {
+		int edgeCursorsStarted = 0;
 		while (m_queues.size() > 0) {
 			PriorityQueue<Cursor> cursorQueue = m_queues.poll();
 			Cursor minCursor = cursorQueue.poll();
@@ -156,6 +167,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			if (minCursor.getDistance() < m_maxDistance) {
 //				log.debug("min cursor: " + minCursor);
 				currentElement.addCursor(minCursor);
+//				if (currentElement.getKeywords().size() > 2)
+//					log.debug(currentElement.getKeywords());
+//				if (m_edgesWithCursors.contains(currentElement))
+//					log.debug(currentElement);
 
 				if (minCursor.getDistance() < m_maxDistance - 1) {
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_indexGraph, minCursor);
@@ -163,6 +178,26 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor))
 							cursorQueue.add(new Cursor(minCursor.getKeyword(), neighbor, minCursor, minCursor.getCost() + 1));
+						if (neighbor instanceof EdgeElement && !m_edgesWithCursors.contains(neighbor)) {
+							Set<String> edgeKeywords = m_edgeUri2Keywords.get(neighbor.getLabel());
+							if (edgeKeywords != null) {
+								for (String keyword : edgeKeywords) {
+									PriorityQueue<Cursor> q = m_keywordQueues.get(keyword);
+									if (q == null) {
+										q = new PriorityQueue<Cursor>();
+										m_queues.add(q);
+										m_keywordQueues.put(keyword, q);
+									}
+									Cursor p = new Cursor(keyword, currentElement, null, 0);
+									p.setFakeStart(true);
+									currentElement.addCursor(p);
+									Cursor c = new Cursor(keyword, neighbor, p, p.getCost() + 1);
+									q.add(c);
+									edgeCursorsStarted++;
+								}
+								m_edgesWithCursors.add((EdgeElement)neighbor);
+							}
+						}
 					}
 				}
 				
@@ -170,26 +205,72 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				
 				if (done)
 					break;
-
-//				if (currentElement.getKeywords().size() == m_keywords.size()) {
-//					log.debug(currentElement + ", " + currentElement.getKeywords().size());
-//					log.debug(minCursor.getPath() + " " + currentElement.getKeywords());
-//					
-//					for (String keyword : currentElement.getKeywords().keySet()) {
-//						log.debug("keyword: " + keyword);
-//						for (Cursor c : currentElement.getKeywords().get(keyword))
-//							log.debug(" " + c + " " + c.getPath());
-//					}
-//				}
+				
 			}
 			
 			if (!cursorQueue.isEmpty())
 				m_queues.add(cursorQueue);
+//			String s = "";
+//			for (PriorityQueue<Cursor> q : m_queues)
+//				s += q.size() + " ";
+//			log.debug(s);
 		}
 		
+//		for (Subgraph sg : m_subgraphs) {
+//			sg.toQuery(true);
+//		}
+	}
+	
+	public void indexMatches(List<GTable<String>> indexMatches, List<Query> queries) {
+		List<List<Subgraph>> groups = new ArrayList<List<Subgraph>>();
+		
 		for (Subgraph sg : m_subgraphs) {
-			log.debug(sg);
-			sg.toQuery();
+			boolean found = false;
+			for (int i = 0; i < groups.size(); i++) {
+				List<Subgraph> list = groups.get(i);
+				Map<String,String> mapping = list.get(0).isIsomorphicTo(sg);
+				if (mapping.size() > 0) {
+					list.add(sg);
+					
+					Map<String,String> vars = list.get(0).getVariableMapping();
+					GTable<String> table = indexMatches.get(i);
+					String[] row = new String [table.columnCount()];
+					
+					for (int j = 0; j < table.columnCount(); j++) {
+						String colName = table.getColumnName(j);
+						row[j] = mapping.get(vars.get(colName));
+					}
+					
+					table.addRow(row);
+					
+					found = true;
+					break;
+				}
+			}
+			
+			if (!found) {
+				List<Subgraph> list = new ArrayList<Subgraph>();
+				list.add(sg);
+				groups.add(list);
+				
+				GTable<String> table = new GTable<String>(sg.getQueryNodes());
+				String[] row = new String[table.columnCount()];
+				for (String col : table.getColumnNames()) {
+					row[table.getColumn(col)] = sg.getVariableMapping().get(col);
+				}
+				table.addRow(row);
+				indexMatches.add(table);
+				
+				queries.add(sg.toQuery(false));
+			}
 		}
+		
+//		log.debug(groups);
+//		for (List<Subgraph> list : groups)
+//			log.debug(list.size());
+		log.debug(m_subgraphs.size() + " => " + groups.size());
+//		log.debug(indexMatches);
+//		for (GTable<String> table : indexMatches)
+//			log.debug(table.toDataString());
 	}
 }

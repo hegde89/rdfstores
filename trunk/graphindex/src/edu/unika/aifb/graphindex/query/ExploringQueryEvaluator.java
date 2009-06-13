@@ -19,6 +19,7 @@ import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
+import edu.unika.aifb.graphindex.query.exploring.EdgeElement;
 import edu.unika.aifb.graphindex.query.exploring.ExploringIndexMatcher;
 import edu.unika.aifb.graphindex.query.exploring.GraphElement;
 import edu.unika.aifb.graphindex.query.exploring.NodeElement;
@@ -217,8 +218,22 @@ public class ExploringQueryEvaluator implements IQueryEvaluator {
 		list.add(new NodeElement("b115768"));
 		keywords.put("student51", list);
 
+//		list = new ArrayList<GraphElement>();
+//		list.add(new EdgeElement(null, "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#advisor", null));
+//		keywords.put("advisor", list);
+		
 		m_matcher.setKeywords(keywords);
 		m_matcher.match();
+		
+		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
+		List<Query> queries = new ArrayList<Query>();
+		
+		m_matcher.indexMatches(indexMatches, queries);
+		
+		for (int i = 0; i < indexMatches.size(); i++) {
+			log.debug(queries.get(i));
+			log.debug(indexMatches.get(i).toDataString());
+		}
 		
 		
 		// step 3: structure-based refinement

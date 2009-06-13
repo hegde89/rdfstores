@@ -59,6 +59,8 @@ public class EvalRunner {
 		op.accepts("c", "cutoff")
 			.withRequiredArg().ofType(Integer.class);
 		op.accepts("sf", "start from specified query");
+		op.accepts("dc", "drop caches script")
+			.withRequiredArg().ofType(String.class);
 		
 		OptionSet os = op.parse(args);
 		
@@ -71,6 +73,7 @@ public class EvalRunner {
 		String outputDirectory = (String)os.valueOf("o");
 		String system = (String)os.valueOf("s");
 		String resultFile = (String)os.valueOf("f");
+		String dropCachesScript = (String)os.valueOf("dc");
 		int reps = os.has("r") ? (Integer)os.valueOf("r") : 1;
 		int cutoff = os.has("c") ? (Integer)os.valueOf("c") : -1;
 		
@@ -102,12 +105,12 @@ public class EvalRunner {
 			for (String queryName : queryNames) {
 				for (int i = 0; i < reps; i++) {
 					// clear caches
-					if (new File("drop_caches.sh").exists()) {
+					if (dropCachesScript != null && new File(dropCachesScript).exists()) {
 						log.info("clearing caches...");
-						Runtime.getRuntime().exec("drop_caches.sh");
+						Runtime.getRuntime().exec(dropCachesScript);
 					}
 					else
-						log.warn("no drop_caches.sh, caches not cleared");
+						log.warn("no drop caches script, caches not cleared");
 					
 					Set<String> dataWarmup = new HashSet<String>();
 					Set<String> keywordWarmup = new HashSet<String>();

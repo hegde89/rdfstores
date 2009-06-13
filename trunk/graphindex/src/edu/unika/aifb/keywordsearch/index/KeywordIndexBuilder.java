@@ -263,6 +263,8 @@ public class KeywordIndexBuilder {
 					log.debug("entities indexed: " + entities);
 			}
 			br.close();
+			
+			log.debug(entities + " entities indexed");
 		}
 		catch (IOException e) {
 			e.printStackTrace();

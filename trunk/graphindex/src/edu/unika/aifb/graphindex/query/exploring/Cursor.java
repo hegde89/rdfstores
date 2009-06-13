@@ -15,6 +15,7 @@ public class Cursor implements Comparable<Cursor> {
 	private int m_cost;
 	private List<GraphElement> m_path = null;
 	private Set<GraphElement> m_parents;
+	private boolean m_fakeStart = false;
 	
 	public Cursor(String keyword, GraphElement element) {
 		m_keyword = keyword;
@@ -27,11 +28,20 @@ public class Cursor implements Comparable<Cursor> {
 	public Cursor(String keyword, GraphElement element, Cursor parent, int cost) {
 		this(keyword, element);
 		m_parent = parent;
-		if (m_parent != null)
+		if (m_parent != null) {
 			m_distance = m_parent.getDistance() + 1;
+		}	
 		else
 			m_distance = 0;
 		m_cost = m_distance;
+	}
+	
+	public void setFakeStart(boolean fs) {
+		m_fakeStart = fs;
+	}
+	
+	public boolean isFakeStart() {
+		return m_fakeStart;
 	}
 	
 	public int getDistance() {
@@ -45,7 +55,14 @@ public class Cursor implements Comparable<Cursor> {
 	public Cursor getParent() {
 		return m_parent;
 	}
-
+	
+	public Cursor getStartCursor() {
+		if (m_parent == null)
+			return this;
+		else
+			return m_parent.getStartCursor();
+	}
+	
 	public GraphElement getGraphElement() {
 		return m_element;
 	}

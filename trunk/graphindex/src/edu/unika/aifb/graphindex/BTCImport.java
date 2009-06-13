@@ -223,7 +223,7 @@ public class BTCImport {
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
 			config.setAllowCreate(true);
-			config.setCacheSize(1073741824);
+//			config.setCacheSize(1073741824);
 
 			Environment env = new Environment(new File(bdbDirectory), config);
 			
@@ -496,6 +496,25 @@ public class BTCImport {
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		String entities = outputDirectory + "/entities";
+		String sortedEntities = outputDirectory + "/entities_sorted";
+		String uniqEntities = outputDirectory + "/entities_uniq";
+		try {
+			Process p = Runtime.getRuntime().exec("sort -o " + sortedEntities + " " + entities);
+			p.waitFor();
+			log.debug("entities sorted");
+			p = Runtime.getRuntime().exec("uniq " + sortedEntities + " " + uniqEntities);
+			p.waitFor();
+			log.debug("entities uniq");
+			new File(entities).delete();
+			new File(sortedEntities).delete();
+			new File(uniqEntities).renameTo(new File(entities));
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	} 

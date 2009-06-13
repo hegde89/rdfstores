@@ -9,8 +9,6 @@ import java.util.TreeSet;
 public class KeywordSegement implements Comparable<KeywordSegement> {
 	
 	private SortedSet<String> keywords;
-	private Set<String> attributes;
-	private Set<String> values;
 	private String query;
 	
 	public KeywordSegement() {

@@ -3,8 +3,6 @@ package edu.unika.aifb.keywordsearch.search;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -12,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -35,6 +31,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
 import org.apache.lucene.search.BooleanClause.Occur;
+import org.openrdf.model.vocabulary.RDFS;
 
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.TypeUtil;
@@ -246,7 +243,10 @@ public class EntitySearcher {
 				Collection<String> tmp = null;
 				if(keyword.startsWith(Constant.URI_PREFIX)) {
 					tmp = new ArrayList<String>();	
-					tmp.add(keyword);
+					if(keyword.equals(RDFS.LABEL.stringValue()))
+						tmp.add(Constant.LABEL_FIELD);
+					else
+						tmp.add(keyword);
 				}
 				else if(keyword.equals(Constant.LABEL_FIELD) || keyword.equals(Constant.LOCALNAME_FIELD) || keyword.equals(Constant.CONCEPT_FIELD)) {
 					tmp = new ArrayList<String>();	

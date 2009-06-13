@@ -4,14 +4,13 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryParser.MultiFieldQueryParser;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.BooleanClause.Occur;
 
-public class MyQueryParser extends MultiFieldQueryParser {
+public class KeywordQueryParser extends MultiFieldQueryParser {
 
-	public MyQueryParser(String[] fields, Analyzer analyzer) {
+	public KeywordQueryParser(String[] fields, Analyzer analyzer) {
 		super(fields, analyzer);
 	}
 	
@@ -21,12 +20,6 @@ public class MyQueryParser extends MultiFieldQueryParser {
 			QueryParser qp = new QueryParser(fields[i], getAnalyzer());
 			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
 			Query q = qp.parse(query);
-//			if (q instanceof BooleanQuery) {
-//				BooleanQuery bquery = (BooleanQuery) q;
-//				for (BooleanClause clause : bquery.getClauses()) {
-//					clause.setOccur(Occur.MUST);
-//				}
-//			}
 			bQuery.add(q, Occur.SHOULD);
 		}
 		return bQuery;
@@ -38,12 +31,6 @@ public class MyQueryParser extends MultiFieldQueryParser {
 			QueryParser qp = new QueryParser(fields[i], getAnalyzer());
 			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
 			Query q = qp.parse(query);
-//			if (q instanceof BooleanQuery) {
-//				BooleanQuery bquery = (BooleanQuery) q;
-//				for (BooleanClause clause : bquery.getClauses()) {
-//					clause.setOccur(Occur.MUST);
-//				}
-//			}
 			bQuery.add(q, Occur.SHOULD);
 		}
 		return bQuery;

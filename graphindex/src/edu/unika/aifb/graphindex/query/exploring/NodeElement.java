@@ -7,8 +7,23 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 public class NodeElement extends GraphElement {
 
+	private String m_attributeUri;
+	
 	public NodeElement(String label) {
 		super(label);
+	}
+	
+	public NodeElement(String label, String attributeUri) {
+		super(label);
+		m_attributeUri = attributeUri;
+	}
+	
+	public String getAttributeUri() {
+		return m_attributeUri;
+	}
+	
+	public void setAttributeUri(String uri) {
+		m_attributeUri = uri;
 	}
 
 	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {

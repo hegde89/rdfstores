@@ -183,6 +183,45 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		log.debug("targets of removed edges: " + targetsOfRemoved);
 		log.debug("removed properties: " + removedProperties);
 		log.debug("remaining edges: " + toVisit.size() + "/" + queryGraph.edgeCount());
+		
+		if (toVisit.size() == 0) {
+			log.debug("no remaining edges, verifying...");
+			List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
+			for (String node : sourcesOfRemoved) {
+				Map<String,List<EvaluationClass>> ext2ec = new HashMap<String,List<EvaluationClass>>();
+				updateClasses(classes, node, node, ext2ec);
+				
+				for (EvaluationClass ec : classes) {
+					String srcExt = ec.getMatch(node);
+					
+					GTable<String> table = ec.findResult(node);
+					ec.getResults().remove(table);
+					
+					GTable<String> t2 = new GTable<String>(table, false);
+					
+					int col = table.getColumn(node);
+					for (String [] row : table) {
+						boolean found = true;
+						for (String p : removedProperties.get(node)) {
+							if (!m_es.getDataSet(m_idxPSES, p, row[col]).contains(srcExt)) {
+								found = false;
+								break;
+							}
+						}
+						
+						if (found) {
+							t2.addRow(row);
+						}
+					}
+					
+					if (t2.rowCount() > 0) {
+						ec.getResults().add(t2);
+						remainingClasses.add(ec);
+					}
+				}
+			}
+		}
+		
 
 		// disable merge join logging
 //		Tables.log.setLevel(Level.OFF);
@@ -229,7 +268,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 							table.addRow(row);
 					}
 					
-					log.debug("entity filter: " + ecTable.rowCount() + " => " + table.rowCount());
+//					log.debug("entity filter: " + ecTable.rowCount() + " => " + table.rowCount());
 					ec.getResults().add(table);
 				}
 			}

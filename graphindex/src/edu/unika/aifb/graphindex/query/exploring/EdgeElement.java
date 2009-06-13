@@ -19,10 +19,8 @@ public class EdgeElement extends GraphElement {
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
 		if (cursor.getParent() == null) {
-			if (cursor.getParent().getGraphElement().equals(m_source))
-				neighbors.add(m_target);
-			else
-				neighbors.add(m_source);
+			neighbors.add(m_target);
+			neighbors.add(m_source);
 		}
 		else {
 			NodeElement prev = (NodeElement)cursor.getParent().getGraphElement();

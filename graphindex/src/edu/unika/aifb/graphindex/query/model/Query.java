@@ -176,36 +176,82 @@ public class Query {
 			indexEdges.addAll(index.getForwardEdges());
 			if (!m_ignoreIndexEdgeSets && !indexEdges.containsAll(edgeLabels))
 				m_queryGraph = null;
-			else
+			else {
 				pruneQueryGraph(m_queryGraph, index);
-		}
-		
-		int longestPath = 0;
-		for (QueryNode constant : constants) {
-			Stack<List<Integer>> toVisit = new Stack<List<Integer>>();
-			toVisit.push(Arrays.asList(m_queryGraph.getNodeId(constant)));
-			while (toVisit.size() > 0) {
-				List<Integer> path = toVisit.pop();
-				
-				if (path.size() - 1 > longestPath)
-					longestPath = path.size() - 1;
-				
-				for (int succ : m_queryGraph.successors(path.get(path.size() - 1)))
-					if (!path.contains(succ)) {
-						List<Integer> next = new ArrayList<Integer>(path);
-						next.add(succ);
-						toVisit.push(next);
+				Map<String,List<GraphEdge<QueryNode>>> parts = new HashMap<String,List<GraphEdge<QueryNode>>>();
+				for (GraphEdge<QueryNode> edge : m_prunedEdges) {
+					String s = m_queryGraph.getSourceNode(edge).getName();
+					String d = m_queryGraph.getTargetNode(edge).getName();
+					
+					if (parts.containsKey(s) && parts.containsKey(d)) {
+						List<GraphEdge<QueryNode>> slist = parts.get(s);
+						List<GraphEdge<QueryNode>> dlist = parts.get(d);
+						slist.add(edge);
+						if (slist != dlist) {
+							slist.addAll(dlist);
+							for (GraphEdge<QueryNode> e : dlist) {
+								parts.put(m_queryGraph.getSourceNode(e).getName(), slist);
+								parts.put(m_queryGraph.getTargetNode(e).getName(), slist);
+							}
+						}
 					}
-				
-				for (int pred : m_queryGraph.predecessors(path.get(path.size() - 1)))
-					if (!path.contains(pred)) {
-						List<Integer> next = new ArrayList<Integer>(path);
-						next.add(pred);
-						toVisit.push(next);
+					else if (parts.containsKey(s) && !parts.containsKey(d) && m_removeNodes.contains(s)) {
+						List<GraphEdge<QueryNode>> list = parts.get(s);
+						list.add(edge);
+						if (m_removeNodes.contains(d))
+							parts.put(d, list);
 					}
+					else if (!parts.containsKey(s) && parts.containsKey(d) && m_removeNodes.contains(d)) {
+						List<GraphEdge<QueryNode>> list = parts.get(d);
+						list.add(edge);
+						if (m_removeNodes.contains(s))
+							parts.put(s, list);
+					}
+					else {
+						List<GraphEdge<QueryNode>> list = new ArrayList<GraphEdge<QueryNode>>();
+						list.add(edge);
+						if (m_removeNodes.contains(s))
+							parts.put(s, list);
+						if (m_removeNodes.contains(d))
+							parts.put(d, list);
+					}
+						
+				}
+				
+				int maxLength = 0;
+				for (List<GraphEdge<QueryNode>> list : parts.values())
+					if (list.size() > maxLength)
+						maxLength = list.size();
+				log.debug(getName() + ": " + m_removeNodes + " " +  maxLength);
 			}
 		}
-		m_longestPathFromConstant = longestPath;
+		
+//		int longestPath = 0;
+//		for (QueryNode constant : constants) {
+//			Stack<List<Integer>> toVisit = new Stack<List<Integer>>();
+//			toVisit.push(Arrays.asList(m_queryGraph.getNodeId(constant)));
+//			while (toVisit.size() > 0) {
+//				List<Integer> path = toVisit.pop();
+//				
+//				if (path.size() - 1 > longestPath)
+//					longestPath = path.size() - 1;
+//				
+//				for (int succ : m_queryGraph.successors(path.get(path.size() - 1)))
+//					if (!path.contains(succ)) {
+//						List<Integer> next = new ArrayList<Integer>(path);
+//						next.add(succ);
+//						toVisit.push(next);
+//					}
+//				
+//				for (int pred : m_queryGraph.predecessors(path.get(path.size() - 1)))
+//					if (!path.contains(pred)) {
+//						List<Integer> next = new ArrayList<Integer>(path);
+//						next.add(pred);
+//						toVisit.push(next);
+//					}
+//			}
+//		}
+//		m_longestPathFromConstant = longestPath;
 	}
 	
 	public Graph<QueryNode> getGraph() {
@@ -392,7 +438,10 @@ public class Query {
 		m_backwardEdgeSet  = new HashSet<String>();
 		m_forwardSources = new HashSet<String>();
 		m_backwardTargets = new HashSet<String>();
+		m_prunedEdges = new HashSet<GraphEdge<QueryNode>>();
 	}
+	
+	private Set<GraphEdge<QueryNode>> m_prunedEdges = new HashSet<GraphEdge<QueryNode>>();
 
 	private void calculateEdgeSets(Graph<QueryNode> g, StructureIndex index, Set<Integer> fixedNodes, Set<Integer> selectIds, Map<String,Set<String>> bwEdgeSources, Map<String,Set<String>> fwEdgeTargets) {
 		for (int srcId : selectIds) {
@@ -416,6 +465,8 @@ public class Query {
 							calculateFixedPaths(g, fixedNodes, edge.getSrc());
 							continue;
 						}
+						
+						m_prunedEdges.add(edge);
 
 						m_backwardEdgeSet.add(edge.getLabel());
 						if (startDirection == 2)
@@ -441,6 +492,8 @@ public class Query {
 							calculateFixedPaths(g, fixedNodes, edge.getDst());
 							continue;
 						}
+
+						m_prunedEdges.add(edge);
 						
 						m_forwardEdgeSet.add(edge.getLabel());
 						if (startDirection == 1)

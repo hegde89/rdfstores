@@ -37,6 +37,7 @@ import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.indexing.FastIndexBuilder;
+import edu.unika.aifb.graphindex.query.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.query.ExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
@@ -54,6 +55,7 @@ import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
 import edu.unika.aifb.keywordsearch.search.EntitySearcher;
+import edu.unika.aifb.keywordsearch.search.KeywordSearcher;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -398,9 +400,11 @@ public class BTCImport {
 		if (action.equals("keywordquery")) {
 			StructureIndexReader reader = new StructureIndexReader(spDirectory);
 
-			ExploringQueryEvaluator qe = new ExploringQueryEvaluator(reader, new EntitySearcher(keywordIndexDirectory));
+			ExploringQueryEvaluator qe = new DirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
+//			ExploringQueryEvaluator qe = new IndirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
+			qe.setDirectEvaluation(true);
 			
-			qe.evaluate(null);
+			qe.evaluate("GraduateStudent51 GraduateCourse3");
 			
 //			Scanner scanner = new Scanner(System.in);
 //			while (true) {

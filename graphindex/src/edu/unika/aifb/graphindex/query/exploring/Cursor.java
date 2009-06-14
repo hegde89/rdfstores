@@ -6,9 +6,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import edu.unika.aifb.keywordsearch.KeywordSegement;
+
 public class Cursor implements Comparable<Cursor> {
 
-	private String m_keyword;
+	private KeywordSegement m_keyword;
 	private Cursor m_parent;
 	private GraphElement m_element, m_startElement;
 	private int m_distance;
@@ -17,7 +19,7 @@ public class Cursor implements Comparable<Cursor> {
 	private Set<GraphElement> m_parents;
 	private boolean m_fakeStart = false;
 	
-	public Cursor(String keyword, GraphElement element) {
+	public Cursor(KeywordSegement keyword, GraphElement element) {
 		m_keyword = keyword;
 		m_element = element;
 		m_parent = null;
@@ -25,7 +27,7 @@ public class Cursor implements Comparable<Cursor> {
 		m_cost = 0;
 	}
 	
-	public Cursor(String keyword, GraphElement element, Cursor parent, int cost) {
+	public Cursor(KeywordSegement keyword, GraphElement element, Cursor parent, int cost) {
 		this(keyword, element);
 		m_parent = parent;
 		if (m_parent != null) {
@@ -48,7 +50,7 @@ public class Cursor implements Comparable<Cursor> {
 		return m_distance;
 	}
 	
-	public String getKeyword() {
+	public KeywordSegement getKeyword() {
 		return m_keyword;
 	}
 

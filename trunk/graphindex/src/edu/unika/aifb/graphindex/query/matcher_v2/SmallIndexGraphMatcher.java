@@ -223,11 +223,11 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 
-//			if (toVisit.size() == 0) {
-//				m_validator = new SignatureRowValidator();
-//			}
-//			else
-//				m_validator = null;
+			if (toVisit.size() == 0) {
+				m_validator = new SignatureRowValidator();
+			}
+			else
+				m_validator = null;
 //			m_validator.alwaysPurge = true;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class Query {
 	private Set<String> m_forwardSources;
 	private int m_longestPathFromConstant = 0;
 	private boolean m_ignoreIndexEdgeSets = false;
+	private ArrayList<List<GraphEdge<QueryNode>>> m_prunedParts;
 	private static final Logger log = Logger.getLogger(Query.class);
 	
 	public Query(List<String> vars) {
@@ -217,12 +219,15 @@ public class Query {
 					}
 						
 				}
-				
+				m_prunedParts = new ArrayList<List<GraphEdge<QueryNode>>>();
 				int maxLength = 0;
-				for (List<GraphEdge<QueryNode>> list : parts.values())
+				for (List<GraphEdge<QueryNode>> list : parts.values()) {
 					if (list.size() > maxLength)
 						maxLength = list.size();
-				log.debug(getName() + ": " + m_removeNodes + " " +  maxLength);
+					if (!m_prunedParts.contains(list))
+						m_prunedParts.add(list);
+				}
+//				log.debug(getName() + ": " + m_removeNodes + " " +  maxLength);
 			}
 		}
 		
@@ -252,6 +257,105 @@ public class Query {
 //			}
 //		}
 //		m_longestPathFromConstant = longestPath;
+	}
+	
+	private int calcDistances(List<GraphEdge<QueryNode>> part, String node, int distance, Map<String,Integer> distances) {
+		distances.put(node, distance);
+		
+		int max = distance;
+		for (GraphEdge<QueryNode> edge : part) {
+			
+			String src = m_queryGraph.getSourceNode(edge).getName();
+			String trg = m_queryGraph.getTargetNode(edge).getName();
+			
+			if (src.equals(node) && !distances.containsKey(trg)) {
+				int dist = calcDistances(part, trg, distance + 1, distances);
+				if (dist > max)
+					max = dist;
+			}
+			if (trg.equals(node) && !distances.containsKey(src)) {
+				int dist = calcDistances(part, src, distance + 1, distances);
+				if (dist > max)
+					max = dist;
+			}
+		}
+		
+		return max;
+	}
+	
+	public void trimPruning(int pathLength) {
+		log.debug("trimming parts to length " + pathLength);
+		log.debug("parts before: " + m_prunedParts);
+		
+		m_forwardSources.clear();
+		m_backwardTargets.clear();
+		
+		Set<GraphEdge<QueryNode>> reclaimedEdges = new HashSet<GraphEdge<QueryNode>>();
+		Set<String> reclaimedNodes = new HashSet<String>();
+		
+		for (List<GraphEdge<QueryNode>> part : m_prunedParts) {
+			if (part.size() > pathLength) {
+				log.debug(part);
+				String startNode = null;
+				for (GraphEdge<QueryNode> edge : part) {
+					if (!m_removeNodes.contains(m_queryGraph.getSourceNode(edge).getName()))
+						startNode = m_queryGraph.getSourceNode(edge).getName();
+					if (!m_removeNodes.contains(m_queryGraph.getTargetNode(edge).getName()))
+						startNode = m_queryGraph.getTargetNode(edge).getName();
+				}
+				log.debug("start node: " + startNode);
+				
+				Map<String,Integer> distances = new HashMap<String,Integer>();
+				int max = calcDistances(part, startNode, 0, distances);
+				int reclaimDistance = max - pathLength;
+				log.debug(distances + " " + max + " " + reclaimDistance);
+				
+				if (reclaimDistance > 0) {
+					for (String node : distances.keySet()) {
+						if (distances.get(node) <= reclaimDistance && m_removeNodes.contains(node))
+							reclaimedNodes.add(node);
+					}
+					
+					log.debug(" reclaim node: " + reclaimedNodes);
+
+					Set<String> notRemovedNodes = new HashSet<String>(reclaimedNodes);
+					notRemovedNodes.add(startNode);
+					
+					for (Iterator<GraphEdge<QueryNode>> i = part.iterator(); i .hasNext(); ) {
+						GraphEdge<QueryNode> edge = i.next();
+						String src = m_queryGraph.getSourceNode(edge).getName();
+						String trg = m_queryGraph.getTargetNode(edge).getName();
+						
+						if (notRemovedNodes.contains(src) && notRemovedNodes.contains(trg)) {
+							i.remove();
+							reclaimedEdges.add(edge);
+						}
+					}
+					
+					log.debug(" reclaimed edges: " + reclaimedEdges);
+				}
+			}
+		}
+		
+		
+		m_removeNodes.removeAll(reclaimedNodes);
+		m_prunedEdges.removeAll(reclaimedEdges);
+		
+		for (GraphEdge<QueryNode> edge : m_queryGraph.edges()) {
+			String src = m_queryGraph.getSourceNode(edge).getName();
+			String trg = m_queryGraph.getTargetNode(edge).getName();
+
+			if (!m_removeNodes.contains(src) && m_removeNodes.contains(trg))
+				m_forwardSources.add(src);
+			if (m_removeNodes.contains(src) && !m_removeNodes.contains(trg))
+				m_backwardTargets.add(trg);
+		}
+
+		log.debug("rem: " + m_removeNodes);
+		log.debug("srcs: " + m_forwardSources);
+		log.debug("trgs: "+ m_backwardTargets);
+		log.debug("e: " + m_prunedEdges);
+		log.debug("parts after: " + m_prunedParts);
 	}
 	
 	public Graph<QueryNode> getGraph() {

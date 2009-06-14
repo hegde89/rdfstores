@@ -37,6 +37,7 @@ public class Timings {
 	public static final Stat STEP_ES = addStat("step_es");
 	public static final Stat STEP_ASM = addStat("step_asm");
 	public static final Stat STEP_ASM2IM = addStat("step_asm2im");
+	public static final Stat STEP_EXPLORE = addStat("step_explore");
 	public static final Stat STEP_IM = addStat("step_im");
 	public static final Stat STEP_IM2DM = addStat("step_im2dm");
 	public static final Stat STEP_DM = addStat("step_dm");

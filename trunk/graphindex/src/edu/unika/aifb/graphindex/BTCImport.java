@@ -284,8 +284,8 @@ public class BTCImport {
 					String s = triple[0];
 					String o = triple[2];
 					
-					if (!Util.isEntity(o))
-						continue;
+//					if (!Util.isEntity(o))
+//						continue;
 					
 					String subExt = bc.getBlockName(s);
 					String objExt = bc.getBlockName(o);
@@ -385,6 +385,8 @@ public class BTCImport {
 				if (queryName != null && !q.getName().equals(queryName))
 					continue;
 				
+				q.trimPruning(reader.getIndex().getPathLength());
+
 				List<String[]> results = qe.evaluate(q);
 				log.info("query " + q.getName() + ": " + results.size() + " results");
 			}

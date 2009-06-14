@@ -105,6 +105,8 @@ public class StructureIndex {
 				e.printStackTrace();
 			}
 		}
+		
+		log.debug("bk: " + m_pathLength);
 	}
 	
 	public void setObjectCardinalities(Map<String,Integer> cards) {

@@ -88,6 +88,11 @@ public class EvalRunner {
 		
 		List<QueryRun> queryRuns = new ArrayList<QueryRun>();
 
+		PrintStream ps = System.out;
+		if (resultFile != null) {
+			ps = new PrintStream(new FileOutputStream(resultFile, true));
+		}
+
 		if (action.equals("query") || action.equals("spquery")) {
 			String queryFile = (String)os.valueOf("qf");
 			String qName = (String)os.valueOf("q");
@@ -179,6 +184,9 @@ public class EvalRunner {
 						
 						collector.reset();
 						
+						if (system.equals("sp") || system.equals("spe"))
+							q.trimPruning(reader.getIndex().getPathLength());
+						
 						List<String[]> results = qe.evaluate(q);
 						log.info("query " + q.getName() + ": " + results.size() + " results");
 						
@@ -190,14 +198,15 @@ public class EvalRunner {
 						c.logStats();
 						
 						queryRuns.add(new QueryRun(q.getName(), system, t, c));
-						System.out.print(q.getName() + ", " + system);
+						ps.print(q.getName() + ", " + system);
 						for (Stat s : Timings.stats) {
-							System.out.print(", " + t.get(s));
+							ps.print(", " + t.get(s));
 						}
 						for (Stat s : Counters.stats) {
-							System.out.print(", " + c.get(s));
+							ps.print(", " + c.get(s));
 						}
-						System.out.println();
+						ps.println();
+						ps.flush();
 					}
 					
 					if (reader != null) {
@@ -211,31 +220,29 @@ public class EvalRunner {
 				}
 			}
 			
-			PrintStream ps = System.out;
-			if (resultFile != null) {
-				ps = new PrintStream(new FileOutputStream(resultFile));
-			}
+			ps.close();
+			
 			
 			// column names
-			ps.print("query, system");
-			for (Stat s : Timings.stats) {
-				ps.print(", t_" + s.name);
-			}
-			for (Stat s : Counters.stats) {
-				ps.print(", c_" + s.name);
-			}
-			ps.println();
-			
-			for (QueryRun qr : queryRuns) {
-				ps.print(qr.getName() + ", " + qr.getSystem());
-				for (Stat s : Timings.stats) {
-					ps.print(", " + qr.getTimings().get(s));
-				}
-				for (Stat s : Counters.stats) {
-					ps.print(", " + qr.getCounters().get(s));
-				}
-				ps.println();
-			}
+//			ps.print("query, system");
+//			for (Stat s : Timings.stats) {
+//				ps.print(", t_" + s.name);
+//			}
+//			for (Stat s : Counters.stats) {
+//				ps.print(", c_" + s.name);
+//			}
+//			ps.println();
+//			
+//			for (QueryRun qr : queryRuns) {
+//				ps.print(qr.getName() + ", " + qr.getSystem());
+//				for (Stat s : Timings.stats) {
+//					ps.print(", " + qr.getTimings().get(s));
+//				}
+//				for (Stat s : Counters.stats) {
+//					ps.print(", " + qr.getCounters().get(s));
+//				}
+//				ps.println();
+//			}
 		}
 	}
 

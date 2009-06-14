@@ -36,7 +36,7 @@ import edu.unika.aifb.keywordsearch.TransformedGraphNode;
 import edu.unika.aifb.keywordsearch.search.ApproximateStructureMatcher;
 import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 
-public class ExploringQueryEvaluator implements IQueryEvaluator {
+public class ExploringQueryEvaluator  {
 
 	private StructureIndexReader m_indexReader;
 	private StructureIndex m_index;

@@ -69,6 +69,7 @@ public class QueryLoader {
 			return null;
 		}
 		
+		
 		m_fwEdgeSet.addAll(q.getForwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getBackwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getNeutralEdgeSet());

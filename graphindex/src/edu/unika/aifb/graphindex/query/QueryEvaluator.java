@@ -63,6 +63,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 		m_index.getCollector().addCounters(m_counters);
 		
 		long start = System.currentTimeMillis();
+		m_timings.start(Timings.TOTAL_QUERY_EVAL);
 		
 		List<String[]> result = new ArrayList<String[]>();
 		for (String indexGraph : m_indexReader.getGraphNames()) {
@@ -114,6 +115,9 @@ public class QueryEvaluator implements IQueryEvaluator {
 			qe.finished();
 			
 		}
+		
+		m_timings.end(Timings.TOTAL_QUERY_EVAL);
+		
 		m_counters.set(Counters.RESULTS, result.size());
 		log.debug("size: " + result.size());
 		

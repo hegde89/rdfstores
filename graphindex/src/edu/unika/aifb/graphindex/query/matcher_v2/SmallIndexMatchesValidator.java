@@ -291,7 +291,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					updateClasses(classes, trgLabel, null, null);
 					updateClasses(classes, srcLabel, srcLabel, ext2ec);
 					
-					classes = evaluateUnmatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec);
+					classes = evaluateUnmatched(currentEdge, property, srcLabel, trgLabel, classes, ext2ec, sourcesOfRemoved, removedProperties);
 				}
 				else {
 					// case 3: both nodes already processed
@@ -394,6 +394,8 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 		int filteredRows = 0, totalRows = 0;
 		
+		boolean targetConstant = Util.isConstant(trgLabel);
+		log.debug("target constant: " + targetConstant);
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
 				GTable<String> sourceTable = ec.findResult(srcLabel);
@@ -417,18 +419,31 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				}
 				
 				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
-				
+
 				Set<String> values = new HashSet<String>();
 				for (String[] srcRow : sourceTable) {
 					if (!values.contains(srcRow[srcCol])) {
 						GTable<String> t2 = m_es.getIndexTable(m_idxPSESO, srcExt, property, srcRow[srcCol]);
-						for (String[] row : t2)
-//							if (!sourcesOfRemoved.contains(trgLabel) || m_es.getDataSet(m_idxPSES, removedProperties.get(trgLabel), row[1]).contains(trgExt))
+						
+						for (String[] row : t2) {
+							boolean all = true;
+							if (sourcesOfRemoved.contains(trgLabel)) {
+								for (String p : removedProperties.get(trgLabel)) {
+									if (!m_es.getDataSet(m_idxPSES, p, row[1]).contains(trgExt)) {
+										all = false;
+										break;
+									}
+										
+								}
+							}
+							
+							if (all && (!targetConstant || row[1].equals(trgLabel)))
 								table.addRow(row);
+						}
 						values.add(srcRow[srcCol]);
 					}
 				}
-				
+
 				if (table.rowCount() == 0)
 					continue;
 				
@@ -450,7 +465,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	}
 
 	// case 2: neither node is matched
-	private List<EvaluationClass> evaluateUnmatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec) throws StorageException {
+	private List<EvaluationClass> evaluateUnmatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 		if (Util.isConstant(trgLabel)) {
 			// use ESPO index to load triples
@@ -459,6 +474,22 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				if (table.rowCount() == 0)
 					continue;
 				
+				if (sourcesOfRemoved.contains(srcLabel)) {
+					GTable<String> t2 = new GTable<String>(table, false);
+					for (String[] row : table) {
+						boolean all = true;
+						for (String p : removedProperties.get(srcLabel)) {
+							if (!m_es.getDataSet(m_idxPSES, p, row[0]).contains(srcExt)) {
+								all = false;
+								break;
+							}
+						}
+						if (all)
+							t2.addRow(row);
+					}
+					table = t2;
+				}
+
 				table.setColumnName(0, srcLabel);
 				table.setColumnName(1, trgLabel);
 

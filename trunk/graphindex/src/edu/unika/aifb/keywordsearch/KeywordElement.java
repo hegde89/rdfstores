@@ -13,12 +13,11 @@ import java.util.Set;
 
 import org.apache.lucene.document.Document;
 
-import edu.unika.aifb.keywordsearch.api.IEntity;
 import edu.unika.aifb.keywordsearch.api.IResource;
 import edu.unika.aifb.keywordsearch.impl.Attribute;
 import edu.unika.aifb.keywordsearch.impl.Entity;
-import edu.unika.aifb.keywordsearch.impl.Relation;
 import edu.unika.aifb.keywordsearch.impl.NamedConcept;
+import edu.unika.aifb.keywordsearch.impl.Relation;
 import edu.unika.aifb.keywordsearch.index.BloomFilter;
 
 
@@ -74,6 +73,15 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public void setKeywords(Set<String> keywords) {
 		this.keywords = keywords;
+	}
+	
+	public void addKeywords(Set<String> keywords) {
+		if(this.keywords == null) {
+			this.keywords = new HashSet<String>();
+		}
+		for(String keyword : keywords) {
+			this.keywords.add(keyword);
+		}
 	}
 	
 	public Collection<String> getKeywords() {

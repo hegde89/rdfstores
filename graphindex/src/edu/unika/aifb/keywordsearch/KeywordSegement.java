@@ -24,16 +24,26 @@ public class KeywordSegement implements Comparable<KeywordSegement> {
 
 	public KeywordSegement(Collection<String> keywords) {
 		this();
-		for(String element : keywords) {
-			this.keywords.add(element);
-			this.query += element + " ";
+		for(String keyword : keywords) {
+			boolean added = this.keywords.add(keyword);
+			if(added)
+				this.query += keyword + " ";
 		}
 			
 	}
 	
 	public void addKeyword(String keyword) {
-		this.keywords.add(keyword);
-		this.query += keyword + " ";
+		boolean added = this.keywords.add(keyword);
+		if(added)
+			this.query += keyword + " ";
+	}
+	
+	public void addKeywords(Collection<String> keywords) {
+		for(String keyword : keywords) {
+			boolean added = this.keywords.add(keyword);
+			if(added)
+				this.query += keyword + " ";
+		}
 	}
 	
 	public Set<String> getKeywords() {

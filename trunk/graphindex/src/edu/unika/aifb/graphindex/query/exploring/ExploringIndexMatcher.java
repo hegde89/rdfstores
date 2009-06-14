@@ -21,6 +21,7 @@ import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
@@ -28,11 +29,11 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private int m_maxDistance = 4; 
 	private DirectedMultigraph<NodeElement,EdgeElement> m_indexGraph;
 	private Map<String,NodeElement> m_nodes;
-	private Map<String,List<GraphElement>> m_keywords;
+	private Map<KeywordSegement,List<GraphElement>> m_keywords;
 	private List<Subgraph> m_subgraphs;
-	private int m_k = 10;
-	private Map<String,PriorityQueue<Cursor>> m_keywordQueues;
-	private Map<String,Set<String>> m_edgeUri2Keywords; 
+	private int m_k = 20;
+	private Map<KeywordSegement,PriorityQueue<Cursor>> m_keywordQueues;
+	private Map<String,Set<KeywordSegement>> m_edgeUri2Keywords; 
 	private Set<EdgeElement> m_edgesWithCursors;
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
@@ -53,8 +54,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				return o1.peek().compareTo(o2.peek());
 			}
 		});
-		m_keywordQueues = new HashMap<String,PriorityQueue<Cursor>>();
-		m_edgeUri2Keywords = new HashMap<String,Set<String>>();
+		m_keywordQueues = new HashMap<KeywordSegement,PriorityQueue<Cursor>>();
+		m_edgeUri2Keywords = new HashMap<String,Set<KeywordSegement>>();
 		m_edgesWithCursors = new HashSet<EdgeElement>();
 	}
 	
@@ -85,8 +86,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		log.debug("ig nodes: " + m_indexGraph.vertexSet().size());
 	}
 	
-	public void setKeywords(Map<String,List<GraphElement>> keywords) {
-		for (String keyword : keywords.keySet()) {
+	public void setKeywords(Map<KeywordSegement,List<GraphElement>> keywords) {
+		for (KeywordSegement keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
 			for (GraphElement ele : keywords.get(keyword)) {
 				if (ele instanceof NodeElement) {
@@ -94,9 +95,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					queue.add(new Cursor(keyword, node, null, 0));
 				}
 				else if (ele instanceof EdgeElement) {
-					Set<String> edgeKeywords = m_edgeUri2Keywords.get(ele.getLabel());
+					Set<KeywordSegement> edgeKeywords = m_edgeUri2Keywords.get(ele.getLabel());
 					if (edgeKeywords == null) {
-						edgeKeywords = new HashSet<String>();
+						edgeKeywords = new HashSet<KeywordSegement>();
 						m_edgeUri2Keywords.put(ele.getLabel(), edgeKeywords);
 					}
 					edgeKeywords.add(keyword);
@@ -129,8 +130,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			for (List<Cursor> combination : combinations) {
 				Subgraph sg = new Subgraph(combination);
 
-				if (!m_subgraphs.contains(sg))
-					m_subgraphs.add(sg);
+				if (!m_subgraphs.contains(sg)) {
+					if (!sg.hasDanglingEdge())
+						m_subgraphs.add(sg);
+				}
 			}
 		}
 		
@@ -179,9 +182,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						if (!parents.contains(neighbor))
 							cursorQueue.add(new Cursor(minCursor.getKeyword(), neighbor, minCursor, minCursor.getCost() + 1));
 						if (neighbor instanceof EdgeElement && !m_edgesWithCursors.contains(neighbor)) {
-							Set<String> edgeKeywords = m_edgeUri2Keywords.get(neighbor.getLabel());
+							Set<KeywordSegement> edgeKeywords = m_edgeUri2Keywords.get(neighbor.getLabel());
 							if (edgeKeywords != null) {
-								for (String keyword : edgeKeywords) {
+								for (KeywordSegement keyword : edgeKeywords) {
 									PriorityQueue<Cursor> q = m_keywordQueues.get(keyword);
 									if (q == null) {
 										q = new PriorityQueue<Cursor>();
@@ -221,7 +224,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		}
 	}
 	
-	public void indexMatches(List<GTable<String>> indexMatches, List<Query> queries) {
+	public void indexMatches(List<GTable<String>> indexMatches, List<Query> queries, List<Map<String,KeywordSegement>> select2ks, boolean withAttributes) {
 		List<List<Subgraph>> groups = new ArrayList<List<Subgraph>>();
 		
 		for (Subgraph sg : m_subgraphs) {
@@ -261,7 +264,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				table.addRow(row);
 				indexMatches.add(table);
 				
-				queries.add(sg.toQuery(false));
+				queries.add(sg.toQuery(withAttributes));
+				
+				select2ks.add(sg.getKSMapping());
 			}
 		}
 		

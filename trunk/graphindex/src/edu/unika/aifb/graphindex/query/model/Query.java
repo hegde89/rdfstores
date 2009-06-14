@@ -166,7 +166,8 @@ public class Query {
 			if (Util.isConstant(dst.getName()))
 				constants.add(dst);
 			
-			edgeLabels.add(l.getPredicate().getUri());
+			if (!l.getPredicate().getUri().startsWith("???")) // for keystruc
+				edgeLabels.add(l.getPredicate().getUri());
 			g.addEdge(src, dst, new LabeledEdge<QueryNode>(src, dst, l.getPredicate().getUri()));
 		}
 		

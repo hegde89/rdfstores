@@ -72,8 +72,10 @@ public class KeywordSearcher {
 			e.printStackTrace();
 		}
 	}
-	
 	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries) {
+		return searchKeywordElements(queries, true);
+	}	
+	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) {
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 		SortedSet<KeywordSegement> segements = parseQueries(queries, conceptsAndRelations, attributes);
@@ -97,21 +99,23 @@ public class KeywordSearcher {
 			System.out.println();	
 		}
 		
-		Set<String> keywords = keywordsWithEntities.keySet();
-		overlapNeighborhoods(keywordsWithEntities, segementsWithEntities,  keywords);
-
-		size = 0;
-		for(Collection<KeywordElement> coll : segementsWithEntities.values()) {
-			size += coll.size();
-		}
-		System.out.println("------------- After NeighborhoodJoin ------------ " 
-				+ "Size_of_segements:" + segementsWithEntities.size() 
-				+ "   Size_of_elements:" + size);
-		for(KeywordSegement segement : segementsWithEntities.keySet()) {
-			System.out.println(segement);
-			for(KeywordElement ele : segementsWithEntities.get(segement))
-				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
-			System.out.println();	
+		if (doOverlap) {
+			Set<String> keywords = keywordsWithEntities.keySet();
+			overlapNeighborhoods(keywordsWithEntities, segementsWithEntities,  keywords);
+	
+			size = 0;
+			for(Collection<KeywordElement> coll : segementsWithEntities.values()) {
+				size += coll.size();
+			}
+			System.out.println("------------- After NeighborhoodJoin ------------ " 
+					+ "Size_of_segements:" + segementsWithEntities.size() 
+					+ "   Size_of_elements:" + size);
+			for(KeywordSegement segement : segementsWithEntities.keySet()) {
+				System.out.println(segement);
+				for(KeywordElement ele : segementsWithEntities.get(segement))
+					System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+				System.out.println();	
+			}
 		}
 		
 		for(String keyword : conceptsAndRelations.keySet()) {

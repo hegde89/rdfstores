@@ -10,14 +10,15 @@ import java.util.Set;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
+import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public abstract class GraphElement {
 	protected String m_label;
-	protected Map<String,List<Cursor>> m_keywordCursors;
+	protected Map<KeywordSegement,List<Cursor>> m_keywordCursors;
 	
 	public GraphElement(String label) {
 		m_label = label;
-		m_keywordCursors = new HashMap<String,List<Cursor>>();
+		m_keywordCursors = new HashMap<KeywordSegement,List<Cursor>>();
 	}
 	
 	public String getLabel() {
@@ -39,7 +40,7 @@ public abstract class GraphElement {
 		
 		int[] idx = new int [m_keywordCursors.size()];
 		int[] guard = new int [m_keywordCursors.size()];
-		List<String> keywords = new ArrayList<String>(m_keywordCursors.keySet());
+		List<KeywordSegement> keywords = new ArrayList<KeywordSegement>(m_keywordCursors.keySet());
 		
 		for (int i = 0; i < keywords.size(); i++)
 			guard[i] = m_keywordCursors.get(keywords.get(i)).size();
@@ -99,7 +100,7 @@ public abstract class GraphElement {
 		return m_label;
 	}
 
-	public Map<String,List<Cursor>> getKeywords() {
+	public Map<KeywordSegement,List<Cursor>> getKeywords() {
 		return m_keywordCursors;
 	}
 }

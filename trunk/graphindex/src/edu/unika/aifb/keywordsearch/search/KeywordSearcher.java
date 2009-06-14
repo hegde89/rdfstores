@@ -162,7 +162,8 @@ public class KeywordSearcher {
 				Collection<String> reachableKeywords = ele.getReachableKeywords();
 				for(String joinKey : keywords) {
 					if(!reachableKeywords.contains(joinKey)) {
-						Collection<KeywordElement> reachables = ele.getReachable(keywordsWithEntities.get(joinKey));	
+						Collection<KeywordElement> coll = keywordsWithEntities.get(joinKey);
+						Collection<KeywordElement> reachables = ele.getReachable(coll);	
 						if(reachables != null && reachables.size() != 0) {
 							for(KeywordElement reachable : reachables) {
 								Collection<String> keywords1 = ele.getReachableKeywords();
@@ -322,20 +323,20 @@ public class KeywordSearcher {
 		Collection<KeywordElement> result = new HashSet<KeywordElement>();
 		try {
 			Hits hits = searcher.search(clause);
-			/********* add fuzzy query funtion here **************/
-			if (hits == null || hits.length() == 0){
-				Set<Term> terms = new HashSet<Term>();
-				clause.extractTerms(terms);
-				//if clause query is a term query
-				if(terms.size() != 0){
-					BooleanQuery query = new BooleanQuery();
-					for(Term term : terms) {
-						query.add(new FuzzyQuery(term, 0.8f, 1), Occur.MUST);
-					}
-					hits = searcher.search(query);
-				}
-			}
-			/************************************************/
+//			/********* add fuzzy query funtion here **************/
+//			if (hits == null || hits.length() == 0){
+//				Set<Term> terms = new HashSet<Term>();
+//				clause.extractTerms(terms);
+//				//if clause query is a term query
+//				if(terms.size() != 0){
+//					BooleanQuery query = new BooleanQuery();
+//					for(Term term : terms) {
+//						query.add(new FuzzyQuery(term, 0.8f, 1), Occur.MUST);
+//					}
+//					hits = searcher.search(query);
+//				}
+//			}
+//			/************************************************/
 
 			for(int i = 0; i < Math.min(hits.length(), MAX_KEYWORDRESULT_SIZE); i++){
 				Document doc = hits.doc(i);

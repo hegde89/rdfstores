@@ -22,8 +22,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
@@ -31,7 +29,6 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
-import org.apache.lucene.search.BooleanClause.Occur;
 
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.TypeUtil;
@@ -72,17 +69,17 @@ public class KeywordSearcher {
 			e.printStackTrace();
 		}
 	}
-	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries) {
+	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> searchKeywordElements(List<String> queries) {
 		return searchKeywordElements(queries, true);
 	}	
-	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) {
+	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> searchKeywordElements(List<String> queries, boolean doOverlap) {
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 		SortedSet<KeywordSegement> segements = parseQueries(queries, conceptsAndRelations, attributes);
 		
 		Map<String, Collection<KeywordElement>> keywordsWithEntities = new HashMap<String, Collection<KeywordElement>>();
 		Map<KeywordElement, KeywordSegement> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegement>();
-		Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities = new HashMap<KeywordSegement, Collection<KeywordElement>>();  
+		Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities = new TreeMap<KeywordSegement, Collection<KeywordElement>>();  
 		searchElementsByKeywords(segements, attributes, entitiesWithSegement, segementsWithEntities, keywordsWithEntities);
 		
 		int size = 0;
@@ -94,13 +91,13 @@ public class KeywordSearcher {
 				+ "   Size_of_elements:" + size);	
 		for(KeywordSegement segement : segementsWithEntities.keySet()) {
 			System.out.println(segement);
-			for(KeywordElement ele : segementsWithEntities.get(segement))
-				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
-			System.out.println();	
+//			for(KeywordElement ele : segementsWithEntities.get(segement))
+//				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+//			System.out.println();	
 		}
 		
+		Set<String> keywords = keywordsWithEntities.keySet();
 		if (doOverlap) {
-			Set<String> keywords = keywordsWithEntities.keySet();
 			overlapNeighborhoods(keywordsWithEntities, segementsWithEntities,  keywords);
 	
 			size = 0;
@@ -118,11 +115,26 @@ public class KeywordSearcher {
 			}
 		}
 		
-		for(String keyword : conceptsAndRelations.keySet()) {
-			segementsWithEntities.put(new KeywordSegement(keyword), conceptsAndRelations.get(keyword));
+		return decompose(segementsWithEntities, keywords, conceptsAndRelations);
+	}
+	
+	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> decompose(Map<KeywordSegement,Collection<KeywordElement>> segementsWithEntities, 
+			Set<String> keywords, Map<String, Collection<KeywordElement>> conceptsAndRelations) {
+		Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = new ArrayList<Map<KeywordSegement,Collection<KeywordElement>>>();
+		Set<KeywordSegement> allSegements = segementsWithEntities.keySet();
+		Iterator<Set<KeywordSegement>> iter = KeywordPartitioner.getPartitionIterator(allSegements, keywords);
+		while(iter.hasNext()) {
+			Set<KeywordSegement> segements = iter.next();
+			Map<KeywordSegement,Collection<KeywordElement>> partition = new HashMap<KeywordSegement,Collection<KeywordElement>>();
+			for(KeywordSegement segement : segements) {
+				partition.put(segement, segementsWithEntities.get(segement));
+			}
+			for(String keyword : conceptsAndRelations.keySet()) {
+				partition.put(new KeywordSegement(keyword), conceptsAndRelations.get(keyword));
+			}
+			partitions.add(partition);
 		}
-		
-		return segementsWithEntities;
+		return partitions;
 	}
 	
 	public SortedSet<KeywordSegement> parseQueries(List<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations, 
@@ -164,8 +176,9 @@ public class KeywordSearcher {
 		for(String keyword : keywordsWithEntities.keySet()) {
 			for(KeywordElement ele : keywordsWithEntities.get(keyword)) {
 				Collection<String> reachableKeywords = ele.getReachableKeywords();
+				Collection<String> containedkeywords = ele.getKeywords();
 				for(String joinKey : keywords) {
-					if(!reachableKeywords.contains(joinKey)) {
+					if(!containedkeywords.contains(joinKey)) {
 						Collection<KeywordElement> coll = keywordsWithEntities.get(joinKey);
 						Collection<KeywordElement> reachables = ele.getReachable(coll);	
 						if(reachables != null && reachables.size() != 0) {
@@ -621,8 +634,20 @@ public class KeywordSearcher {
 			
 			LinkedList<String> keywordList = getKeywordList(line);
 			
-			searcher.searchKeywordElements(keywordList);
-			
+			Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = searcher.searchKeywordElements(keywordList);
+			for(Map<KeywordSegement,Collection<KeywordElement>> partition : partitions) {
+				System.out.println("---------------------------------------------------------------");
+				System.out.println("keyword partition size: " + partition.keySet().size());
+				for(KeywordSegement segement : partition.keySet()) {
+					System.out.println(segement);
+				}
+				int size = 0;
+				for(Collection<KeywordElement> coll : partition.values()) {
+					size += coll.size();
+				}
+				System.out.println("keyword element size: " + size);
+				System.out.println("---------------------------------------------------------------");
+			}
 		}
 	} 
 	

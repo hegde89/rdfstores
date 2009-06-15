@@ -40,7 +40,7 @@ public class KeywordPartitioner {
 				}
 				++i;
 				
-				while(!isCandidate(i) && i < n) 
+				while(!isSegementCandidate(i) && i < n) 
 					++i;
 				return set;
 			}
@@ -51,7 +51,74 @@ public class KeywordPartitioner {
 		};
 	}
 	
-	public static boolean isCandidate(int i) {
+	public static Iterator<Set<KeywordSegement>> partitionIterator(final Set<KeywordSegement> values, final Set<String> keywords) {
+		return new Iterator<Set<KeywordSegement>>() {
+			private int i = 1;
+			private int size = values.size();
+			private long n = 1 << Math.max(0, size);
+			private Set<KeywordSegement> next;
+			private Set<Integer> combinations = new HashSet<Integer>() ; 
+
+			public boolean hasNext() {
+				if(i < n) {
+					boolean found = false;
+					while(found == false && i < n ) {
+						Set<KeywordSegement> set = new HashSet<KeywordSegement>();
+						Set<String> contained = new HashSet<String>();
+						int j = 0;
+						out: for(KeywordSegement segement : values) {
+							if (((1 << j++) & i) != 0) {
+								for(String keyword : segement.getKeywords()) {
+									if(contained.contains(keyword))
+										break out;
+								}
+								set.add(segement);
+								contained.addAll(segement.getKeywords());
+							}
+						}
+						if(contained.containsAll(keywords)){
+							combinations.add(i);
+							next = set;
+							found = true;
+						}
+						
+						++i;
+						while(!isPartitionCandidate(combinations, i) && i < n) 
+							++i;
+					}	
+					if(found == true)
+						return true;
+					else 
+						return false;
+				}
+				else 
+					return false;
+			}
+			
+			public Set<KeywordSegement> next() {
+				return next;
+			}
+			
+			public void remove() {
+				throw new UnsupportedOperationException();
+			}
+		};
+	}
+	
+	public static Iterator<Set<KeywordSegement>> getPartitionIterator(Set<KeywordSegement> values, Set<String> keywords) {
+		return partitionIterator(values, keywords);
+	}
+	
+	public static boolean isPartitionCandidate(Set<Integer> combinations, int i) {
+		for(int c : combinations) {
+			int m = c&i;
+			if(m == c)
+				return false;
+		}
+		return true;
+	} 
+	
+	public static boolean isSegementCandidate(int i) {
 		int leftZeros = Integer.numberOfLeadingZeros(i);
 		int rightZeros = Integer.numberOfTrailingZeros(i);
 		int ones = Integer.bitCount(i);

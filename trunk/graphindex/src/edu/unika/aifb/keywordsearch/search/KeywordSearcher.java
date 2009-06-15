@@ -69,10 +69,10 @@ public class KeywordSearcher {
 			e.printStackTrace();
 		}
 	}
-	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> searchKeywordElements(List<String> queries) {
+	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries) {
 		return searchKeywordElements(queries, true);
 	}	
-	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> searchKeywordElements(List<String> queries, boolean doOverlap) {
+	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) {
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 		SortedSet<KeywordSegement> segements = parseQueries(queries, conceptsAndRelations, attributes);
@@ -115,7 +115,11 @@ public class KeywordSearcher {
 			}
 		}
 		
-		return decompose(segementsWithEntities, keywords, conceptsAndRelations);
+		for(String keyword : conceptsAndRelations.keySet()) {
+			segementsWithEntities.put(new KeywordSegement(keyword), conceptsAndRelations.get(keyword));
+		}
+		
+		return segementsWithEntities;
 	}
 	
 	public Collection<Map<KeywordSegement,Collection<KeywordElement>>> decompose(Map<KeywordSegement,Collection<KeywordElement>> segementsWithEntities, 
@@ -622,7 +626,7 @@ public class KeywordSearcher {
 	}
 	
 	public static void main(String[] args) {
-		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
+		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/lubm/keyword"); 
 		
 		System.out.println("******************** Input Example ********************");
 		System.out.println("name:Thanh publication AIFB");

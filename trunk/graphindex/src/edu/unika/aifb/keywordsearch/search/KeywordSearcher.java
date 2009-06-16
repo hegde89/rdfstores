@@ -233,21 +233,25 @@ public class KeywordSearcher {
 //			}
 //		}
 //		if(filterKeyword != null) {
+//			Collection<KeywordElement> remain = new HashSet<KeywordElement>();
 //			for(KeywordElement filterElement : keywordsWithEntities.get(filterKeyword)) {
 //				Collection<String> containedkeywords = filterElement.getKeywords();
+//				Collection<KeywordElement> joinEle = new HashSet<KeywordElement>();
+//				boolean reachAllKeywords = true;
 //				for(String joinKey : keywords) {
 //					if(!containedkeywords.contains(joinKey)) {
 //						Collection<KeywordElement> coll = keywordsWithEntities.get(joinKey);
 //						Collection<KeywordElement> reachables = filterElement.getReachable(coll);	
 //						if(reachables != null && reachables.size() != 0) {
-//							for(KeywordElement reachable : reachables) {
-//								Collection<String> keywords1 = filterElement.getReachableKeywords();
-//								Collection<String> keywords2 = reachable.getReachableKeywords();
-//								reachable.addReachableKeywords(keywords1);
-//								filterElement.addReachableKeywords(keywords2);
-//							}
+//							joinEle.addAll(reachables);
 //						}
+//						else
+//							reachAllKeywords = false;
 //					}
+//				}
+//				if(reachAllKeywords == true) {
+//					remain.addAll(joinEle);
+//					remain.add(filterElement);
 //				}
 //			}	
 //			Iterator<KeywordSegement> iterSeg = segementsWithEntities.keySet().iterator();
@@ -255,9 +259,8 @@ public class KeywordSearcher {
 //				Collection<KeywordElement> elements = segementsWithEntities.get(iterSeg.next());
 //				Iterator<KeywordElement> iterEle = elements.iterator();
 //				while(iterEle.hasNext()) {
-//					if(!iterEle.next().getReachableKeywords().containsAll(keywords)) {
+//					if(!remain.contains(iterEle.next()))
 //						iterEle.remove();
-//					}	
 //				}
 //				if(elements.size() == 0)
 //					iterSeg.remove();

@@ -50,7 +50,7 @@ public class KeywordSearcher {
 	private IndexSearcher searcher;
 	private Set<String> allAttributes;
 	
-	private static final double ENTITY_THRESHOLD = 0.8;
+//	private static final double ENTITY_THRESHOLD = 0.8;
 	private static final double SCHEMA_THRESHOLD = 0.8;
 	private static final int MAX_KEYWORDRESULT_SIZE = 1000;
 	
@@ -75,6 +75,7 @@ public class KeywordSearcher {
 	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) {
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
+//		Collection<Set<KeywordSegement>> partitions = new ArrayList<Set<KeywordSegement>>();
 		SortedSet<KeywordSegement> segements = parseQueries(queries, conceptsAndRelations, attributes);
 		
 		Map<String, Collection<KeywordElement>> keywordsWithEntities = new HashMap<String, Collection<KeywordElement>>();
@@ -91,14 +92,13 @@ public class KeywordSearcher {
 				+ "   Size_of_elements:" + size);	
 		for(KeywordSegement segement : segementsWithEntities.keySet()) {
 			System.out.println(segement);
-//			for(KeywordElement ele : segementsWithEntities.get(segement))
-//				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
-//			System.out.println();	
+			for(KeywordElement ele : segementsWithEntities.get(segement))
+				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+			System.out.println();	
 		}
 		
-		Set<String> keywords = keywordsWithEntities.keySet();
 		if (doOverlap) {
-			overlapNeighborhoods(keywordsWithEntities, segementsWithEntities,  keywords);
+			overlapNeighborhoods(keywordsWithEntities, segementsWithEntities);
 	
 			size = 0;
 			for(Collection<KeywordElement> coll : segementsWithEntities.values()) {
@@ -175,11 +175,11 @@ public class KeywordSearcher {
 	}
 	
 	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> keywordsWithEntities,
-			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities, Collection<String> keywords) {
+			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities) {
 		
+		Set<String> keywords = keywordsWithEntities.keySet();
 		for(String keyword : keywordsWithEntities.keySet()) {
 			for(KeywordElement ele : keywordsWithEntities.get(keyword)) {
-				Collection<String> reachableKeywords = ele.getReachableKeywords();
 				Collection<String> containedkeywords = ele.getKeywords();
 				for(String joinKey : keywords) {
 					if(!containedkeywords.contains(joinKey)) {
@@ -211,6 +211,59 @@ public class KeywordSearcher {
 				iterSeg.remove();
 		}
 	}
+	
+	// when we index k-hops neighborhoods, where k is the maximal chain length of the query, this method can be used. 
+//	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> keywordsWithEntities, 
+//			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities) {
+//		
+//		int min = 0;
+//		String filterKeyword = null;
+//		Set<String> keywords = keywordsWithEntities.keySet();
+//		for(String keyword : keywords) {
+//			if(min == 0) {
+//				min = keywordsWithEntities.get(keyword).size();
+//				filterKeyword = keyword;
+//			}
+//			else {
+//				int num = keywordsWithEntities.get(keyword).size();
+//				if(min > num) {
+//					min = num;
+//					filterKeyword = keyword;
+//				}
+//			}
+//		}
+//		if(filterKeyword != null) {
+//			for(KeywordElement filterElement : keywordsWithEntities.get(filterKeyword)) {
+//				Collection<String> containedkeywords = filterElement.getKeywords();
+//				for(String joinKey : keywords) {
+//					if(!containedkeywords.contains(joinKey)) {
+//						Collection<KeywordElement> coll = keywordsWithEntities.get(joinKey);
+//						Collection<KeywordElement> reachables = filterElement.getReachable(coll);	
+//						if(reachables != null && reachables.size() != 0) {
+//							for(KeywordElement reachable : reachables) {
+//								Collection<String> keywords1 = filterElement.getReachableKeywords();
+//								Collection<String> keywords2 = reachable.getReachableKeywords();
+//								reachable.addReachableKeywords(keywords1);
+//								filterElement.addReachableKeywords(keywords2);
+//							}
+//						}
+//					}
+//				}
+//			}	
+//			Iterator<KeywordSegement> iterSeg = segementsWithEntities.keySet().iterator();
+//			while(iterSeg.hasNext()) {
+//				Collection<KeywordElement> elements = segementsWithEntities.get(iterSeg.next());
+//				Iterator<KeywordElement> iterEle = elements.iterator();
+//				while(iterEle.hasNext()) {
+//					if(!iterEle.next().getReachableKeywords().containsAll(keywords)) {
+//						iterEle.remove();
+//					}	
+//				}
+//				if(elements.size() == 0)
+//					iterSeg.remove();
+//			}
+//		}
+//	}
 	
 	public void searchElementsByKeywords(SortedSet<KeywordSegement> segements, Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegement> entitiesWithSegement, 
 			Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities,	Map<String, Collection<KeywordElement>> keywordsWithentities) { 
@@ -492,8 +545,8 @@ public class KeywordSearcher {
 		   	for(int i = 0; i < docHits.length; i++) {
 		   		Document doc = reader.document(docHits[i].doc, fieldSelector);
 		   		float score = docHits[i].score/maxScore;
-		   		if(score < ENTITY_THRESHOLD)
-		   			break;
+//		   		if(score < ENTITY_THRESHOLD)
+//		   			break;
 		   		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
 		   		if(type == null) {
 		   			System.err.println("type is null!");
@@ -626,7 +679,7 @@ public class KeywordSearcher {
 	}
 	
 	public static void main(String[] args) {
-		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/lubm/keyword"); 
+		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
 		
 		System.out.println("******************** Input Example ********************");
 		System.out.println("name:Thanh publication AIFB");
@@ -638,20 +691,23 @@ public class KeywordSearcher {
 			
 			LinkedList<String> keywordList = getKeywordList(line);
 			
-			Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = searcher.searchKeywordElements(keywordList);
-			for(Map<KeywordSegement,Collection<KeywordElement>> partition : partitions) {
-				System.out.println("---------------------------------------------------------------");
-				System.out.println("keyword partition size: " + partition.keySet().size());
-				for(KeywordSegement segement : partition.keySet()) {
-					System.out.println(segement);
-				}
-				int size = 0;
-				for(Collection<KeywordElement> coll : partition.values()) {
-					size += coll.size();
-				}
-				System.out.println("keyword element size: " + size);
-				System.out.println("---------------------------------------------------------------");
-			}
+//			Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = searcher.searchKeywordElements(keywordList);
+//			for(Map<KeywordSegement,Collection<KeywordElement>> partition : partitions) {
+//				System.out.println("---------------------------------------------------------------");
+//				System.out.println("keyword partition size: " + partition.keySet().size());
+//				for(KeywordSegement segement : partition.keySet()) {
+//					System.out.println(segement);
+//				}
+//				int size = 0;
+//				for(Collection<KeywordElement> coll : partition.values()) {
+//					size += coll.size();
+//				}
+//				System.out.println("keyword element size: " + size);
+//				System.out.println("---------------------------------------------------------------");
+//			}
+			
+			searcher.searchKeywordElements(keywordList);
+			
 		}
 	} 
 	

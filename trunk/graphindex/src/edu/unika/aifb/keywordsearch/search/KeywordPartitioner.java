@@ -51,7 +51,7 @@ public class KeywordPartitioner {
 		};
 	}
 	
-	public static Iterator<Set<KeywordSegement>> partitionIterator(final Set<KeywordSegement> values, final Set<String> keywords) {
+	public static Iterator<Set<KeywordSegement>> partitionIterator(final Collection<KeywordSegement> values, final Collection<String> keywords) {
 		return new Iterator<Set<KeywordSegement>>() {
 			private int i = 1;
 			private int size = values.size();
@@ -127,7 +127,7 @@ public class KeywordPartitioner {
 		return false;
 	} 
 
-	public static <T> boolean addAll(Collection<KeywordSegement> collection, Iterator<Set<String>> iterator) {
+	public static <T> boolean addAllSegements(Collection<KeywordSegement> collection, Iterator<Set<String>> iterator) {
 		if(collection != null) {
 			boolean wasModified = false;
 			while(iterator.hasNext()) {
@@ -137,10 +137,23 @@ public class KeywordPartitioner {
 		}
 		return false;
 	}
+	
+	public static <T> boolean addAllPartitions(Collection<Set<KeywordSegement>> collection, Iterator<Set<KeywordSegement>> iterator, Collection<KeywordSegement> allSegements) {
+		if(collection != null) {
+			boolean wasModified = false;
+			while(iterator.hasNext()) {
+				Set<KeywordSegement> segements = iterator.next();
+				wasModified |= collection.add(segements);
+				allSegements.addAll(segements);
+			}
+			return wasModified;
+		}
+		return false;
+	}
 
 	public static Set<KeywordSegement> getSegements(List<String> keywords) {
 		Set<KeywordSegement> segements = new HashSet<KeywordSegement>();
-		addAll(segements, segementIterator(keywords));
+		addAllSegements(segements, segementIterator(keywords));
 		return segements;
 	}
 
@@ -164,6 +177,66 @@ public class KeywordPartitioner {
 			}
 		}
 		return orderedSegements;
+	}
+	
+	public static SortedSet<KeywordSegement> getOrderedPartitions(List<String> allKeywords, Collection<Set<KeywordSegement>> partitions) {
+		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
+		Iterator<Set<String>> segementIterator = segementIterator(allKeywords);
+		SortedSet<KeywordSegement> segements = new TreeSet<KeywordSegement>();
+		while(segementIterator.hasNext()) {
+			KeywordSegement segement = new KeywordSegement(segementIterator.next());
+			segements.add(segement);
+		}
+		addAllPartitions(partitions, partitionIterator(segements, allKeywords), orderedSegements);
+		return orderedSegements;
+	}
+	
+	public static SortedSet<KeywordSegement> getOrderedPartitions(Collection<List<String>> allKeywords, Collection<Set<KeywordSegement>> partitions) {
+		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
+		List<List<Set<KeywordSegement>>> iresults = new ArrayList<List<Set<KeywordSegement>>>();
+		for(List<String> list : allKeywords) {
+			List<Set<KeywordSegement>> part = new ArrayList<Set<KeywordSegement>>();
+			Iterator<Set<String>> segementIterator = segementIterator(list);
+			SortedSet<KeywordSegement> segements = new TreeSet<KeywordSegement>();
+			while(segementIterator.hasNext()) {
+				KeywordSegement segement = new KeywordSegement(segementIterator.next());
+				segements.add(segement);
+			}
+			addAllPartitions(part, partitionIterator(segements, list), orderedSegements);
+			iresults.add(part);
+		}
+		computeCombinations(iresults, partitions);
+		return orderedSegements;
+	}
+	
+	public static void computeCombinations(List<List<Set<KeywordSegement>>> iresults, Collection<Set<KeywordSegement>> partitions) {
+		int size = iresults.size();
+		int[] guards = new int[size];
+		for(int i = 0; i < iresults.size(); i++) {
+			guards[i] = iresults.get(i).size()-1;
+		}
+		int[] cursors = new int[size];
+		for(int j=0; j<cursors.length; j++) {
+			cursors[j] = 0;
+		}
+		guards[size-1]++;
+		do {
+			Set<KeywordSegement> combination = new TreeSet<KeywordSegement>();
+			for(int m = 0; m < size; m++){
+				combination.addAll(iresults.get(m).get(cursors[m]));
+			}
+			if(partitions.contains(combination))
+				System.out.println("==================" + combination + "==========================");
+			partitions.add(combination);
+			cursors[0]++;
+			for(int j = 0; j < size; j++){
+				if(cursors[j] > guards[j]){
+					cursors[j] = 0;
+					cursors[j+1]++; 
+				}
+			}
+		}
+		while(cursors[size-1] < guards[size-1]);
 	}
 
 	public static void main(String[] args) {

@@ -18,10 +18,14 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.SetBasedFieldSelector;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
 
 import com.sleepycat.je.DatabaseException;
@@ -53,6 +57,7 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.keywordsearch.Constant;
 import edu.unika.aifb.keywordsearch.index.KeywordIndexBuilder;
 import edu.unika.aifb.keywordsearch.search.EntitySearcher;
 import edu.unika.aifb.keywordsearch.search.KeywordSearcher;
@@ -402,7 +407,6 @@ public class BTCImport {
 
 			ExploringQueryEvaluator qe = new DirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
 //			ExploringQueryEvaluator qe = new IndirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
-			qe.setDirectEvaluation(true);
 			
 			qe.evaluate("GraduateStudent51 GraduateCourse3");
 			
@@ -432,7 +436,7 @@ public class BTCImport {
 			
 			EnvironmentConfig config = new EnvironmentConfig();
 			config.setTransactional(false);
-			config.setAllowCreate(true);
+			config.setAllowCreate(false);
 
 			Environment env = new Environment(new File(bdbDirectory), config);
 			
@@ -441,6 +445,45 @@ public class BTCImport {
 			
 			gs.close();
 			env.close();
+		}
+		
+		if (action.equals("fixkeywordindex")) {
+			EnvironmentConfig config = new EnvironmentConfig();
+			config.setTransactional(false);
+			config.setAllowCreate(false);
+			Environment env = new Environment(new File(bdbDirectory), config);
+			BlockCache bc = new BlockCache(env);
+			
+			IndexReader reader = IndexReader.open(keywordIndexDirectory);
+			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(keywordIndexDirectory), true, new StandardAnalyzer(), false);
+			
+		    for (int i = 0; i < reader.numDocs(); i++) {
+				Document doc = reader.document(i);
+
+				String uri = doc.getField(Constant.URI_FIELD).stringValue();
+				
+				String type = doc.getField(Constant.TYPE_FIELD).stringValue();
+				if (type.equals(TypeUtil.ENTITY) || type.equals(TypeUtil.CONCEPT)) {
+					String ext = bc.getBlockName(uri);
+					if (ext != null) {
+						if (i % 100000 == 0) {
+							log.debug(doc.getField(Constant.EXTENSION_FIELD).stringValue() + " -> " + ext);
+						}
+						writer.deleteDocuments(new Term(Constant.URI_FIELD, uri));
+						
+						doc.removeField(Constant.EXTENSION_FIELD);
+						doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
+						writer.addDocument(doc);
+					}
+				}
+				
+				if (i % 500000 == 0)
+					log.debug(i);
+			}
+		    
+		    reader.close();
+		    writer.optimize();
+		    writer.close();
 		}
 	}
 	

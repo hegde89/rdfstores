@@ -127,7 +127,6 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	
 	public void updateCacheSizes() {
 		if (m_manager.getIndex().getDocumentCacheSize() != m_docCache.cacheSize()) {
-			log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
 			m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
 		}
 	}

@@ -19,19 +19,24 @@ import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.graph.LabeledEdge;
 import edu.unika.aifb.graphindex.query.AbstractIndexGraphMatcher;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Literal;
+import edu.unika.aifb.graphindex.query.model.Predicate;
 import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
 	private PriorityQueue<PriorityQueue<Cursor>> m_queues;
-	private int m_maxDistance = 4; 
+	private int m_maxDistance = 10; 
 	private DirectedMultigraph<NodeElement,EdgeElement> m_indexGraph;
 	private Map<String,NodeElement> m_nodes;
-	private Map<KeywordSegement,List<GraphElement>> m_keywords;
+	private Map<KeywordSegement,List<GraphElement>> m_keywordSegments;
+	private Set<String> m_keywords;
 	private List<Subgraph> m_subgraphs;
-	private int m_k = 20;
+	private int m_k = 10;
 	private Map<KeywordSegement,PriorityQueue<Cursor>> m_keywordQueues;
 	private Map<String,Set<KeywordSegement>> m_edgeUri2Keywords; 
 	private Set<EdgeElement> m_edgesWithCursors;
@@ -57,6 +62,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		m_keywordQueues = new HashMap<KeywordSegement,PriorityQueue<Cursor>>();
 		m_edgeUri2Keywords = new HashMap<String,Set<KeywordSegement>>();
 		m_edgesWithCursors = new HashSet<EdgeElement>();
+		m_keywords = new HashSet<String>();
 	}
 	
 	@Override
@@ -87,8 +93,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	}
 	
 	public void setKeywords(Map<KeywordSegement,List<GraphElement>> keywords) {
+//		log.debug(keywords);
 		for (KeywordSegement keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
+			m_keywords.addAll(keyword.getKeywords());
 			for (GraphElement ele : keywords.get(keyword)) {
 				if (ele instanceof NodeElement) {
 					NodeElement node = m_nodes.get(ele.getLabel());
@@ -103,15 +111,15 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					edgeKeywords.add(keyword);
 				}
 			}
+			log.debug("queue size for " + keyword + ": " + queue.size());
 			if (!queue.isEmpty()) {
 				m_queues.add(queue);
 				m_keywordQueues.put(keyword, queue);
 			}
 		}
-		m_keywords = keywords;
-		log.debug(m_keywords);
-		log.debug(m_queues);
-		log.debug(m_edgeUri2Keywords);
+		log.debug("keywords: " + m_keywords);
+
+		m_keywordSegments = keywords;
 	}
 	
 	public void setK(int k) {
@@ -128,7 +136,16 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			// current element is a connecting element
 			List<List<Cursor>> combinations = currentElement.getCursorCombinations();
 			for (List<Cursor> combination : combinations) {
-				Subgraph sg = new Subgraph(combination);
+				Set<String> combinationKeywords = new HashSet<String>();
+				for (Cursor c : combination)
+					for (KeywordSegement ks : c.getKeywordSegments())
+						combinationKeywords.addAll(ks.getKeywords());
+				
+				if (!combinationKeywords.equals(m_keywords)) {
+					log.debug(combination);
+					continue;
+				}
+				Subgraph sg = new Subgraph(new HashSet<Cursor>(combination));
 
 				if (!m_subgraphs.contains(sg)) {
 					if (!sg.hasDanglingEdge())
@@ -151,56 +168,42 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		int highestCost = m_subgraphs.get(m_subgraphs.size() - 1).getCost();
 		int lowestCost = m_queues.peek().peek().getCost();
 		
-//		log.debug(m_queues.peek().size() + " " + highestCost + " " + lowestCost);
+//		log.debug(highestCost + " " + lowestCost);
 		
 		if (highestCost < lowestCost) {
 			log.debug("done");
 			return true;
 		}
+		
 		return false;
 	}
 	
 	public void match() throws StorageException {
-		int edgeCursorsStarted = 0;
+//		int edgeCursorsStarted = 0;
 		while (m_queues.size() > 0) {
 			PriorityQueue<Cursor> cursorQueue = m_queues.poll();
 			Cursor minCursor = cursorQueue.poll();
 			GraphElement currentElement = minCursor.getGraphElement();
-			
+
 			if (minCursor.getDistance() < m_maxDistance) {
-//				log.debug("min cursor: " + minCursor);
 				currentElement.addCursor(minCursor);
-//				if (currentElement.getKeywords().size() > 2)
-//					log.debug(currentElement.getKeywords());
-//				if (m_edgesWithCursors.contains(currentElement))
-//					log.debug(currentElement);
 
 				if (minCursor.getDistance() < m_maxDistance - 1) {
-					List<GraphElement> neighbors = currentElement.getNeighbors(m_indexGraph, minCursor);
 					Set<GraphElement> parents = minCursor.getParents();
+					
+					List<GraphElement> neighbors = currentElement.getNeighbors(m_indexGraph, minCursor);
 					for (GraphElement neighbor : neighbors) {
-						if (!parents.contains(neighbor))
-							cursorQueue.add(new Cursor(minCursor.getKeyword(), neighbor, minCursor, minCursor.getCost() + 1));
-						if (neighbor instanceof EdgeElement && !m_edgesWithCursors.contains(neighbor)) {
-							Set<KeywordSegement> edgeKeywords = m_edgeUri2Keywords.get(neighbor.getLabel());
-							if (edgeKeywords != null) {
-								for (KeywordSegement keyword : edgeKeywords) {
-									PriorityQueue<Cursor> q = m_keywordQueues.get(keyword);
-									if (q == null) {
-										q = new PriorityQueue<Cursor>();
-										m_queues.add(q);
-										m_keywordQueues.put(keyword, q);
-									}
-									Cursor p = new Cursor(keyword, currentElement, null, 0);
-									p.setFakeStart(true);
-									currentElement.addCursor(p);
-									Cursor c = new Cursor(keyword, neighbor, p, p.getCost() + 1);
-									q.add(c);
-									edgeCursorsStarted++;
-								}
-								m_edgesWithCursors.add((EdgeElement)neighbor);
+						if (!parents.contains(neighbor)) {
+							if (neighbor instanceof EdgeElement && m_edgeUri2Keywords.containsKey(neighbor.getLabel())) {
+								Cursor c = new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1);
+								for (KeywordSegement ks : m_edgeUri2Keywords.get(neighbor.getLabel()))
+									c.addKeywordSegment(ks);
+								cursorQueue.add(c);
 							}
+							else
+								cursorQueue.add(new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1));
 						}
+
 					}
 				}
 				
@@ -214,6 +217,11 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			if (!cursorQueue.isEmpty())
 				m_queues.add(cursorQueue);
 //			String s = "";
+//			for (KeywordSegement ks : m_keywordQueues.keySet())
+//				s += ks.toString() + ": " + m_keywordQueues.get(ks).size() + ", ";
+//			log.debug(s);
+			
+//			String s = "";
 //			for (PriorityQueue<Cursor> q : m_queues)
 //				s += q.size() + " ";
 //			log.debug(s);
@@ -224,27 +232,30 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		}
 	}
 	
-	public void indexMatches(List<GTable<String>> indexMatches, List<Query> queries, List<Map<String,KeywordSegement>> select2ks, boolean withAttributes) {
+	public void indexMatches(List<GTable<String>> indexMatches, List<Query> queries, List<Map<String,Set<KeywordSegement>>> select2ks, boolean withAttributes) {
 		List<List<Subgraph>> groups = new ArrayList<List<Subgraph>>();
 		
 		for (Subgraph sg : m_subgraphs) {
 			boolean found = false;
 			for (int i = 0; i < groups.size(); i++) {
 				List<Subgraph> list = groups.get(i);
-				Map<String,String> mapping = list.get(0).isIsomorphicTo(sg);
-				if (mapping.size() > 0) {
+				List<Map<String,String>> mappings = list.get(0).isIsomorphicTo(sg);
+				if (mappings.size() > 0) {
 					list.add(sg);
 					
 					Map<String,String> vars = list.get(0).getVariableMapping();
 					GTable<String> table = indexMatches.get(i);
-					String[] row = new String [table.columnCount()];
 					
-					for (int j = 0; j < table.columnCount(); j++) {
-						String colName = table.getColumnName(j);
-						row[j] = mapping.get(vars.get(colName));
+					for (Map<String,String> mapping : mappings) {
+						String[] row = new String [table.columnCount()];
+						
+						for (int j = 0; j < table.columnCount(); j++) {
+							String colName = table.getColumnName(j);
+							row[j] = mapping.get(vars.get(colName));
+						}
+						
+						table.addRow(row);
 					}
-					
-					table.addRow(row);
 					
 					found = true;
 					break;
@@ -252,6 +263,12 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			}
 			
 			if (!found) {
+//				for (Cursor c : sg.getCursors()) {
+//					log.debug(c + " " + c.getStartCursor());
+//				}
+//				log.debug(sg.edgeSet().size());
+//				log.debug(sg.edgeSet());
+//				log.debug("");
 				List<Subgraph> list = new ArrayList<Subgraph>();
 				list.add(sg);
 				groups.add(list);
@@ -264,10 +281,73 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				table.addRow(row);
 				indexMatches.add(table);
 				
-				queries.add(sg.toQuery(withAttributes));
+//				queries.add(sg.toQuery(withAttributes));
 				
-				select2ks.add(sg.getKSMapping());
-			}
+				Map<String,Set<KeywordSegement>> ksMap = sg.getKSMapping();
+				Map<KeywordSegement,KeywordSegement> replace = new HashMap<KeywordSegement,KeywordSegement>();
+				
+				Set<KeywordSegement> querySegments = new HashSet<KeywordSegement>();
+				for (Set<KeywordSegement> ksSet : ksMap.values())
+					for (KeywordSegement ks : ksSet)
+						querySegments.add(ks);
+				
+				Set<String> compared = new HashSet<String>();
+				for (KeywordSegement ks1 : querySegments) {
+					for (KeywordSegement ks2 : querySegments) {
+						if (ks1 == ks2)
+							continue;
+						if (compared.contains(ks1.toString() + "|||" + ks2.toString()))
+							continue;
+						if (compared.contains(ks2.toString() + "|||" + ks1.toString()))
+							continue;
+						compared.add(ks1.toString() + "|||" + ks2.toString());
+						
+						Set<String> ks1keywords = new HashSet<String>(ks1.getKeywords());
+						ks1keywords.retainAll(ks2.getKeywords());
+						
+						if (ks1keywords.size() > 0) {//< ks1.getKeywords().size()) {
+							Set<String> remaining = new HashSet<String>(ks1.getKeywords());
+							remaining.removeAll(ks1keywords);
+							for (KeywordSegement ks : m_keywordSegments.keySet()) {
+								if (ks.getKeywords().equals(remaining)) {
+									replace.put(ks1, ks);
+									break;
+								}
+							}
+						}
+					}
+				}
+//				log.debug(replace);
+				for (Set<KeywordSegement> ksSet : ksMap.values()) {
+					for (KeywordSegement ks : replace.keySet())
+						if (ksSet.contains(ks)) {
+							ksSet.remove(ks);
+							ksSet.add(replace.get(ks));
+						}
+							
+				}
+//				log.debug(ksMap);
+				select2ks.add(ksMap);
+				
+				Query q = new Query(null);
+				q.setSelectVariables(sg.getSelectVariables());
+				
+				for (EdgeElement e : sg.edgeSet()) {
+					String src = sg.getLabels().get(e.getSource().getLabel());
+					String dst = sg.getLabels().get(e.getTarget().getLabel());
+					q.addLiteral(new Literal(new Predicate(e.getLabel()), new Variable(src), new Variable(dst)));
+				}
+				
+				if (withAttributes) {
+					int x = 0;
+					for (String selectNode : ksMap.keySet()) {
+						for (KeywordSegement ks : ksMap.get(selectNode))
+							for (String keyword : ks.getKeywords())
+								q.addLiteral(new Literal(new Predicate("???" + x++), new Variable(selectNode), new Constant(keyword)));
+					}
+				}
+				queries.add(q);
+ 			}
 		}
 		
 //		log.debug(groups);

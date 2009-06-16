@@ -50,9 +50,10 @@ public class KeywordSearcher {
 	private IndexSearcher searcher;
 	private Set<String> allAttributes;
 	
+	public static final double ENTITY_THRESHOLD = 0.8;
 //	private static final double ENTITY_THRESHOLD = 0.8;
 	private static final double SCHEMA_THRESHOLD = 0.8;
-	private static final int MAX_KEYWORDRESULT_SIZE = 1000;
+	public static final int MAX_KEYWORDRESULT_SIZE = 1000;
 	
 	private static final String SEPARATOR = ":";
 	
@@ -77,7 +78,7 @@ public class KeywordSearcher {
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 //		Collection<Set<KeywordSegement>> partitions = new ArrayList<Set<KeywordSegement>>();
 		SortedSet<KeywordSegement> segements = parseQueries(queries, conceptsAndRelations, attributes);
-		
+
 		Map<String, Collection<KeywordElement>> keywordsWithEntities = new HashMap<String, Collection<KeywordElement>>();
 		Map<KeywordElement, KeywordSegement> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegement>();
 		Map<KeywordSegement, Collection<KeywordElement>> segementsWithEntities = new TreeMap<KeywordSegement, Collection<KeywordElement>>();  
@@ -91,10 +92,10 @@ public class KeywordSearcher {
 				+ "Size_of_segements:" + segementsWithEntities.size() 
 				+ "   Size_of_elements:" + size);	
 		for(KeywordSegement segement : segementsWithEntities.keySet()) {
-			System.out.println(segement);
-			for(KeywordElement ele : segementsWithEntities.get(segement))
-				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
-			System.out.println();	
+			System.out.println(segement + " " + segementsWithEntities.get(segement).size());
+//			for(KeywordElement ele : segementsWithEntities.get(segement))
+//				System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+//			System.out.println();	
 		}
 		
 		if (doOverlap) {
@@ -108,10 +109,10 @@ public class KeywordSearcher {
 					+ "Size_of_segements:" + segementsWithEntities.size() 
 					+ "   Size_of_elements:" + size);
 			for(KeywordSegement segement : segementsWithEntities.keySet()) {
-				System.out.println(segement);
-				for(KeywordElement ele : segementsWithEntities.get(segement))
-					System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
-				System.out.println();	
+				System.out.println(segement + " " + segementsWithEntities.get(segement).size());
+//				for(KeywordElement ele : segementsWithEntities.get(segement))
+//					System.out.println(ele.getResource() + "\t" + ele.getMatchingScore());
+//				System.out.println();	
 			}
 		}
 		
@@ -536,7 +537,7 @@ public class KeywordSearcher {
 		    Set<String> lazyFieldNames = new HashSet<String>();
 		    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 		    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
-			
+
 		    float maxScore = 1.0f;
 		    ScoreDoc[] docHits = getTopDocuments(clause, MAX_KEYWORDRESULT_SIZE);
 		    if(docHits.length != 0 && docHits[0] != null) {
@@ -674,6 +675,7 @@ public class KeywordSearcher {
 			TopDocCollector collector = new TopDocCollector(top);  
 			searcher.search(q, collector);
 			docs = collector.topDocs().scoreDocs;
+//			log.debug(q + " " + docs.length);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -681,19 +683,19 @@ public class KeywordSearcher {
 		return docs;
 	}
 	
-	public static void main(String[] args) {
-		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
-		
-		System.out.println("******************** Input Example ********************");
-		System.out.println("name:Thanh publication AIFB");
-		System.out.println("******************** Input Example ********************");
-		Scanner scanner = new Scanner(System.in);
-		while (true) {
-			System.out.println("Please input the keywords:");
-			String line = scanner.nextLine();
-			
-			LinkedList<String> keywordList = getKeywordList(line);
-			
+//	public static void main(String[] args) {
+//		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
+//		
+//		System.out.println("******************** Input Example ********************");
+//		System.out.println("name:Thanh publication AIFB");
+//		System.out.println("******************** Input Example ********************");
+//		Scanner scanner = new Scanner(System.in);
+//		while (true) {
+//			System.out.println("Please input the keywords:");
+//			String line = scanner.nextLine();
+//			
+//			LinkedList<String> keywordList = getKeywordList(line);
+//			
 //			Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = searcher.searchKeywordElements(keywordList);
 //			for(Map<KeywordSegement,Collection<KeywordElement>> partition : partitions) {
 //				System.out.println("---------------------------------------------------------------");
@@ -708,11 +710,8 @@ public class KeywordSearcher {
 //				System.out.println("keyword element size: " + size);
 //				System.out.println("---------------------------------------------------------------");
 //			}
-			
-			searcher.searchKeywordElements(keywordList);
-			
-		}
-	} 
+//		}
+//	} 
 	
 	 public static LinkedList<String> getKeywordList(String line) {
 		LinkedList<String> ll = new LinkedList<String>();

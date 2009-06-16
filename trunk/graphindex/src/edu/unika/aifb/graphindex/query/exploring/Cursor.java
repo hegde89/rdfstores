@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.query.exploring;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -10,7 +11,7 @@ import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public class Cursor implements Comparable<Cursor> {
 
-	private KeywordSegement m_keyword;
+	private Set<KeywordSegement> m_keywords;
 	private Cursor m_parent;
 	private GraphElement m_element, m_startElement;
 	private int m_distance;
@@ -20,15 +21,16 @@ public class Cursor implements Comparable<Cursor> {
 	private boolean m_fakeStart = false;
 	
 	public Cursor(KeywordSegement keyword, GraphElement element) {
-		m_keyword = keyword;
-		m_element = element;
-		m_parent = null;
-		m_distance = 0;
-		m_cost = 0;
+		this(keyword, element, null, 0);
 	}
 	
 	public Cursor(KeywordSegement keyword, GraphElement element, Cursor parent, int cost) {
-		this(keyword, element);
+		this(new HashSet<KeywordSegement>(Arrays.asList(keyword)), element, parent, cost);
+	}
+	
+	public Cursor(Set<KeywordSegement> keywords, GraphElement element, Cursor parent, int cost) {
+		m_keywords = new HashSet<KeywordSegement>(keywords);
+		m_element = element;
 		m_parent = parent;
 		if (m_parent != null) {
 			m_distance = m_parent.getDistance() + 1;
@@ -50,8 +52,12 @@ public class Cursor implements Comparable<Cursor> {
 		return m_distance;
 	}
 	
-	public KeywordSegement getKeyword() {
-		return m_keyword;
+	public Set<KeywordSegement> getKeywordSegments() {
+		return m_keywords;
+	}
+	
+	public void addKeywordSegment(KeywordSegement ks) {
+		m_keywords.add(ks);
 	}
 
 	public Cursor getParent() {
@@ -113,7 +119,7 @@ public class Cursor implements Comparable<Cursor> {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((m_element == null) ? 0 : m_element.hashCode());
-		result = prime * result + ((m_keyword == null) ? 0 : m_keyword.hashCode());
+		result = prime * result + ((m_keywords == null) ? 0 : m_keywords.hashCode());
 		result = prime * result + ((m_path == null) ? 0 : m_path.hashCode());
 		return result;
 	}
@@ -132,10 +138,10 @@ public class Cursor implements Comparable<Cursor> {
 				return false;
 		} else if (!m_element.equals(other.m_element))
 			return false;
-		if (m_keyword == null) {
-			if (other.m_keyword != null)
+		if (m_keywords == null) {
+			if (other.m_keywords != null)
 				return false;
-		} else if (!m_keyword.equals(other.m_keyword))
+		} else if (!m_keywords.equals(other.m_keywords))
 			return false;
 		if (!getPath().equals(other.getPath()))
 			return false;
@@ -143,6 +149,6 @@ public class Cursor implements Comparable<Cursor> {
 	}
 
 	public String toString() {
-		return "(" + m_keyword + "," + m_element + "," + m_distance + "," + m_cost + ")";
+		return "(" + m_keywords + "," + m_element + "," + m_distance + "," + m_cost + ")";
 	}
 }

@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.query.exploring;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.query.model.Literal;
 import edu.unika.aifb.graphindex.query.model.Predicate;
 import edu.unika.aifb.graphindex.query.model.Query;
@@ -27,15 +29,15 @@ import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;
 public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> implements Comparable<Subgraph> {
 	private static final long serialVersionUID = -5730502189634789126L;
 	
-	private List<Cursor> m_cursors;
+	private Set<Cursor> m_cursors;
 	private Set<EdgeElement> m_edges;
 	private int m_cost;
-	private Map<NodeElement,KeywordSegement> m_startElements;
+	private Map<NodeElement,Set<String>> m_startElements;
 	private Map<String,String> m_labels;
 	private Map<String,String> m_vars;
 	private List<String> m_selectVariables;
 
-	private HashMap<String,KeywordSegement> m_select2ks;
+	private HashMap<String,Set<KeywordSegement>> m_select2ks;
 	
 	private static final Logger log = Logger.getLogger(Subgraph.class);
 	
@@ -45,12 +47,13 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		m_edges = new HashSet<EdgeElement>();
 	}
 
-	public Subgraph(List<Cursor> cursors) {
+	public Subgraph(Set<Cursor> cursors) {
 		this(EdgeElement.class);
 		
 		m_cursors = cursors;
 		for (Cursor c : cursors) {
-			m_cost += c.getCost();
+			if (c.getCost() > m_cost)
+				m_cost = c.getCost();
 			for (GraphElement e : c.getPath()) {
 				if (e instanceof EdgeElement) {
 					m_edges.add((EdgeElement)e);
@@ -60,6 +63,47 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				}
 			}
 		}
+
+		NodeElement start = null;
+		for (NodeElement node : vertexSet()) {
+			if (inDegreeOf(node) + outDegreeOf(node) == 1) {
+				start = node;
+				break;
+			}
+		}	
+		if (start != null)
+//		
+		m_cost = getLongestPath(start, new HashSet<String>());
+//		log.debug(" " + m_cost);
+//		m_cost = edgeSet().size();
+//		log.debug(" " + m_cost);
+	}
+	
+	public Set<Cursor> getCursors() {
+		return m_cursors;
+	}
+	
+	private int getLongestPath(NodeElement node, Set<String> path) {
+		Set<String> newPath = new HashSet<String>(path);
+		newPath.add(node.getLabel());
+		
+		Set<NodeElement> next = new HashSet<NodeElement>();
+		
+		for (EdgeElement edge : outgoingEdgesOf(node)) 
+			if (!path.contains(edge.getTarget().getLabel())) 
+				next.add(edge.getTarget());
+		for (EdgeElement edge : incomingEdgesOf(node)) 
+			if (!path.contains(edge.getSource().getLabel()))
+				next.add(edge.getSource());
+		
+		int max = 0;
+		for (NodeElement nextNode : next) {
+			int length = getLongestPath(nextNode, newPath);
+			if (length > max)
+				max = length;
+		}
+		
+		return Math.max(max, path.size());
 	}
 	
 	public int getCost() {
@@ -71,24 +115,47 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	}
 	
 	private void generateLabelMappings() {
-		m_startElements = new HashMap<NodeElement,KeywordSegement>();
+		m_startElements = new HashMap<NodeElement,Set<String>>();
 		m_selectVariables = new ArrayList<String>();
-		m_select2ks = new HashMap<String,KeywordSegement>();
+		m_select2ks = new HashMap<String,Set<KeywordSegement>>();
 		m_labels = new HashMap<String,String>();
 		m_vars = new HashMap<String,String>();
 
 		int x = 1;
 		for (Cursor c : m_cursors) {
 			Cursor start = c.getStartCursor();
-			if (!start.isFakeStart()) {
-				m_startElements.put((NodeElement)c.getStartElement(), c.getKeyword());
-				if (!m_labels.containsKey(c.getStartElement().getLabel())) {
-					m_labels.put(c.getStartElement().getLabel(), "?x" + x++);
-					m_vars.put(m_labels.get(c.getStartElement().getLabel()), c.getStartElement().getLabel());
-					m_selectVariables.add(m_labels.get(c.getStartElement().getLabel()));
-					m_select2ks.put(m_labels.get(c.getStartElement().getLabel()), c.getKeyword());
-				}
+			NodeElement startElement = (NodeElement)start.getGraphElement();
+
+//			if (m_labels.containsKey(startElement.getLabel()))
+//				continue;
+			
+			assert start.getKeywordSegments().size() == 1;
+			KeywordSegement startKS = null;
+			for (KeywordSegement ks : start.getKeywordSegments())
+				startKS = ks;
+			
+			if (!m_startElements.containsKey(startElement)) {
+				String var = "?x" + x++;
+				m_startElements.put(startElement, new HashSet<String>(startKS.getKeywords()));
+				m_labels.put(startElement.getLabel(), var);
+				m_vars.put(var, startElement.getLabel());
+				m_selectVariables.add(var);
+				m_select2ks.put(var, new HashSet<KeywordSegement>(Arrays.asList(startKS)));
 			}
+			else {
+				m_startElements.get(startElement).addAll(startKS.getKeywords());
+				m_select2ks.get(m_labels.get(startElement.getLabel())).add(startKS);
+			}
+			
+//			if (!start.isFakeStart() && c.getStartElement() instanceof NodeElement) {
+//				m_startElements.put((NodeElement)c.getStartElement(), c.getKeywordSegments()());
+//				if (!m_labels.containsKey(c.getStartElement().getLabel())) {
+//					m_labels.put(c.getStartElement().getLabel(), "?x" + x++);
+//					m_vars.put(m_labels.get(c.getStartElement().getLabel()), c.getStartElement().getLabel());
+//					m_selectVariables.add(m_labels.get(c.getStartElement().getLabel()));
+//					m_select2ks.put(m_labels.get(c.getStartElement().getLabel()), c.getKeyword());
+//				}
+//			}
 		}
 
 		for (EdgeElement e : m_edges) {
@@ -130,7 +197,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		if (withAttributes) {
 			int x = 0;
 			for (NodeElement startElement : m_startElements.keySet()) {
-				for (String keyword : m_startElements.get(startElement).getKeywords())
+				for (String keyword : m_startElements.get(startElement))
 					q.addLiteral(new Literal(new Predicate("???" + x++), new Variable(m_labels.get(startElement.getLabel())), new Constant(keyword)));
 			}
 		}
@@ -138,6 +205,12 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 //		log.debug(q);
 		
 		return q;
+	}
+	
+	public Map<String,String> getLabels() {
+		if (m_labels == null)
+			generateLabelMappings();
+		return m_labels;
 	}
 	
 
@@ -158,14 +231,14 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		return m_vars;
 	}
 	
-	public Map<String,KeywordSegement> getKSMapping() {
+	public HashMap<String,Set<KeywordSegement>> getKSMapping() {
 		if (m_vars == null)
 			generateLabelMappings();
 		return m_select2ks;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public Map<String,String> isIsomorphicTo(Subgraph sg) {
+	public List<Map<String,String>> isIsomorphicTo(Subgraph sg) {
 		GraphIsomorphismInspector<IsomorphismRelation> t =  AdaptiveIsomorphismInspectorFactory.createIsomorphismInspector(this, sg, 
 			new EquivalenceComparator() {
 
@@ -191,23 +264,21 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		Set<String> fixedNodes = new HashSet<String>();
 		for (String selectNode : m_selectVariables)
 			fixedNodes.add(m_vars.get(selectNode));
-		Map<String,String> mapping = new HashMap<String,String>();
-		if (t.isIsomorphic()) {
-			while (t.hasNext() && mapping.size() < sg.vertexSet().size()) {
+		List<Map<String,String>> mappings = new ArrayList<Map<String,String>>();
+		
+		if (sg.vertexSet().size() == vertexSet().size() && sg.edgeSet().size() == edgeSet().size() && t.isIsomorphic()) {
+			while (t.hasNext()) {
 				IsomorphismRelation rel = t.next();
-				mapping.clear();
+
+				HashMap<String,String> mapping = new HashMap<String,String>();
 				for (NodeElement v1 : vertexSet()) {
-//					if (fixedNodes.contains(v1.getLabel()) && !v1.getLabel().equals(((NodeElement)rel.getVertexCorrespondence(v1, true)).getLabel()))
-//						break;
 					mapping.put(v1.getLabel(), ((NodeElement)rel.getVertexCorrespondence(v1, true)).getLabel());
 				}
+				mappings.add(mapping);
 			}
-			
-			if (mapping.size() < sg.vertexSet().size())
-				mapping.clear();
 		}
 			
-		return mapping;
+		return mappings;
 	}
 	
 	public String toString() {

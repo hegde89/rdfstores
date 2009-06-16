@@ -26,6 +26,9 @@ public class Counters {
 	public static final Stat ASM_INDEX_MATCHES = addStat("asm_index_matches");
 	public static final Stat ASM_RESULT_SIZE = addStat("asm_result_size");
 	
+	public static final Stat QT_QUERIES = addStat("qt_queries");
+	public static final Stat QT_QUERY_SIZE = addStat("qt_query_size");
+	
 	public static final Stat IM_INDEX_MATCHES = addStat("im_index_matches");
 	public static final Stat IM_PROCESSED_EDGES = addStat("im_processed_edges");
 	
@@ -66,8 +69,13 @@ public class Counters {
 	}
 	
 	public void logStats() {
+		logStats(stats);
+	}
+	
+
+	public void logStats(List<Stat> _stats) {
 		log.debug("counters");
-		for (Stat s : Counters.stats) {
+		for (Stat s : _stats) {
 			log.debug(" " + s.name + "\t" + counts[s.idx]);
 		}
 	}

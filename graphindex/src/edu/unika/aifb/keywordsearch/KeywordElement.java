@@ -191,7 +191,9 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		if(resource instanceof Entity) {
 			return ((Entity)resource).getExtension(); 	
 		}
-		else 
+		else if (resource instanceof NamedConcept)
+			return ((NamedConcept)resource).getExtension();
+		else
 			return null;
 	} 
 		

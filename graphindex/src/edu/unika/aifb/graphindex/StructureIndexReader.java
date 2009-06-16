@@ -59,7 +59,7 @@ public class StructureIndexReader {
 			for (String prop : (Set<String>)cmap.keySet()) {
 				cardinalities.put(prop, (Integer)cmap.get(prop));
 			}
-			log.debug("object cards. loaded: " + cardinalities);
+//			log.debug("object cards. loaded: " + cardinalities);
 		}
 		m_index.setObjectCardinalities(cardinalities);
 	}

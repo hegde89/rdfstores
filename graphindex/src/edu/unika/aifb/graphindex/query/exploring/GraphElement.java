@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex.query.exploring;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,11 +15,13 @@ import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public abstract class GraphElement {
 	protected String m_label;
-	protected Map<KeywordSegement,List<Cursor>> m_keywordCursors;
+	protected Map<String,List<Cursor>> m_keywordCursors;
+	protected Set<String> m_keywords;
 	
 	public GraphElement(String label) {
 		m_label = label;
-		m_keywordCursors = new HashMap<KeywordSegement,List<Cursor>>();
+		m_keywordCursors = new HashMap<String,List<Cursor>>();
+		m_keywords = new HashSet<String>();
 	}
 	
 	public String getLabel() {
@@ -26,13 +29,17 @@ public abstract class GraphElement {
 	}
 	
 	public void addCursor(Cursor c) {
-		List<Cursor> cursors = m_keywordCursors.get(c.getKeyword());
-		if (cursors == null) {
-			cursors = new ArrayList<Cursor>();
-			m_keywordCursors.put(c.getKeyword(), cursors);
+		for (KeywordSegement ks : c.getKeywordSegments()) {
+			for (String keyword : ks.getKeywords()) {
+				List<Cursor> cursors = m_keywordCursors.get(keyword);
+				if (cursors == null) {
+					cursors = new ArrayList<Cursor>();
+					m_keywordCursors.put(keyword, cursors);
+				}
+				cursors.add(c);
+				Collections.sort(cursors);
+			}
 		}
-		cursors.add(c);
-		Collections.sort(cursors);
 	}
 	
 	public List<List<Cursor>> getCursorCombinations() {
@@ -40,10 +47,11 @@ public abstract class GraphElement {
 		
 		int[] idx = new int [m_keywordCursors.size()];
 		int[] guard = new int [m_keywordCursors.size()];
-		List<KeywordSegement> keywords = new ArrayList<KeywordSegement>(m_keywordCursors.keySet());
+		List<String> keywords = new ArrayList<String>(m_keywordCursors.keySet());
 		
-		for (int i = 0; i < keywords.size(); i++)
+		for (int i = 0; i < keywords.size(); i++) {
 			guard[i] = m_keywordCursors.get(keywords.get(i)).size();
+		}
 		
 		boolean carry = true;
 		do {
@@ -56,6 +64,7 @@ public abstract class GraphElement {
 			for (int i = 0; i < keywords.size(); i++) {
 				if (carry) {
 					idx[i]++;
+					carry = false;
 				}
 				
 				if (idx[i] >= guard[i]) {
@@ -65,7 +74,7 @@ public abstract class GraphElement {
 			}
 		}
 		while (!carry);
-		
+
 		return list;
 	}
 	
@@ -100,7 +109,7 @@ public abstract class GraphElement {
 		return m_label;
 	}
 
-	public Map<KeywordSegement,List<Cursor>> getKeywords() {
+	public Map<String,List<Cursor>> getKeywords() {
 		return m_keywordCursors;
 	}
 }

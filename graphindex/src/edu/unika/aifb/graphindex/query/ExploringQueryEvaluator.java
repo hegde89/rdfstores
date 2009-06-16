@@ -3,8 +3,10 @@ package edu.unika.aifb.graphindex.query;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,50 +42,44 @@ import edu.unika.aifb.keywordsearch.search.KeywordSearcher;
 
 public abstract class ExploringQueryEvaluator  {
 
-	private StructureIndex m_schemaIndex, m_directIndex;
-	private KeywordSearcher m_schemaKS, m_directKS;
-	private ExploringIndexMatcher m_schemaMatcher, m_directMatcher;
-	private IndexMatchesValidator m_schemaValidator, m_directValidator;
-	private int m_cutoff;
-	private boolean m_direct = true;
 	
 	private static final Logger log = Logger.getLogger(ExploringQueryEvaluator.class);
 	
 	public ExploringQueryEvaluator() throws StorageException {
 	}
 	
-	public void setDirectEvaluation(boolean direct) {
-		m_direct = direct;
+	protected Map<KeywordSegement,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) {
+		List<String> list = KeywordSearcher.getKeywordList(query);
+		log.debug("keyword list: " + list);
+		Map<KeywordSegement,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
+		return res;
 	}
 	
-	public void setCutoff(int cutoff) {
-		m_cutoff = cutoff;
-	}
-	
-	protected void searchAndExplore(String query, ExploringIndexMatcher matcher, KeywordSearcher searcher, List<GTable<String>> indexMatches,
-			List<Query> queries, List<Map<String,KeywordSegement>> selectMappings, Map<KeywordSegement,List<GraphElement>> segment2elements,
+	protected void explore(Map<KeywordSegement,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, List<GTable<String>> indexMatches,
+			List<Query> queries, List<Map<String,Set<KeywordSegement>>> selectMappings, Map<KeywordSegement,List<GraphElement>> segment2elements,
 			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException {
-		timings.start(Timings.STEP_KWSEARCH);
-		Map<KeywordSegement,Collection<KeywordElement>> entities = searcher.searchKeywordElements(KeywordSearcher.getKeywordList(query));
-		timings.end(Timings.STEP_KWSEARCH);
-
-		
-		timings.start(Timings.STEP_EXPLORE);
 		
 		for (KeywordSegement ks : entities.keySet()) {
 			Set<String> nodes = new HashSet<String>();
 			Set<String> edges = new HashSet<String>();
+//			log.debug(ks);
+			List<String> keywords = new ArrayList<String>(ks.getKeywords());
+			Collections.sort(keywords);
+			String id = keywords.toString();
+//			log.debug(id);
 			for (KeywordElement ele : entities.get(ks)) {
+//				log.debug(" " + ele + " " + ele.getType());
 				if (ele.getType() == KeywordElement.CONCEPT || ele.getType() == KeywordElement.ENTITY) {
 					String ext = ele.getExtensionId();
 					
-					Set<String> extEntities = ext2entities.get(ext + ks.toString());
+					Set<String> extEntities = ext2entities.get(ext + id);
 					if (extEntities == null) {
 						extEntities = new HashSet<String>(50);
-						ext2entities.put(ext + ks.toString(), extEntities);
+						ext2entities.put(ext + id, extEntities);
 					}
 					extEntities.add(ele.getUri());
-					log.debug(ext + " " + ks.toString() + " " + extEntities);
+//					log.debug(ext + id + ": " + extEntities);
+//					log.debug(ext + " " + ks.toString() + " " + extEntities.size());
 					nodes.add(ext);
 				}
 				else if (ele.getType() == KeywordElement.RELATION || ele.getType() == KeywordElement.ATTRIBUTE) {
@@ -104,7 +100,7 @@ public abstract class ExploringQueryEvaluator  {
 			
 			segment2elements.put(ks, elements);
 			
-			log.debug("segment: " + ks + ", elements: " + elements);
+			log.debug("segment: " + ks.getKeywords() + ", elements: " + elements.size());
 		}
 		
 
@@ -112,6 +108,8 @@ public abstract class ExploringQueryEvaluator  {
 		matcher.match();
 		
 		matcher.indexMatches(indexMatches, queries, selectMappings, true);
+		
+		log.debug("queries: " + queries.size());
 	}
 	
 	public abstract void evaluate(String query) throws StorageException;

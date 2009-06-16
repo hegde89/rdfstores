@@ -39,8 +39,8 @@ public class Timings {
 	public static final Stat STEP_ASM2IM = addStat("step_asm2im");
 	public static final Stat STEP_KWSEARCH = addStat("step_kwsearch");
 	public static final Stat STEP_EXPLORE = addStat("step_explore");
-	public static final Stat STEP_DIRECT_QUERY = addStat("step_direct_query");
-	public static final Stat STEP_INDIRECT_QUERY = addStat("step_indirect_query");
+	public static final Stat STEP_IQA = addStat("step_direct_query");
+	public static final Stat STEP_QA = addStat("step_indirect_query");
 	public static final Stat STEP_IM = addStat("step_im");
 	public static final Stat STEP_IM2DM = addStat("step_im2dm");
 	public static final Stat STEP_DM = addStat("step_dm");
@@ -83,8 +83,12 @@ public class Timings {
 	}
 	
 	public void logStats() {
+		logStats(stats);
+	}
+	
+	public void logStats(List<Stat> _stats) {
 		log.debug("time spent");
-		for (Stat s : Timings.stats) {
+		for (Stat s : _stats) {
 			log.debug(" " + s.name + "\t" + timings[s.idx]);
 		}
 	}

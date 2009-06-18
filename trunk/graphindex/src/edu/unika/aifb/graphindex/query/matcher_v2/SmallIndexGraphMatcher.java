@@ -90,7 +90,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 	private IndexDescription m_idxPSESO;
 	private IndexDescription m_idxPOESS;
 	private IndexDescription m_idxPOES;
-	private IndexDescription m_idxPSES;
+	private IndexDescription m_idxSES;
 
 	private static final Logger log = Logger.getLogger(SmallIndexGraphMatcher.class);
 
@@ -107,9 +107,9 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		m_idxPSESO = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
 		m_idxPOESS = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
 		m_idxPOES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);
-		m_idxPSES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
+		m_idxSES = m_index.getCompatibleIndex(DataField.SUBJECT, DataField.EXT_SUBJECT);
 
-		if (m_idxPSESO == null || m_idxPOESS == null || m_idxPOES == null || m_idxPSES == null)
+		if (m_idxPSESO == null || m_idxPOESS == null || m_idxPOES == null || m_idxSES == null)
 			return false;
 
 		return true;
@@ -223,11 +223,11 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 
-			if (toVisit.size() == 0) {
-				m_validator = new SignatureRowValidator();
-			}
-			else
-				m_validator = null;
+//			if (toVisit.size() == 0) {
+//				m_validator = new SignatureRowValidator();
+//			}
+//			else
+//				m_validator = null;
 //			m_validator.alwaysPurge = true;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source

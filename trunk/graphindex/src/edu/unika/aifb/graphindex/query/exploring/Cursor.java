@@ -37,7 +37,7 @@ public class Cursor implements Comparable<Cursor> {
 		}	
 		else
 			m_distance = 0;
-		m_cost = m_distance;
+		m_cost = m_distance + 1;
 	}
 	
 	public void setFakeStart(boolean fs) {

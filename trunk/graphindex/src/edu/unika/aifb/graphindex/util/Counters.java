@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 public class Counters {
+
 	long[] counts = new long [20];
 
 	public final static List<Stat> stats = new ArrayList<Stat>();
@@ -19,6 +20,9 @@ public class Counters {
 	public static final Stat QUERY_EDGES = addStat("query_edges");
 	public static final Stat QUERY_NODES = addStat("query_nodes");
 	public static final Stat QUERY_DEFERRED_EDGES = addStat("query_deferred_edges");
+	public static final Stat KWQUERY_KEYWORDS = addStat("query_keywords");
+	public static final Stat KWQUERY_NODE_KEYWORDS = addStat("query_node_keywords");
+	public static final Stat KWQUERY_EDGE_KEYWORDS = addStat("query_edge_keywords");
 	
 	public static final Stat ES_RESULT_SIZE = addStat("es_result_size");
 	public static final Stat ES_PROCESSED_EDGES = addStat("es_processed_edges");
@@ -27,7 +31,7 @@ public class Counters {
 	public static final Stat ASM_RESULT_SIZE = addStat("asm_result_size");
 	
 	public static final Stat QT_QUERIES = addStat("qt_queries");
-	public static final Stat QT_QUERY_SIZE = addStat("qt_query_size");
+	public static final Stat QT_QUERY_EDGES = addStat("qt_query_edges");
 	
 	public static final Stat IM_INDEX_MATCHES = addStat("im_index_matches");
 	public static final Stat IM_PROCESSED_EDGES = addStat("im_processed_edges");

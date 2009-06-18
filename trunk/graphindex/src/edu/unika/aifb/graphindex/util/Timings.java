@@ -21,6 +21,7 @@ public class Timings {
 	
 	public static final Stat LOAD_DATA_LIST = addStat("load_data_list");
 	public static final Stat LOAD_DATA_SET = addStat("load_data_set");
+	public static final Stat LOAD_DATA_ITEM = addStat("load_data_item");
 	public static final Stat LOAD_HT = addStat("load_ht");
 	public static final Stat LOAD_IT = addStat("load_it");
 	public static final Stat LOAD_ITS = addStat("load_its");
@@ -39,8 +40,8 @@ public class Timings {
 	public static final Stat STEP_ASM2IM = addStat("step_asm2im");
 	public static final Stat STEP_KWSEARCH = addStat("step_kwsearch");
 	public static final Stat STEP_EXPLORE = addStat("step_explore");
-	public static final Stat STEP_IQA = addStat("step_direct_query");
-	public static final Stat STEP_QA = addStat("step_indirect_query");
+	public static final Stat STEP_IQA = addStat("step_iqa_query");
+	public static final Stat STEP_QA = addStat("step_qa_query");
 	public static final Stat STEP_IM = addStat("step_im");
 	public static final Stat STEP_IM2DM = addStat("step_im2dm");
 	public static final Stat STEP_DM = addStat("step_dm");

@@ -13,6 +13,8 @@ import java.util.Set;
 
 import org.apache.lucene.document.Document;
 
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
+import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.keywordsearch.api.IResource;
 import edu.unika.aifb.keywordsearch.impl.Attribute;
 import edu.unika.aifb.keywordsearch.impl.Entity;
@@ -41,6 +43,8 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	private BloomFilter bloomFilter;
 
 	protected int type;
+
+	private NeighborhoodStorage ns;
 	
 	public KeywordElement(IResource resource, int type, Document doc, double score) {
 		this.resource = resource;
@@ -55,6 +59,12 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.matchingScore = score;
 		this.keywords = new HashSet<String>();
 		this.keywords.add(keyword);
+	}
+	
+	public KeywordElement(IResource resource, int type, NeighborhoodStorage ns) {
+		this.resource = resource;
+		this.type = type;
+		this.ns = ns;
 	}
 	
 	public KeywordElement(){}
@@ -129,18 +139,23 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public BloomFilter getBloomFilter() {
 		if(bloomFilter == null) {
-			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
-			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
 			try {
-				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
-				bloomFilter = (BloomFilter)objectInput.readObject();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				bloomFilter = ns.getNeighborhoodBloomFilter(resource.getUri());
+			} catch (StorageException e) {
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
+			}
+//			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
+//			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
+//			try {
+//				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
+//				bloomFilter = (BloomFilter)objectInput.readObject();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} catch (ClassNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} 
 		}
 		return bloomFilter;
 	}

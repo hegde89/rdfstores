@@ -60,6 +60,7 @@ public class KeystrucEval {
 		op.accepts("sf", "start from specified query");
 		op.accepts("dc", "drop caches script")
 			.withRequiredArg().ofType(String.class);
+		op.accepts("all", "execute all queries instead of only first");
 		
 		OptionSet os = op.parse(args);
 		
@@ -75,6 +76,7 @@ public class KeystrucEval {
 		String dropCachesScript = (String)os.valueOf("dc");
 		int reps = os.has("r") ? (Integer)os.valueOf("r") : 1;
 		int cutoff = os.has("c") ? (Integer)os.valueOf("c") : -1;
+		boolean allQueries = os.has("all");
 		
 		log.debug("schema dir: " + schemaDir);
 		log.debug("dir: " + indexDir);
@@ -104,9 +106,9 @@ public class KeystrucEval {
 		List<KeywordQuery> queries = new ArrayList<KeywordQuery>();
 		
 		List<Stat> timingStats = Arrays.asList(Timings.STEP_KWSEARCH, Timings.STEP_EXPLORE, Timings.STEP_IQA, Timings.STEP_QA, Timings.TOTAL_QUERY_EVAL);
-		List<Stat> counterStats = Arrays.asList(Counters.QT_QUERIES, Counters.QT_QUERY_SIZE, Counters.RESULTS);
+		List<Stat> counterStats = Arrays.asList(Counters.KWQUERY_NODE_KEYWORDS, Counters.KWQUERY_EDGE_KEYWORDS, Counters.KWQUERY_KEYWORDS, Counters.QT_QUERIES, Counters.QT_QUERY_EDGES, Counters.RESULTS);
 		
-//		queries.add(new KeywordQuery("qtest", "publication13 publicationAuthor graduatestudent52@department12.university0.edu publicationAuthor publication15 publicationAuthor graduatestudent7"));
+		queries.add(new KeywordQuery("qtest", "publication13 publicationAuthor graduatestudent52@department12.university0.edu publicationAuthor publication15 publicationAuthor graduatestudent7"));
 //		queries.add(new KeywordQuery("qtest", "GraduateStudent51 takesCourse GraduateCourse3"));
 //		queries.add(loader.loadQueryFile(queryFile).remove(0));
 		queries.addAll(loader.loadQueryFile(queryFile));
@@ -124,24 +126,8 @@ public class KeystrucEval {
 				else
 					log.warn("no drop caches script, caches not cleared");
 				
-				Set<String> dataWarmup = new HashSet<String>();
-				Set<String> keywordWarmup = new HashSet<String>();
-				
-//					if (new File(outputDirectory + "/data_warmup").exists()) {
-//						dataWarmup = Util.readEdgeSet(outputDirectory + "/data_warmup");
-//					}
-//					else
-//						log.warn("no data warmup");
-//					
-//					if (new File(outputDirectory + "/keyword_warmup").exists()) {
-//						keywordWarmup = Util.readEdgeSet(outputDirectory + "/keyword_warmup");
-//					}
-//					else if (system.equals("spe"))
-//						log.warn("no keyword warmup");
-				
 				log.info("opening and warming up...");
 				StructureIndexReader reader = new StructureIndexReader(indexDir + "/sidx");
-				reader.warmUp(dataWarmup);
 				StructureIndexReader schemaReader = null;
 				
 				ExploringQueryEvaluator qe = null;
@@ -159,6 +145,8 @@ public class KeystrucEval {
 				else {
 					qe = null;
 				}
+				
+				qe.setExecuteAllQueries(allQueries);
 				
 				collector = reader.getIndex().getCollector();
 				

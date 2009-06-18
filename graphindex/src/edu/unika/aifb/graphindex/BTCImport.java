@@ -89,6 +89,7 @@ public class BTCImport {
 		op.accepts("bk", "bisim path length")
 			.withRequiredArg().ofType(Integer.class);
 		op.accepts("idxdata", "if specified, data nodes will be indexed");
+		op.accepts("bwonly", "backward only");
 		
 		OptionSet os = op.parse(args);
 		
@@ -101,6 +102,7 @@ public class BTCImport {
 		String outputDirectory = (String)os.valueOf("o");
 		boolean rmBN = os.has("bn");
 		rmBN = false;
+		boolean backwardOnly = os.has("bwonly");
 		
 		String importDirectory = outputDirectory + "/tripleimport";
 		String spDirectory = outputDirectory + "/sidx";
@@ -236,7 +238,10 @@ public class BTCImport {
 			
 			new File(outputDirectory + "/temp").mkdir();
 
-			LargeRCP rcp = new LargeRCP(gs, env, edges, edges);
+			Set<String> backwardEdges = edges;
+			Set<String> forwardEdges = backwardOnly ? new HashSet<String>() : edges;
+			
+			LargeRCP rcp = new LargeRCP(gs, env, forwardEdges, backwardEdges);
 			rcp.setIgnoreDataValues(true);
 			rcp.setTempDir(outputDirectory + "/temp");
 
@@ -306,7 +311,7 @@ public class BTCImport {
 					// add triples to extensions
 					es.addTriples(IndexDescription.PSESO, subExt, property, s, Arrays.asList(o));
 					es.addTriples(IndexDescription.POESS, subExt, property, o, Arrays.asList(s));
-					es.addData(IndexDescription.PSES, es.concat(new String[] { property, s }, 2), Arrays.asList(subExt) , false);
+					es.addData(IndexDescription.SES, es.concat(new String[] { s }, 1), Arrays.asList(subExt) , false);
 					es.addData(IndexDescription.POES, es.concat(new String[] { property, o }, 2), Arrays.asList(subExt) , false);
 					
 					triples++;
@@ -348,7 +353,7 @@ public class BTCImport {
 			
 			index.addIndex(IndexDescription.PSESO);
 			index.addIndex(IndexDescription.POESS);
-			index.addIndex(IndexDescription.PSES);
+			index.addIndex(IndexDescription.SES);
 			index.addIndex(IndexDescription.POES);
 			
 			igs.optimize();
@@ -360,7 +365,7 @@ public class BTCImport {
 			LuceneExtensionStorage les = new LuceneExtensionStorage(spDirectory + "/index");
 			les.initialize(false, false);
 
-			for (IndexDescription index : Arrays.asList(IndexDescription.PSESO, IndexDescription.POESS, IndexDescription.PSES, IndexDescription.POES)) {
+			for (IndexDescription index : Arrays.asList(IndexDescription.PSESO, IndexDescription.POESS, IndexDescription.SES, IndexDescription.POES)) {
 				log.debug(index.getIndexFieldName());
 				les.mergeIndexDocuments(index);
 			}
@@ -371,57 +376,35 @@ public class BTCImport {
 			les.close();
 		}
 		
-		if (action.equals("query") || action.equals("spquery")) {
-			String queryFile = (String)os.valueOf("qf");
-			String queryName = (String)os.valueOf("q");
-			
-			if (queryFile == null) {
-				log.error("no query file specified");
-			}
-
-			StructureIndexReader reader = new StructureIndexReader(spDirectory);
-			
-			QueryLoader loader = new QueryLoader(reader.getIndex());
-			List<Query> queries = loader.loadQueryFile(queryFile);
-			
-			
-			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, new EntitySearcher(keywordIndexDirectory));
-			if (action.equals("spquery"))
-				qe = new QueryEvaluator(reader);
-			for (Query q : queries) {
-				if (queryName != null && !q.getName().equals(queryName))
-					continue;
-				
-				q.trimPruning(reader.getIndex().getPathLength());
-
-				List<String[]> results = qe.evaluate(q);
-				log.info("query " + q.getName() + ": " + results.size() + " results");
-			}
-			reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
-			reader.close();
-		}
-		
-		// for keystruc
-		if (action.equals("keywordquery")) {
-			StructureIndexReader reader = new StructureIndexReader(spDirectory);
-
-			ExploringQueryEvaluator qe = new DirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
-//			ExploringQueryEvaluator qe = new IndirectExploringQueryEvaluator(reader, new KeywordSearcher(keywordIndexDirectory));
-			
-			qe.evaluate("GraduateStudent51 GraduateCourse3");
-			
-//			Scanner scanner = new Scanner(System.in);
-//			while (true) {
-//				System.out.println("Keyword query:");
-//				String line = scanner.nextLine();
-//				String tokens[] = line.split(" ");
-//				List<String> keywordList = new ArrayList<String>();
-//				for (int i = 0; i < tokens.length; i++) {
-//					keywordList.add(tokens[i]);
-//				}
+//		if (action.equals("query") || action.equals("spquery")) {
+//			String queryFile = (String)os.valueOf("qf");
+//			String queryName = (String)os.valueOf("q");
+//			
+//			if (queryFile == null) {
+//				log.error("no query file specified");
 //			}
-			
-		}
+//
+//			StructureIndexReader reader = new StructureIndexReader(spDirectory);
+//			
+//			QueryLoader loader = new QueryLoader(reader.getIndex());
+//			List<Query> queries = loader.loadQueryFile(queryFile);
+//			
+//			
+//			IQueryEvaluator qe = new IncrementalQueryEvaluator(reader, new EntitySearcher(keywordIndexDirectory));
+//			if (action.equals("spquery"))
+//				qe = new QueryEvaluator(reader);
+//			for (Query q : queries) {
+//				if (queryName != null && !q.getName().equals(queryName))
+//					continue;
+//				
+//				q.trimPruning(reader.getIndex().getPathLength());
+//
+//				List<String[]> results = qe.evaluate(q);
+//				log.info("query " + q.getName() + ": " + results.size() + " results");
+//			}
+//			reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
+//			reader.close();
+//		}
 		
 		if (action.equals("keywordindex")) {
 			removeTemporaryFiles(outputDirectory + "/temp");

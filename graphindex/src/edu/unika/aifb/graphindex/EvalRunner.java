@@ -22,11 +22,13 @@ import org.apache.log4j.Logger;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
+import edu.unika.aifb.graphindex.query.EntityLoader;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.QueryLoader;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
@@ -72,7 +74,7 @@ public class EvalRunner {
 		String action = (String)os.valueOf("a");
 		String outputDirectory = (String)os.valueOf("o");
 		String system = (String)os.valueOf("s");
-		String resultFile = (String)os.valueOf("f");
+		String resultFile = (String)os.valueOf("rf");
 		String dropCachesScript = (String)os.valueOf("dc");
 		int reps = os.has("r") ? (Integer)os.valueOf("r") : 1;
 		int cutoff = os.has("c") ? (Integer)os.valueOf("c") : -1;
@@ -86,164 +88,129 @@ public class EvalRunner {
 		String spDirectory = outputDirectory + "/sidx";
 		String keywordIndexDirectory = outputDirectory + "/keyword";
 		
-		List<QueryRun> queryRuns = new ArrayList<QueryRun>();
+//		List<QueryRun> queryRuns = new ArrayList<QueryRun>();
 
 		PrintStream ps = System.out;
 		if (resultFile != null) {
+			if (!new File(resultFile).exists())
+				new File(resultFile).createNewFile();
 			ps = new PrintStream(new FileOutputStream(resultFile, true));
 		}
 
-		if (action.equals("query") || action.equals("spquery")) {
-			String queryFile = (String)os.valueOf("qf");
-			String qName = (String)os.valueOf("q");
-			
-			if (queryFile == null) {
-				log.error("no query file specified");
-			}
-			
-			List<Query> qs = new QueryLoader(null).loadQueryFile(queryFile);
-			List<String> queryNames = new ArrayList<String>();
-			for (Query q : qs)
-				if (qName == null || qName.equals(q.getName()))
-					queryNames.add(q.getName());
+		String queryFile = (String)os.valueOf("qf");
+		String qName = (String)os.valueOf("q");
+		
+		if (queryFile == null) {
+			log.error("no query file specified");
+		}
+		
+		List<Stat> timingStats = Arrays.asList(Timings.STEP_ES, Timings.STEP_ASM, Timings.STEP_IM, Timings.STEP_DM, Timings.TOTAL_QUERY_EVAL);
+		List<Stat> counterStats = Arrays.asList(Counters.QUERY_EDGES, Counters.QUERY_DEFERRED_EDGES, Counters.ES_RESULT_SIZE, 
+			Counters.ASM_RESULT_SIZE, Counters.IM_INDEX_MATCHES, Counters.IM_PROCESSED_EDGES, Counters.DM_REM_EDGES, Counters.DM_REM_NODES, 
+			Counters.DM_PROCESSED_EDGES, Counters.ES_PROCESSED_EDGES, Counters.RESULTS);
 
-			for (String queryName : queryNames) {
-				for (int i = 0; i < reps; i++) {
-					// clear caches
-					if (dropCachesScript != null && new File(dropCachesScript).exists()) {
-						log.info("clearing caches...");
-						Runtime.getRuntime().exec(dropCachesScript);
-					}
-					else
-						log.warn("no drop caches script, caches not cleared");
+		List<Query> qs = new QueryLoader(null).loadQueryFile(queryFile);
+		List<String> queryNames = new ArrayList<String>();
+		for (Query q : qs)
+			if (qName == null || qName.equals(q.getName()))
+				queryNames.add(q.getName());
+
+		for (String queryName : queryNames) {
+			for (int i = 0; i < reps; i++) {
+				// clear caches
+				if (dropCachesScript != null && new File(dropCachesScript).exists()) {
+					log.info("clearing caches...");
+					Process p = Runtime.getRuntime().exec(dropCachesScript);
+					p.waitFor();
+				}
+				else
+					log.warn("no drop caches script, caches not cleared");
+				
+				log.info("opening ...");
+				StructureIndexReader reader = null;
+				LuceneStorage ls = null;
+				IQueryEvaluator qe = null;
+				StatisticsCollector collector = null;
+				if (system.equals("sp")) {
+					reader = new StructureIndexReader(outputDirectory);
 					
-					Set<String> dataWarmup = new HashSet<String>();
-					Set<String> keywordWarmup = new HashSet<String>();
+					qe = new QueryEvaluator(reader);
+					collector = reader.getIndex().getCollector();
+				}
+				else if (system.equals("spe")) {
+					reader = new StructureIndexReader(spDirectory);
 					
-					if (new File(outputDirectory + "/data_warmup").exists()) {
-						dataWarmup = Util.readEdgeSet(outputDirectory + "/data_warmup");
-					}
-					else
-						log.warn("no data warmup");
+					qe = new IncrementalQueryEvaluator(reader, new EntityLoader(outputDirectory + "/vp"),
+						new LuceneNeighborhoodStorage(outputDirectory + "/neighborhood"));
+					((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
+					collector = reader.getIndex().getCollector();
+				}
+				else if (system.equals("vp")) {
+					collector = new StatisticsCollector();
+					ls = new LuceneStorage(outputDirectory);
+					ls.initialize(false, true);
 					
-					if (new File(outputDirectory + "/keyword_warmup").exists()) {
-						keywordWarmup = Util.readEdgeSet(outputDirectory + "/keyword_warmup");
-					}
-					else if (system.equals("spe"))
-						log.warn("no keyword warmup");
+					qe = new VPQueryEvaluator(ls, collector);
+					reader = null;
+				}
+				else {
+					qe = null;
+					reader = null;
+					collector = null;
+				}
+				
+				log.info("loading queries");
+				QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
+				List<Query> queries = loader.loadQueryFile(queryFile);
+				
+				boolean startFound = false;
+				for (Query q : queries) {
+					if (!startFound && queryName != null && !q.getName().equals(queryName))
+						continue;
+					startFound = os.has("sf");
+					log.info("query: " + q.getName());
 					
-					log.info("opening and warming up...");
-					StructureIndexReader reader = null;
-					LuceneStorage ls = null;
-					IQueryEvaluator qe = null;
-					StatisticsCollector collector = null;
-					if (system.equals("sp")) {
-						reader = new StructureIndexReader(outputDirectory);
-						reader.warmUp(dataWarmup);
-						
-						qe = new QueryEvaluator(reader);
-						collector = reader.getIndex().getCollector();
-					}
-					else if (system.equals("spe")) {
-						reader = new StructureIndexReader(spDirectory);
-						reader.warmUp(dataWarmup);
-						
-						EntitySearcher es = new EntitySearcher(keywordIndexDirectory);
-						es.warmUp(keywordWarmup);
-						
-						qe = new IncrementalQueryEvaluator(reader, es);
-						((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
-						collector = reader.getIndex().getCollector();
-					}
-					else if (system.equals("vp")) {
-						collector = new StatisticsCollector();
-						ls = new LuceneStorage(outputDirectory);
-						ls.initialize(false, true);
-						
-						ls.warmUp(dataWarmup);
-						
-						qe = new VPQueryEvaluator(ls, collector);
-						reader = null;
-					}
-					else {
-						qe = null;
-						reader = null;
-						collector = null;
-					}
+					collector.reset();
 					
-					log.info("loading queries");
-					QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
-					List<Query> queries = loader.loadQueryFile(queryFile);
+					if (system.equals("sp") || system.equals("spe"))
+						q.trimPruning(reader.getIndex().getPathLength());
 					
-					boolean startFound = false;
-					for (Query q : queries) {
-						if (!startFound && queryName != null && !q.getName().equals(queryName))
-							continue;
-						startFound = os.has("sf");
-						log.info("query: " + q.getName());
-						
-						collector.reset();
-						
-						if (system.equals("sp") || system.equals("spe"))
-							q.trimPruning(reader.getIndex().getPathLength());
-						
-						List<String[]> results = qe.evaluate(q);
-						log.info("query " + q.getName() + ": " + results.size() + " results");
-						
-						Timings t = new Timings();
-						Counters c = new Counters();
-						collector.consolidate(t, c);
-						
-						t.logStats();
-						c.logStats();
-						
-						queryRuns.add(new QueryRun(q.getName(), system, t, c));
-						ps.print(q.getName() + ", " + system);
-						for (Stat s : Timings.stats) {
-							ps.print(", " + t.get(s));
-						}
-						for (Stat s : Counters.stats) {
-							ps.print(", " + c.get(s));
-						}
-						ps.println();
-						ps.flush();
-					}
+					List<String[]> results = qe.evaluate(q);
+					log.info("query " + q.getName() + ": " + results.size() + " results");
 					
-					if (reader != null) {
-						reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
-						reader.close();
-					}
+					Timings t = new Timings();
+					Counters c = new Counters();
+					collector.consolidate(t, c);
 					
-					if (ls != null) {
-						ls.close();
+					t.logStats(timingStats);
+					c.logStats(counterStats);
+					
+//					queryRuns.add(new QueryRun(q.getName(), system, t, c));
+					ps.print(q.getName() + "," + system);
+					for (Stat s : timingStats) {
+						ps.print("," + t.get(s));
 					}
+					for (Stat s : counterStats) {
+						ps.print("," + c.get(s));
+					}
+					ps.println();
+					ps.flush();
+				}
+				
+				if (reader != null) {
+					reader.getIndex().getExtensionManager().setMode(ExtensionManager.MODE_READONLY);
+					reader.close();
+				}
+				
+				if (ls != null) {
+					ls.close();
 				}
 			}
-			
-			ps.close();
-			
-			
-			// column names
-//			ps.print("query, system");
-//			for (Stat s : Timings.stats) {
-//				ps.print(", t_" + s.name);
-//			}
-//			for (Stat s : Counters.stats) {
-//				ps.print(", c_" + s.name);
-//			}
-//			ps.println();
-//			
-//			for (QueryRun qr : queryRuns) {
-//				ps.print(qr.getName() + ", " + qr.getSystem());
-//				for (Stat s : Timings.stats) {
-//					ps.print(", " + qr.getTimings().get(s));
-//				}
-//				for (Stat s : Counters.stats) {
-//					ps.print(", " + qr.getCounters().get(s));
-//				}
-//				ps.println();
-//			}
 		}
+		
+		ps.close();
+		
+		
 	}
 
 }

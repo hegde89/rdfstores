@@ -44,6 +44,7 @@ public abstract class ExploringQueryEvaluator  {
 
 	
 	private static final Logger log = Logger.getLogger(ExploringQueryEvaluator.class);
+	protected boolean m_allQueries;
 	
 	public ExploringQueryEvaluator() throws StorageException {
 	}
@@ -113,4 +114,8 @@ public abstract class ExploringQueryEvaluator  {
 	}
 	
 	public abstract void evaluate(String query) throws StorageException;
+
+	public void setExecuteAllQueries(boolean allQueries) {
+		m_allQueries = allQueries;
+	}
 }

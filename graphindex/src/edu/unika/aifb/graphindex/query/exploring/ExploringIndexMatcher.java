@@ -25,6 +25,7 @@ import edu.unika.aifb.graphindex.query.model.Predicate;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.query.model.Variable;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.keywordsearch.KeywordSegement;
 
 public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
@@ -118,12 +119,33 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			}
 		}
 		log.debug("keywords: " + m_keywords);
+		
+		Set<String> nodeKeywords = new HashSet<String>();
+		Set<String> edgeKeywords = new HashSet<String>();
+		for (KeywordSegement ks : m_keywordQueues.keySet())
+			nodeKeywords.addAll(ks.getKeywords());
+		for (KeywordSegement ks : keywords.keySet())
+			if (!m_keywordQueues.containsKey(ks))
+				edgeKeywords.addAll(ks.getKeywords());
+		log.debug("node keywords: " + nodeKeywords);
+		log.debug("edge keywords: " + edgeKeywords);
+		
+		m_counters.set(Counters.KWQUERY_NODE_KEYWORDS, nodeKeywords.size());
+		m_counters.set(Counters.KWQUERY_EDGE_KEYWORDS, edgeKeywords.size());
+		m_counters.set(Counters.KWQUERY_KEYWORDS, m_keywords.size());
 
 		m_keywordSegments = keywords;
+		
+		setMaxDistance(nodeKeywords.size() * 2);
+		log.debug("max distance: " + m_maxDistance);
 	}
 	
 	public void setK(int k) {
 		m_k = k;
+	}
+	
+	public void setMaxDistance(int distance) {
+		m_maxDistance = distance;
 	}
 
 	@Override
@@ -134,17 +156,18 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private boolean topK(GraphElement currentElement) {
 		if (currentElement.getKeywords().size() == m_keywords.size()) {
 			// current element is a connecting element
+//			log.debug(m_subgraphs.size());
 			List<List<Cursor>> combinations = currentElement.getCursorCombinations();
 			for (List<Cursor> combination : combinations) {
-				Set<String> combinationKeywords = new HashSet<String>();
-				for (Cursor c : combination)
-					for (KeywordSegement ks : c.getKeywordSegments())
-						combinationKeywords.addAll(ks.getKeywords());
-				
-				if (!combinationKeywords.equals(m_keywords)) {
-					log.debug(combination);
-					continue;
-				}
+//				Set<String> combinationKeywords = new HashSet<String>();
+//				for (Cursor c : combination)
+//					for (KeywordSegement ks : c.getKeywordSegments())
+//						combinationKeywords.addAll(ks.getKeywords());
+//				
+//				if (!combinationKeywords.equals(m_keywords)) {
+//					log.debug(combination);
+//					continue;
+//				}
 				Subgraph sg = new Subgraph(new HashSet<Cursor>(combination));
 
 				if (!m_subgraphs.contains(sg)) {
@@ -152,6 +175,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						m_subgraphs.add(sg);
 				}
 			}
+//			log.debug(m_subgraphs.size());
 		}
 		
 		if (m_subgraphs.size() < m_k)

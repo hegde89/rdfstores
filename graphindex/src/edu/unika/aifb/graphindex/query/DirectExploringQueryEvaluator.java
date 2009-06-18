@@ -84,10 +84,11 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		
 		counters.set(Counters.QT_QUERIES, queries.size());
 		
-		
-		for (int i = 0; i < Math.min(1, indexMatches.size()); i++) {
+		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
+
+		for (int i = 0; i < numberOfQueries; i++) {
 			Query q = queries.get(i);
-			counters.set(Counters.QT_QUERY_SIZE, q.getLiterals().size());
+			counters.set(Counters.QT_QUERY_EDGES, q.getLiterals().size());
 			log.debug(q);
 			q.createQueryGraph(m_index);
 			QueryExecution qe = new QueryExecution(q, m_index);

@@ -35,7 +35,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	private IndexDescription m_idxPSESO;
 	private IndexDescription m_idxPOESS;
 	private IndexDescription m_idxPOES;
-	private IndexDescription m_idxPSES;
+	private IndexDescription m_idxSES;
 	private EntitySearcher m_entitySearcher;
 	private List<GraphEdge<QueryNode>> m_deferredTypeEdges;
 
@@ -49,9 +49,9 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		m_idxPSESO = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
 		m_idxPOESS = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
 		m_idxPOES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);
-		m_idxPSES = m_index.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
+		m_idxSES = m_index.getCompatibleIndex(DataField.SUBJECT, DataField.EXT_SUBJECT);
 		
-		if (m_idxPSESO == null || m_idxPOESS == null || m_idxPOES == null || m_idxPSES == null)
+		if (m_idxPSESO == null || m_idxPOESS == null || m_idxPOES == null || m_idxSES == null)
 			return false;
 		
 		return true;
@@ -201,15 +201,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					
 					int col = table.getColumn(node);
 					for (String [] row : table) {
-						boolean found = true;
-						for (String p : removedProperties.get(node)) {
-							if (!m_es.getDataSet(m_idxPSES, p, row[col]).contains(srcExt)) {
-								found = false;
-								break;
-							}
-						}
-						
-						if (found) {
+						if (m_es.getDataSet(m_idxSES, row[col]).contains(srcExt)) {
 							t2.addRow(row);
 						}
 					}
@@ -349,15 +341,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						GTable<String> t2 = m_es.getIndexTable(m_idxPOESS, srcExt, property, trgRow[trgCol]);
 						if (sourcesOfRemoved.contains(trgLabel)) {
 							for (String[] row : t2) {
-								boolean all = true;
-								for (String p : removedProperties.get(trgLabel)) {
-									if (!m_es.getDataSet(m_idxPSES, p, row[1]).contains(trgExt)) {
-										all = false;
-										break;
-									}
-										
-								}
-								if (all)
+								if (m_es.getDataItem(m_idxSES, row[1]).equals(trgExt)) 
 									table.addRow(row);
 							}
 						}
@@ -408,16 +392,6 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 //				if (sourcesOfRemoved.contains(trgLabel) && !m_es.hasTriples(m_idxESPS, trgExt, removedProperties.get(trgLabel), null))
 //					continue;
 
-				if (filterUsingSource) {
-					GTable<String> filteredTable = filterTable(m_idxPSES, sourceTable, srcExt, property, srcLabel);
-					filteredRows += sourceTable.rowCount() - filteredTable.rowCount();
-					totalRows += sourceTable.rowCount();
-					sourceTable = filteredTable;
-					
-					if (sourceTable.rowCount() == 0)
-						continue;
-				}
-				
 				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
 
 				Set<String> values = new HashSet<String>();
@@ -426,18 +400,9 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						GTable<String> t2 = m_es.getIndexTable(m_idxPSESO, srcExt, property, srcRow[srcCol]);
 						
 						for (String[] row : t2) {
-							boolean all = true;
-							if (sourcesOfRemoved.contains(trgLabel)) {
-								for (String p : removedProperties.get(trgLabel)) {
-									if (!m_es.getDataSet(m_idxPSES, p, row[1]).contains(trgExt)) {
-										all = false;
-										break;
-									}
-										
-								}
-							}
-							
-							if (all && (!targetConstant || row[1].equals(trgLabel)))
+//							boolean all = m_es.getDataItem(m_idxSES, row[1]).equals(trgExt);
+//							
+//							if (all && (!targetConstant || row[1].equals(trgLabel)))
 								table.addRow(row);
 						}
 						values.add(srcRow[srcCol]);
@@ -477,14 +442,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				if (sourcesOfRemoved.contains(srcLabel)) {
 					GTable<String> t2 = new GTable<String>(table, false);
 					for (String[] row : table) {
-						boolean all = true;
-						for (String p : removedProperties.get(srcLabel)) {
-							if (!m_es.getDataSet(m_idxPSES, p, row[0]).contains(srcExt)) {
-								all = false;
-								break;
-							}
-						}
-						if (all)
+						if (m_es.getDataItem(m_idxSES, row[0]).equals(srcExt)) 
 							t2.addRow(row);
 					}
 					table = t2;
@@ -532,31 +490,11 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					index = m_idxPSESO;
 					prevTable = sourceTable;
 					col = sourceTable.getColumn(srcLabel);
-					
-					if (filter) {
-						GTable<String> filteredTable = filterTable(m_idxPSES, sourceTable, srcExt, property, srcLabel);
-						filteredRows += sourceTable.rowCount() - filteredTable.rowCount();
-						totalRows += sourceTable.rowCount();
-						
-						sourceTable = filteredTable;
-						if (sourceTable.rowCount() == 0)
-							continue;
-					}
 				}
 				else {
 					index = m_idxPOESS;
 					prevTable = targetTable;
 					col = targetTable.getColumn(trgLabel);
-
-					if (filter) {
-						GTable<String> filteredTable = filterTable(m_idxPOES, targetTable, srcExt, property, trgLabel);
-						filteredRows += targetTable.rowCount() - filteredTable.rowCount();
-						totalRows += targetTable.rowCount();
-					
-						targetTable = filteredTable;
-						if (targetTable.rowCount() == 0)
-							continue;
-					}
 				}
 				
 				String trgExt = ec.getMatch(trgLabel);
@@ -568,16 +506,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						GTable<String> t2 = m_es.getIndexTable(index, srcExt, property, row[col]);
 						if (sourcesOfRemoved.contains(trgLabel)) {
 							for (String[] t2row : t2) {
-								boolean all = true;
-								for (String p : removedProperties.get(trgLabel)) {
-									if (!m_es.getDataSet(m_idxPSES, p, t2row[1]).contains(trgExt)) {
-										all = false;
-										break;
-									}
-										
-								}
-								
-								if (all)
+								if (m_es.getDataItem(m_idxSES, t2row[1]).equals(trgExt))
 									table.addRow(t2row);
 							}
 						}

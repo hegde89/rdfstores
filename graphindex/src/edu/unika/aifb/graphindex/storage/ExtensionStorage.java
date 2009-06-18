@@ -70,6 +70,11 @@ public interface ExtensionStorage {
 		public static final IndexDescription PSES = new IndexDescription("pses", "es",
 			DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
 		
+		public static final IndexDescription OES = new IndexDescription("oes", "es",
+			DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);
+		public static final IndexDescription SES = new IndexDescription("ses", "es",
+			DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
+
 		public IndexDescription(String indexFieldName, String valueFieldName, DataField... fields) {
 			m_indexFieldName = indexFieldName;
 			m_valueFieldName = valueFieldName;
@@ -194,6 +199,7 @@ public interface ExtensionStorage {
 	public void addData(IndexDescription index, String indexKey, Collection<String> set) throws StorageException;
 	public List<String> getData(IndexDescription index, String... indexFields) throws StorageException;
 	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException;
+	public String getDataItem(IndexDescription index, String... indexFields) throws StorageException;
 	public GTable<String> getIndexTable(String col1, String col2, IndexDescription index, String... indexFields) throws StorageException;
 	public void warmUp(Set<String> queries) throws StorageException;
 }

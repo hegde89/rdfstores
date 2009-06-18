@@ -1,5 +1,6 @@
 package edu.unika.aifb.graphindex.query;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -22,7 +23,10 @@ import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexGraphMatcher;
 import edu.unika.aifb.graphindex.query.matcher_v2.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.TypeUtil;
@@ -40,13 +44,19 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 	private IndexGraphMatcher m_matcher;
 	private IndexMatchesValidator m_validator;
 	private EntitySearcher m_searcher;
+	private ExtensionStorage m_es;
 	private int m_cutoff;
+	private NeighborhoodStorage m_ns;
+	private EntityLoader m_el;
+	private int m_nk = 2;
 	
 	private static final Logger log = Logger.getLogger(IncrementalQueryEvaluator.class);
 	
-	public IncrementalQueryEvaluator(StructureIndexReader reader, EntitySearcher es) throws StorageException {
+	public IncrementalQueryEvaluator(StructureIndexReader reader, EntityLoader el, NeighborhoodStorage ns) throws StorageException {
 		m_indexReader = reader;
 		m_index = reader.getIndex();
+		m_es = m_index.getExtensionManager().getExtensionStorage();
+		m_ns = ns;
 		
 		for (String ig : m_indexReader.getGraphNames()) {
 			m_matcher = new SmallIndexGraphMatcher(m_index, ig);
@@ -55,15 +65,18 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		}
 
 		m_validator = new SmallIndexMatchesValidator(m_index, m_index.getCollector());
-		
-		m_searcher = es;
+		m_el = el;
 	}
 	
 	public void setCutoff(int cutoff) {
 		m_cutoff = cutoff;
 	}
 	
-	public List<String[]> evaluate(Query q) throws StorageException {
+	public void setNeighborhoodSize(int nk) {
+		m_nk  = nk;
+	}
+	
+	public List<String[]> evaluate(Query q) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
@@ -87,14 +100,12 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		// step 1: entity search
 		timings.start(Timings.STEP_ES);
-		if (m_cutoff < 0)
-			transformedGraph = m_searcher.searchEntities(transformedGraph);
-		else
-			transformedGraph = m_searcher.searchEntities(transformedGraph, m_cutoff);
+//		transformedGraph = m_searcher.searchEntities(transformedGraph);
+		transformedGraph = m_el.loadEntities(transformedGraph, m_ns);
 		timings.end(Timings.STEP_ES);
 		
 		// step 2: approximate structure matching
-		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, 2);
+		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, m_nk, m_ns);
 		asm.setTimings(timings);
 		asm.setCounters(counters);
 		
@@ -112,19 +123,20 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		Set<String> entityNodes = new HashSet<String>();
 		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-			if (edge.getLabel().equals(RDF.TYPE.toString())) {
-				String srcNode = queryGraph.getSourceNode(edge).getName();
-				TransformedGraphNode node = transformedGraph.getNode(srcNode);
-				log.debug(node.getAttributeQueries());
-				if (node.getAttributeQueries().size() > 0 && !node.getAttributeQueries().keySet().contains(RDF.TYPE.toString())) {
-					processedTypeEdges.add(edge);
-					entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
-				}
-				else {
-					deferredTypeEdges.add(edge);
-				}
-			}
-			else if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()))
+//			if (edge.getLabel().equals(RDF.TYPE.toString())) {
+//				String srcNode = queryGraph.getSourceNode(edge).getName();
+//				TransformedGraphNode node = transformedGraph.getNode(srcNode);
+//				log.debug(node.getAttributeQueries());
+//				if (node.getAttributeQueries().size() > 0) {// && !node.getAttributeQueries().keySet().contains(RDF.TYPE.toString())) {
+//					processedTypeEdges.add(edge);
+//					entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
+//				}
+//				else {
+//					deferredTypeEdges.add(edge);
+//				}
+//			}
+//			else 
+				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()))
 				entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
 		}
 		
@@ -151,7 +163,8 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				
 				String nodeLabel = asmResult.getColumnName(i);
 
-				String extNode = ele.getExtensionId() + nodeLabel;
+				String eleExt = m_es.getDataItem(IndexDescription.SES, ele.getUri());
+				String extNode = eleExt + nodeLabel;
 				
 				if (!extNode2entity.containsKey(extNode)) 
 					extNode2entity.put(extNode, new HashSet<String>());
@@ -160,7 +173,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				if (!node2exts.containsKey(nodeLabel))
 				node2exts.put(nodeLabel, new HashSet<String>());
 			
-				if (!node2exts.get(nodeLabel).add(ele.getExtensionId()))
+				if (!node2exts.get(nodeLabel).add(eleExt))
 					continue;
 			
 				if (!node2columns.containsKey(nodeLabel)) {
@@ -188,7 +201,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 				}
 				
 				String[] newRow = new String [columns.size()];
-				newRow[0] = ele.getExtensionId();
+				newRow[0] = eleExt;
 				for (int j = 1; j < columns.size(); j++)
 					newRow[j] = "bxx" + nodeLabel + j;
 				imTables[i].addRow(newRow);
@@ -219,7 +232,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		Map<String,Set<String>> entity2constants = new HashMap<String,Set<String>>();
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !deferredTypeEdges.contains(edge)) {
+			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())){// && !deferredTypeEdges.contains(edge)) {
 				qe.imVisited(edge);
 				
 				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
@@ -253,7 +266,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 			
 			for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 				// assume edges with constants to be already processed
-				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()) && !deferredTypeEdges.contains(edge)) {
+				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())){// && !deferredTypeEdges.contains(edge)) {
 					qe.visited(edge);
 					
 					// update classes
@@ -299,6 +312,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 					rows += table.rowCount();
 	//				log.debug(table.toDataString(false));
 				}
+				log.debug(ec);
 			}
 	//		log.debug(rows + " " + rows2);
 			qe.setEvaluationClasses(classes);

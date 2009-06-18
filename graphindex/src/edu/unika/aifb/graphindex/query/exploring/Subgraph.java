@@ -72,9 +72,9 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 			}
 		}	
 		if (start != null)
-//		
-		m_cost = getLongestPath(start, new HashSet<String>());
-//		log.debug(" " + m_cost);
+			m_cost = getLongestPath(start, new HashSet<String>()) * 2;
+
+		//		log.debug(" " + m_cost);
 //		m_cost = edgeSet().size();
 //		log.debug(" " + m_cost);
 	}

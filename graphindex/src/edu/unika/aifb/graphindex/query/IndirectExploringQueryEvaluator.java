@@ -85,6 +85,8 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 //		m_queryMatcher.setCounters(counters);
 //		m_queryValidator.setTimings(timings);
 //		m_queryValidator.setCounters(counters);
+		m_schemaMatcher.setTimings(timings);
+		m_schemaMatcher.setCounters(counters);
 		m_queryIndex.getCollector().addTimings(timings);
 		m_queryIndex.getCollector().addCounters(counters);
 		GTable.timings = timings;
@@ -110,11 +112,13 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 
 		counters.set(Counters.QT_QUERIES, queries.size());
 
+		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
+		
 		timings.start(Timings.STEP_QA);
 		// execute queries
-		for (int i = 0; i < Math.min(1, indexMatches.size()); i++) {
+		for (int i = 0; i < numberOfQueries; i++) {
 			Query q = queries.get(i);
-			counters.set(Counters.QT_QUERY_SIZE, q.getLiterals().size());
+			counters.set(Counters.QT_QUERY_EDGES, q.getLiterals().size());
 			q.createQueryGraph(m_queryIndex);
 			QueryExecution qe = new QueryExecution(q, m_queryIndex);
 			log.debug(q);

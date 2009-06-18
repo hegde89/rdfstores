@@ -498,7 +498,8 @@ public class LargeRCP {
 		List<String> properties = new ArrayList<String>(m_backwardEdges);
 		Collections.sort(properties);
 //		createPartition(blocks, properties, pathLength, false);
-		createPartitionSimple(blocks, properties, pathLength, false);
+		if (properties.size() > 0)
+			createPartitionSimple(blocks, properties, pathLength, false);
 
 		System.gc();
 
@@ -509,7 +510,8 @@ public class LargeRCP {
 		properties = new ArrayList<String>(m_forwardEdges);
 		Collections.sort(properties);
 //		createPartition(blocks, properties, pathLength, true);
-		createPartitionSimple(blocks, properties, pathLength, true);
+		if (properties.size() > 0)
+			createPartitionSimple(blocks, properties, pathLength, true);
 
 //		writePartition(p, partitionFile, graphFile, blockFile, true);
 //		if (m_ignoreDataValues)

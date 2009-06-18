@@ -101,6 +101,7 @@ public class QueryLoader {
 		int prunableQueries = 0;
 		String input;
 		String prefix = new File(filename).getName();
+		boolean inQuery = false;
 		while ((input = in.readLine()) != null) {
 			input = input.trim();
 		
@@ -131,8 +132,9 @@ public class QueryLoader {
 				currentQuery = "";
 				removeNodes = new HashSet<String>();
 				selectNodes = new ArrayList<String>();
+				inQuery = true;
 			}
-			else {
+			else if (inQuery) {
 				if (input.startsWith("select:")) {
 					String[] t = input.split(" ");
 					for (int i = 1; i < t.length; i++)
@@ -145,15 +147,19 @@ public class QueryLoader {
 				}
 				else if (!input.equals(""))
 					currentQuery += input + "\n";
+				else
+					inQuery = false;
 			}
 			
 		}
 		
-		Query q = createQuery(currentQueryName, currentQuery, selectNodes);
-		if (q != null) {
-			queries.add(q);
-			if (q.getRemovedNodes().size() > 0)
-				prunableQueries++;
+		if (currentQuery != null && !currentQuery.equals("")) {
+			Query q = createQuery(currentQueryName, currentQuery, selectNodes);
+			if (q != null) {
+				queries.add(q);
+				if (q.getRemovedNodes().size() > 0)
+					prunableQueries++;
+			}
 		}
 		
 		// the "requested" edge sets are the minimal sets to support maximal pruning 

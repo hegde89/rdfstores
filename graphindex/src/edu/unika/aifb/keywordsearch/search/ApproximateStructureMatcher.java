@@ -10,6 +10,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.keywordsearch.KeywordElement;
@@ -24,17 +25,20 @@ public class ApproximateStructureMatcher {
 	private Set<String> m_nodesWithNoEntities;
 	private TransformedGraphNode m_startNode;
 	private GTable<KeywordElement> m_table;
+	private NeighborhoodStorage m_ns;
 	
 	private Timings m_timings;
 	private Counters m_counters;
+
 	
 	private static final Logger log = Logger.getLogger(ApproximateStructureMatcher.class);
 	
-	public ApproximateStructureMatcher(TransformedGraph graph, int hops) {
+	public ApproximateStructureMatcher(TransformedGraph graph, int hops, NeighborhoodStorage ns) {
 		m_graph = graph;
 		m_nodesWithNoEntities = new HashSet<String>();
 		m_startNode = computeCentricNode();
 		m_hops = hops;
+		m_ns = ns;
 	}
 	
 	public TransformedGraphNode computeCentricNode() {

@@ -54,6 +54,7 @@ import edu.unika.aifb.graphindex.query.Table;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
@@ -68,6 +69,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 	private LRUCache<Integer,Document> m_docCache;
 	private LRUCache<String,Set<String>> m_dataSetCache;
 	private LRUCache<String,List<String>> m_dataListCache;
+	private LRUCache<String,String> m_dataItemCache;
 	private Timings m_timings;
 //	private Map<String,Integer> m_queriesFromDisk, m_queriesFromCache;
 	private int m_docCacheHits;
@@ -92,7 +94,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			m_searcher = new IndexSearcher(m_reader);
 			
 			if (m_manager != null && m_manager.getIndex() != null) {
-				log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
+//				log.info("doc cache size: " + m_manager.getIndex().getDocumentCacheSize());
 				m_docCache = new LRUCache<Integer,Document>(m_manager.getIndex().getDocumentCacheSize());
 			}
 			else
@@ -100,6 +102,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			
 			m_dataSetCache = new LRUCache<String,Set<String>>(50000);
 			m_dataListCache = new LRUCache<String,List<String>>(50000);
+			m_dataItemCache = new LRUCache<String,String>(50000);
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -352,6 +355,31 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 		m_timings.end(Timings.LOAD_DATA_SET);
 		return values;
 	}
+	
+	public String getDataItem(IndexDescription index, String... indexFields) throws StorageException {
+		m_timings.start(Timings.LOAD_DATA_ITEM);
+
+		String query = concat(indexFields, indexFields.length);
+		String item = m_dataItemCache.get(query);
+		if (item != null) {
+			m_timings.end(Timings.LOAD_DATA_ITEM);
+			return item;
+		}
+		
+		TermQuery tq = new TermQuery(new Term(index.getIndexFieldName(), query));
+
+		List<Integer> docIds = getDocumentIds(tq);
+		if (docIds.size() > 0) {
+			List<String> values = loadDocument(docIds.get(0), index);
+			if (values.size() > 0)
+				item = values.get(0);
+		}
+		
+		m_dataItemCache.put(query, item);
+		
+		m_timings.end(Timings.LOAD_DATA_ITEM);
+		return item;
+	}
 
 	public void addData(IndexDescription index, String indexKey, List<String> values, boolean sort) throws StorageException {
 		if (sort)
@@ -435,6 +463,17 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 			while ((s = splitter.next()) != null)
 				values.add(s);
 		}
+		return values;
+	}
+	
+	private List<String> loadDocument(int docId, IndexDescription index) throws StorageException {
+		List<String> values = new ArrayList<String>(100);
+		Document doc = getDocument(docId);
+
+		StringSplitter splitter = new StringSplitter(doc.getField(index.getValueFieldName()).stringValue(), "\n");
+		String s;
+		while ((s = splitter.next()) != null)
+			values.add(s);
 		return values;
 	}
 	

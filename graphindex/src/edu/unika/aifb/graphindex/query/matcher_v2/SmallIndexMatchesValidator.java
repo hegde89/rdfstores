@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.query.matcher_v2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -310,6 +311,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	
 	// case 1 a,d: target node is matched, source is not
 	private List<EvaluationClass> evaluateTargetMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingTarget, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
+		log.debug("target matched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
@@ -374,6 +376,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	// case 1 b,c: source node is matched, target is not
 	private List<EvaluationClass> evaluateSourceMatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingSource, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
+		log.debug("source matched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
@@ -399,12 +402,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					if (!values.contains(srcRow[srcCol])) {
 						GTable<String> t2 = m_es.getIndexTable(m_idxPSESO, srcExt, property, srcRow[srcCol]);
 						
-						for (String[] row : t2) {
-//							boolean all = m_es.getDataItem(m_idxSES, row[1]).equals(trgExt);
-//							
-//							if (all && (!targetConstant || row[1].equals(trgLabel)))
-								table.addRow(row);
-						}
+						if (!targetConstant)
+							table.addRows(t2.getRows());
+						else
+							for (String[] row : t2)
+								if (row[1].equals(trgLabel))
+									table.addRow(row);
+						
 						values.add(srcRow[srcCol]);
 					}
 				}
@@ -431,6 +435,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	// case 2: neither node is matched
 	private List<EvaluationClass> evaluateUnmatched(GraphEdge<QueryNode> edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, Set<String> sourcesOfRemoved, Map<String,Set<String>> removedProperties) throws StorageException {
+		log.debug("both unmatched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 		if (Util.isConstant(trgLabel)) {
 			// use ESPO index to load triples
@@ -499,16 +504,19 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				
 				String trgExt = ec.getMatch(trgLabel);
 				
-//				log.debug(ec.getMappings().toDataString());
 				for (String[] row : prevTable) {
 					if (!values.contains(row[col])) {
-//						table.addRows(m_es.getIndexTable(index, srcExt, property, row[col]).getRows());
 						GTable<String> t2 = m_es.getIndexTable(index, srcExt, property, row[col]);
 						if (sourcesOfRemoved.contains(trgLabel)) {
 							for (String[] t2row : t2) {
 								if (m_es.getDataItem(m_idxSES, t2row[1]).equals(trgExt))
 									table.addRow(t2row);
 							}
+						}
+						else if (srcLabel.equals("?x1")) {
+							for (String[] t2row : t2)
+								if (m_es.getDataItem(m_idxSES, t2row[0]).equals(srcExt))
+									table.addRow(t2row);
 						}
 						else
 							table.addRows(t2.getRows());
@@ -520,13 +528,19 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				if (table.rowCount() == 0)
 					continue;
 				
-				sourceTable.sort(srcLabel, true);
-				table.sort(srcLabel, true);
-				table = Tables.mergeJoin(sourceTable, table, srcLabel);
-				
-				targetTable.sort(trgLabel, true);
-				table.sort(trgLabel);
-				table = Tables.mergeJoin(targetTable, table, trgLabel);
+				if (sourceTable == targetTable) {
+					table = Tables.mergeJoin(sourceTable, table, Arrays.asList(srcLabel, trgLabel));
+//					table = Tables.hashJoin(sourceTable, table, Arrays.asList(srcLabel, trgLabel));
+				}
+				else {
+					sourceTable.sort(srcLabel, true);
+					table.sort(srcLabel, true);
+					table = Tables.mergeJoin(sourceTable, table, srcLabel);
+					
+					targetTable.sort(trgLabel, true);
+					table.sort(trgLabel);
+					table = Tables.mergeJoin(targetTable, table, trgLabel);
+				}
 
 				if (table.rowCount() > 0) {
 					ec.getResults().add(table);

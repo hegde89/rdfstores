@@ -24,14 +24,22 @@ import edu.unika.aifb.keywordsearch.TransformedGraphNode;
 import edu.unika.aifb.keywordsearch.impl.Entity;
 
 public class EntityLoader {
-	
+	private int m_cutoff = -1;
 	private LuceneStorage m_ls;
 	
 	private static final Logger log = Logger.getLogger(EntityLoader.class);
 	
-	public EntityLoader(String directory) throws StorageException {
-		m_ls = new LuceneStorage(directory);
+	public EntityLoader(LuceneStorage ls) throws StorageException {
+		m_ls = ls;
+	}
+	
+	public EntityLoader(String dir) throws StorageException {
+		m_ls = new LuceneStorage(dir);
 		m_ls.initialize(false, true);
+	}
+	
+	public void setCutoff(int cutoff) {
+		m_cutoff = cutoff;
 	}
 	
 	public TransformedGraph loadEntities(TransformedGraph tg, NeighborhoodStorage ns) throws IOException, StorageException {
@@ -82,9 +90,14 @@ public class EntityLoader {
 				
 				List<KeywordElement> entities = new ArrayList<KeywordElement>(table.rowCount());
 				int col = table.getColumn(node.getNodeName());
+				int i = 0;
 				for (String[] row : table) {
 					entities.add(new KeywordElement(new Entity(row[col]), KeywordElement.ENTITY, ns));
+					i++;
+					if (m_cutoff > 0 && i >= m_cutoff)
+						break;
 				}
+				log.debug("entities after cutoff: " + entities.size());
 				node.setEntities(entities);
 			}
 		}

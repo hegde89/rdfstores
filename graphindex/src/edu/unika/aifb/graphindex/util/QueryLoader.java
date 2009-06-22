@@ -16,6 +16,9 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.StructureIndex;
 import edu.unika.aifb.graphindex.query.QueryParser;
+import edu.unika.aifb.graphindex.query.model.Constant;
+import edu.unika.aifb.graphindex.query.model.Individual;
+import edu.unika.aifb.graphindex.query.model.Literal;
 import edu.unika.aifb.graphindex.query.model.Query;
 
 public class QueryLoader {
@@ -26,6 +29,7 @@ public class QueryLoader {
 	private Set<String> m_fwEdgeSet;
 	private Set<String> m_requiredBwEdgeSet;
 	private Set<String> m_requiredFwEdgeSet;
+	private boolean m_entityNodesAsSelectNodes;
 	
 	private static final Logger log = Logger.getLogger(QueryLoader.class);
 
@@ -36,6 +40,11 @@ public class QueryLoader {
 		m_index = index;
 		m_namespaces = new HashMap<String,String>();
 		m_parser = new QueryParser(m_namespaces);
+		m_entityNodesAsSelectNodes = false;
+	}
+	
+	public void setEntityNodesAsSelectNodes(boolean enAsSN) {
+		m_entityNodesAsSelectNodes = enAsSN;
 	}
 	
 	public Set<String> getForwardEdgeSet() {
@@ -50,6 +59,17 @@ public class QueryLoader {
 		Query q = m_parser.parseQuery(query);
 		q.setName(queryName);
 //		q.setRemoveNodes(removeNodes);
+		if (m_entityNodesAsSelectNodes) {
+			Set<String> select = new HashSet<String>();
+			for (Literal l : q.getLiterals()) {
+				if (l.getObject() instanceof Constant || l.getObject() instanceof Individual)
+					select.add(l.getSubject().toString());
+			}
+//			log.debug("entity nodes as select nodes: " + queryName + " " + select);
+			selectNodes.clear();
+			selectNodes.addAll(select);
+		}
+		
 		q.setSelectVariables(selectNodes);
 
 		// ignore the current edge sets, i.e. calculate prunable 
@@ -69,15 +89,9 @@ public class QueryLoader {
 			return null;
 		}
 		
-		
 		m_fwEdgeSet.addAll(q.getForwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getBackwardEdgeSet());
 		m_bwEdgeSet.addAll(q.getNeutralEdgeSet());
-		
-//		log.debug("query: " + q.getName());
-//		log.debug("  ne: " + q.getNeutralEdgeSet());
-//		log.debug("  bw: " + q.getBackwardEdgeSet());
-//		log.debug("  fw: " + q.getForwardEdgeSet());
 		
 		return q;
 	}

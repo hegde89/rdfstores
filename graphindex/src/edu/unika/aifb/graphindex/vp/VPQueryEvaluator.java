@@ -23,6 +23,7 @@ import edu.unika.aifb.graphindex.graph.Graph;
 import edu.unika.aifb.graphindex.graph.GraphEdge;
 import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
+import edu.unika.aifb.graphindex.query.QueryExecution;
 import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Counters;
@@ -49,6 +50,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 	}
 
 	int loaded = 0;
+	private QueryExecution m_qe;
 	private GTable<String> getTable(Index index, String p, String so, String col1, String col2) throws IOException, StorageException {
 		t.start(Timings.VP_LOAD);
 		GTable<String> table;
@@ -335,8 +337,6 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		final Map<String,Integer> scores = getScores(queryGraph);
 		log.debug(scores);
 
-		final Map<String,Integer> e2s = q.getEvalOrder();
-		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
 			if (m_ls.getObjectCardinality(edge.getLabel()) == null) {
 				log.debug("unknown edge: aborting");
@@ -350,24 +350,9 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 				String s2 = queryGraph.getNode(e2.getSrc()).getSingleMember();
 				String d1 = queryGraph.getNode(e1.getDst()).getSingleMember();
 				String d2 = queryGraph.getNode(e2.getDst()).getSingleMember();
-								
-//				int e1score = (isVariable(s1) ? 1 : 0) + (isVariable(d1) ? 1 : 0);
-//				int e2score = (isVariable(s2) ? 1 : 0) + (isVariable(d2) ? 1 : 0);
 				
 				int e1score = scores.get(s1) * scores.get(d1);
 				int e2score = scores.get(s2) * scores.get(d2);
-				
-//				String es1 = s1 + " " + e1.getLabel() + " " + d1;
-//				String es2 = s2 + " " + e2.getLabel() + " " + d2;
-
-//				if (e2s.get(es1) != null && e2s.get(es2) != null) {
-//					if (e2s.get(es1) < e2s.get(es2))
-//						return -1;
-//					else
-//						return 1;
-//				}
-				
-//				log.debug(e1score + " " + e2score);
 				
 				if (e1score == e2score) {
 					Integer ce1 = m_ls.getObjectCardinality(e1.getLabel());
@@ -386,7 +371,6 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 					return -1;
 				else
 					return 1;
-//				return 0;
 			}
 		});
 
@@ -395,6 +379,29 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		List<ResultArea> results = new ArrayList<ResultArea>();
 		boolean empty = false;
 		Set<String> visited = new HashSet<String>();
+		
+		if (m_qe != null) {
+			toVisit.clear();
+			toVisit.addAll(m_qe.toVisit());
+			if (m_qe.getResultTables() != null) {
+				results.clear();
+				for (GTable<String> resultTable : m_qe.getResultTables()) {
+					ResultArea ra = new ResultArea();
+					ra.setResult(resultTable);
+					
+					for (GraphEdge<QueryNode> edge : m_qe.getVisited()) {
+						String src = queryGraph.getSourceNode(edge).getName();
+						String dst = queryGraph.getTargetNode(edge).getName();
+						if (resultTable.hasColumn(src) && resultTable.hasColumn(dst)) {
+							ra.addEdge(edge, src, dst);
+							visited.add(src);
+							visited.add(dst);
+						}
+					}
+					results.add(ra);
+				}
+			}
+		}
 
 		while (toVisit.size() > 0) {
 			long edgeStart = System.currentTimeMillis();
@@ -610,47 +617,43 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		if (empty) {
 			log.debug("size: 0");
 			m_counters.set(Counters.RESULTS, 0);
-			t.end(Timings.TOTAL_QUERY_EVAL);
+//			t.end(Timings.TOTAL_QUERY_EVAL);
 			return new ArrayList<String[]>();
 		} else {
-			log.debug("size: " + results.get(0).getResult().rowCount());
-			List<String[]> result = new ArrayList<String[]>();
-			Set<String> sigs = new HashSet<String>();
-			GTable<String> table = results.get(0).getResult();
-			
-//			Map<String,Set<String>> node2entity = new HashMap<String,Set<String>>();
-//			node2entity.put("?x2", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course0", "http://www.Department10.University0.edu/Course51", "http://www.Department10.University0.edu/Course53")));
-//			node2entity.put("?x3", new HashSet<String>(Arrays.asList("http://www.Department0.University0.edu/Course50", "http://www.Department10.University0.edu/Course50")));
-//			for (String[] row : table) {
-//				if (node2entity.get("?x2").contains(row[table.getColumn("?x2")]) && node2entity.get("?x3").contains(row[table.getColumn("?x3")])) {
-//					for (String s : row)
-//						System.out.print(s + " ");
-//					System.out.println();
-//				}
-//			}
-			
-			int[] cols = new int [q.getSelectVariables().size()];
-			for (int i = 0; i < q.getSelectVariables().size(); i++)
-				cols[i] = table.getColumn(q.getSelectVariables().get(i));
-			for (String[] row : table) {
-				String[] selectRow = new String [cols.length];
-				StringBuilder sb = new StringBuilder();
-				
-				for (int i = 0; i < cols.length; i++) {
-					selectRow[i] = row[cols[i]];
-					sb.append(row[cols[i]]).append("__");
-				}
-				
-				String sig = sb.toString();
-				if (!sigs.contains(sig)) {
-					sigs.add(sig);
-					result.add(selectRow);
-				}
+			if (m_qe != null) {
+				m_qe.addResult(results.get(0).getResult(), true);
+				return m_qe.getResult().getRows();
 			}
-			t.end(Timings.TOTAL_QUERY_EVAL);
-			m_counters.set(Counters.RESULTS, result.size());
-			log.debug("size: " + result.size());
-			return result;
+			else {
+				log.debug("size: " + results.get(0).getResult().rowCount());
+				List<String[]> result = new ArrayList<String[]>();
+				Set<String> sigs = new HashSet<String>();
+				GTable<String> table = results.get(0).getResult();
+				
+				log.debug(q.getSelectVariables());
+				int[] cols = new int [q.getSelectVariables().size()];
+				for (int i = 0; i < q.getSelectVariables().size(); i++)
+					cols[i] = table.getColumn(q.getSelectVariables().get(i));
+				for (String[] row : table) {
+					String[] selectRow = new String [cols.length];
+					StringBuilder sb = new StringBuilder();
+					
+					for (int i = 0; i < cols.length; i++) {
+						selectRow[i] = row[cols[i]];
+						sb.append(row[cols[i]]).append("__");
+					}
+					
+					String sig = sb.toString();
+					if (!sigs.contains(sig)) {
+						sigs.add(sig);
+						result.add(selectRow);
+					}
+				}
+				t.end(Timings.TOTAL_QUERY_EVAL);
+				m_counters.set(Counters.RESULTS, result.size());
+				log.debug("size: " + result.size());
+				return result;
+			}
 		}
 	}
 	
@@ -667,43 +670,7 @@ public class VPQueryEvaluator implements IQueryEvaluator {
 		return t;
 	}
 
-	// public static void main(String[] args) {
-	// GTable<String> t1 = new GTable<String>("a", "b");
-	// t1.addRow(new String[] { "a", "g1" });
-	// t1.addRow(new String[] { "a", "d1" });
-	// t1.addRow(new String[] { "b", "f1" });
-	// t1.addRow(new String[] { "c", "e1" });
-	// t1.addRow(new String[] { "z", "r1" });
-	//
-	// GTable<String> t2 = new GTable<String>("a", "b");
-	// t2.addRow(new String[] { "a", "a2" });
-	// t2.addRow(new String[] { "b", "d2" });
-	// t2.addRow(new String[] { "b", "f2" });
-	// t2.addRow(new String[] { "d", "e2" });
-	// t2.addRow(new String[] { "f", "r2" });
-	// t2.addRow(new String[] { "t", "g2" });
-	// t2.addRow(new String[] { "y", "x2" });
-	//		
-	// t1.setSortedColumn(0);
-	// t2.setSortedColumn(0);
-	//		
-	// VPQueryEvaluator vp = new VPQueryEvaluator(null);
-	// // GTable<String> t = vp.mergeTables(Arrays.asList(t1, t2), 0);
-	// GTable<String> t = vp.mergeJoin(t1, t2, "a");
-	// for (String[] row : t) {
-	// for (String s : row)
-	// System.out.print(s + " ");
-	// System.out.println();
-	// }
-	// System.out.println();
-	//
-	// vp.sortTable(t, 1);
-	// for (String[] row : t) {
-	// for (String s : row)
-	// System.out.print(s + " ");
-	// System.out.println();
-	// }
-	// System.out.println(t);
-	//		
-	// }
+	public void setQueryExecution(QueryExecution qe) {
+		m_qe = qe;
+	}
 }

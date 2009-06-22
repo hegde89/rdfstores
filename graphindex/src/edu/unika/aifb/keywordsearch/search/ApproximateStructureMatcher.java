@@ -195,9 +195,9 @@ public class ApproximateStructureMatcher {
 			joinedTable.sort(filterNode.getNodeName());
 			m_table = mergeJoin(m_table, joinedTable, filterNode.getNodeName());
 			
-			log.debug("join/filter done");
-			log.debug(filterElements.size() + " " + remainingFilterElements.size());
-			log.debug(elements.size() + " " + allJoinedElements.size());
+//			log.debug("join/filter done");
+//			log.debug(filterElements.size() + " " + remainingFilterElements.size());
+//			log.debug(elements.size() + " " + allJoinedElements.size());
 			
 			node.setEntities(allJoinedElements);
 			
@@ -208,12 +208,12 @@ public class ApproximateStructureMatcher {
 			if(filterNode.getNumOfEntities() == 0)
 				m_nodesWithNoEntities.add(filterNode.getNodeName());
 			
-			log.debug("t_rem: " + t_rem + ", t_join: " + t_join + ", t_reach: " + t_reachable);
+			log.debug("t_reach: " + t_reachable);
 		}
 	}
 	
 	public void DFS(TransformedGraphNode node) {
-		log.debug(" DFS: " + node.getNodeName());
+//		log.debug(" DFS: " + node.getNodeName());
 		node.setVisisted();
 		for(TransformedGraphNode neighbor : node.getNeighbors()) {
 			if(neighbor.isVisited() == true 
@@ -234,7 +234,7 @@ public class ApproximateStructureMatcher {
 			else {
 				neighbor.setFilter(node.getFilter());
 			}	
-			log.debug(" neighbor: " + neighbor);
+//			log.debug(" neighbor: " + neighbor);
 			if(!m_nodesWithNoEntities.contains(neighbor.getNodeName()))
 				neighborhoodJoin(neighbor.getFilter(), neighbor);
 			DFS(neighbor);	
@@ -258,7 +258,7 @@ public class ApproximateStructureMatcher {
 		m_table.setRows(list);
 		m_table.sort(m_startNode.getNodeName());
 		
-		log.debug(" start node: " + m_startNode.getNodeName());
+		log.debug("start node: " + m_startNode.getNodeName());
 		DFS(m_startNode);
 		
 		return m_table;

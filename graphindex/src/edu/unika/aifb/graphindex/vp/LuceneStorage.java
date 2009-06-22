@@ -95,7 +95,7 @@ public class LuceneStorage {
 			for (String prop : (Set<String>)cmap.keySet()) {
 				m_objectCardinalities.put(prop, (Integer)cmap.get(prop));
 			}
-			log.debug("object cards. loaded: " + m_objectCardinalities);
+//			log.debug("object cards. loaded: " + m_objectCardinalities);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}

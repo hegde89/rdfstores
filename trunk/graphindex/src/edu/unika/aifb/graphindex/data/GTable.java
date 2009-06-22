@@ -246,6 +246,22 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 			timings.end(Timings.TBL_SORT);
 	}
 	
+	public void sort(final List<String> columns) {
+		Collections.sort(m_rows, new Comparator<T[]>() {
+			public int compare(T[] o1, T[] o2) {
+				StringBuilder s1 = new StringBuilder(), s2 = new StringBuilder();
+				for (String col : columns) {
+					int idx = getColumn(col);
+					s1.append(o1[idx]);
+					s2.append(o2[idx]);
+				}
+				return s1.toString().compareTo(s2.toString());
+			}
+			
+		});
+		setSortedColumn(columns.get(0));
+	}
+	
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		return super.clone(); // shallow copy

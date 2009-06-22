@@ -62,11 +62,12 @@ public class QueryEvaluator implements IQueryEvaluator {
 		m_index.getCollector().addTimings(m_timings);
 		m_index.getCollector().addCounters(m_counters);
 		
-		long start = System.currentTimeMillis();
+		m_counters.set(Counters.QUERY_EDGES, query.getLiterals().size());
 		m_timings.start(Timings.TOTAL_QUERY_EVAL);
 		
 		List<String[]> result = new ArrayList<String[]>();
 		for (String indexGraph : m_indexReader.getGraphNames()) {
+			m_timings.start(Timings.STEP_IM);
 			QueryExecution qe = new QueryExecution(query, m_index);
 			
 //			VPEvaluator vpe = new VPEvaluator();
@@ -77,7 +78,7 @@ public class QueryEvaluator implements IQueryEvaluator {
 //			log.debug("result: " + qe.getResult().rowCount());
 //			m_counters.reset();
 			
-			qe = new QueryExecution(query, m_index);
+//			qe = new QueryExecution(query, m_index);
 			IndexGraphMatcher matcher = m_matchers.get(indexGraph);
 			
 			matcher.setTimings(m_timings);
@@ -87,10 +88,6 @@ public class QueryEvaluator implements IQueryEvaluator {
 			GTable.timings = m_timings;
 			Tables.timings = m_timings;
 			
-//			qe.getQuery().setRemoveNodes(new HashSet<String>());
-//			qe.getQuery().setForwardSources(new HashSet<String>());
-			
-			m_timings.start(Timings.STEP_IM);
 			matcher.match();
 			m_timings.end(Timings.STEP_IM);
 			
@@ -105,14 +102,14 @@ public class QueryEvaluator implements IQueryEvaluator {
 			
 			m_timings.start(Timings.STEP_DM);
 			m_mlv.validateIndexMatches();
-			m_timings.end(Timings.STEP_DM);
 
-			m_index.getCollector().logStats();
+//			m_index.getCollector().logStats();
 
 			if (qe.getResult().rowCount() > 0)
 				result.addAll(qe.getResult().getRows());
 			
 			qe.finished();
+			m_timings.end(Timings.STEP_DM);
 			
 		}
 		
@@ -120,12 +117,6 @@ public class QueryEvaluator implements IQueryEvaluator {
 		
 		m_counters.set(Counters.RESULTS, result.size());
 		log.debug("size: " + result.size());
-		
-		long end = System.currentTimeMillis();
-		log.info("duration: " + (end - start) / 1000.0);
-		
-
-		((LuceneExtensionStorage)m_es).logStats(log);
 		
 		return result;
 	}

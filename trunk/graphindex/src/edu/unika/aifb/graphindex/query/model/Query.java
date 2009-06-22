@@ -37,7 +37,7 @@ public class Query {
 	private Set<String> m_forwardSources;
 	private int m_longestPathFromConstant = 0;
 	private boolean m_ignoreIndexEdgeSets = false;
-	private ArrayList<List<GraphEdge<QueryNode>>> m_prunedParts;
+	private List<List<GraphEdge<QueryNode>>> m_prunedParts;
 	private static final Logger log = Logger.getLogger(Query.class);
 	
 	public Query(List<String> vars) {
@@ -77,6 +77,10 @@ public class Query {
 	
 	public void setRemoveNodes(Set<String> rn) {
 		m_removeNodes = rn;
+	}
+	
+	public Set<GraphEdge<QueryNode>> getPrunedEdges() {
+		return m_prunedEdges;
 	}
 	
 	public void setSelectVariables(List<String> vars) {
@@ -363,6 +367,10 @@ public class Query {
 		return m_queryGraph;
 	}
 	
+	public List<List<GraphEdge<QueryNode>>> getPrunedParts() {
+		return m_prunedParts;
+	}
+	
 	public String toString() {
 		String s = "(select: " + m_selectVariables + ", remove: " + m_removeNodes + ")\n";
 		String nl = "";
@@ -500,8 +508,13 @@ public class Query {
 			
 			m_removeNodes.add(qn.getName());
 			
-			if (visited.contains(n))
+			if (visited.contains(n)) {
+				if (n == srcId && level > 0) {
+					fixedNodes.addAll(currentPath);
+					m_neutralEdgeSet.addAll(currentLabelPath);
+				}
 				continue;
+			}
 			visited.add(n);
 			for (int i = currentPath.size() - 1; i >= level; i--) {
 				currentPath.remove(i);
@@ -519,16 +532,18 @@ public class Query {
 			
 			int toVisitSize = toVisit.size();
 			
-			for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
-				if (!visited.contains(edge.getSrc())) {
-					toVisit.push(new Integer[] {edge.getSrc(), level + 1});
-					currentLabelPath.add(edge.getLabel());
+			if (!Util.isConstant(qn.getName())) {
+				for (GraphEdge<QueryNode> edge : g.incomingEdges(n)) {
+					if (!visited.contains(edge.getSrc())) {
+						toVisit.push(new Integer[] {edge.getSrc(), level + 1});
+						currentLabelPath.add(edge.getLabel());
+					}
 				}
-			}
-			for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
-				if (!visited.contains(edge.getDst())) {
-					toVisit.push(new Integer[] {edge.getDst(), level + 1});
-					currentLabelPath.add(edge.getLabel());
+				for (GraphEdge<QueryNode> edge : g.outgoingEdges(n)) {
+					if (!visited.contains(edge.getDst())) {
+						toVisit.push(new Integer[] {edge.getDst(), level + 1});
+						currentLabelPath.add(edge.getLabel());
+					}
 				}
 			}
 //				log.debug(toVisit);

@@ -1,27 +1,18 @@
 package edu.unika.aifb.graphindex;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.graphindex.query.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.query.EntityLoader;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
@@ -31,19 +22,17 @@ import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.QueryLoader;
+import edu.unika.aifb.graphindex.util.Stat;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
-import edu.unika.aifb.graphindex.util.Stat;
 import edu.unika.aifb.graphindex.vp.LuceneStorage;
 import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
 
-public class EvalRunner {
-	private static final Logger log = Logger.getLogger(EvalRunner.class);
+public class CombinedEval {
+	private static final Logger log = Logger.getLogger(CombinedEval.class);
 	
 	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
-		op.accepts("a", "action to perform, comma separated list of: import")
-			.withRequiredArg().ofType(String.class).describedAs("action").withValuesSeparatedBy(',');
 		op.accepts("o", "output directory")
 			.withRequiredArg().ofType(String.class).describedAs("directory");
 		op.accepts("qf", "query file")
@@ -56,43 +45,26 @@ public class EvalRunner {
 			.withRequiredArg().ofType(String.class);
 		op.accepts("r", "repeats")
 			.withRequiredArg().ofType(Integer.class);
-		op.accepts("c", "cutoff")
-			.withRequiredArg().ofType(Integer.class);
-		op.accepts("nh", "neighborhood dir")
-			.withRequiredArg().ofType(String.class);
-		op.accepts("nk", "nk size")
-			.withRequiredArg().ofType(Integer.class);
-		op.accepts("sf", "start from specified query");
 		op.accepts("dc", "drop caches script")
 			.withRequiredArg().ofType(String.class);
 		
 		OptionSet os = op.parse(args);
 		
-		if (!os.has("a") || !os.has("o") || !os.has("s")) {
+		if (!os.has("o") || !os.has("s")) {
 			op.printHelpOn(System.out);
 			return;
 		}
 		
-		String action = (String)os.valueOf("a");
 		String outputDirectory = (String)os.valueOf("o");
-		String neighborhoodDirectory = (String)os.valueOf("nh");
 		String system = (String)os.valueOf("s");
 		String resultFile = (String)os.valueOf("rf");
 		String dropCachesScript = (String)os.valueOf("dc");
 		int reps = os.has("r") ? (Integer)os.valueOf("r") : 1;
-		int cutoff = os.has("c") ? (Integer)os.valueOf("c") : -1;
-		int nk = os.has("nk") ? (Integer)os.valueOf("nk") : 1;
 		
 		log.debug("dir: " + outputDirectory);
-		log.debug("neighborhood: " + neighborhoodDirectory);
-		log.debug("nk: " + nk);
 		log.debug("system: " + system);
 		log.debug("result file: " + resultFile);
 		log.debug("reps: " + reps);
-		log.debug("cutoff: " + cutoff);
-		
-		if (system.equals("spe") && neighborhoodDirectory == null)
-			neighborhoodDirectory = outputDirectory + "/neighborhood";
 
 		String spDirectory = outputDirectory + "/sidx";
 		
@@ -112,17 +84,11 @@ public class EvalRunner {
 			log.error("no query file specified");
 		}
 		
-		List<Stat> timingStats = Arrays.asList(Timings.ASM_REACHABLE, Timings.STEP_ES, Timings.STEP_ASM, 
-			Timings.STEP_IM, Timings.STEP_DM, Timings.TOTAL_QUERY_EVAL);
-		List<Stat> counterStats = Arrays.asList(Counters.ES_CUTOFF, Counters.QUERY_EDGES, Counters.QUERY_DEFERRED_EDGES, 
-			Counters.ASM_RESULT_SIZE, Counters.IM_INDEX_MATCHES, Counters.IM_PROCESSED_EDGES, 
-			Counters.IM_RESULT_SIZE, Counters.DM_REM_EDGES,	Counters.DM_REM_NODES, 
-			Counters.DM_PROCESSED_EDGES, Counters.ES_PROCESSED_EDGES,
-			Counters.INC_PRCS_ES, Counters.INC_PRCS_ASM, Counters.INC_PRCS_SBR,
-			Counters.RESULTS);
+		List<Stat> timingStats = Arrays.asList(Timings.STEP_IM, Timings.STEP_DM, Timings.TOTAL_QUERY_EVAL);
+		List<Stat> counterStats = Arrays.asList(Counters.QUERY_EDGES,  Counters.DM_REM_EDGES,	Counters.DM_REM_NODES, 
+			Counters.DM_PROCESSED_EDGES, Counters.RESULTS);
 
 		QueryLoader ql = new QueryLoader(null);
-		ql.setEntityNodesAsSelectNodes(true);
 		List<Query> qs = ql.loadQueryFile(queryFile);
 	
 		List<String> queryNames = new ArrayList<String>();
@@ -152,20 +118,25 @@ public class EvalRunner {
 					qe = new QueryEvaluator(reader);
 					collector = reader.getIndex().getCollector();
 				}
-				else if (system.equals("spe")) {
+				else if (system.equals("spc")) {
 					reader = new StructureIndexReader(spDirectory);
-					collector = reader.getIndex().getCollector();
-					qe = new IncrementalQueryEvaluator(reader, new EntityLoader(outputDirectory + "/vp"),
-						new LuceneNeighborhoodStorage(neighborhoodDirectory), collector, nk);
-					((IncrementalQueryEvaluator)qe).setCutoff(cutoff);
-				}
-				else if (system.equals("vp")) {
-					collector = new StatisticsCollector();
-					ls = new LuceneStorage(outputDirectory);
+					ls = new LuceneStorage(outputDirectory + "/vp");
 					ls.initialize(false, true);
 					
-					qe = new VPQueryEvaluator(ls, collector);
-					reader = null;
+					collector = reader.getIndex().getCollector();
+
+					qe = new CombinedQueryEvaluator(reader, ls);
+					((CombinedQueryEvaluator)qe).setDoRefinement(true);
+				}
+				else if (system.equals("vp")) {
+					reader = new StructureIndexReader(spDirectory);
+					ls = new LuceneStorage(outputDirectory + "/vp");
+					ls.initialize(false, true);
+					
+					collector = reader.getIndex().getCollector();
+
+					qe = new CombinedQueryEvaluator(reader, ls);
+					((CombinedQueryEvaluator)qe).setDoRefinement(false);
 				}
 				else {
 					qe = null;
@@ -175,7 +146,6 @@ public class EvalRunner {
 				
 				log.info("loading queries");
 				QueryLoader loader = new QueryLoader(reader != null ? reader.getIndex() : null);
-				loader.setEntityNodesAsSelectNodes(true);
 				List<Query> queries = loader.loadQueryFile(queryFile);
 				
 				boolean startFound = false;
@@ -187,11 +157,11 @@ public class EvalRunner {
 					
 					collector.reset();
 					
-					if (system.equals("sp") || system.equals("spe"))
+					if (system.equals("spc") || system.equals("sp"))
 						q.trimPruning(reader.getIndex().getPathLength());
 					
 					List<String[]> results = qe.evaluate(q);
-//					log.info("query " + q.getName() + ": " + results.size() + " results");
+					log.info("query " + q.getName() + ": " + results.size() + " results");
 					
 					Timings t = new Timings();
 					Counters c = new Counters();
@@ -227,5 +197,4 @@ public class EvalRunner {
 		
 		
 	}
-
 }

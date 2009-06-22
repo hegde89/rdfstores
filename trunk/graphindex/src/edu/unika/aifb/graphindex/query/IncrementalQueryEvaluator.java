@@ -28,9 +28,12 @@ import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage.IndexDescription;
 import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.graphindex.vp.LuceneStorage;
+import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
 import edu.unika.aifb.keywordsearch.KeywordElement;
 import edu.unika.aifb.keywordsearch.TransformedGraph;
 import edu.unika.aifb.keywordsearch.TransformedGraphNode;
@@ -49,16 +52,18 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 	private NeighborhoodStorage m_ns;
 	private EntityLoader m_el;
 	private int m_nk = 2;
+	private VPQueryEvaluator m_evaluator;
+	private StatisticsCollector m_collector;
 	
 	private static final Logger log = Logger.getLogger(IncrementalQueryEvaluator.class);
 	
-	public IncrementalQueryEvaluator(StructureIndexReader reader, EntityLoader el, NeighborhoodStorage ns) throws StorageException {
+	public IncrementalQueryEvaluator(StructureIndexReader reader, EntityLoader el, NeighborhoodStorage ns, StatisticsCollector collector, int nk) throws StorageException {
 		m_indexReader = reader;
 		m_index = reader.getIndex();
-		m_es = m_index.getExtensionManager().getExtensionStorage();
 		m_ns = ns;
+		m_es = m_index.getExtensionManager().getExtensionStorage();
 		
-		for (String ig : m_indexReader.getGraphNames()) {
+		for (String ig : reader.getGraphNames()) {
 			m_matcher = new SmallIndexGraphMatcher(m_index, ig);
 			m_matcher.initialize();
 			break;
@@ -66,6 +71,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 
 		m_validator = new SmallIndexMatchesValidator(m_index, m_index.getCollector());
 		m_el = el;
+		m_nk = nk;
 	}
 	
 	public void setCutoff(int cutoff) {
@@ -89,6 +95,7 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		GTable.timings = timings;
 		Tables.timings = timings;
 
+		counters.set(Counters.ES_CUTOFF, m_cutoff);
 		log.info("evaluating...");
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 		
@@ -100,9 +107,17 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		
 		// step 1: entity search
 		timings.start(Timings.STEP_ES);
-//		transformedGraph = m_searcher.searchEntities(transformedGraph);
+		m_el.setCutoff(m_cutoff);
 		transformedGraph = m_el.loadEntities(transformedGraph, m_ns);
 		timings.end(Timings.STEP_ES);
+		
+		Map<String,Set<KeywordElement>> esSets = new HashMap<String,Set<KeywordElement>>();
+		for (TransformedGraphNode tgn : transformedGraph.getNodes()) {
+			if (tgn.getEntities() != null)
+				esSets.put(tgn.getNodeName(), new HashSet<KeywordElement>(tgn.getEntities()));
+			else
+				esSets.put(tgn.getNodeName(), new HashSet<KeywordElement>());
+		}
 		
 		// step 2: approximate structure matching
 		ApproximateStructureMatcher asm = new ApproximateStructureMatcher(transformedGraph, m_nk, m_ns);
@@ -116,231 +131,187 @@ public class IncrementalQueryEvaluator implements IQueryEvaluator {
 		counters.set(Counters.ASM_RESULT_SIZE, asmResult.rowCount());
 		log.debug("asm result table: " + asmResult);
 
-		timings.start(Timings.STEP_ASM2IM);
+		timings.start(Timings.STEP_IM);
 		
-		List<GraphEdge<QueryNode>> deferredTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
-		List<GraphEdge<QueryNode>> processedTypeEdges = new ArrayList<GraphEdge<QueryNode>>();
 		Set<String> entityNodes = new HashSet<String>();
+		Set<String> constants = new HashSet<String>();
 		
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-//			if (edge.getLabel().equals(RDF.TYPE.toString())) {
-//				String srcNode = queryGraph.getSourceNode(edge).getName();
-//				TransformedGraphNode node = transformedGraph.getNode(srcNode);
-//				log.debug(node.getAttributeQueries());
-//				if (node.getAttributeQueries().size() > 0) {// && !node.getAttributeQueries().keySet().contains(RDF.TYPE.toString())) {
-//					processedTypeEdges.add(edge);
-//					entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
-//				}
-//				else {
-//					deferredTypeEdges.add(edge);
-//				}
-//			}
-//			else 
-				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember()))
+			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
 				entityNodes.add(queryGraph.getSourceNode(edge).getSingleMember());
+				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
+			}
 		}
 		
-		log.debug("processed type edges: " + processedTypeEdges);
-		log.debug("deferred type edges: " + deferredTypeEdges);
 		log.debug("entity nodes: " + entityNodes);
-		counters.set(Counters.QUERY_DEFERRED_EDGES, deferredTypeEdges.size());
+		log.debug("constants: " + constants);
+		
+		if (asmResult.columnCount() < entityNodes.size() || asmResult.rowCount() == 0) {
+			log.error("not enough nodes from ASM, probably nk of this index too small for this query");
+			timings.end(Timings.STEP_IM);
+			timings.end(Timings.TOTAL_QUERY_EVAL);
+			return new ArrayList<String[]>();
+		}
 		
 		// result of ASM step, mapping query node labels to extensions
 		// list of entities with associated extensions
 		
-		Map<String,Set<String>> extNode2entity  = new HashMap<String,Set<String>>();
-		Map<String,List<String>> node2columns = new HashMap<String,List<String>>();
-		Map<String,Set<String>> node2exts = new HashMap<String,Set<String>>();
-		
-		GTable<String>[] imTables = new GTable [asmResult.columnCount()];
+		List<String> columns = new ArrayList<String>();
+		columns.addAll(Arrays.asList(asmResult.getColumnNames()));
+		columns.addAll(constants);
+		GTable<String> resultTable = new GTable<String>(columns);
+		GTable<String> matchTable = new GTable<String>(columns);
+
+		Set<String> matchSignatures = new HashSet<String>(asmResult.rowCount() / 4);
+		Map<String,List<String[]>> matchRows = new HashMap<String,List<String[]>>(asmResult.rowCount() / 4);
 		
 		for (KeywordElement[] row : asmResult) {
+			String[] resultRow = new String [resultTable.columnCount()];
+			String[] matchRow = new String [matchTable.columnCount()];
+			
+			StringBuilder matchSignature = new StringBuilder();
 			for (int i = 0; i < row.length; i++) {
 				KeywordElement ele = row[i];
+				String node = asmResult.getColumnName(i);
+				if (!node.equals(resultTable.getColumnName(i)))
+					log.error("whut");
 				
-				if (ele == null)
-					continue;
-				
-				String nodeLabel = asmResult.getColumnName(i);
-
-				String eleExt = m_es.getDataItem(IndexDescription.SES, ele.getUri());
-				String extNode = eleExt + nodeLabel;
-				
-				if (!extNode2entity.containsKey(extNode)) 
-					extNode2entity.put(extNode, new HashSet<String>());
-				extNode2entity.get(extNode).add(ele.getUri());
-				
-				if (!node2exts.containsKey(nodeLabel))
-				node2exts.put(nodeLabel, new HashSet<String>());
-			
-				if (!node2exts.get(nodeLabel).add(eleExt))
-					continue;
-			
-				if (!node2columns.containsKey(nodeLabel)) {
-					List<String> columns = new ArrayList<String>();
-					
-					columns.add(nodeLabel);
-					TransformedGraphNode node = transformedGraph.getNode(nodeLabel);
-					for (Collection<String> coll : node.getAttributeQueries().values()) {
-						columns.addAll(coll);
-						counters.inc(Counters.ES_PROCESSED_EDGES);
-					}
-					
-					for (String concept : node.getTypeQueries()) {
-						columns.add(concept);
-						counters.inc(Counters.ES_PROCESSED_EDGES);
-					}
-					
-					node2columns.put(nodeLabel, columns);
-				}
-				
-				List<String> columns = node2columns.get(nodeLabel);
-				
-				if (imTables[i] == null) {
-					imTables[i] = new GTable<String>(columns);
-				}
-				
-				String[] newRow = new String [columns.size()];
-				newRow[0] = eleExt;
-				for (int j = 1; j < columns.size(); j++)
-					newRow[j] = "bxx" + nodeLabel + j;
-				imTables[i].addRow(newRow);
+				resultRow[i] = ele.getUri();
+				matchRow[i] = m_es.getDataItem(IndexDescription.SES, ele.getUri());
+				matchSignature.append(matchRow[i]).append("_");
 			}
+			
+			for (int i = row.length; i < resultTable.columnCount(); i++) {
+				resultRow[i] = resultTable.getColumnName(i);
+				matchRow[i] = "bxx" + i;
+			}
+			
+			resultTable.addRow(resultRow);
+			
+			String sig = matchSignature.toString();
+			if (matchSignatures.add(sig))
+				matchTable.addRow(matchRow);
+			
+			List<String[]> rows = matchRows.get(sig);
+			if (rows == null) {
+				rows = new ArrayList<String[]>(asmResult.rowCount() / 2);
+				matchRows.put(sig, rows);
+			}
+			rows.add(resultRow);
 		}
-		
-		List<GTable<String>> matchTables = new ArrayList<GTable<String>>();
-		int asmIndexMatches = 0;
-		for (GTable<String> table : imTables)
-			if (table != null) {
-				matchTables.add(table);
-				asmIndexMatches += table.rowCount();
-			}
-		
-		counters.set(Counters.ASM_INDEX_MATCHES, asmIndexMatches / matchTables.size());
-		log.debug("match tables: " + matchTables);
 		
 		q.setSelectVariables(new ArrayList<String>(entityNodes));
 		q.createQueryGraph(m_index);
 
 		// step 3: structure-based refinement
 		QueryExecution qe = new QueryExecution(q, m_index);
-//		qe.getQuery().setRemoveNodes(new HashSet<String>());
-//		qe.getQuery().setForwardSources(new HashSet<String>());
-		qe.setMatchTables(matchTables);
-		
-		Set<String> constants = new HashSet<String>();
-		Map<String,Set<String>> entity2constants = new HashMap<String,Set<String>>();
 		for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-			// assume edges with constants to be already processed
-			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())){// && !deferredTypeEdges.contains(edge)) {
+			if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())) {
+				qe.visited(edge);
 				qe.imVisited(edge);
-				
-				constants.add(queryGraph.getTargetNode(edge).getSingleMember());
-				
-				if (!entity2constants.containsKey(queryGraph.getSourceNode(edge).getName()))
-					entity2constants.put(queryGraph.getSourceNode(edge).getName(), new HashSet<String>());
-				entity2constants.get(queryGraph.getSourceNode(edge).getName()).add(queryGraph.getTargetNode(edge).getName());
 			}
 		}
 		
-		log.debug("im visited: " + qe.getIMVisited().size() + ", " + qe.getIMVisited());
-
-		timings.end(Timings.STEP_ASM2IM);
-
-		m_matcher.setQueryExecution(qe);
+		qe.setMatchTables(new ArrayList<GTable<String>>(Arrays.asList(matchTable)));
 		
-		timings.start(Timings.STEP_IM);
+		m_matcher.setQueryExecution(qe);
 		m_matcher.match();
 		timings.end(Timings.STEP_IM);
-
+		
 		log.debug(qe.getIndexMatches());
 		
-		if (qe.getIndexMatches() != null) {
-			timings.start(Timings.STEP_IM2DM);
-
-			// step 4: result computation
-			// add entites from remaining extensions to an intermediate result set
-			
-			List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
-			classes.add(new EvaluationClass(qe.getIndexMatches()));
-			
-			for (GraphEdge<QueryNode> edge : queryGraph.edges()) {
-				// assume edges with constants to be already processed
-				if (Util.isConstant(queryGraph.getTargetNode(edge).getSingleMember())){// && !deferredTypeEdges.contains(edge)) {
-					qe.visited(edge);
-					
-					// update classes
-					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
-					for (EvaluationClass ec : classes) {
-						newClasses.addAll(ec.addMatch(queryGraph.getTargetNode(edge).getName(), true, null, null));
-					}
-					classes.addAll(newClasses);
-					newClasses.clear();
-					for (EvaluationClass ec : classes) {
-						newClasses.addAll(ec.addMatch(queryGraph.getSourceNode(edge).getName(), false, null, null));
-					}
-					classes.addAll(newClasses);
-				} 
-			}
-			
-			log.debug("dm visited: " + qe.getVisited().size() + ", " + qe.getVisited());
-			
-			int rows = 0;
+		timings.start(Timings.STEP_DM);
+		List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
+		classes.add(new EvaluationClass(qe.getIndexMatches()));
+		
+		for (String constant : constants) {
+			List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 			for (EvaluationClass ec : classes) {
-	//			log.debug(ec.getMatches());
-	//			log.debug(ec.getMappings());
-				
-				for (String entityNode : entityNodes) {
-					if (!ec.getMappings().hasColumn(entityNode))
-						continue;
-					if (qe.getQuery().getRemovedNodes().contains(entityNode))
-						continue;
-						
-					List<String> columns = new ArrayList<String>(entity2constants.get(entityNode));
-					columns.add(entityNode);
-					GTable<String> table = new GTable<String>(columns);
-					int col = table.getColumn(entityNode);
-	
-					for (String entity : extNode2entity.get(ec.getMatch(entityNode) + entityNode)) {
-						String[] row = new String [entity2constants.get(entityNode).size() + 1];
-						row[col] = entity;
-						for (String constant : entity2constants.get(entityNode))
-							row[table.getColumn(constant)] = constant;
-						table.addRow(row);
-					}
-					ec.getResults().add(table);
-					rows += table.rowCount();
-	//				log.debug(table.toDataString(false));
-				}
-				log.debug(ec);
+				newClasses.addAll(ec.addMatch(constant, true, null, null));
 			}
-	//		log.debug(rows + " " + rows2);
-			qe.setEvaluationClasses(classes);
-			
-			timings.end(Timings.STEP_IM2DM);
-			
-			m_validator.setQueryExecution(qe);
-			((SmallIndexMatchesValidator)m_validator).setIncrementalState(m_searcher, deferredTypeEdges);
-	
-			timings.start(Timings.STEP_DM);
-			m_validator.validateIndexMatches();
-			timings.end(Timings.STEP_DM);
+			classes.addAll(newClasses);					
 		}
-		else
-			qe.addResult(new GTable<String>(qe.getQuery().getSelectVariables()), false);
+		
+		for (String node : entityNodes) {
+			List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
+			for (EvaluationClass ec : classes) {
+				newClasses.addAll(ec.addMatch(node, false, null, null));
+			}
+			classes.addAll(newClasses);					
+		}
+		
+		GTable<String> resultsAfterIM = new GTable<String>(resultTable, false);
+		int rowsAfterIM = 0;
+		for (EvaluationClass ec : classes) {
+			StringBuilder sig = new StringBuilder();
+			for (String col : asmResult.getColumnNames())
+				sig.append(ec.getMatch(col)).append("_");
+			
+			GTable<String> table = new GTable<String>(resultTable.getColumnNames());
+			table.addRows(matchRows.get(sig.toString()));
+			resultsAfterIM.addRows(matchRows.get(sig.toString()));
+			ec.getResults().add(table);
+			
+			rowsAfterIM += table.rowCount();
+		}
+		
+		counters.set(Counters.IM_RESULT_SIZE, rowsAfterIM);
+		
+		qe.setEvaluationClasses(classes);
+		
+		m_validator.setQueryExecution(qe);
+		m_validator.validateIndexMatches();
 		
 		qe.finished();
 		log.debug(qe.getResult());
-		
+		timings.end(Timings.STEP_DM);
 		timings.end(Timings.TOTAL_QUERY_EVAL);
 		
-		counters.set(Counters.RESULTS, qe.getResult().rowCount());
+		counters.set(Counters.RESULTS, qe.getResult() != null ? qe.getResult().rowCount() : 0);
 		
-//		m_index.getCollector().logStats();
+		double pES= 0, pASM = 0, pSBR = 0;
+		for (String node : entityNodes) {
+			Set<String> esEntities = new HashSet<String>(), asmEntities = new HashSet<String>();
+			Set<String> imEntites = new HashSet<String>(), finalEntities = new HashSet<String>();
+			
+			for (KeywordElement ele : esSets.get(node)) //transformedGraph.getNode(node).getEntities())
+				esEntities.add(ele.getUri());
+			
+			entitiesForColumn(resultTable, node, asmEntities);
+			entitiesForColumn(resultsAfterIM, node, imEntites);
+			if (qe.getResult() != null)
+				entitiesForColumn(qe.getResult(), node, finalEntities);
+			
+			log.debug("node: " + node + " " + esEntities.size() + " " + asmEntities.size() + " " + imEntites.size() + " " + finalEntities.size());
+//			log.debug(esEntities.containsAll(asmEntities));
+//			log.debug(asmEntities.containsAll(imEntites));
+//			log.debug(imEntites.containsAll(finalEntities));
+			
+			pES += finalEntities.size() / (double)esEntities.size();
+			pASM += finalEntities.size() / (double)asmEntities.size();
+			pSBR += finalEntities.size() / (double)imEntites.size();
+		}
+		pES /= entityNodes.size();
+		pASM /= entityNodes.size();
+		pSBR /= entityNodes.size();
+		log.debug(pES + " " + pASM + " " + pSBR);
 		
-		return qe.getResult().getRows();
+		counters.set(Counters.INC_PRCS_ES, pES);
+		counters.set(Counters.INC_PRCS_ASM, pASM);
+		counters.set(Counters.INC_PRCS_SBR, pSBR);
+		
+		if (qe.getResult() != null)
+			return qe.getResult().getRows();
+		else
+			return null;
 	}
-
+	
+	public void entitiesForColumn(GTable<String> table, String colName, Set<String> entities) {
+		int col = table.getColumn(colName);
+		for (String[] row : table)
+			entities.add(row[col]);
+	}
+	
 	public long[] getTimings() {
 		return null;
 	}

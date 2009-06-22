@@ -5,9 +5,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -256,6 +258,107 @@ public class Tables {
 //		log.debug(result.toDataString());
 //		log.debug("merge join: done in " + (System.currentTimeMillis() - start));
 //		log.debug(" joined (merge) " + left + " " + right + " => " + result + ", " + result.rowCount() + " in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds");
+		if (timings != null)
+			timings.end(Timings.JOIN_MERGE);
+		return result;
+	}
+
+	private static String[] combineRow(String[] lrow, String[] rrow, List<Integer> rightCols) {
+		String[] resultRow = new String[lrow.length + rrow.length - rightCols.size()];
+		System.arraycopy(lrow, 0, resultRow, 0, lrow.length);
+		int rr = lrow.length;
+		for (int i = 0; i < rrow.length; i++) {
+			if (!rightCols.contains(i)) {
+				resultRow[rr] = rrow[i];
+				rr++;
+			}
+		}
+		return resultRow;
+	}
+
+	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, List<String> cols) {
+		return mergeJoin(left, right, cols, null);
+	}
+	
+	private static String sig(String[] row, List<Integer> cols) {
+		StringBuilder sb = new StringBuilder();
+		for (int i : cols) 
+			sb.append(row[i]);
+		return sb.toString();
+	}
+	
+	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, List<String> cols, JoinedRowValidator validator) {
+		if (timings != null)
+			timings.start(Timings.JOIN_MERGE);
+		long start = System.currentTimeMillis();
+		
+		if (right.columnCount() > left.columnCount()) {
+			GTable<String> temp = right;
+			right = left;
+			left = temp;
+		}
+	
+		List<String> resultColumns = new ArrayList<String>();
+		for (String s : left.getColumnNames())
+			resultColumns.add(s);
+		for (String s : right.getColumnNames())
+			if (!cols.contains(s))
+				resultColumns.add(s);
+	
+		List<Integer> leftCols = new ArrayList<Integer>(), rightCols = new ArrayList<Integer>();
+		for (String col : cols) {
+			leftCols.add(left.getColumn(col));
+			rightCols.add(right.getColumn(col));
+		}
+		
+		left.sort(cols);
+		right.sort(cols);
+		
+		if (validator != null)
+			validator.setTables(left, right);
+	
+		GTable<String> result = new GTable<String>(resultColumns, left.rowCount() + right.rowCount());
+	
+		int l = 0, r = 0;
+		while (l < left.rowCount() && r < right.rowCount()) {
+			String[] lrow = left.getRow(l);
+			String[] rrow = right.getRow(r);
+	
+			String lsig = sig(lrow, leftCols);
+			String rsig = sig(rrow, rightCols);
+			int val = lsig.compareTo(rsig); 
+			if (val < 0)
+				l++;
+			else if (val > 0)
+				r++;
+			else {
+				if (validator == null || validator.isValid(lrow, rrow))
+					result.addRow(combineRow(lrow, rrow, rightCols));
+	
+				String[] row;
+				int i = l + 1;
+				while (i < left.rowCount() && sig(left.getRow(i), leftCols).compareTo(rsig) == 0) {
+					row = left.getRow(i);
+					if (validator == null || validator.isValid(row, rrow))
+						result.addRow(combineRow(row, rrow, rightCols));
+					i++;
+				}
+	
+				int j = r + 1;
+				while (j < right.rowCount() && lsig.compareTo(sig(right.getRow(j), rightCols)) == 0) {
+					row = right.getRow(j);
+					if (validator == null || validator.isValid(lrow, row))
+						result.addRow(combineRow(lrow, row, rightCols));
+					j++;
+				}
+	
+				l++;
+				r++;
+			}
+		}
+	
+		result.setSortedColumn(leftCols.get(0));
+
 		if (timings != null)
 			timings.end(Timings.JOIN_MERGE);
 		return result;

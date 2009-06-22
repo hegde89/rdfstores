@@ -207,7 +207,7 @@ public class LuceneExtensionStorage extends AbstractExtensionStorage {
 					uris.add(path[0]);
 				}
 			}
-			log.debug(uris.size() + " extensions");
+//			log.debug(uris.size() + " extensions");
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {

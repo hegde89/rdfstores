@@ -1,6 +1,7 @@
 package edu.unika.aifb.graphindex.query.matcher_v2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,7 +62,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		}
 
 		public boolean isValid(String[] leftRow, String[] rightRow) {
-			if (nopurge)
+			if (nopurge || !m_purgeNeeded)
 				return true;
 
 			m_timings.start(Timings.IM_PURGE);
@@ -223,6 +224,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 
+//			if (toVisit.size() == 0)
+//				m_purgeNeeded = true;
 //			if (toVisit.size() == 0) {
 //				m_validator = new SignatureRowValidator();
 //			}
@@ -257,35 +260,40 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 				result = edgeTable;
 			} else {
 				// case 3: both nodes already processed
-				GTable<String> first, second;
-				String firstCol, secondCol;
-				GTable<String> edgeTable;
-
-				// start with smaller table
-				if (sourceTable.rowCount() < targetTable.rowCount()) {
-					first = sourceTable;
-					firstCol = srcLabel;
-
-					second = targetTable;
-					secondCol = trgLabel;
-
-					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
-				} else {
-					first = targetTable;
-					firstCol = trgLabel;
-
-					second = sourceTable;
-					secondCol = srcLabel;
-
-					edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				if (sourceTable == targetTable) {
+					result = Tables.mergeJoin(sourceTable, getEdgeTable(property, srcLabel, trgLabel, 0), Arrays.asList(srcLabel, trgLabel));
 				}
-
-				first.sort(firstCol, true);
-				result = Tables.mergeJoin(first, edgeTable, firstCol, m_validator);
-
-				result.sort(secondCol, true);
-				second.sort(secondCol, true);
-				result = Tables.mergeJoin(second, result, secondCol, m_validator);
+				else {
+					GTable<String> first, second;
+					String firstCol, secondCol;
+					GTable<String> edgeTable;
+	
+					// start with smaller table
+					if (sourceTable.rowCount() < targetTable.rowCount()) {
+						first = sourceTable;
+						firstCol = srcLabel;
+	
+						second = targetTable;
+						secondCol = trgLabel;
+	
+						edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+					} else {
+						first = targetTable;
+						firstCol = trgLabel;
+	
+						second = sourceTable;
+						secondCol = srcLabel;
+	
+						edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+					}
+	
+					first.sort(firstCol, true);
+					result = Tables.mergeJoin(first, edgeTable, firstCol, m_validator);
+	
+					result.sort(secondCol, true);
+					second.sort(secondCol, true);
+					result = Tables.mergeJoin(second, result, secondCol, m_validator);
+				}
 			}
 
 			if (result.rowCount() == 0) {

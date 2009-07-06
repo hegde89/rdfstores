@@ -44,12 +44,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
 
-import edu.unika.aifb.graphindex.data.ExtensionSegment;
 import edu.unika.aifb.graphindex.data.GTable;
-import edu.unika.aifb.graphindex.data.ListExtensionSegment;
-import edu.unika.aifb.graphindex.data.SetExtensionSegment;
-import edu.unika.aifb.graphindex.data.Subject;
-import edu.unika.aifb.graphindex.data.Triple;
 import edu.unika.aifb.graphindex.query.Table;
 import edu.unika.aifb.graphindex.storage.AbstractExtensionStorage;
 import edu.unika.aifb.graphindex.storage.ExtensionStorage;

@@ -251,13 +251,13 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				}
 
 		}, 
-		new EquivalenceComparator<EdgeElement,Subgraph>() {
+		new EquivalenceComparator() {
 
-			public boolean equivalenceCompare(EdgeElement arg0, EdgeElement arg1, Subgraph arg2, Subgraph arg3) {
-				return arg0.getLabel().equals(arg1.getLabel());
+			public boolean equivalenceCompare(Object arg0, Object arg1, Object arg2, Object arg3) {
+				return ((EdgeElement)arg0).getLabel().equals(((EdgeElement)arg1).getLabel());
 			}
 
-			public int equivalenceHashcode(EdgeElement arg0, Subgraph arg1) {
+			public int equivalenceHashcode(Object arg0, Object arg1) {
 				return arg0.hashCode();
 			}
 		});

@@ -114,12 +114,6 @@ public class BTCImport {
 		
 		log.debug(Util.memory());
 		
-		if (action.equals("optimize")) {
-//			IndexWriter iw = new IndexWriter(FSDirectory.getDirectory(outputDirectory), new WhitespaceAnalyzer(), false);
-//			iw.optimize();
-//			iw.close();
-		}
-		
 		if (action.equals("import")) {
 			List<String> files = os.nonOptionArguments();
 			

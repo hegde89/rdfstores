@@ -1,7 +1,5 @@
 package edu.unika.aifb.graphindex.graph;
 
-import edu.unika.aifb.graphindex.query.matcher_v1.MappingListValidator;
-
 public class GraphEdge<V> {
 
 	private int m_src, m_dst;

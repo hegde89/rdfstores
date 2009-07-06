@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.data.GTable;
-import edu.unika.aifb.graphindex.data.Triple;
 
 
 public interface ExtensionStorage {

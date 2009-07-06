@@ -110,7 +110,7 @@ public class BTCImport {
 		String keywordIndexDirectory = outputDirectory + "/keyword";
 		boolean indexDataValues = os.has("idxdata");
 		int neighborhoodDistance = os.has("nk") ? (Integer)os.valueOf("nk") : 2;
-		int pathLength = os.has("bk") ? (Integer)os.valueOf("bk") : 10;
+		int pathLength = os.has("bk") ? (Integer)os.valueOf("bk") : 1;
 		
 		log.debug(Util.memory());
 		

@@ -1,7 +1,22 @@
-/**
- * 
- */
 package edu.unika.aifb.graphindex.algorithm.largercp;
+
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,12 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 
 public class Block {
-	public static LuceneGraphStorage m_gs;
+	public static DataIndex m_gs;
 	public static BlockCache m_bc;
 	public static int m_blockId = 0;
 

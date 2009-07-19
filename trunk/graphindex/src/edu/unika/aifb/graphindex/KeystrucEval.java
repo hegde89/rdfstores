@@ -22,6 +22,8 @@ import edu.unika.aifb.graphindex.query.IndirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.searcher.entity.EntitySearcher;
+import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Counters;
@@ -33,8 +35,6 @@ import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 import edu.unika.aifb.graphindex.vp.LuceneStorage;
 import edu.unika.aifb.graphindex.vp.VPQueryEvaluator;
-import edu.unika.aifb.keywordsearch.search.EntitySearcher;
-import edu.unika.aifb.keywordsearch.search.KeywordSearcher;
 
 public class KeystrucEval {
 	private static Logger log = Logger.getLogger(KeystrucEval.class);

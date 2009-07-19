@@ -1,5 +1,23 @@
 package edu.unika.aifb.graphindex.algorithm.largercp;
 
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -27,30 +45,21 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.graphindex.StructureIndex;
-import edu.unika.aifb.graphindex.data.HashValueProvider;
-import edu.unika.aifb.graphindex.data.IVertex;
-import edu.unika.aifb.graphindex.graph.IndexGraph;
-import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.NamedGraph;
-import edu.unika.aifb.graphindex.preprocessing.VertexListProvider;
-import edu.unika.aifb.graphindex.storage.GraphManager;
+import edu.unika.aifb.graphindex.index.DataIndex;
+import edu.unika.aifb.graphindex.index.DataIndex.NodeListener;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.StorageManager;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
-import edu.unika.aifb.graphindex.util.LineSortFile;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class LargeRCP {
 	private BlockCache m_bc;
 	private boolean m_ignoreDataValues = false;
 	private Set<String> m_forwardEdges, m_backwardEdges;
-	private LuceneGraphStorage m_gs;
+	private DataIndex m_gs;
 	private Environment m_env;
 	private String m_tempDir;
 	private static final Logger log = Logger.getLogger(LargeRCP.class);
 	
-	public LargeRCP(LuceneGraphStorage gs, Environment env, Set<String> fw, Set<String> bw) throws EnvironmentLockedException, DatabaseException {
+	public LargeRCP(DataIndex gs, Environment env, Set<String> fw, Set<String> bw) throws EnvironmentLockedException, DatabaseException {
 		m_forwardEdges = fw;
 		m_backwardEdges = bw;
 		
@@ -195,13 +204,21 @@ public class LargeRCP {
 		log.debug("forward: " + forward);
 		
 		if (blocks.size() == 0) {
-			Block b = m_bc.createBlock();
+			final Block b = m_bc.createBlock();
 			blocks.add(b);
 
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
-			m_gs.addNodesToBC(m_bc, b, edges);
+			for (String property : edges)
+				m_gs.iterateNodes(property, new NodeListener() {
+					public void node(String node) {
+						if (node.contains("Employee"))
+							log.debug(node);
+						m_bc.setBlock(node, b);
+					}
+				});
+
 			b.setSize((int)m_bc.getNodeCount());
 			log.debug("nodes: " + b.size());
 			
@@ -209,7 +226,7 @@ public class LargeRCP {
 			moved = new HashSet<String>();
 			for (String property : edges) {
 				log.debug(property);
-				Set<String> image = m_gs.getNodes(1, property);
+				Set<String> image = m_gs.getObjectNodes(property);
 				refinePartitionSimple(blocks, image, false);
 				log.debug("blocks: " + blocks.size());
 			}
@@ -335,14 +352,20 @@ public class LargeRCP {
 			if (preimage)
 				log.error("wrong start");
 			
-			Block b = m_bc.createBlock();
+			final Block b = m_bc.createBlock();
 			blocks.add(b);
 			startXB.addBlock(b);
 			
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
-			m_gs.addNodesToBC(m_bc, b, properties);
+			for (String property : properties)
+				m_gs.iterateNodes(property, new NodeListener() {
+					public void node(String node) {
+						m_bc.setBlock(node, b);
+					}
+				});
+
 			b.setSize((int)m_bc.getNodeCount());
 			log.debug("nodes: " + b.size());
 			
@@ -351,7 +374,7 @@ public class LargeRCP {
 			moved = new HashSet<String>();
 			for (String property : properties) {
 				log.debug(property);
-				Set<String> image = m_gs.getNodes(1, property);
+				Set<String> image = m_gs.getObjectNodes(property);
 				refinePartition(blocks, image, w);
 				movedIn++;
 			}
@@ -371,7 +394,7 @@ public class LargeRCP {
 		cbs.add(startXB);
 		
 		System.gc();
-		log.debug(m_gs.m_docCacheMisses + "/" + m_gs.m_docCacheHits);
+
 		log.debug("path length: " + pathLength);
 		log.debug("blocks: " + blocks.size());
 		log.debug("setup complete, " + Util.memory());
@@ -380,7 +403,6 @@ public class LargeRCP {
 		int steps = 0;
 		
 		startXB.calcInfo(preimage);
-		log.debug(m_gs.m_docCacheMisses + "/" + m_gs.m_docCacheHits);
 		
 		steps++;
 		log.debug(blocks.size());
@@ -519,112 +541,4 @@ public class LargeRCP {
 
 		m_bc.close();
 	}
-	
-	private String getTripleString(String s, String p, String o) {
-		StringBuilder sb = new StringBuilder();
-		sb.append(s).append("__").append(p).append("__").append(o);
-		return sb.toString();
-	}
-	
-	private void writeDataEdges(String partitionFile, List<IVertex> vertices, boolean inverted) throws IOException {
-		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile, true)));
-		
-		int edges = 0;
-		for (IVertex v : vertices) {
-			for (long label : v.getEdgeLabels()) {
-				for (IVertex y : v.getImage(label)) {
-					if (v.isDataValue()) {
-						if (inverted) {
-							// switch around if inverted
-							out.println(y.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t");
-						}
-						else {
-							out.println(v.getBlock().getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t");
-						}
-						edges++;
-					}
-				}
-			}
-		}
-		
-		log.debug("data edges written: " + edges);
-		out.close();
-	}
-
-//	private void writePartition(Partition p, String partitionFile, String graphFile, String blockFile, boolean inverted) throws IOException, InterruptedException {
-//		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(partitionFile)));
-//		PrintWriter graph = new PrintWriter(new BufferedWriter(new FileWriter(graphFile)));
-//		PrintWriter block = new PrintWriter(new BufferedWriter(new FileWriter(blockFile)));
-//	
-//		log.info("writing block file...");
-//		for(Block b : p.getBlocks()) {
-//			for (IVertex v : b) {
-//				block.println(b.getName() + "\t" + m_hashes.getValue(v.getId()));
-//			}
-//		}
-//		
-//		log.info("writing partition file...");
-//		int blocks = 0;
-//		int edges = 0;
-//		int vertices = 0;
-//		for (Block b : p.getBlocks()) {
-//			for (IVertex v : b) {
-//				vertices++;
-//				if (v.isDataValue())
-//					log.debug("data");
-//				for (Long label : v.getEdgeLabels()) {
-//					if (!m_backwardEdges.contains(m_hashes.getValue(label)) && !m_forwardEdges.contains(m_hashes.getValue(label)))
-//						continue;
-//
-//					for (IVertex y : v.getImage(label)) {
-//						// subject extension, subject, property, object, object extension
-//						if (inverted) {
-//							// switch around if inverted
-//							out.println(y.getBlock().getName() + "\t" + y.getId() + "\t" + label + "\t" + v.getId() + "\t" + b.getName());
-//							graph.println(y.getBlock().getName() + "\t" + m_hashes.getValue(label) + "\t" + b.getName());
-//						}
-//						else {
-//							out.println(b.getName() + "\t" + v.getId() + "\t" + label + "\t" + y.getId() + "\t" + y.getBlock().getName());
-//							graph.println(b.getName() + "\t" + m_hashes.getValue(label) + "\t" + y.getBlock().getName());
-//						}
-//						edges++;
-//					}
-//				}
-//			}
-//			
-//			blocks++;
-//
-//			if (blocks % 5000 == 0)
-//				log.debug(" blocks processed: " + blocks);
-//		}
-//		block.close();
-//		out.close();
-//		graph.close();
-//		
-//		log.debug("entity edges written: " + edges);
-//		log.debug("vertices in partition: " + vertices);
-//		
-//		LineSortFile blsf = new LineSortFile(blockFile, blockFile);
-//		blsf.setDeleteWhenStringRepeated(true);
-//		blsf.sortFile();
-//		
-////		LineSortFile plsf = new LineSortFile(partitionFile, partitionFile);
-////		plsf.setDeleteWhenStringRepeated(true);
-////		plsf.sortFile();
-//		
-//		// uniq only filters repeated lines: sort so that duplicate lines are consecutive
-//		Process process = Runtime.getRuntime().exec("sort -o " + graphFile + " " + graphFile);
-//		process.waitFor();
-//		process = Runtime.getRuntime().exec("uniq " + graphFile + " " + graphFile + ".uniq");
-//		process.waitFor();
-//		File f = new File(graphFile);
-//		f.delete();
-//		f = new File(graphFile + ".uniq");
-//		f.renameTo(new File(graphFile));
-//		log.debug("graph uniq");
-//		
-////		LineSortFile glsf = new LineSortFile(graphFile, graphFile);
-////		glsf.setDeleteWhenStringRepeated(true);
-////		glsf.sortFile();
-//	}
 }

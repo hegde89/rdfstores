@@ -1,5 +1,23 @@
 package edu.unika.aifb.graphindex.util;
 
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,15 +38,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.jgrapht.ext.DOTExporter;
-import org.jgrapht.ext.EdgeNameProvider;
-import org.jgrapht.ext.VertexNameProvider;
-
-import edu.unika.aifb.graphindex.graph.Graph;
-import edu.unika.aifb.graphindex.graph.GraphEdge;
-import edu.unika.aifb.graphindex.graph.LabeledEdge;
-import edu.unika.aifb.graphindex.graph.NamedGraph;
 
 public class Util {
 	public static class Counter {
@@ -137,130 +146,36 @@ public class Util {
 		return edgeSet;
 	}
 	
+	public static void writeEdgeSet(File file, Set<String> set) throws IOException {
+		PrintWriter out = new PrintWriter(new FileWriter(file));
+		for (String s : set)
+			out.println(s);
+		out.close();
+	}
+	
 	public static Set<String> readEdgeSet(String file) {
 		return readEdgeSet(new File(file));
 	}
 	
-	public static <V extends Comparable<V>> void printTLP(PrintWriter out, Graph<V> graph) {
-		out.println("(tlp \"3.0\"");
-		
-		StringBuilder edgeProperty = new StringBuilder();
-		edgeProperty.append("(property 0 string \"viewLabel\"\n(default \"\" \"\")\n");
-		out.print("(nodes ");
-		for (int i = 0; i < graph.nodeCount(); i++) {
-			out.print(i + " ");
-			edgeProperty.append("(node ").append(i).append(" \"").append(graph.getNode(i).toString()).append("\")\n");
-		}
-		out.println(")");
-		int j = 0;
-		for (int i = 0; i < graph.nodeCount(); i++) {
-			for (GraphEdge<V> e : graph.outgoingEdges(i)) { 
-				out.println("(edge " + j + " " + e.getSrc() + " " + e.getDst() + ")");
-				edgeProperty.append("(edge ").append(j).append(" \"").append(truncateUri(e.getLabel())).append("\")\n");
-				j++;
+	public static void mergeRowSet(File file, Set<String> set) {
+		try {
+			BufferedReader in = new BufferedReader(new FileReader(file));
+			String input;
+			while ((input = in.readLine()) != null) {
+				input = input.trim();
+				set.remove(input);
 			}
+			in.close();
+			
+			PrintWriter pw = new PrintWriter(new FileWriter(file, true));
+			for (String row : set)
+				pw.println(row);
+			pw.close();
 		}
-		edgeProperty.append(")\n");
-		out.println(edgeProperty.toString());
-		out.println(")");
-		out.close();
-	}
-	
-	public static <V extends Comparable<V>> void printTLP(String file, Graph<V> graph) {
-		try {
-			printTLP(new PrintWriter(new FileWriter(file)), graph);
-		} catch (IOException e) {
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
-	public static <V extends Comparable<V>> void printGDL(PrintWriter out, Graph<V> graph) {
-		out.println("graph: {");
-//		out.println("layout_algorithm: forcedir");
-		out.println("display_edge_labels: yes");
-		for (int i = 0; i < graph.nodeCount(); i++) {
-			out.println("node: { title: \"" + i + "\" label: \"" + truncateUri(graph.getNode(i).toString()) + "\" }");
-			for (GraphEdge<V> e : graph.outgoingEdges(i)) 
-				out.println("edge: { source: \"" + i + "\" target: \"" + e.getDst() + "\"label: \"" + truncateUri(e.getLabel()) + "\" }");
-		}
-		out.println("}");
-		out.close();
-	}
-	
-	public static <V extends Comparable<V>> void printGDL(String file, Graph<V> graph) {
-		try {
-			printGDL(new PrintWriter(new FileWriter(file)), graph);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static <V extends Comparable<V>> void printDOT(PrintWriter out, Graph<V> graph) {
-		out.println("digraph {");
-		for (int i = 0; i < graph.nodeCount(); i++) {
-			out.println(i + "[label=\"" + graph.getNode(i).toString() + "\"];");
-			for (GraphEdge<V> e : graph.outgoingEdges(i)) 
-				if (e.getDst() != e.getSrc())
-					out.println(i + " -> " + e.getDst() + " [label=\"" + truncateUri(e.getLabel()) + "\"];");
-		}
-		out.println("}");
-		out.close();
-	}
-	
-	public static <V extends Comparable<V>> void printDOT(String file, Graph<V> graph) {
-		try {
-			printDOT(new PrintWriter(new FileWriter(file)), graph);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static void printDOT(Writer out, NamedGraph<String,LabeledEdge<String>> graph) {
-		try {
-			DOTExporter<String,LabeledEdge<String>> exporter = new DOTExporter<String,LabeledEdge<String>>(
-					// id
-					new VertexNameProvider<String>() {
-						public String getVertexName(String v) {
-							return "\"" + v + "\"";
-						}
-					},
-					// label
-					new VertexNameProvider<String>() {
-						public String getVertexName(String v) {
-							return v;
-						}
-					},
-					new EdgeNameProvider<LabeledEdge<String>>() {
-						public String getEdgeName(LabeledEdge<String> edge) {
-							return truncateUri(edge.getLabel());
-						}
-					});
-			exporter.export(out, graph);
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static void printDOT(NamedGraph<String,LabeledEdge<String>> graph) {
-		try {
-			printDOT(new FileWriter(graph.getName() + ".dot"), graph);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static void printDOT(String fileName, NamedGraph<String,LabeledEdge<String>> graph) {
-		try {
-			printDOT(new FileWriter(fileName), graph);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-//	public static void printDOT(Graph graph) {
-//		printDOT(new PrintWriter(System.out), graph);
-//	}
 	
 	public static void writeObject(String file, Object object) throws FileNotFoundException, IOException {
 		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));

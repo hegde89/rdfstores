@@ -1,5 +1,24 @@
 package edu.unika.aifb.graphindex.algorithm.largercp;
 
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,9 +34,11 @@ import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.dbi.Operation;
 
+import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -30,8 +51,21 @@ public class BlockCache {
 	private Map<Integer,Block> m_blocks;
 	private Map<Integer,Set<String>> m_nodeCache;
 	boolean m_nodeCacheActive = false;
+	
+	public BlockCache(IndexDirectory idxDirectory) throws DatabaseException, IOException {
+		EnvironmentConfig config = new EnvironmentConfig();
+		config.setTransactional(false);
+		config.setAllowCreate(false);
+
+		Environment env = new Environment(idxDirectory.getDirectory(IndexDirectory.BDB_DIR), config);
+		initialize(env);
+	}
 
 	public BlockCache(Environment env) throws DatabaseException {
+		initialize(env);
+	}
+	
+	private void initialize(Environment env) throws DatabaseException {
 		DatabaseConfig config = new DatabaseConfig();
 		config.setTransactional(false);
 		config.setAllowCreate(true);

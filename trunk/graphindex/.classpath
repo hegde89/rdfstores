@@ -9,7 +9,6 @@
 	<classpathentry kind="lib" path="libs/aduna-text-1.3.jar"/>
 	<classpathentry kind="lib" path="libs/aduna-xml-1.5.jar"/>
 	<classpathentry kind="lib" path="libs/jgrapht-jdk1.5.jar"/>
-	<classpathentry kind="lib" path="libs/kaon2.plain.jar"/>
 	<classpathentry kind="lib" path="libs/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="libs/lucene-core-2.3.2.jar"/>
 	<classpathentry kind="lib" path="libs/mysql-connector-java-5.1.6-bin.jar"/>

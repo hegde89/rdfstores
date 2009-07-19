@@ -11,7 +11,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.FSDirectory;
 
-import edu.unika.aifb.keywordsearch.Constant;
+import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;

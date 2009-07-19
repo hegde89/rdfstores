@@ -1,7 +1,22 @@
-/**
- * 
- */
 package edu.unika.aifb.graphindex.algorithm.largercp;
+
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,34 +32,22 @@ import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 
-import edu.unika.aifb.graphindex.data.IVertex;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneGraphStorage;
 import edu.unika.aifb.graphindex.util.Util;
 
 
 public class XBlock {
 	public static Environment m_env;
-	public static LuceneGraphStorage m_gs;
+	public static DataIndex m_gs;
 	private static int m_xbId = 0;
 	
-	private class Info {
-		public long label;
-		public int sval;
-		
-		public Info(long label, int sval) {
-			this.label = label;
-			this.sval = sval;
-		}
-	}
 	private LinkedList<Block> m_blocks;
-	private Map<IVertex,List<Info>> m_info;
 	private int m_id;
 	private Database m_db;
 	
 	public XBlock() throws DatabaseException {
 		m_blocks = new LinkedList<Block>();
-		m_info = new HashMap<IVertex,List<Info>>();
 		m_id = m_xbId++;
 		
 		DatabaseConfig config = new DatabaseConfig();

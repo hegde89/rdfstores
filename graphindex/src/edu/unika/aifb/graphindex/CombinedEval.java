@@ -13,11 +13,11 @@ import joptsimple.OptionSet;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.query.CombinedQueryEvaluator;
-import edu.unika.aifb.graphindex.query.EntityLoader;
 import edu.unika.aifb.graphindex.query.IQueryEvaluator;
 import edu.unika.aifb.graphindex.query.IncrementalQueryEvaluator;
 import edu.unika.aifb.graphindex.query.QueryEvaluator;
 import edu.unika.aifb.graphindex.query.model.Query;
+import edu.unika.aifb.graphindex.searcher.entity.EntityLoader;
 import edu.unika.aifb.graphindex.storage.ExtensionManager;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.Counters;

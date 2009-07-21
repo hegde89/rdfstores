@@ -34,12 +34,11 @@ import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.Pseudograph;
 
-import edu.unika.aifb.graphindex.importer.HashedTripleSink;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.util.Util;
 
-public class TriplesPartitioner implements HashedTripleSink {
+public class TriplesPartitioner implements TripleSink {
 	
 	private Map<Long,Integer> h2p;
 	private Map<Integer,Set<Integer>> pmap;
@@ -68,7 +67,7 @@ public class TriplesPartitioner implements HashedTripleSink {
 			}
 	}
 	
-	public void triple(long s, long p, long o, String objectType) {
+	public void triple(String s, String p, String o, String objectType) {
 		long sh = s;
 		long oh = o;
 		

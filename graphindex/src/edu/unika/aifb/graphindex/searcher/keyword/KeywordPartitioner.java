@@ -30,7 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 public class KeywordPartitioner {
 	private static final Logger log = Logger.getLogger(KeywordPartitioner.class);
@@ -66,22 +66,22 @@ public class KeywordPartitioner {
 		};
 	}
 	
-	public static Iterator<Set<KeywordSegement>> partitionIterator(final Collection<KeywordSegement> values, final Collection<String> keywords) {
-		return new Iterator<Set<KeywordSegement>>() {
+	public static Iterator<Set<KeywordSegment>> partitionIterator(final Collection<KeywordSegment> values, final Collection<String> keywords) {
+		return new Iterator<Set<KeywordSegment>>() {
 			private int i = 1;
 			private int size = values.size();
 			private long n = 1 << Math.max(0, size);
-			private Set<KeywordSegement> next;
+			private Set<KeywordSegment> next;
 			private Set<Integer> combinations = new HashSet<Integer>() ; 
 
 			public boolean hasNext() {
 				if(i < n) {
 					boolean found = false;
 					while(found == false && i < n ) {
-						Set<KeywordSegement> set = new HashSet<KeywordSegement>();
+						Set<KeywordSegment> set = new HashSet<KeywordSegment>();
 						Set<String> contained = new HashSet<String>();
 						int j = 0;
-						out: for(KeywordSegement segement : values) {
+						out: for(KeywordSegment segement : values) {
 							if (((1 << j++) & i) != 0) {
 								for(String keyword : segement.getKeywords()) {
 									if(contained.contains(keyword))
@@ -110,7 +110,7 @@ public class KeywordPartitioner {
 					return false;
 			}
 			
-			public Set<KeywordSegement> next() {
+			public Set<KeywordSegment> next() {
 				return next;
 			}
 			
@@ -120,7 +120,7 @@ public class KeywordPartitioner {
 		};
 	}
 	
-	public static Iterator<Set<KeywordSegement>> getPartitionIterator(Set<KeywordSegement> values, Set<String> keywords) {
+	public static Iterator<Set<KeywordSegment>> getPartitionIterator(Set<KeywordSegment> values, Set<String> keywords) {
 		return partitionIterator(values, keywords);
 	}
 	
@@ -142,22 +142,22 @@ public class KeywordPartitioner {
 		return false;
 	} 
 
-	public static <T> boolean addAllSegements(Collection<KeywordSegement> collection, Iterator<Set<String>> iterator) {
+	public static <T> boolean addAllSegements(Collection<KeywordSegment> collection, Iterator<Set<String>> iterator) {
 		if(collection != null) {
 			boolean wasModified = false;
 			while(iterator.hasNext()) {
-				wasModified |= collection.add(new KeywordSegement(iterator.next()));
+				wasModified |= collection.add(new KeywordSegment(iterator.next()));
 			}
 			return wasModified;
 		}
 		return false;
 	}
 	
-	public static <T> boolean addAllPartitions(Collection<Set<KeywordSegement>> collection, Iterator<Set<KeywordSegement>> iterator, Collection<KeywordSegement> allSegements) {
+	public static <T> boolean addAllPartitions(Collection<Set<KeywordSegment>> collection, Iterator<Set<KeywordSegment>> iterator, Collection<KeywordSegment> allSegements) {
 		if(collection != null) {
 			boolean wasModified = false;
 			while(iterator.hasNext()) {
-				Set<KeywordSegement> segements = iterator.next();
+				Set<KeywordSegment> segements = iterator.next();
 				wasModified |= collection.add(segements);
 				allSegements.addAll(segements);
 			}
@@ -166,55 +166,55 @@ public class KeywordPartitioner {
 		return false;
 	}
 
-	public static Set<KeywordSegement> getSegements(List<String> keywords) {
-		Set<KeywordSegement> segements = new HashSet<KeywordSegement>();
+	public static Set<KeywordSegment> getSegements(List<String> keywords) {
+		Set<KeywordSegment> segements = new HashSet<KeywordSegment>();
 		addAllSegements(segements, segementIterator(keywords));
 		return segements;
 	}
 
-	public static SortedSet<KeywordSegement> getOrderedSegements(List<String> keywords) {
-		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
+	public static SortedSet<KeywordSegment> getOrderedSegements(List<String> keywords) {
+		SortedSet<KeywordSegment> orderedSegements = new TreeSet<KeywordSegment>();
 		Iterator<Set<String>> segementIterator = segementIterator(keywords);
 		while(segementIterator.hasNext()) {
-			KeywordSegement segement = new KeywordSegement(segementIterator.next());
+			KeywordSegment segement = new KeywordSegment(segementIterator.next());
 			orderedSegements.add(segement);
 		}
 		return orderedSegements;
 	}
 	
-	public static SortedSet<KeywordSegement> getOrderedSegements(Collection<List<String>> keywords) {
-		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
+	public static SortedSet<KeywordSegment> getOrderedSegements(Collection<List<String>> keywords) {
+		SortedSet<KeywordSegment> orderedSegements = new TreeSet<KeywordSegment>();
 		for(List<String> list : keywords) {
 			Iterator<Set<String>> segementIterator = segementIterator(list);
 			while(segementIterator.hasNext()) {
-				KeywordSegement segement = new KeywordSegement(segementIterator.next());
+				KeywordSegment segement = new KeywordSegment(segementIterator.next());
 				orderedSegements.add(segement);
 			}
 		}
 		return orderedSegements;
 	}
 	
-	public static SortedSet<KeywordSegement> getOrderedPartitions(List<String> allKeywords, Collection<Set<KeywordSegement>> partitions) {
-		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
+	public static SortedSet<KeywordSegment> getOrderedPartitions(List<String> allKeywords, Collection<Set<KeywordSegment>> partitions) {
+		SortedSet<KeywordSegment> orderedSegements = new TreeSet<KeywordSegment>();
 		Iterator<Set<String>> segementIterator = segementIterator(allKeywords);
-		SortedSet<KeywordSegement> segements = new TreeSet<KeywordSegement>();
+		SortedSet<KeywordSegment> segements = new TreeSet<KeywordSegment>();
 		while(segementIterator.hasNext()) {
-			KeywordSegement segement = new KeywordSegement(segementIterator.next());
+			KeywordSegment segement = new KeywordSegment(segementIterator.next());
 			segements.add(segement);
 		}
 		addAllPartitions(partitions, partitionIterator(segements, allKeywords), orderedSegements);
 		return orderedSegements;
 	}
 	
-	public static SortedSet<KeywordSegement> getOrderedPartitions(Collection<List<String>> allKeywords, Collection<Set<KeywordSegement>> partitions) {
-		SortedSet<KeywordSegement> orderedSegements = new TreeSet<KeywordSegement>();
-		List<List<Set<KeywordSegement>>> iresults = new ArrayList<List<Set<KeywordSegement>>>();
+	public static SortedSet<KeywordSegment> getOrderedPartitions(Collection<List<String>> allKeywords, Collection<Set<KeywordSegment>> partitions) {
+		SortedSet<KeywordSegment> orderedSegements = new TreeSet<KeywordSegment>();
+		List<List<Set<KeywordSegment>>> iresults = new ArrayList<List<Set<KeywordSegment>>>();
 		for(List<String> list : allKeywords) {
-			List<Set<KeywordSegement>> part = new ArrayList<Set<KeywordSegement>>();
+			List<Set<KeywordSegment>> part = new ArrayList<Set<KeywordSegment>>();
 			Iterator<Set<String>> segementIterator = segementIterator(list);
-			SortedSet<KeywordSegement> segements = new TreeSet<KeywordSegement>();
+			SortedSet<KeywordSegment> segements = new TreeSet<KeywordSegment>();
 			while(segementIterator.hasNext()) {
-				KeywordSegement segement = new KeywordSegement(segementIterator.next());
+				KeywordSegment segement = new KeywordSegment(segementIterator.next());
 				segements.add(segement);
 			}
 			addAllPartitions(part, partitionIterator(segements, list), orderedSegements);
@@ -224,7 +224,7 @@ public class KeywordPartitioner {
 		return orderedSegements;
 	}
 	
-	public static void computeCombinations(List<List<Set<KeywordSegement>>> iresults, Collection<Set<KeywordSegement>> partitions) {
+	public static void computeCombinations(List<List<Set<KeywordSegment>>> iresults, Collection<Set<KeywordSegment>> partitions) {
 		int size = iresults.size();
 		int[] guards = new int[size];
 		for(int i = 0; i < iresults.size(); i++) {
@@ -236,7 +236,7 @@ public class KeywordPartitioner {
 		}
 		guards[size-1]++;
 		do {
-			Set<KeywordSegement> combination = new TreeSet<KeywordSegement>();
+			Set<KeywordSegment> combination = new TreeSet<KeywordSegment>();
 			for(int m = 0; m < size; m++){
 				combination.addAll(iresults.get(m).get(cursors[m]));
 			}
@@ -272,7 +272,7 @@ public class KeywordPartitioner {
 				colOfLists.add(list);
 			}
 
-			SortedSet<KeywordSegement> segements = getOrderedSegements(colOfLists);
+			SortedSet<KeywordSegment> segements = getOrderedSegements(colOfLists);
 			log.debug("added " + colOfLists);
 			log.debug("segements size: " + segements.size());
 			log.debug("segements = " + segements);

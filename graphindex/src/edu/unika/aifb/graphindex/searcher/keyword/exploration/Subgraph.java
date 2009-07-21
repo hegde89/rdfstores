@@ -35,7 +35,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
 
@@ -50,7 +50,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	private Map<String,String> m_vars;
 	private List<String> m_selectVariables;
 
-	private HashMap<String,Set<KeywordSegement>> m_select2ks;
+	private HashMap<String,Set<KeywordSegment>> m_select2ks;
 	
 	private static final Logger log = Logger.getLogger(Subgraph.class);
 	
@@ -130,7 +130,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	private void generateLabelMappings() {
 		m_startElements = new HashMap<NodeElement,Set<String>>();
 		m_selectVariables = new ArrayList<String>();
-		m_select2ks = new HashMap<String,Set<KeywordSegement>>();
+		m_select2ks = new HashMap<String,Set<KeywordSegment>>();
 		m_labels = new HashMap<String,String>();
 		m_vars = new HashMap<String,String>();
 
@@ -143,8 +143,8 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 //				continue;
 			
 			assert start.getKeywordSegments().size() == 1;
-			KeywordSegement startKS = null;
-			for (KeywordSegement ks : start.getKeywordSegments())
+			KeywordSegment startKS = null;
+			for (KeywordSegment ks : start.getKeywordSegments())
 				startKS = ks;
 			
 			if (!m_startElements.containsKey(startElement)) {
@@ -153,7 +153,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				m_labels.put(startElement.getLabel(), var);
 				m_vars.put(var, startElement.getLabel());
 				m_selectVariables.add(var);
-				m_select2ks.put(var, new HashSet<KeywordSegement>(Arrays.asList(startKS)));
+				m_select2ks.put(var, new HashSet<KeywordSegment>(Arrays.asList(startKS)));
 			}
 			else {
 				m_startElements.get(startElement).addAll(startKS.getKeywords());
@@ -246,7 +246,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		return m_vars;
 	}
 	
-	public HashMap<String,Set<KeywordSegement>> getKSMapping() {
+	public HashMap<String,Set<KeywordSegment>> getKSMapping() {
 		if (m_vars == null)
 			generateLabelMappings();
 		return m_select2ks;

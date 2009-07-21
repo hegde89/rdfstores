@@ -28,7 +28,7 @@ import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 public abstract class GraphElement {
 	protected String m_label;
@@ -46,7 +46,7 @@ public abstract class GraphElement {
 	}
 	
 	public void addCursor(Cursor c) {
-		for (KeywordSegement ks : c.getKeywordSegments()) {
+		for (KeywordSegment ks : c.getKeywordSegments()) {
 			for (String keyword : ks.getKeywords()) {
 				List<Cursor> cursors = m_keywordCursors.get(keyword);
 				if (cursors == null) {

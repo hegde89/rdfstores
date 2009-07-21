@@ -27,6 +27,11 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
 
+/**
+ * IndexReader provides an interface for accessing a graphindex.
+ * 
+ * @author gla
+ */
 public class IndexReader {
 	private IndexDirectory m_idxDirectory;
 	private IndexConfiguration m_idxConfig;

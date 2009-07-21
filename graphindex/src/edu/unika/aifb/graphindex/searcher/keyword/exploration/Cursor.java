@@ -25,11 +25,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 public class Cursor implements Comparable<Cursor> {
 
-	private Set<KeywordSegement> m_keywords;
+	private Set<KeywordSegment> m_keywords;
 	private Cursor m_parent;
 	private GraphElement m_element, m_startElement;
 	private int m_distance;
@@ -38,16 +38,16 @@ public class Cursor implements Comparable<Cursor> {
 	private Set<GraphElement> m_parents;
 	private boolean m_fakeStart = false;
 	
-	public Cursor(KeywordSegement keyword, GraphElement element) {
+	public Cursor(KeywordSegment keyword, GraphElement element) {
 		this(keyword, element, null, 0);
 	}
 	
-	public Cursor(KeywordSegement keyword, GraphElement element, Cursor parent, int cost) {
-		this(new HashSet<KeywordSegement>(Arrays.asList(keyword)), element, parent, cost);
+	public Cursor(KeywordSegment keyword, GraphElement element, Cursor parent, int cost) {
+		this(new HashSet<KeywordSegment>(Arrays.asList(keyword)), element, parent, cost);
 	}
 	
-	public Cursor(Set<KeywordSegement> keywords, GraphElement element, Cursor parent, int cost) {
-		m_keywords = new HashSet<KeywordSegement>(keywords);
+	public Cursor(Set<KeywordSegment> keywords, GraphElement element, Cursor parent, int cost) {
+		m_keywords = new HashSet<KeywordSegment>(keywords);
 		m_element = element;
 		m_parent = parent;
 		if (m_parent != null) {
@@ -70,11 +70,11 @@ public class Cursor implements Comparable<Cursor> {
 		return m_distance;
 	}
 	
-	public Set<KeywordSegement> getKeywordSegments() {
+	public Set<KeywordSegment> getKeywordSegments() {
 		return m_keywords;
 	}
 	
-	public void addKeywordSegment(KeywordSegement ks) {
+	public void addKeywordSegment(KeywordSegment ks) {
 		m_keywords.add(ks);
 	}
 

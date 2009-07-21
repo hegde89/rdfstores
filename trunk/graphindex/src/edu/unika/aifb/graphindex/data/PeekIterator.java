@@ -20,6 +20,12 @@ package edu.unika.aifb.graphindex.data;
 
 import java.util.Iterator;
 
+/**
+ * PeekIterator wraps another iterator and provides a peek method, which returns
+ * the next item in the iterator without advancing the iterator.
+ * 
+ * @author gla
+ */
 public class PeekIterator<E> implements Iterator<E> {
 
 	private Iterator<E> m_iter;

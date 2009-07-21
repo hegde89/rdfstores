@@ -59,7 +59,7 @@ import edu.unika.aifb.graphindex.model.impl.NamedConcept;
 import edu.unika.aifb.graphindex.model.impl.Relation;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
@@ -92,13 +92,13 @@ public class KeywordSearcher_2 {
 		}
 	}
 	
-	public Map<KeywordSegement,Collection<KeywordElement>> searchKeywordElements(Collection<String> queries) {
+	public Map<KeywordSegment,Collection<KeywordElement>> searchKeywordElements(Collection<String> queries) {
 		Collection<String> keywordQueries = new HashSet<String>();
 		Map<String, Collection<String>> keywordCompoundQueries = new HashMap<String, Collection<String>>();
 		parseQueries(queries,keywordQueries, keywordCompoundQueries);
 		
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
-		Map<KeywordElement, KeywordSegement> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegement>();
+		Map<KeywordElement, KeywordSegment> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegment>();
 		searchElementsByKeywords(keywordQueries, conceptsAndRelations, entitiesWithSegement);
 		searchElementsByKeywordCompounds(keywordCompoundQueries, entitiesWithSegement);
 		
@@ -122,7 +122,7 @@ public class KeywordSearcher_2 {
 		
 		overlapNeighborhoods(entities, entitiesWithSegement);
 
-		Map<KeywordSegement, Collection<KeywordElement>> results = new HashMap<KeywordSegement, Collection<KeywordElement>>();
+		Map<KeywordSegment, Collection<KeywordElement>> results = new HashMap<KeywordSegment, Collection<KeywordElement>>();
 		for(String keyword : conceptsAndRelations.keySet()) {
 			
 		}
@@ -130,7 +130,7 @@ public class KeywordSearcher_2 {
 		return results;
 	}
 	
-	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> entities, Map<KeywordElement, KeywordSegement> entitiesWithSegement) {
+	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> entities, Map<KeywordElement, KeywordSegment> entitiesWithSegement) {
 		
 		
 		
@@ -196,7 +196,7 @@ public class KeywordSearcher_2 {
 	}
 	
 	public void searchElementsByKeywords(Collection<String> queries, 
-			Map<String, Collection<KeywordElement>> conceptsAndRelations, Map<KeywordElement, KeywordSegement> entities) { 
+			Map<String, Collection<KeywordElement>> conceptsAndRelations, Map<KeywordElement, KeywordSegment> entities) { 
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(searcher, queries, conceptsAndRelations, attributes);
@@ -207,7 +207,7 @@ public class KeywordSearcher_2 {
 	}
 	
 	public void searchElementsByKeywordCompounds(Map<String, Collection<String>> queries, 
-			Map<KeywordElement, KeywordSegement> entities) { 
+			Map<KeywordElement, KeywordSegment> entities) { 
 		Map<String, Collection<KeywordElement>> attributesAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		
 		searchSchema(searcher, queries.keySet(), attributesAndRelations);
@@ -349,7 +349,7 @@ public class KeywordSearcher_2 {
 	}
 	
 	private void searchEntitiesByAttributesAndValues(IndexSearcher searcher, Collection<String> queries, 
-			Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegement> entities) {
+			Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegment> entities) {
 		Set<String> queriesWithResults = new HashSet<String>();
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
@@ -376,7 +376,7 @@ public class KeywordSearcher_2 {
 	}
 	
 	public void searchEntitiesByValues(IndexSearcher searcher, Collection<String> queries, 
-			Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegement> entities) {
+			Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegment> entities) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			Set<String> fields = new HashSet<String>();
@@ -399,7 +399,7 @@ public class KeywordSearcher_2 {
 	}		
 	
 	private void searchEntitiesByCompounds(IndexSearcher searcher, Map<String, Collection<String>> queries, 
-			Map<String, Collection<KeywordElement>> attributesAndRelations, Map<KeywordElement, KeywordSegement> entities) {
+			Map<String, Collection<KeywordElement>> attributesAndRelations, Map<KeywordElement, KeywordSegment> entities) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			for (String keywordForAttributeAndRelation : queries.keySet()) {
@@ -427,7 +427,7 @@ public class KeywordSearcher_2 {
 	}
 		
 	public void searchEntitiesWithClause(IndexSearcher searcher, Query clause, String keyword, String additionalKeyword, 
-			Map<KeywordElement, KeywordSegement> result) {
+			Map<KeywordElement, KeywordSegment> result) {
 		try {
 			Set<String> loadFieldNames = new HashSet<String>();
 		    loadFieldNames.add(Constant.URI_FIELD);
@@ -458,13 +458,13 @@ public class KeywordSearcher_2 {
 	    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
 	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
 	    			if(result.keySet().contains(ele)) {
-	    				KeywordSegement ks = result.get(ele);
+	    				KeywordSegment ks = result.get(ele);
 	    				ks.addKeyword(keyword);
 	    				if(additionalKeyword != null)
 	    					ks.addKeyword(additionalKeyword);
 	    			}
 	    			else {
-	    				KeywordSegement ks = new KeywordSegement();
+	    				KeywordSegment ks = new KeywordSegment();
 	    				ks.addKeyword(keyword);
 	    				if(additionalKeyword != null)
 	    					ks.addKeyword(additionalKeyword);

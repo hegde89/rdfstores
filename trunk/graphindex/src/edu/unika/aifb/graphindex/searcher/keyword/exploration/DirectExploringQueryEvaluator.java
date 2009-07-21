@@ -18,6 +18,7 @@ package edu.unika.aifb.graphindex.searcher.keyword.exploration;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,7 +38,7 @@ import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
 import edu.unika.aifb.graphindex.searcher.structured.sig.EvaluationClass;
 import edu.unika.aifb.graphindex.searcher.structured.sig.IndexMatchesValidator;
@@ -54,10 +55,10 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 	
 	private static final Logger log = Logger.getLogger(DirectExploringQueryEvaluator.class);
 
-	public DirectExploringQueryEvaluator(IndexReader reader) throws StorageException {
+	public DirectExploringQueryEvaluator(IndexReader reader) throws StorageException, IOException {
 		super(reader);
 
-		m_searcher = searcher;
+		m_searcher = new KeywordSearcher(reader);
 		
 		m_matcher = new ExploringIndexMatcher(reader);
 		m_matcher.initialize();
@@ -82,13 +83,13 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
 		timings.start(Timings.STEP_KWSEARCH);
-		Map<KeywordSegement,Collection<KeywordElement>> decomposition = search(query, m_searcher, timings);
+		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query, m_searcher, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 
 		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
 		List<StructuredQuery> queries = new ArrayList<StructuredQuery>();
-		List<Map<String,Set<KeywordSegement>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegement>>>();
-		Map<KeywordSegement,List<GraphElement>> segment2elements = new HashMap<KeywordSegement,List<GraphElement>>();
+		List<Map<String,Set<KeywordSegment>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegment>>>();
+		Map<KeywordSegment,List<GraphElement>> segment2elements = new HashMap<KeywordSegment,List<GraphElement>>();
 		Map<String,Set<String>> ext2entities = new HashMap<String,Set<String>>();
 
 		timings.start(Timings.STEP_EXPLORE);
@@ -113,7 +114,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 			qe.setIndexMatches(indexMatch);
 			log.debug(indexMatch);
 			
-			Map<String,Set<KeywordSegement>> select2ks = selectMappings.get(i);
+			Map<String,Set<KeywordSegment>> select2ks = selectMappings.get(i);
 			
 			List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
 			classes.add(new EvaluationClass(indexMatch));
@@ -146,7 +147,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 			for (Iterator<EvaluationClass> j = classes.iterator(); j.hasNext(); ) {
 				EvaluationClass ec = j.next();
 				log.debug(ec);
-				for (String selectNode : q.getSelectVariables()) {
+				for (String selectNode : q.getSelectVariableLabels()) {
 					if (!ec.getMappings().hasColumn(selectNode))
 						continue;
 					if (q.getRemovedNodes().contains(selectNode))
@@ -154,7 +155,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 
 					boolean stop = false;
 					String ksCol = "";
-					for (KeywordSegement ks : select2ks.get(selectNode)) {
+					for (KeywordSegment ks : select2ks.get(selectNode)) {
 						ksCol += ks.toString().replaceAll(" ", "_");
 //						log.debug("ks: " + ks + ", " + getKSId(ks) + ": " + ec.getMatch(selectNode) + getKSId(ks));
 						if (ext2entities.get(ec.getMatch(selectNode) + getKSId(ks)) == null) {
@@ -174,7 +175,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 					GTable<String> table = new GTable<String>(columns);
 					int col = table.getColumn(selectNode);
 	
-					for (KeywordSegement ks : select2ks.get(selectNode)) {
+					for (KeywordSegment ks : select2ks.get(selectNode)) {
 						for (String entity : ext2entities.get(ec.getMatch(selectNode) + getKSId(ks))) {
 							String[] row = new String [2];
 							row[col] = entity;
@@ -206,7 +207,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		timings.end(Timings.TOTAL_QUERY_EVAL);
 	}
 	
-	private String getKSId(KeywordSegement ks) {
+	private String getKSId(KeywordSegment ks) {
 		List<String> keywords = new ArrayList<String>(ks.getKeywords());
 		Collections.sort(keywords);
 		return keywords.toString();

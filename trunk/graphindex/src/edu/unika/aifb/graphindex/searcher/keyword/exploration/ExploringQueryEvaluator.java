@@ -41,7 +41,7 @@ import edu.unika.aifb.graphindex.searcher.entity.EntitySearcher;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraph;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraphNode;
 import edu.unika.aifb.graphindex.searcher.structured.sig.SmallIndexGraphMatcher;
@@ -61,18 +61,18 @@ public abstract class ExploringQueryEvaluator extends KeywordQueryEvaluator {
 		super(idxReader);
 	}
 	
-	protected Map<KeywordSegement,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) {
+	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) {
 		List<String> list = KeywordSearcher.getKeywordList(query);
 		log.debug("keyword list: " + list);
-		Map<KeywordSegement,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
+		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
 		return res;
 	}
 	
-	protected void explore(Map<KeywordSegement,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, List<GTable<String>> indexMatches,
-			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegement>>> selectMappings, Map<KeywordSegement,List<GraphElement>> segment2elements,
+	protected void explore(Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, List<GTable<String>> indexMatches,
+			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> selectMappings, Map<KeywordSegment,List<GraphElement>> segment2elements,
 			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException {
 		
-		for (KeywordSegement ks : entities.keySet()) {
+		for (KeywordSegment ks : entities.keySet()) {
 			Set<String> nodes = new HashSet<String>();
 			Set<String> edges = new HashSet<String>();
 //			log.debug(ks);

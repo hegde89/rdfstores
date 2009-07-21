@@ -24,23 +24,23 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-public class KeywordSegement implements Comparable<KeywordSegement> {
+public class KeywordSegment implements Comparable<KeywordSegment> {
 	
 	private SortedSet<String> keywords;
 	private String query;
 	
-	public KeywordSegement() {
+	public KeywordSegment() {
 		this.keywords = new TreeSet<String>(); 
 		this.query = "";
 	}
 	
-	public KeywordSegement(String keyword) {
+	public KeywordSegment(String keyword) {
 		this();
 		this.addKeyword(keyword);
 	}
 
 
-	public KeywordSegement(Collection<String> keywords) {
+	public KeywordSegment(Collection<String> keywords) {
 		this();
 		for(String keyword : keywords) {
 			boolean added = this.keywords.add(keyword);
@@ -72,7 +72,7 @@ public class KeywordSegement implements Comparable<KeywordSegement> {
 		return this.query;
 	}
 	
-	public boolean contains(KeywordSegement segement) {
+	public boolean contains(KeywordSegment segement) {
 		if(keywords.containsAll(segement.keywords))
 			return true;
 		return false;
@@ -81,9 +81,9 @@ public class KeywordSegement implements Comparable<KeywordSegement> {
 	public boolean equals(Object object){
 		if(this == object) return true;
 		if(object == null) return false;
-		if(!(object instanceof KeywordSegement)) return false;
+		if(!(object instanceof KeywordSegment)) return false;
 		
-		KeywordSegement ks = (KeywordSegement)object;
+		KeywordSegment ks = (KeywordSegment)object;
 		if(this.keywords.equals(ks.keywords))
 			return true;
 		return false;
@@ -100,7 +100,7 @@ public class KeywordSegement implements Comparable<KeywordSegement> {
 		return str;
 	}
 
-	public int compareTo(KeywordSegement ks) {
+	public int compareTo(KeywordSegment ks) {
 		SortedSet<String> s1 = this.keywords;
 		SortedSet<String> s2 = ks.keywords;
 		if (s1.size() < s2.size()) {

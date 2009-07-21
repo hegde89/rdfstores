@@ -41,22 +41,15 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
 
-import edu.unika.aifb.graphindex.StructureIndex;
-import edu.unika.aifb.graphindex.StructureIndexReader;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.data.Tables;
-import edu.unika.aifb.graphindex.graph.GraphEdge;
-import edu.unika.aifb.graphindex.graph.QueryNode;
 import edu.unika.aifb.graphindex.model.IEntity;
 import edu.unika.aifb.graphindex.model.impl.Entity;
-import edu.unika.aifb.graphindex.query.QueryExecution;
-import edu.unika.aifb.graphindex.query.VPEvaluator;
-import edu.unika.aifb.graphindex.query.model.Query;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryParser;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
-import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.structured.sig.SmallIndexGraphMatcher;
 import edu.unika.aifb.graphindex.searcher.structured.sig.SmallIndexMatchesValidator;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -64,6 +57,7 @@ import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
+@Deprecated
 public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 	private StructureIndex m_schemaIndex;
 	private ExploringIndexMatcher m_schemaMatcher;
@@ -112,13 +106,13 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
 		timings.start(Timings.STEP_KWSEARCH);
-		Map<KeywordSegement,Collection<KeywordElement>> decomposition = search(query, m_schemaKS, timings);
+		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query, m_schemaKS, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 		
 		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
 		List<Query> queries = new ArrayList<Query>();
-		List<Map<String,Set<KeywordSegement>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegement>>>();
-		Map<KeywordSegement,List<GraphElement>> segment2elements = new HashMap<KeywordSegement,List<GraphElement>>();
+		List<Map<String,Set<KeywordSegment>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegment>>>();
+		Map<KeywordSegment,List<GraphElement>> segment2elements = new HashMap<KeywordSegment,List<GraphElement>>();
 		Map<String,Set<String>> ext2entities = new HashMap<String,Set<String>>();
 
 		timings.start(Timings.STEP_EXPLORE);
@@ -139,13 +133,13 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 			QueryExecution qe = new QueryExecution(q, m_queryIndex);
 			log.debug(q);
 			
-			Map<String,Set<KeywordSegement>> select2ks = selectMappings.get(i);
+			Map<String,Set<KeywordSegment>> select2ks = selectMappings.get(i);
 			
-			Map<KeywordSegement,Collection<KeywordElement>> keywordEntities = search(query, m_queryKS, timings);
+			Map<KeywordSegment,Collection<KeywordElement>> keywordEntities = search(query, m_queryKS, timings);
 			List<GTable<String>> resultTables = new ArrayList<GTable<String>>();
 			for (String selectNode : select2ks.keySet()) {
 				Set<String> keywords = new HashSet<String>();
-				for (KeywordSegement ks : select2ks.get(selectNode))
+				for (KeywordSegment ks : select2ks.get(selectNode))
 					keywords.addAll(ks.getKeywords());
 
 				List<String> columns = new ArrayList<String>();
@@ -154,9 +148,9 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 				GTable<String> table = new GTable<String>(columns);
 				
 				Set<String> entities = new HashSet<String>(100);
-				for (KeywordSegement ksOld : select2ks.get(selectNode)) {
-					KeywordSegement ks = null;
-					for (KeywordSegement k : keywordEntities.keySet())
+				for (KeywordSegment ksOld : select2ks.get(selectNode)) {
+					KeywordSegment ks = null;
+					for (KeywordSegment k : keywordEntities.keySet())
 						if (k.getKeywords().equals(ksOld.getKeywords()))
 							ks = k;
 					

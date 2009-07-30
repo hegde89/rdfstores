@@ -11,14 +11,18 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NTriplesImporter;
+import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
+import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.keyword.exploration.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
@@ -29,6 +33,14 @@ import joptsimple.OptionSet;
 public class V2Test {
 	private static final Logger log = Logger.getLogger(V2Test.class);
 
+	private static class Value<T> {
+		public T val;
+		
+		public Value(T val) {
+			this.val = val;
+		}
+	}
+	
 	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
 		op.accepts("a", "action to perform, comma separated list of: import")
@@ -50,7 +62,7 @@ public class V2Test {
 		
 		if (action.equals("create")) {
 			List<String> files = os.nonOptionArguments();
-			
+
 			if (files.size() == 1) {
 				// check if file is a directory, if yes, import all files in the directory
 				File f = new File(files.get(0));
@@ -63,8 +75,8 @@ public class V2Test {
 			}
 
 			Importer importer;
-			if (files.get(0).contains(".nt"))
-				importer = new NTriplesImporter(false);
+			if (files.get(0).contains(".nt") || !files.get(0).contains("."))
+				importer = new NxImporter();
 			else if (files.get(0).contains(".owl"))
 				importer = new OntologyImporter();
 			else if (files.get(0).contains(".rdf") || files.get(0).contains(".xml"))
@@ -81,6 +93,25 @@ public class V2Test {
 			ic.create();
 		}
 		
+		if (action.equals("importtest")) {
+			final Value<Integer> triples = new Value<Integer>(0);
+			Importer importer = new NxImporter();
+			importer.addImport("/data/datasets/btc2009/btc-2009-chunk-001");
+			importer.setTripleSink(new TripleSink() {
+				public void triple(String subject, String property, String object, String context) {
+					triples.val++;
+					
+					if (triples.val % 500000 == 0) {
+						log.debug(triples.val);
+						log.debug(subject + " "+ property + " " + object + " | " + context);
+					}
+				}
+			});
+			
+			importer.doImport();
+			log.debug(triples.val);
+		}
+		
 		if (action.equals("test")) {
 			IndexReader ir = new IndexReader(dir);
 			
@@ -94,15 +125,19 @@ public class V2Test {
 			
 			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
 			
-//			VPEvaluator eval = new VPEvaluator(ir);
+			VPEvaluator eval = new VPEvaluator(ir);
 //			log.debug(eval.evaluate(q));
 			
-			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
-			cqe.setDoRefinement(true);
-			cqe.evaluate(q);
-
-			QueryEvaluator qe = new QueryEvaluator(ir);
-			qe.evaluate(q);
+//			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
+//			cqe.setDoRefinement(true);
+//			cqe.evaluate(q);
+//
+//			QueryEvaluator qe = new QueryEvaluator(ir);
+//			qe.evaluate(q);
+			
+			KeywordQuery kq = new KeywordQuery("q1", "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
+			DirectExploringQueryEvaluator keval = new DirectExploringQueryEvaluator(ir);
+			keval.evaluate(kq);
 		}
 		
 	}

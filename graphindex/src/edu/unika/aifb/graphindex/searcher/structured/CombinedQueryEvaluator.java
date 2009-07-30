@@ -178,11 +178,11 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			GTable<String> result;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				result = joinWithTable(property, srcLabel, trgLabel, targetTable, IndexDescription.PO, targetTable.getColumn(trgLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, targetTable, IndexDescription.POS, targetTable.getColumn(trgLabel));
 			}
 			else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PS, sourceTable.getColumn(srcLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PSO, sourceTable.getColumn(srcLabel));
 			}
 			else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
@@ -229,7 +229,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		
 		Set<String> values = new HashSet<String>();
 		for (String[] row : result) {
-			String ext = m_is.getDataItem(IndexDescription.SES, row[col]);
+			String ext = m_is.getDataItem(IndexDescription.SES, DataField.EXT_SUBJECT, row[col]);
 			if (values.add(ext))
 				extTable.addRow(new String[] { ext });
 			
@@ -286,7 +286,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	
 	private GTable<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException, IOException {
 		if (Util.isConstant(trgLabel)) {
-			GTable<String> table = m_ds.getIndexTable(IndexDescription.PO, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
+			GTable<String> table = m_ds.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;
@@ -303,13 +303,13 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
 			for (String[] row : sourceTable) {
 				if (values.add(row[col]))
-					t2.addRows(m_ds.getIndexTable(IndexDescription.PS, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
+					t2.addRows(m_ds.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
 			}
 			log.debug("unique values: " + values.size());
 			table = Tables.mergeJoin(sourceTable, t2, Arrays.asList(srcLabel, trgLabel));
 		}
 		else {
-			table = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PS, sourceTable.getColumn(srcLabel));
+			table = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PSO, sourceTable.getColumn(srcLabel));
 			
 			table.sort(trgLabel, true);
 			targetTable.sort(trgLabel, true);

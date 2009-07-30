@@ -319,16 +319,15 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				
 				String trgExt = ec.getMatch(trgLabel);
 
-				if (filterUsingTarget) {
-//					log.debug("filter: " + targetTable.rowCount() + " => " + filteredTable.rowCount());
-					GTable<String> filteredTable = filterTable(m_idxPOES, targetTable, srcExt, property, trgLabel);
-					filteredRows += targetTable.rowCount() - filteredTable.rowCount();
-					totalRows += targetTable.rowCount();
-					targetTable = filteredTable;
-										
-					if (targetTable.rowCount() == 0)
-						continue;
-				}
+//				if (filterUsingTarget) {
+//					GTable<String> filteredTable = filterTable(m_idxPOES, targetTable, srcExt, property, trgLabel);
+//					filteredRows += targetTable.rowCount() - filteredTable.rowCount();
+//					totalRows += targetTable.rowCount();
+//					targetTable = filteredTable;
+//										
+//					if (targetTable.rowCount() == 0)
+//						continue;
+//				}
 				
 				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
 				
@@ -338,7 +337,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						GTable<String> t2 = m_is.getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgRow[trgCol], srcExt);
 						if (prunedQuery.isRootOfPrunedPart(trgLabel)) {
 							for (String[] row : t2) {
-								if (m_is.getDataItem(m_idxSES, row[1]).equals(trgExt)) 
+								if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, row[1]).equals(trgExt)) 
 									table.addRow(row);
 							}
 						}
@@ -442,7 +441,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				if (prunedQuery.isRootOfPrunedPart(srcLabel)) {
 					GTable<String> t2 = new GTable<String>(table, false);
 					for (String[] row : table) {
-						if (m_is.getDataItem(m_idxSES, row[0]).equals(srcExt)) 
+						if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, row[0]).equals(srcExt)) 
 							t2.addRow(row);
 					}
 					table = t2;
@@ -504,13 +503,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 						GTable<String> t2 = m_is.getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col], srcExt);
 						if (prunedQuery.isRootOfPrunedPart(trgLabel)) {
 							for (String[] t2row : t2) {
-								if (m_is.getDataItem(m_idxSES, t2row[1]).equals(trgExt))
+								if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, t2row[1]).equals(trgExt))
 									table.addRow(t2row);
 							}
 						}
 						else if (srcLabel.equals("?x1")) {
 							for (String[] t2row : t2)
-								if (m_is.getDataItem(m_idxSES, t2row[0]).equals(srcExt))
+								if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, t2row[0]).equals(srcExt))
 									table.addRow(t2row);
 						}
 						else
@@ -550,18 +549,17 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		return remainingClasses;
 	}
 	
-	private GTable<String> filterTable(IndexDescription index, GTable<String> table, String ext, String property, String colName) throws StorageException {
-		t.start(Timings.DM_FILTER);
-		GTable<String> filteredTable = new GTable<String>(table, false);
-		int col = table.getColumn(colName);
-		for (String[] trgRow : table) {
-			if (m_is.getDataSet(index, property, trgRow[col]).contains(ext))
-				filteredTable.addRow(trgRow);
-		}
-//		log.debug("filtered: " + table.rowCount() + " => " + filteredTable.rowCount());
-		t.end(Timings.DM_FILTER);
-		return filteredTable;
-	}
+//	private GTable<String> filterTable(IndexDescription index, GTable<String> table, String ext, String property, String colName) throws StorageException {
+//		t.start(Timings.DM_FILTER);
+//		GTable<String> filteredTable = new GTable<String>(table, false);
+//		int col = table.getColumn(colName);
+//		for (String[] trgRow : table) {
+//			if (m_is.getDataSet(index, property, trgRow[col]).contains(ext))
+//				filteredTable.addRow(trgRow);
+//		}
+//		t.end(Timings.DM_FILTER);
+//		return filteredTable;
+//	}
 
 	private void updateClasses(List<EvaluationClass> classes, String key, String valueMapNode, Map<String,List<EvaluationClass>> valueMap) {
 		t.start(Timings.DM_CLASSES);

@@ -71,8 +71,8 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 		
 		int igedges = 0;
 		for (String property : m_idxReader.getObjectProperties()) {
-			m_p2ts.put(property, gs.getIndexTable(IndexDescription.PO, DataField.SUBJECT, DataField.OBJECT, property));
-			m_p2to.put(property, gs.getIndexTable(IndexDescription.PS, DataField.SUBJECT, DataField.OBJECT, property));
+			m_p2ts.put(property, gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property));
+			m_p2to.put(property, gs.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property));
 		}
 		
 		log.debug("index graph edges: " + igedges);

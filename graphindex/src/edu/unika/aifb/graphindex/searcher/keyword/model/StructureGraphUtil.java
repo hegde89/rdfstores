@@ -34,23 +34,23 @@ public class StructureGraphUtil {
 	 * @param ele
 	 * @return
 	 */
-	public static String getResourceUri(SummaryGraphElement ele) {
-		if(ele.getType() == SummaryGraphElement.CONCEPT) {
-			return  ((NamedConcept)ele.getResource()).getUri();
-		}
-		else if(ele.getType() == SummaryGraphElement.ATTRIBUTE) {
-			return ((Attribute)ele.getResource()).getUri();
-		}
-		else if(ele.getType() == SummaryGraphElement.RELATION) {
-			return ((Relation)ele.getResource()).getUri();
-		}
-		else if(ele.getType() == SummaryGraphElement.ENTITY) {
-			return ((Entity)ele.getResource()).getUri();
-		}
-		else {
-			return ele.getResource().getLabel();
-		}
-	}
+//	public static String getResourceUri(SummaryGraphElement ele) {
+//		if(ele.getType() == SummaryGraphElement.CONCEPT) {
+//			return  ((NamedConcept)ele.getResource()).getUri();
+//		}
+//		else if(ele.getType() == SummaryGraphElement.ATTRIBUTE) {
+//			return ((Attribute)ele.getResource()).getUri();
+//		}
+//		else if(ele.getType() == SummaryGraphElement.RELATION) {
+//			return ((Relation)ele.getResource()).getUri();
+//		}
+//		else if(ele.getType() == SummaryGraphElement.ENTITY) {
+//			return ((Entity)ele.getResource()).getUri();
+//		}
+//		else {
+//			return ele.getResource().getLabel();
+//		}
+//	}
 	
 	public static String removeNum(String line) {
 		String res = line.replaceFirst("\\u0028.*\\u0029", "");
@@ -58,44 +58,44 @@ public class StructureGraphUtil {
 		return res;
 	}
 	
-	public static SummaryGraphElement getGraphElementWithoutNum(SummaryGraphElement ele){
-		if(ele.getType() == SummaryGraphElement.ATTRIBUTE || ele.getType() == SummaryGraphElement.RELATION){
-			String uri = removeNum(getResourceUri(ele));
-			SummaryGraphElement element = null;
-			if(ele.getType() == SummaryGraphElement.ATTRIBUTE){
-				element = new SummaryGraphElement(new Attribute(uri), SummaryGraphElement.ATTRIBUTE);
-				element.setDatasource(ele.getDatasource());
-				element.setEF(ele.getEF());
-				element.setTotalCost(ele.getTotalCost());
-				element.setMatchingScore(ele.getMatchingScore());
-				return element;
-			}
-			else {
-				element = new SummaryGraphElement(new Relation(uri), SummaryGraphElement.RELATION);
-				element.setDatasource(ele.getDatasource());
-				element.setEF(ele.getEF());
-				element.setTotalCost(ele.getTotalCost());
-				element.setMatchingScore(ele.getMatchingScore());
-				return element;
-			}
-		}
-		else {
-			return ele;
-		}
-	}
-	
-	public static SummaryGraphEdge getGraphEdgeWithoutNum(SummaryGraphEdge edge){
-		SummaryGraphElement source = edge.getSource();
-		SummaryGraphElement target = edge.getTarget();
-		SummaryGraphElement sourceWithoutNum = getGraphElementWithoutNum(source);
-		SummaryGraphElement targetWithoutNum = getGraphElementWithoutNum(target);
-		if(sourceWithoutNum.equals(source) && targetWithoutNum.equals(target)){
-			return edge; 
-		}
-		else {
-			return new SummaryGraphEdge(sourceWithoutNum, targetWithoutNum, edge.getEdgeLabel());
-		}
-	} 
+//	public static SummaryGraphElement getGraphElementWithoutNum(SummaryGraphElement ele){
+//		if(ele.getType() == SummaryGraphElement.ATTRIBUTE || ele.getType() == SummaryGraphElement.RELATION){
+//			String uri = removeNum(getResourceUri(ele));
+//			SummaryGraphElement element = null;
+//			if(ele.getType() == SummaryGraphElement.ATTRIBUTE){
+//				element = new SummaryGraphElement(new Attribute(uri), SummaryGraphElement.ATTRIBUTE);
+//				element.setDatasource(ele.getDatasource());
+//				element.setEF(ele.getEF());
+//				element.setTotalCost(ele.getTotalCost());
+//				element.setMatchingScore(ele.getMatchingScore());
+//				return element;
+//			}
+//			else {
+//				element = new SummaryGraphElement(new Relation(uri), SummaryGraphElement.RELATION);
+//				element.setDatasource(ele.getDatasource());
+//				element.setEF(ele.getEF());
+//				element.setTotalCost(ele.getTotalCost());
+//				element.setMatchingScore(ele.getMatchingScore());
+//				return element;
+//			}
+//		}
+//		else {
+//			return ele;
+//		}
+//	}
+//	
+//	public static SummaryGraphEdge getGraphEdgeWithoutNum(SummaryGraphEdge edge){
+//		SummaryGraphElement source = edge.getSource();
+//		SummaryGraphElement target = edge.getTarget();
+//		SummaryGraphElement sourceWithoutNum = getGraphElementWithoutNum(source);
+//		SummaryGraphElement targetWithoutNum = getGraphElementWithoutNum(target);
+//		if(sourceWithoutNum.equals(source) && targetWithoutNum.equals(target)){
+//			return edge; 
+//		}
+//		else {
+//			return new SummaryGraphEdge(sourceWithoutNum, targetWithoutNum, edge.getEdgeLabel());
+//		}
+//	} 
 	
 	/**
 	 * remove the first < or > from a string.
@@ -132,9 +132,9 @@ public class StructureGraphUtil {
 		}
 	}
 	
-	public static void outputEdges(Pseudograph<SummaryGraphElement, SummaryGraphEdge> graph) {
-		for(SummaryGraphEdge edge : graph.edgeSet()) {
-			System.out.println(edge.toString());
-		}
-	}
+//	public static void outputEdges(Pseudograph<SummaryGraphElement, SummaryGraphEdge> graph) {
+//		for(SummaryGraphEdge edge : graph.edgeSet()) {
+//			System.out.println(edge.toString());
+//		}
+//	}
 }

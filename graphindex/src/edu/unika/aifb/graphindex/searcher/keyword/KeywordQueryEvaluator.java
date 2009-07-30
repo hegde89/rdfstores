@@ -18,13 +18,19 @@ package edu.unika.aifb.graphindex.searcher.keyword;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import edu.unika.aifb.graphindex.index.IndexReader;
-import edu.unika.aifb.graphindex.searcher.Searcher;
+import java.io.IOException;
 
-public class KeywordQueryEvaluator extends Searcher {
+import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
+import edu.unika.aifb.graphindex.searcher.Searcher;
+import edu.unika.aifb.graphindex.storage.StorageException;
+
+public abstract class KeywordQueryEvaluator extends Searcher {
 
 	protected KeywordQueryEvaluator(IndexReader idxReader) {
 		super(idxReader);
 	}
 
+	public abstract GTable<String> evaluate(KeywordQuery query) throws StorageException, IOException;
 }

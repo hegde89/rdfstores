@@ -24,12 +24,14 @@ public class DataField {
 	public static final String FIELD_PROPERTY = "p";
 	public static final String FIELD_EXT_SUBJECT = "es";
 	public static final String FIELD_EXT_OBJECT = "eo";
+	public static final String FIELD_CONTEXT = "c";
 	
 	public static final DataField SUBJECT = new DataField(FIELD_SUBJECT);
 	public static final DataField OBJECT = new DataField(FIELD_OBJECT);
 	public static final DataField PROPERTY = new DataField(FIELD_PROPERTY);
 	public static final DataField EXT_SUBJECT = new DataField(FIELD_EXT_SUBJECT);
 	public static final DataField EXT_OBJECT = new DataField(FIELD_EXT_OBJECT);
+	public static final DataField CONTEXT = new DataField(FIELD_CONTEXT);
 	
 	private String m_type;
 	
@@ -48,6 +50,8 @@ public class DataField {
 			return EXT_SUBJECT;
 		if (type.equals(FIELD_EXT_OBJECT))
 			return EXT_OBJECT;
+		if (type.equals(FIELD_CONTEXT))
+			return CONTEXT;
 		return null;
 	}
 	

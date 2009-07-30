@@ -47,8 +47,8 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	private QueryExecution m_qe;
 	private DataIndex m_dataIndex;
 	
-	private IndexDescription m_idxPSESO;
-	private IndexDescription m_idxPOESS;
+	private IndexDescription m_idxPSO;
+	private IndexDescription m_idxPOS;
 
 	private Timings m_timings;
 	
@@ -63,10 +63,12 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	}
 
 	protected boolean isCompatibleWithIndex() {
-		m_idxPSESO = m_dataIndex.getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
-		m_idxPOESS = m_dataIndex.getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
+		m_idxPSO = m_dataIndex.getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
+		m_idxPOS = m_dataIndex.getSuitableIndex(DataField.PROPERTY, DataField.OBJECT);
 		
-		if (m_idxPSESO == null || m_idxPOESS == null)
+		log.debug("pso index: " + m_idxPSO + ", pos index: " + m_idxPOS);
+		
+		if (m_idxPSO == null || m_idxPOS == null)
 			return false;
 		
 		return true;
@@ -148,11 +150,11 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 			GTable<String> result;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOESS, targetTable.getColumn(trgLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOS, targetTable.getColumn(trgLabel));
 			}
 			else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSESO, sourceTable.getColumn(srcLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, sourceTable.getColumn(srcLabel));
 			}
 			else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
@@ -198,7 +200,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private GTable<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException {
 		if (Util.isConstant(trgLabel)) {
-			GTable<String> table = m_dataIndex.getIndexStorage().getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
+			GTable<String> table = m_dataIndex.getIndexStorage().getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;
@@ -209,7 +211,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private GTable<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, GTable<String> sourceTable, GTable<String> targetTable) throws StorageException {
 
-		GTable<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSESO, sourceTable.getColumn(srcLabel));
+		GTable<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, sourceTable.getColumn(srcLabel));
 		
 		table.sort(trgLabel, true);
 		targetTable.sort(trgLabel, true);

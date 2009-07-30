@@ -38,6 +38,7 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 
 public class NTriplesImporter extends Importer {
+	private static Logger log = Logger.getLogger(NTriplesImporter.class);
 
 	private boolean m_removeBN = true;
 	

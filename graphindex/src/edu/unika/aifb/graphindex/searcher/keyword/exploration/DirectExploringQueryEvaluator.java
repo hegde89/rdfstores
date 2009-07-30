@@ -33,6 +33,8 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
+import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
@@ -66,7 +68,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		m_validator = new SmallIndexMatchesValidator(reader);
 	}
 
-	public void evaluate(String query) throws StorageException {
+	public GTable<String> evaluate(KeywordQuery query) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
@@ -83,7 +85,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
 		timings.start(Timings.STEP_KWSEARCH);
-		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query, m_searcher, timings);
+		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getQuery(), m_searcher, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 
 		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
@@ -103,7 +105,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
 
 		for (int i = 0; i < numberOfQueries; i++) {
-			StructuredQuery q = queries.get(i);
+			PrunedQuery q = new PrunedQuery(queries.get(i), m_idxReader.getStructureIndex());
 			counters.set(Counters.QT_QUERY_EDGES, q.getQueryGraph().edgeCount());
 			log.debug(q);
 
@@ -123,7 +125,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 				String src = edge.getSource().getLabel();
 				String trg = edge.getTarget().getLabel();
 				
-				if (q.getSelectVariables().contains(src)) {
+				if (q.getSelectVariableLabels().contains(src)) {
 					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 					for (EvaluationClass ec : classes) {
 						newClasses.addAll(ec.addMatch(src, false, null, null));
@@ -131,7 +133,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 					classes.addAll(newClasses);					
 				}
 				
-				if (q.getSelectVariables().contains(trg)) {
+				if (q.getSelectVariableLabels().contains(trg)) {
 					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 					for (EvaluationClass ec : classes) {
 						newClasses.addAll(ec.addMatch(trg, false, null, null));
@@ -150,7 +152,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 				for (String selectNode : q.getSelectVariableLabels()) {
 					if (!ec.getMappings().hasColumn(selectNode))
 						continue;
-					if (q.getRemovedNodes().contains(selectNode))
+					if (q.isRemovedNode(selectNode))
 						continue;
 
 					boolean stop = false;
@@ -205,6 +207,8 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		timings.end(Timings.STEP_IQA);
 		
 		timings.end(Timings.TOTAL_QUERY_EVAL);
+		
+		return null;
 	}
 	
 	private String getKSId(KeywordSegment ks) {

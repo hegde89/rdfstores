@@ -19,9 +19,20 @@ package edu.unika.aifb.graphindex.query;
  */
 
 public class HybridQuery extends VQuery {
-
-	public HybridQuery(String name) {
+	private StructuredQuery m_structuredQuery;
+	private KeywordQuery m_keywordQuery;
+	
+	public HybridQuery(String name, StructuredQuery sq, KeywordQuery kq) {
 		super(name);
+		m_structuredQuery = sq;
+		m_keywordQuery = kq;
 	}
 
+	public StructuredQuery getStructuredQuery() {
+		return m_structuredQuery;
+	}
+	
+	public KeywordQuery getKeywordQuery() {
+		return m_keywordQuery;
+	}
 }

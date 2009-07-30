@@ -34,7 +34,7 @@ public class PrunedQuery extends StructuredQuery {
 
 	private StructureIndex m_si;
 	private QueryGraph m_prunedQueryGraph;
-	private Set<String> m_removeNodes;
+	private Set<QNode> m_removeNodes;
 	private Set<String> m_neutralEdgeSet;
 	private Set<PrunedQueryPart> m_prunedParts;
 	private Set<QNode> m_roots;
@@ -45,6 +45,7 @@ public class PrunedQuery extends StructuredQuery {
 		super(query.getName() + "-pruned");
 		
 		m_si = si;
+		m_selectVariables = query.getSelectVariables();
 		
 		pruneQuery(query, si);
 	}
@@ -69,7 +70,7 @@ public class PrunedQuery extends StructuredQuery {
 	
 	@SuppressWarnings("unchecked")
 	private QueryGraph pruneQueryGraph(StructureIndex index) {
-		m_removeNodes = new HashSet<String>();
+		m_removeNodes = new HashSet<QNode>();
 		m_neutralEdgeSet = new HashSet<String>();
 		m_roots = new HashSet<QNode>();
 		
@@ -127,6 +128,7 @@ public class PrunedQuery extends StructuredQuery {
 		for (PrunedQueryPart part : m_prunedParts) {
 			List<QueryEdge> edges = part.trim(m_si.getPathLength());
 			m_roots.add(part.getRoot());
+			m_removeNodes.addAll(part.getQueryGraph().vertexSet());
 			for (QueryEdge edge : edges)
 				prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
 		}
@@ -139,6 +141,14 @@ public class PrunedQuery extends StructuredQuery {
 //		calculateEdgeSets(queryGraph, index, fixedNodes, new HashSet<Integer>(fixedNodes), bwEdgeSources, fwEdgeTargets);
 		
 		return prunedQueryGraph;
+	}
+	
+	public boolean isRemovedNode(QNode node) {
+		return m_removeNodes.contains(node);
+	}
+	
+	public boolean isRemovedNode(String node) {
+		return isRemovedNode(new QNode(node));
 	}
 	
 	private static void explorePath(QueryGraph g, QNode node, List<QNode> path, Set<QNode> fixedNodes) {

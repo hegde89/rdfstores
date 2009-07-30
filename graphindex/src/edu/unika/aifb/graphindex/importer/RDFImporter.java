@@ -35,6 +35,7 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 
 public class RDFImporter extends Importer {
+	private static Logger log = Logger.getLogger(RDFImporter.class);
 
 	public RDFImporter() {
 		super();

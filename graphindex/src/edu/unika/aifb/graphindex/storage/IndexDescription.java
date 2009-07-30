@@ -25,9 +25,38 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * The IndexDescription is used to describe an index. An index consists of a list of index fields, which
+ * describes the indexed term, and one value field. Each of these fields is a {@link DataField}, 
+ * which identifies a part of the information to index. In this case, usually triples or quads are 
+ * indexed and so the fields are subject, property, object, context, etc. 
+ * 
+ * An index is identified by its index and value field name. If several indexes are stored in the same 
+ * storage location (e.g. a Lucene directory), the index and value field names have to be unique.
+ * 
+ * The storage layer supports term and prefix queries. A term query specifies values for all index fields,
+ * whereas for prefix queries only a prefix is specified.
+ * 
+ * @author gla
+ */
 public class IndexDescription {
-	private String m_indexFieldName, m_valueFieldName;
+	/**
+	 * The name of the index field. Used by the storage layer, needs to be unique for a single storage
+	 * location.
+	 */
+	private String m_indexFieldName;
+	/**
+	 * The name of the value field. Used by the storage layer, needs to be unique for a single storage
+	 * location.
+	 */
+	private String m_valueFieldName;
+	/**
+	 * List of fields that make up the index term. Order is significant.
+	 */
 	private List<DataField> m_indexFields;
+	/**
+	 * The field stored as values.
+	 */
 	private DataField m_valueField;
 	
 	public static final IndexDescription PSESO = new IndexDescription("pseso", "o", 
@@ -49,16 +78,38 @@ public class IndexDescription {
 	public static final IndexDescription SES = new IndexDescription("ses", "es",
 		DataField.SUBJECT, DataField.EXT_SUBJECT);
 	
-	public static final IndexDescription OP = new IndexDescription("op", "s",
+	public static final IndexDescription OPS = new IndexDescription("op", "s",
 		DataField.OBJECT, DataField.PROPERTY, DataField.SUBJECT);
-	public static final IndexDescription SP = new IndexDescription("sp", "o",
+	public static final IndexDescription SPO = new IndexDescription("sp", "o",
 		DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT);
-	public static final IndexDescription PO = new IndexDescription("po", "s",
+	public static final IndexDescription POS = new IndexDescription("po", "s",
 		DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
-	public static final IndexDescription PS = new IndexDescription("ps", "o",
+	public static final IndexDescription PSO = new IndexDescription("ps", "o",
 		DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
-	
 
+	public static final IndexDescription SCOP = new IndexDescription("sco", "p",
+		DataField.SUBJECT, DataField.CONTEXT, DataField.OBJECT, DataField.PROPERTY);
+	public static final IndexDescription OCPS = new IndexDescription("ocp", "s",
+		DataField.OBJECT, DataField.CONTEXT, DataField.PROPERTY, DataField.SUBJECT);
+	public static final IndexDescription PSOC = new IndexDescription("pso", "c",
+		DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT, DataField.CONTEXT);
+	public static final IndexDescription CPSO = new IndexDescription("cps", "o",
+		DataField.CONTEXT, DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
+	public static final IndexDescription POCS = new IndexDescription("poc", "s",
+		DataField.PROPERTY, DataField.OBJECT, DataField.CONTEXT, DataField.SUBJECT);
+	public static final IndexDescription SOPC = new IndexDescription("sop", "c",
+		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY, DataField.CONTEXT);
+
+
+	/**
+	 * Creates a new IndexDescription object. The parameter <code>fields</code> contains
+	 * the index and value fields. The last element of the array is assumed to be the value field.
+	 * All previous elements are indexed fields.
+	 * 
+	 * @param indexFieldName
+	 * @param valueFieldName
+	 * @param fields 
+	 */
 	public IndexDescription(String indexFieldName, String valueFieldName, DataField... fields) {
 		m_indexFieldName = indexFieldName;
 		m_valueFieldName = valueFieldName;
@@ -68,6 +119,11 @@ public class IndexDescription {
 		m_valueField = fields[fields.length - 1];
 	}
 	
+	/**
+	 * Convenience method for loading index description from a configuration file.
+	 * 
+	 * @param desc
+	 */
 	public IndexDescription(Map<String,String> desc) {
 		m_indexFieldName = desc.get("index_field_name");
 		m_valueFieldName = desc.get("value_field_name");
@@ -94,6 +150,14 @@ public class IndexDescription {
 		return m_valueField;
 	}
 	
+	/**
+	 * Returns the position of {@link DataField} <code>df</code> among the indexed
+	 * fields or <code>-1</code> if the field is not part of the indexed fields.
+	 * 
+	 * @param df
+	 * @return position of <code>df</code> among the indexed fields or <code>-1</code> if not
+	 * present
+	 */
 	public int getIndexFieldPos(DataField df) {
 		for (int i = 0; i < m_indexFields.size(); i++)
 			if (m_indexFields.get(i) == df)
@@ -113,6 +177,14 @@ public class IndexDescription {
 		return map;
 	}
 
+	/**
+	 * Checks if the index is compatible with the specified fields. An index is
+	 * compatible if the index contains exactly the fields specified in the <code>fields</code>
+	 * parameter. Again, the last element is assumed to be the value field.
+	 * 
+	 * @param fields
+	 * @return true, if the index is compatible, false otherwise
+	 */
 	public boolean isCompatible(DataField[] fields) {
 		if (fields.length - 1 != m_indexFields.size())
 			return false;
@@ -125,6 +197,62 @@ public class IndexDescription {
 			return false;
 			
 		return true;
+	}
+	
+	/**
+	 * Creates an array containing the values specified by <code>indexValue</code> in the
+	 * order of this index's indexed fields, so that the array can be used to access the index.
+	 * 
+	 * @param indexValues maps {@link DataField}s to their values
+	 * @return values from <code>indexValues</code> in correct order for access to this index
+	 */
+	public String[] createValueArray(Map<DataField,String> indexValues) {
+		String[] values = new String [indexValues.size()];
+		
+		for (int i = 0; i < values.length; i++) {
+			values[i] = indexValues.get(m_indexFields.get(i)); 
+			if (values[i] == null)
+				return null;
+		}
+		
+		return values;
+	}
+	
+	/**
+	 * Convenience method that accepts an array as a representation of a Map. See {@link #createValueArray(Map)}.
+	 * The array should contain alternating DataField and String objects as keys and values, respectively.
+	 *  
+	 * @param map
+	 * @return
+	 */
+	public String[] createValueArray(Object... map) {
+		Map<DataField,String> values = new HashMap<DataField,String>();
+		for (int i = 0; i < map.length; i += 2)
+			values.put((DataField)map[i], (String)map[i + 1]);
+		return createValueArray(values);
+	}
+	
+	public int[] getIndexFieldMap(DataField... fields) {
+		int[] map = new int [fields.length];
+		
+		for (int i = 0; i < fields.length; i++) {
+			DataField indexField = m_indexFields.get(i);
+			
+			int idx = -1;
+			for (int j = 0; j < fields.length; j++) {
+				if (fields[j] == indexField) {
+					idx = j;
+					break;
+				}
+			}
+			
+			if (idx < 0)
+				return null;
+			
+			map[idx] = i;
+		}
+		
+		return map;
 	}
 	
 	public boolean isPrefix(DataField[] fields) {

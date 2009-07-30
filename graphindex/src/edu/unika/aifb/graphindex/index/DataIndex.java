@@ -54,6 +54,13 @@ public class DataIndex extends Index {
 		return null;
 	}
 	
+	public IndexDescription getSuitableIndex(DataField... fields) {
+		for (IndexDescription index : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
+			if (index.getIndexFieldMap(fields) != null)
+				return index;
+		return null;
+	}
+	
 	public IndexStorage getIndexStorage() {
 		return m_is;
 	}
@@ -77,25 +84,50 @@ public class DataIndex extends Index {
 			indexValues.put(DataField.OBJECT, o);
 		}
 		
-		IndexDescription index = null;
-		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
-			if (idx.isPrefix(indexFields)) {
-				index = idx;
-				break;
-			}
-		}
-		
+		IndexDescription index = getSuitableIndex(indexFields.toArray(new DataField[] {}));
 		if (index == null) {
 			throw new UnsupportedOperationException("no suitable index found");
 		}
 		
-		return m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT }, indexValues);
+		return m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT }, index.createValueArray(indexValues));
+	}
+
+	public GTable<String> getQuads(String s, String p, String o, String c) throws StorageException {
+		List<DataField> indexFields = new ArrayList<DataField>();
+		Map<DataField,String> indexValues = new HashMap<DataField,String>();
+
+		if (s != null) {
+			indexFields.add(DataField.SUBJECT);
+			indexValues.put(DataField.SUBJECT, s);
+		}
+		
+		if (p != null) {
+			indexFields.add(DataField.PROPERTY);
+			indexValues.put(DataField.PROPERTY, p);
+		}
+		
+		if (o != null) {
+			indexFields.add(DataField.OBJECT);
+			indexValues.put(DataField.OBJECT, o);
+		}
+		
+		if (c != null) {
+			indexFields.add(DataField.CONTEXT);
+			indexValues.put(DataField.CONTEXT, c);
+		}
+		
+		IndexDescription index = getSuitableIndex(indexFields.toArray(new DataField[] {}));
+		if (index == null) {
+			throw new UnsupportedOperationException("no suitable index found");
+		}
+		
+		return m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT, DataField.CONTEXT }, index.createValueArray(indexValues));
 	}
 
 	public Map<String,Set<String>> getImage(String node, boolean preimage) throws StorageException {
-		IndexDescription index = preimage ? IndexDescription.OP : IndexDescription.SP;
-		
-		GTable<String> table = m_is.getIndexTable(index, DataField.PROPERTY, preimage ? DataField.SUBJECT : DataField.OBJECT, node);
+		IndexDescription index = getSuitableIndex(preimage ? DataField.OBJECT : DataField.SUBJECT);
+		GTable<String> table = m_is.getTable(index, new DataField[] { preimage ? DataField.SUBJECT : DataField.OBJECT } , 
+				index.createValueArray(preimage ? DataField.OBJECT : DataField.SUBJECT, node));
 		
 		Map<String,Set<String>> image = new HashMap<String,Set<String>>();
 		for (String[] row : table) {
@@ -111,16 +143,19 @@ public class DataIndex extends Index {
 	}
 
 	public Set<String> getImage(String node, String property, boolean preimage) throws StorageException {
-		IndexDescription index = preimage ? IndexDescription.PO : IndexDescription.PS;
-		return m_is.getDataSet(index, property, node);
+		DataField df = preimage ? DataField.OBJECT : DataField.SUBJECT;
+		IndexDescription index = getSuitableIndex(DataField.PROPERTY, df);
+		return m_is.getDataSet(index, preimage ? DataField.SUBJECT : DataField.OBJECT, index.createValueArray(DataField.PROPERTY, property, df, node));
 	}
 	
 	public Set<String> getSubjectNodes(String property) throws StorageException {
-		return m_is.getDataSet(IndexDescription.PO, property);
+		IndexDescription index = getSuitableIndex(DataField.PROPERTY);
+		return m_is.getDataSet(index, DataField.SUBJECT, index.createValueArray(DataField.PROPERTY, property));
 	}
 
 	public Set<String> getObjectNodes(String property) throws StorageException {
-		return m_is.getDataSet(IndexDescription.PS, property);
+		IndexDescription index = getSuitableIndex(DataField.PROPERTY);
+		return m_is.getDataSet(index, DataField.OBJECT, index.createValueArray(DataField.PROPERTY, property));
 	}
 	
 	public void iterateNodes(String property, NodeListener nl) throws StorageException {
@@ -131,6 +166,6 @@ public class DataIndex extends Index {
 	}
 	
 	public Iterator<String[]> iterator(String property) throws StorageException {
-		return m_is.iterator(IndexDescription.PO, property);
+		return m_is.iterator(getSuitableIndex(DataField.PROPERTY), new DataField[] { DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT }, property);
 	}
 }

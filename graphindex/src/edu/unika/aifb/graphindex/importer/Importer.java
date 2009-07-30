@@ -29,8 +29,6 @@ public abstract class Importer {
 	protected TripleSink m_sink;
 	protected List<String> m_files;
 
-	protected static Logger log;
-	
 	protected Importer() {
 		m_files = new ArrayList<String>();
 	}

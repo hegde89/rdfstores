@@ -43,6 +43,11 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
+/**
+ * VPEvaluator evaluates structured queries using only the data index.
+ * 
+ * @author gla
+ */
 public class VPEvaluator extends StructuredQueryEvaluator {
 	private QueryExecution m_qe;
 	private DataIndex m_dataIndex;

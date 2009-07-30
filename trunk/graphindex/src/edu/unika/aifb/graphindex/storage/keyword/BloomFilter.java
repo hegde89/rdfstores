@@ -20,10 +20,10 @@ package edu.unika.aifb.graphindex.storage.keyword;
 
 import java.util.BitSet;
 
-public class BloomFilter extends Filter
-{
-
-    private BitSet filter_;
+public class BloomFilter extends Filter {
+	private static final long serialVersionUID = 5208974595676250223L;
+	
+	private BitSet filter_;
 
     public BloomFilter(int numElements, int bucketsPerElement)
     {

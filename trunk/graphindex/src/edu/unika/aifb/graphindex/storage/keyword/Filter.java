@@ -21,9 +21,10 @@ package edu.unika.aifb.graphindex.storage.keyword;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
-public abstract class Filter implements Serializable
-{
-    int hashCount;
+public abstract class Filter implements Serializable {
+	private static final long serialVersionUID = -4042125259539176417L;
+
+	int hashCount;
 
     private static MurmurHash hasher = new MurmurHash();
 

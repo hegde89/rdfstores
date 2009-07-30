@@ -47,6 +47,11 @@ import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
+/**
+ * CombinedQueryEvaluator evaluates structured queries using both the data and the structure index.
+ *
+ * @author gla
+ */
 public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 
 	private PrunedPartMatcher m_matcher;

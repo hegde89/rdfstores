@@ -18,6 +18,7 @@ package edu.unika.aifb.graphindex.searcher.keyword.exploration;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -125,8 +126,6 @@ public abstract class ExploringQueryEvaluator extends KeywordQueryEvaluator {
 		log.debug("queries: " + queries.size());
 	}
 	
-	public abstract void evaluate(String query) throws StorageException;
-
 	public void setExecuteAllQueries(boolean allQueries) {
 		m_allQueries = allQueries;
 	}

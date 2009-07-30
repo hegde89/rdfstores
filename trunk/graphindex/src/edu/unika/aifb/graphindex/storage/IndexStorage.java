@@ -37,14 +37,15 @@ public interface IndexStorage {
 	
 	public boolean hasValues(IndexDescription index, String... indexFields) throws StorageException;
 	
-	public List<String> getDataList(IndexDescription index, String... indexFields) throws StorageException;
-	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException;
-	public String getDataItem(IndexDescription index, String... indexFields) throws StorageException;
+	public List<String> getDataList(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException;
+	public Set<String> getDataSet(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException;
+	public String getDataItem(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException;
 	
-	public GTable<String> getTable(IndexDescription index, DataField[] columns, Map<DataField,String> indexValues) throws StorageException;
-	public GTable<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException;
+	public GTable<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException;
+	public GTable<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFieldValues) throws StorageException;
 	
 	public void mergeIndex(IndexDescription index) throws StorageException;
 	public void optimize() throws StorageException;
-	public Iterator<String[]> iterator(IndexDescription index, String property) throws StorageException;
+
+	public Iterator<String[]> iterator(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException;
 }

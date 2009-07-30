@@ -364,7 +364,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			}
 			if (Util.isConstant(trgLabel)) {
 				doTrgFilter = false;
-				List<String> subjectExtensions = m_is.getDataList(m_idxPOES, property, trgLabel);
+				List<String> subjectExtensions = m_is.getDataList(m_idxPOES, DataField.EXT_SUBJECT, m_idxPOES.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 				log.debug("subject extensions: " + subjectExtensions.size());
 				edgeTable = new GTable<String>(srcLabel, trgLabel);
 				for (String subjectExt : subjectExtensions)

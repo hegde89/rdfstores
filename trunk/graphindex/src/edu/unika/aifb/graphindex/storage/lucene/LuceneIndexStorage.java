@@ -20,10 +20,10 @@ package edu.unika.aifb.graphindex.storage.lucene;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -56,7 +56,6 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.StringSplitter;
-import edu.unika.aifb.graphindex.util.Timings;
 
 public class LuceneIndexStorage implements IndexStorage {
 	
@@ -67,7 +66,7 @@ public class LuceneIndexStorage implements IndexStorage {
 	private boolean m_readonly = true;
 	private File m_directory;
 	
-	private static final String KEY_DELIM = "__";
+	private static final String KEY_DELIM = Character.toString((char)31);
 	
 	private static final Logger log = Logger.getLogger(LuceneIndexStorage.class);
 
@@ -97,7 +96,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			e.printStackTrace();
 		}
 
-		BooleanQuery.setMaxClauseCount(1048576);
+		BooleanQuery.setMaxClauseCount(4194304);
 	}
 	
 	public void close() throws StorageException {
@@ -271,21 +270,13 @@ public class LuceneIndexStorage implements IndexStorage {
 		return sb.toString();
 	}
 	
-	private String getIndexKey(IndexDescription index, Map<DataField,String> indexValues) {
-		String[] indexFields = new String[indexValues.size()];
-		for (int i = 0; i < indexFields.length; i++) {
-			indexFields[i] = indexValues.get(index.getIndexFields().get(i));
-		}
-		return getIndexKey(indexFields);
-	}
-
-	public String getDataItem(IndexDescription index, String... indexFields) throws StorageException {
-		if (indexFields.length < index.getIndexFields().size())
+	public String getDataItem(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException {
+		if (indexFieldValues.length < index.getIndexFields().size())
 			throw new UnsupportedOperationException("getDataItem supports only queries with one result document");
 		
 		String value = null;
 		
-		TermQuery q = new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
+		TermQuery q = new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFieldValues)));
 		
 		List<Integer> docIds = getDocumentIds(q);
 		if (docIds.size() > 0) {
@@ -296,58 +287,67 @@ public class LuceneIndexStorage implements IndexStorage {
 		return value;
 	}
 
-	public List<String> getDataList(IndexDescription index, String... indexFields) throws StorageException {
+	public List<String> getDataList(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException {
 		List<String> values = new ArrayList<String>();
-		getData(index, values, indexFields);
+		getData(index, field, values, indexFieldValues);
 		return values;
 	}
 
-	public Set<String> getDataSet(IndexDescription index, String... indexFields) throws StorageException {
+	public Set<String> getDataSet(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException {
 		Set<String> values = new HashSet<String>();
-		getData(index, values, indexFields);
+		getData(index, field, values, indexFieldValues);
 		return values;
 	}
 	
-	private void getData(IndexDescription index, Collection<String> values, String... indexFields) throws StorageException {
-		Query q;
-		if (indexFields.length == index.getIndexFields().size())
-			q = new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
-		else
-			q = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
-		
-		List<Integer> docIds = getDocumentIds(q);
-		for (int docId : docIds)
-			values.addAll(loadDocument(docId, index));
+	private void getData(IndexDescription index, DataField field, Collection<String> values, String... indexFieldValues) throws StorageException {
+		GTable<String> table = getTable(index, new DataField[] { field }, indexFieldValues);
+		for (String[] row : table)
+			values.add(row[0]);
 	}
-
+	
 	@SuppressWarnings("unchecked")
-	public GTable<String> getTable(IndexDescription index, DataField[] columns, Map<DataField,String> indexValues) throws StorageException {
+	public GTable<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException {
 		List<String> cols = new ArrayList<String>();
 		for (DataField df : columns)
 			cols.add(df.toString());
 		
 		GTable<String> table = new GTable<String>(cols);
 
+		boolean usesValueField = false;
 		int[] valueIdxs = new int [columns.length];
-		
 		for (int i = 0; i < columns.length; i++) {
 			DataField colField = columns[i];
 			
-			if (colField == index.getValueField())
+			if (colField == index.getValueField()) {
 				valueIdxs[i] = -1;
-			else
+				usesValueField = true;
+			}
+			else {
 				valueIdxs[i] = index.getIndexFieldPos(colField);
+			}
 		}
 		
 		List<TermQuery> queries = new ArrayList<TermQuery>();
 		
-		String indexKey = getIndexKey(index, indexValues);
-		if (indexValues.size() < index.getIndexFields().size()) {
+		String indexKey = getIndexKey(indexFieldValues);
+		if (indexFieldValues.length < index.getIndexFields().size()) {
 			PrefixQuery pq = new PrefixQuery(new Term(index.getIndexFieldName(), indexKey));
 			try {
 				BooleanQuery bq = (BooleanQuery)pq.rewrite(m_reader);
-				for (BooleanClause bc : bq.getClauses())
-					queries.add((TermQuery)bc.getQuery());
+				if (!usesValueField) {
+					for (BooleanClause bc : bq.getClauses()) {
+						String term = ((TermQuery)bc.getQuery()).getTerm().text();
+						String[] indexTerms = term.split(KEY_DELIM);
+						String[] row = new String[table.columnCount()];
+						for (int i = 0; i < row.length; i++)
+							row[i] = indexTerms[valueIdxs[i]];
+						table.addRow(row);
+					}
+				}
+				else {
+					for (BooleanClause bc : bq.getClauses())
+						queries.add((TermQuery)bc.getQuery());
+				}
 			} catch (IOException e1) {
 				throw new StorageException(e1);
 			}
@@ -355,6 +355,9 @@ public class LuceneIndexStorage implements IndexStorage {
 		else {
 			queries.add(new TermQuery(new Term(index.getIndexFieldName(), indexKey)));
 		}
+		
+		if (!usesValueField)
+			return table;
 		
 		List<Object[]> dis = new ArrayList<Object[]>();
 		for (TermQuery q : queries) {
@@ -405,6 +408,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		return table;
 	}
 
+	@SuppressWarnings("unchecked")
 	private GTable<String> getIndexTables(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException {
 		PrefixQuery pq = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
 		
@@ -535,51 +539,79 @@ public class LuceneIndexStorage implements IndexStorage {
 		private Iterator<TermQuery> m_queryIterator;
 		private List<String> m_values;
 		private Iterator<String> m_valueIterator;
-		private int m_keyValueIdx, m_propertyValueIdx;
-		private String m_currentProperty, m_currentKeyValue;
+		private int[] m_colIdx2TermIdx;
+		private boolean m_usesValue = false;
+		private String[] m_indexTerms;
 		
 		public TriplesIterator(IndexDescription index, List<TermQuery> queries) {
+			this(index, queries, DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT);
+		}
+		
+		public TriplesIterator(IndexDescription index, List<TermQuery> queries, DataField... columnFields) {
 			m_index = index;
 			m_queryIterator = queries.iterator();
 
-			if (index.getValueField() == DataField.SUBJECT)
-				m_keyValueIdx = index.getIndexFieldPos(DataField.OBJECT);
-			else
-				m_keyValueIdx = index.getIndexFieldPos(DataField.SUBJECT);
-			m_propertyValueIdx = index.getIndexFieldPos(DataField.PROPERTY);
+			m_colIdx2TermIdx = new int [columnFields.length];
+			for (int i = 0; i < columnFields.length; i++) {
+				m_colIdx2TermIdx[i] = index.getIndexFieldPos(columnFields[i]);
+				if (columnFields[i] == index.getValueField())
+					m_usesValue = true;
+			}
 		}
 		
 		public boolean hasNext() {
-			if (!m_queryIterator.hasNext() && !m_valueIterator.hasNext())
+			if (!m_usesValue && !m_queryIterator.hasNext())
 				return false;
+			
+			if (m_usesValue && !m_queryIterator.hasNext() && m_valueIterator != null && !m_valueIterator.hasNext())
+				return false;
+			
 			return true;
 		}
 
 		public String[] next() {
-			if (m_values == null || !m_valueIterator.hasNext()) {
+			if (m_indexTerms == null || m_values == null ||!m_valueIterator.hasNext()) {
 				if (!m_queryIterator.hasNext())
 					return null;
-				
+
 				TermQuery q = m_queryIterator.next();
 				String term = q.getTerm().text();
-				String[] indexTerms = term.split(KEY_DELIM);
+				m_indexTerms = term.split(KEY_DELIM);
 				
-				m_currentKeyValue = indexTerms[m_keyValueIdx];
-				m_currentProperty = indexTerms[m_propertyValueIdx];
-				
-				try {
-					m_values = getDataList(m_index, indexTerms);
-					m_valueIterator = m_values.iterator();
-				} catch (StorageException e) {
-					e.printStackTrace();
-					return null;
+				if (m_indexTerms.length < m_index.getIndexFields().size()) {
+					String s = "";
+					for (String idxTerm : m_indexTerms)
+						s += idxTerm + " ";
+					log.debug(q + ", " + term + ", " + s);
 				}
 			}
 			
-			if (m_index.getValueField() == DataField.SUBJECT)
-				return new String[] { m_valueIterator.next(), m_currentProperty, m_currentKeyValue };
-			else
-				return new String[] { m_currentKeyValue, m_currentProperty, m_valueIterator.next() };
+			String[] row = new String [m_colIdx2TermIdx.length];
+
+			if (!m_usesValue) {
+				for (int i = 0; i < m_colIdx2TermIdx.length; i++)
+					row[i] = m_indexTerms[m_colIdx2TermIdx[i]];
+			}
+			else {
+				if (m_values == null || !m_valueIterator.hasNext()) {
+					try {
+						m_values = getDataList(m_index, m_index.getValueField(), m_indexTerms);
+						m_valueIterator = m_values.iterator();
+					} catch (StorageException e) {
+						e.printStackTrace();
+						return null;
+					}
+				}
+				
+				for (int i = 0; i < m_colIdx2TermIdx.length; i++) {
+					if (m_colIdx2TermIdx[i] >= m_indexTerms.length)
+						row[i] = m_valueIterator.next();
+					else
+						row[i] = m_indexTerms[m_colIdx2TermIdx[i]];
+				}
+			}
+			
+			return row;
 		}
 
 		public void remove() {
@@ -588,19 +620,24 @@ public class LuceneIndexStorage implements IndexStorage {
 		
 	}
 	
-	public Iterator<String[]> iterator(IndexDescription index, String property) throws StorageException {
-		PrefixQuery q = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(property)));
-
+	@Override
+	public Iterator<String[]> iterator(IndexDescription index, DataField[] columns, String... indexValues)	throws StorageException {
 		List<TermQuery> queries = new ArrayList<TermQuery>();
-		try {
-			BooleanQuery bq = (BooleanQuery)q.rewrite(m_reader);
-			for (BooleanClause bc : bq.getClauses())
-				queries.add((TermQuery)bc.getQuery());
-		} catch (IOException e) {
-			throw new StorageException(e);
-		}
 		
-		return new TriplesIterator(index, queries);
+		if (indexValues.length < index.getIndexFields().size()) {
+			PrefixQuery q = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues)));
+			try {
+				BooleanQuery bq = (BooleanQuery)q.rewrite(m_reader);
+				for (BooleanClause bc : bq.getClauses())
+					queries.add((TermQuery)bc.getQuery());
+			} catch (IOException e) {
+				throw new StorageException(e);
+			}
+		}
+		else
+			queries.add(new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues))));
+		
+		return new TriplesIterator(index, queries, columns);
 	}
 
 }

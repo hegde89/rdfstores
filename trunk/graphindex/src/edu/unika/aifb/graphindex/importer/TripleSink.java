@@ -18,8 +18,6 @@ package edu.unika.aifb.graphindex.importer;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import edu.unika.aifb.graphindex.storage.StorageException;
-
 public interface TripleSink {
-	public void triple(String s, String p, String o, String objectType);
+	public void triple(String subject, String property, String object, String context);
 }

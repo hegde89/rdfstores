@@ -90,7 +90,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		IndexStorage gs = m_idxReader.getStructureIndex().getGraphIndexStorage();
 
 		for (String property : m_idxReader.getObjectProperties()) {
-			GTable<String> table = gs.getIndexTable(IndexDescription.PO, DataField.SUBJECT, DataField.OBJECT, property);
+			GTable<String> table = gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property);
 			for (String[] row : table) {
 				String src = row[0];
 				String trg = row[1];

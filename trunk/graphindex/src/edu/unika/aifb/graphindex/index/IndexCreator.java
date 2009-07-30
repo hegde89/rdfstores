@@ -26,9 +26,11 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -116,17 +118,26 @@ public class IndexCreator implements TripleSink {
 	public void create() throws FileNotFoundException, IOException, StorageException, EnvironmentLockedException, DatabaseException, InterruptedException {
 		m_idxDirectory.create();
 
-		addDataIndex(IndexDescription.OP);
-		addDataIndex(IndexDescription.PO);
-		addDataIndex(IndexDescription.SP);
-		addDataIndex(IndexDescription.PS);
+//		addDataIndex(IndexDescription.OPS);
+//		addDataIndex(IndexDescription.POS);
+//		addDataIndex(IndexDescription.SPO);
+//		addDataIndex(IndexDescription.PSO);
+
+		addDataIndex(IndexDescription.SCOP);
+		addDataIndex(IndexDescription.OCPS);
+		addDataIndex(IndexDescription.PSOC);
+		addDataIndex(IndexDescription.CPSO);
+		addDataIndex(IndexDescription.POCS);
+		addDataIndex(IndexDescription.SOPC);
 		
 		addSPIndex(IndexDescription.PSESO);
 		addSPIndex(IndexDescription.POESS);
 		addSPIndex(IndexDescription.SES);
 		addSPIndex(IndexDescription.POES);
 		
-		importData();
+//		importData();
+		
+//		analyzeData();
 		
 		index();
 		
@@ -144,22 +155,26 @@ public class IndexCreator implements TripleSink {
 		
 		m_importer.doImport();
 		
-		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
+		Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE, true), m_properties);
+
+		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
+			log.debug("merging " + idx.toString());
 			m_vp.mergeIndex(idx);
+		}
+		log.debug("optimizing...");
 		m_vp.optimize();
-		m_vp.reopen();
-		
-		analyzeData();
-		
 		m_vp.close();
+		
 	}
 	
 	private void analyzeData() throws StorageException, IOException {
+		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
+
 		Set<String> objectProperties = new HashSet<String>();
 		Set<String> dataProperties = new HashSet<String>();
 
-		for (String property : m_properties) {
-			if (hasEntity(property))
+		for (String property : Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE))) {
+			if (hasEntity(dataIndex, property))
 				objectProperties.add(property);
 			else
 				dataProperties.add(property);
@@ -228,8 +243,8 @@ public class IndexCreator implements TripleSink {
 				// build index graph
 				String indexEdge = new StringBuilder().append(subExt).append("__").append(property).append("__").append(objExt).toString();
 				if (indexEdges.add(indexEdge)) {
-					gs.addData(IndexDescription.PS, new String[] { property, subExt }, objExt);
-					gs.addData(IndexDescription.PO, new String[] { property, objExt }, subExt);
+					gs.addData(IndexDescription.PSO, new String[] { property, subExt }, objExt);
+					gs.addData(IndexDescription.POS, new String[] { property, objExt }, subExt);
 				}
 				
 				// add triples to extensions
@@ -279,8 +294,8 @@ public class IndexCreator implements TripleSink {
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
 			is.mergeIndex(idx);
 		
-		gs.mergeIndex(IndexDescription.PS);
-		gs.mergeIndex(IndexDescription.PO);
+		gs.mergeIndex(IndexDescription.PSO);
+		gs.mergeIndex(IndexDescription.POS);
 		
 		is.optimize();
 		gs.optimize();
@@ -365,41 +380,52 @@ public class IndexCreator implements TripleSink {
 		}
 	} 
 	
-	private boolean hasEntity(String property) throws StorageException {
-		GTable<String> table = m_vp.getIndexTable(IndexDescription.PS, DataField.SUBJECT, DataField.OBJECT, property);
-		for (String[] row : table)
-			if (Util.isEntity(row[1]))
+	private boolean hasEntity(DataIndex dataIndex, String property) throws StorageException {
+		IndexDescription idx = dataIndex.getSuitableIndex(DataField.PROPERTY);
+
+		Map<DataField,String> valueMap = new HashMap<DataField,String>();
+		valueMap.put(DataField.PROPERTY, property);
+		
+		for (Iterator<String[]> i = dataIndex.getIndexStorage().iterator(idx, new DataField[] { DataField.PROPERTY }, property); i.hasNext(); ) {
+			String[] row = i.next();
+			if (Util.isEntity(row[2]))
 				return true;
+		}
 		return false;
 	}
 	
-	private String selectByField(DataField df, String s, String p, String o) {
+	private String selectByField(DataField df, String s, String p, String o, String c) {
 		if (df == DataField.SUBJECT)
 			return s;
 		else if (df == DataField.PROPERTY)
 			return p;
 		else if (df == DataField.OBJECT)
 			return o;
+		else if (df == DataField.CONTEXT)
+			return c;
 		else
 			return null;
 	}
-
-	public void triple(String s, String p, String o, String objectType) {
+	
+	public void triple(String s, String p, String o, String c) {
 		m_properties.add(p);
+		
+		if (c == null)
+			c = "";
 		
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			String[] indexFields = new String [idx.getIndexFields().size()];
 			
 			for (int i = 0; i < indexFields.length; i++) {
 				DataField df = idx.getIndexFields().get(i);
-				indexFields[i] = selectByField(df, s, p, o);
+				indexFields[i] = selectByField(df, s, p, o, c);
 
 				if (indexFields[i] == null) {
 					throw new UnsupportedOperationException("data indexes can only consist of S, P and O data fields");
 				}
 			}
 			
-			String value = selectByField(idx.getValueField(), s, p, o);
+			String value = selectByField(idx.getValueField(), s, p, o, c);
 			
 			if (value == null) {
 				throw new UnsupportedOperationException("data indexes can only consist of S, P and O data fields");

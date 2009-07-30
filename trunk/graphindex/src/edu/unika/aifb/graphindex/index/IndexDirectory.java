@@ -41,6 +41,7 @@ public class IndexDirectory {
 	}
 	
 	public static final int CONFIG_FILE = addFile("config.yml");
+	public static final int PROPERTIES_FILE = addFile("properties");
 	public static final int OBJECT_PROPERTIES_FILE = addFile("object_properties");
 	public static final int DATA_PROPERTIES_FILE = addFile("data_properties");
 	public static final int BW_EDGESET_FILE = addFile("backward_edgeset");

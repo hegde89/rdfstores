@@ -68,54 +68,54 @@ public class TriplesPartitioner implements TripleSink {
 	}
 	
 	public void triple(String s, String p, String o, String objectType) {
-		long sh = s;
-		long oh = o;
-		
-		if (!m_partitioningDisabled) {
-			// both uris are known
-			if (h2p.containsKey(sh) && h2p.containsKey(oh)) {
-				int spid = h2p.get(sh);
-				int opid = h2p.get(oh);
-				if (spid != opid) {
-					// uris are in different partitions, mark partitions as being one partition
-					Set<Integer> plist = pmap.get(spid);
-					if (plist == null) {
-						plist = new HashSet<Integer>();
-						pmap.put(spid, plist);
-					}
-					plist.add(opid);
-				}
-			}
-			else if (h2p.containsKey(sh) && !h2p.containsKey(oh)) {
-				// add the object to the partition of the subject
-				h2p.put(oh, h2p.get(sh));
-			}
-			else if (!h2p.containsKey(sh) && h2p.containsKey(oh)) {
-				// add the subject to the partition of the object
-				h2p.put(sh, h2p.get(oh));
-			}
-			else {
-				// both unknown -> create new partition
-				h2p.put(sh, m_pid);
-				h2p.put(oh, m_pid);
-				m_pid++;
-			}
-		}
-		else {
-			h2p.put(sh, m_pid);
-			h2p.put(oh, m_pid);
-		}
-		
-		if (m_triples % MERGE_INTERVAL == 0 && !m_partitioningDisabled)
-			mergePartitions();
-		
-		if (m_triples % PCOUNT_INTERVAL == 0)
-			log.debug("components: " + partitionCount());
-		
-		if (m_triples % STATUS_INTERVAL == 0)
-			log.debug(m_triples + " " + h2p.size() + " " + pmap.size());
-		
-		m_triples++;
+//		long sh = s;
+//		long oh = o;
+//		
+//		if (!m_partitioningDisabled) {
+//			// both uris are known
+//			if (h2p.containsKey(sh) && h2p.containsKey(oh)) {
+//				int spid = h2p.get(sh);
+//				int opid = h2p.get(oh);
+//				if (spid != opid) {
+//					// uris are in different partitions, mark partitions as being one partition
+//					Set<Integer> plist = pmap.get(spid);
+//					if (plist == null) {
+//						plist = new HashSet<Integer>();
+//						pmap.put(spid, plist);
+//					}
+//					plist.add(opid);
+//				}
+//			}
+//			else if (h2p.containsKey(sh) && !h2p.containsKey(oh)) {
+//				// add the object to the partition of the subject
+//				h2p.put(oh, h2p.get(sh));
+//			}
+//			else if (!h2p.containsKey(sh) && h2p.containsKey(oh)) {
+//				// add the subject to the partition of the object
+//				h2p.put(sh, h2p.get(oh));
+//			}
+//			else {
+//				// both unknown -> create new partition
+//				h2p.put(sh, m_pid);
+//				h2p.put(oh, m_pid);
+//				m_pid++;
+//			}
+//		}
+//		else {
+//			h2p.put(sh, m_pid);
+//			h2p.put(oh, m_pid);
+//		}
+//		
+//		if (m_triples % MERGE_INTERVAL == 0 && !m_partitioningDisabled)
+//			mergePartitions();
+//		
+//		if (m_triples % PCOUNT_INTERVAL == 0)
+//			log.debug("components: " + partitionCount());
+//		
+//		if (m_triples % STATUS_INTERVAL == 0)
+//			log.debug(m_triples + " " + h2p.size() + " " + pmap.size());
+//		
+//		m_triples++;
 	}
 	
 	private void mergePartitions() {

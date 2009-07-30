@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 public class OntologyImporter extends Importer {
+	private static Logger log = Logger.getLogger(OntologyImporter.class);
 
 	public OntologyImporter() {
 		super();

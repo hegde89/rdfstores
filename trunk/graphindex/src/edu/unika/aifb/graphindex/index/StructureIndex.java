@@ -68,7 +68,7 @@ public class StructureIndex extends Index {
 	}
 	
 	public String getExtension(String node) throws StorageException, IOException {
-		return getSPIndexStorage().getDataItem(IndexDescription.SES, node);
+		return getSPIndexStorage().getDataItem(IndexDescription.SES, DataField.EXT_SUBJECT, node);
 	}
 
 	public IndexStorage getGraphIndexStorage() throws IOException {

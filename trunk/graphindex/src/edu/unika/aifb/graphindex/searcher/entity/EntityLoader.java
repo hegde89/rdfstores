@@ -63,7 +63,7 @@ public class EntityLoader extends Searcher {
 			for (String property : node.getAttributeQueries().keySet()) {
 				Collection<String> objects = node.getAttributeQueries().get(property);
 				for (String object : objects) {
-					GTable<String> table = m_is.getIndexTable(IndexDescription.PO, DataField.SUBJECT, DataField.OBJECT, property, object);
+					GTable<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, object);
 					table.setColumnName(0, node.getNodeName());
 					table.setColumnName(1, object);
 					tables.add(table);
@@ -71,7 +71,7 @@ public class EntityLoader extends Searcher {
 			}
 			
 			for (String type : node.getTypeQueries()) {
-				GTable<String> table = m_is.getIndexTable(IndexDescription.PO, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
+				GTable<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
 				table.setColumnName(0, node.getNodeName());
 				table.setColumnName(1, type);
 				tables.add(table);

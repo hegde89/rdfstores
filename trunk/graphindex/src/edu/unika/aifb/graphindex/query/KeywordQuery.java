@@ -18,7 +18,7 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public class KeywordQuery extends VQuery{
+public class KeywordQuery extends Query{
 	private String m_query;
 	
 	public KeywordQuery(String name, String query) {

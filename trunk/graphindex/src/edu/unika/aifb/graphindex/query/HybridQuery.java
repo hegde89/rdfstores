@@ -18,7 +18,7 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public class HybridQuery extends VQuery {
+public class HybridQuery extends Query {
 	private StructuredQuery m_structuredQuery;
 	private KeywordQuery m_keywordQuery;
 	

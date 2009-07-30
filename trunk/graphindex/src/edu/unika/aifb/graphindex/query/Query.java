@@ -18,10 +18,10 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public abstract class VQuery {
+public abstract class Query {
 	protected String m_name;
 	
-	protected VQuery(String name) {
+	protected Query(String name) {
 		m_name = name;
 	}
 	

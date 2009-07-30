@@ -74,7 +74,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 	
 	private static final Logger log = Logger.getLogger(IncrementalQueryEvaluator.class);
 	
-	public IncrementalQueryEvaluator(IndexReader reader, EntityLoader el, NeighborhoodStorage ns, StatisticsCollector collector, int nk) throws StorageException, IOException {
+	public IncrementalQueryEvaluator(IndexReader reader, NeighborhoodStorage ns, StatisticsCollector collector, int nk) throws StorageException, IOException {
 		super(reader);
 		m_ns = ns;
 		
@@ -82,7 +82,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		m_matcher.initialize();
 
 		m_validator = new SmallIndexMatchesValidator(reader);
-		m_el = el;
+		m_el = new EntityLoader(reader);
 		m_nk = nk;
 		
 		m_si = reader.getStructureIndex();
@@ -96,6 +96,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		m_nk  = nk;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public GTable<String> evaluate(StructuredQuery q) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();

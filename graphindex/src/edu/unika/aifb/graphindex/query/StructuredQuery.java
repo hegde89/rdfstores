@@ -29,7 +29,7 @@ import java.util.Stack;
 import org.jgrapht.graph.DirectedMultigraph;
 
 
-public class StructuredQuery extends VQuery {
+public class StructuredQuery extends Query {
 	protected QueryGraph m_queryGraph;
 	protected List<QNode> m_selectVariables;
 	

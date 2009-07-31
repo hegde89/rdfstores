@@ -48,7 +48,7 @@ import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
 /**
- * CombinedQueryEvaluator evaluates structured queries using both the data and the structure index.
+ * CombinedQueryEvaluator evaluates structured queries using both, data and structure index.
  *
  * @author gla
  */
@@ -57,7 +57,9 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	private PrunedPartMatcher m_matcher;
 	private IndexStorage m_is, m_ds;
 	private QueryExecution m_qe;
-	private boolean m_doRefinement;
+	private boolean m_doRefinement = true;
+	private IndexDescription m_idxPOS;
+	private IndexDescription m_idxPSO;
 	
 	private static final Logger log = Logger.getLogger(CombinedQueryEvaluator.class);
 
@@ -69,6 +71,11 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		
 		m_ds = idxReader.getDataIndex().getIndexStorage();
 		m_is = idxReader.getStructureIndex().getSPIndexStorage();
+
+		m_idxPSO = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
+		m_idxPOS = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.OBJECT);
+		
+		log.debug("pso index: " + m_idxPSO + ", pos index: " + m_idxPOS);
 	}
 	
 	public void setQueryExecution(QueryExecution qe) {
@@ -127,7 +134,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		});
 
 		if (m_doRefinement)
-			toVisit.addAll(m_qe.getPrunedQuery().getQueryGraph().edgeSet());
+			toVisit.addAll(m_qe.getPrunedQuery().getPrunedQueryGraph().edgeSet());
 		else
 			toVisit.addAll(m_qe.toVisit());
 		
@@ -183,11 +190,11 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			GTable<String> result;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				result = joinWithTable(property, srcLabel, trgLabel, targetTable, IndexDescription.POS, targetTable.getColumn(trgLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOS, DataField.OBJECT, targetTable.getColumn(trgLabel));
 			}
 			else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PSO, sourceTable.getColumn(srcLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.SUBJECT, sourceTable.getColumn(srcLabel));
 			}
 			else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
@@ -259,14 +266,14 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		return result;
 	}
 	
-	private GTable<String> joinWithTable(String property, String srcLabel, String trgLabel, GTable<String> table, IndexDescription index, int col) throws StorageException, IOException {
+	private GTable<String> joinWithTable(String property, String srcLabel, String trgLabel, GTable<String> table, IndexDescription index, DataField df, int col) throws StorageException, IOException {
 		GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
 		
 		boolean targetConstant = Util.isConstant(trgLabel);
 		Set<String> values = new HashSet<String>();
 		for (String[] row : table) {
 			if (values.add(row[col])) {
-				 GTable<String> t3 = m_ds.getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col]);
+				 GTable<String> t3 = m_ds.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
 				 if (!targetConstant)
 					 t2.addRows(t3.getRows());
 				 else {
@@ -291,7 +298,8 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	
 	private GTable<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException, IOException {
 		if (Util.isConstant(trgLabel)) {
-			GTable<String> table = m_ds.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
+//			GTable<String> table = m_ds.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
+			GTable<String> table = m_ds.getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;
@@ -308,13 +316,14 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
 			for (String[] row : sourceTable) {
 				if (values.add(row[col]))
-					t2.addRows(m_ds.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
+					t2.addRows(m_ds.getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, row[col])).getRows());
+//					t2.addRows(m_ds.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
 			}
 			log.debug("unique values: " + values.size());
 			table = Tables.mergeJoin(sourceTable, t2, Arrays.asList(srcLabel, trgLabel));
 		}
 		else {
-			table = joinWithTable(property, srcLabel, trgLabel, sourceTable, IndexDescription.PSO, sourceTable.getColumn(srcLabel));
+			table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.SUBJECT, sourceTable.getColumn(srcLabel));
 			
 			table.sort(trgLabel, true);
 			targetTable.sort(trgLabel, true);

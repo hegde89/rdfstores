@@ -32,6 +32,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 public class StructuredQuery extends Query {
 	protected QueryGraph m_queryGraph;
 	protected List<QNode> m_selectVariables;
+	protected List<QNode> m_variables;
 	
 	public StructuredQuery(String name) {
 		super(name);
@@ -71,6 +72,16 @@ public class StructuredQuery extends Query {
 	
 	public List<QNode> getSelectVariables() {
 		return m_selectVariables;
+	}
+	
+	public List<QNode> getVariables() {
+		if (m_variables == null) {
+			m_variables = new ArrayList<QNode>();
+			for (QNode node : m_queryGraph.vertexSet())
+				if (node.isVariable())
+					m_variables.add(node);
+		}
+		return m_variables;
 	}
 
 	public List<String> getSelectVariableLabels() {

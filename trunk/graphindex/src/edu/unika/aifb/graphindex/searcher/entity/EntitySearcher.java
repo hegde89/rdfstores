@@ -51,17 +51,21 @@ import org.apache.lucene.search.TopDocCollector;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.openrdf.model.vocabulary.RDFS;
 
+import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.model.IEntity;
 import edu.unika.aifb.graphindex.model.impl.Entity;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraph;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraphNode;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
 public class EntitySearcher {
 	
+	private NeighborhoodStorage ns;
 	private IndexSearcher searcher;
 	private IndexReader reader; 
 	
@@ -73,10 +77,12 @@ public class EntitySearcher {
 	
 	private static final Logger log = Logger.getLogger(EntitySearcher.class);
 	
-	public EntitySearcher(String indexDir) {
+	public EntitySearcher(edu.unika.aifb.graphindex.index.IndexReader idxReader) throws StorageException {
 		try {
-			reader = IndexReader.open(indexDir);
+			reader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.KEYWORD_DIR));
 			searcher = new IndexSearcher(reader);
+			ns = new LuceneNeighborhoodStorage(idxReader.getIndexDirectory().getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
+			ns.initialize(false, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -359,7 +365,7 @@ public class EntitySearcher {
 
 				if(type.equals(TypeUtil.ENTITY)){
 					IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-					KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+					KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
 					entities.add(ele);
 				}
 		    }
@@ -438,7 +444,7 @@ public class EntitySearcher {
 
 	    		if(type.equals(TypeUtil.ENTITY)){
 	    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
 	    			result.add(ele);
 	    		}
 	    	}
@@ -481,32 +487,6 @@ public class EntitySearcher {
 	private String pruneString(String str) {
 		return str.replaceAll("\"", "");
 	}
-	
-	public static void main(String[] args) {
-		EntitySearcher searcher = new EntitySearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
-		
-		System.out.println("******************** Input Example ********************");
-		System.out.println("name::Thanh publication AIFB");
-		System.out.println("******************** Input Example ********************");
-		Scanner scanner = new Scanner(System.in);
-		while (true) {
-			System.out.println("Please input the keywords:");
-			String line = scanner.nextLine();
-			
-			if(line.trim().equals("exit")) return;
-			
-			LinkedList<String> keywordList = getKeywordList(line);
-			Map<String, Collection<String>> map = parseQueries(keywordList);
-			
-			long start = System.currentTimeMillis();
-			Collection<KeywordElement> results = searcher.searchEntities(map, null, 0);
-			log.info("total time: " + (System.currentTimeMillis() - start) + " milliseconds");	
-			
-			for(KeywordElement ele : results) {
-				log.info("Elements :" + ele);
-			}
-		}
-	} 
 	
 	public static Map<String, Collection<String>> parseQueries(Collection<String> queries) {
 		Map<String, Collection<String>> keywordCompounds = new HashMap<String, Collection<String>>();

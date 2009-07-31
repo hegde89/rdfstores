@@ -62,19 +62,20 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 
 	private NeighborhoodStorage ns;
 	
-	public KeywordElement(IResource resource, int type, Document doc, double score) {
+	public KeywordElement(IResource resource, int type, Document doc, double score, NeighborhoodStorage ns) {
 		this.resource = resource;
 		this.type = type;
 		this.matchingScore = score;
 		this.doc = doc;
 	}
 	
-	public KeywordElement(IResource resource, int type, double score, String keyword) {
+	public KeywordElement(IResource resource, int type, double score, String keyword, NeighborhoodStorage ns) {
 		this.resource = resource;
 		this.type = type;
 		this.matchingScore = score;
 		this.keywords = new HashSet<String>();
 		this.keywords.add(keyword);
+		this.ns = ns;
 	}
 	
 	public KeywordElement(IResource resource, int type, NeighborhoodStorage ns) {
@@ -155,23 +156,23 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public BloomFilter getBloomFilter() {
 		if(bloomFilter == null) {
-//			try {
-//				bloomFilter = ns.getNeighborhoodBloomFilter(resource.getUri());
-//			} catch (StorageException e) {
-//				e.printStackTrace();
-//			}
-			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
-			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
 			try {
-				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
-				bloomFilter = (BloomFilter)objectInput.readObject();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				bloomFilter = ns.getNeighborhoodBloomFilter(resource.getUri());
+			} catch (StorageException e) {
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
+			}
+//			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
+//			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
+//			try {
+//				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
+//				bloomFilter = (BloomFilter)objectInput.readObject();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} catch (ClassNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} 
 		}
 		return bloomFilter;
 	}

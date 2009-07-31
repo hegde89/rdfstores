@@ -54,6 +54,7 @@ public class IndexDirectory {
 	public static final int KEYWORD_DIR = addDirectory("keyword");
 	public static final int BDB_DIR = addDirectory("bdb");
 	public static final int TEMP_DIR = addDirectory("temp");
+	public static final int NEIGHBORHOOD_DIR = addDirectory("neighborhood");
 	
 	private String m_directory;
 	

@@ -21,6 +21,11 @@ package edu.unika.aifb.graphindex.storage;
 import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
 
 public interface NeighborhoodStorage {
-	public BloomFilter getNeighborhoodBloomFilter(String uri) throws StorageException;
+	public void initialize(boolean clean, boolean readonly) throws StorageException;
 	public void close() throws StorageException;
+	public void optimize() throws StorageException;
+
+	public void addNeighborhoodBloomFilter(String uri, BloomFilter filter) throws StorageException;
+	
+	public BloomFilter getNeighborhoodBloomFilter(String uri) throws StorageException;
 }

@@ -19,18 +19,26 @@ package edu.unika.aifb.graphindex.storage.lucene;
  */
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
@@ -39,16 +47,42 @@ import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
 
 public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 
+	private File m_directory;
+	private IndexWriter m_writer;
 	private IndexReader m_reader;
 	private IndexSearcher m_searcher;
-//	private LRUCache<Integer,Document> m_docCache;
 
-	public LuceneNeighborhoodStorage(String directory) throws StorageException {
+	public LuceneNeighborhoodStorage(File file) throws StorageException {
+		m_directory = file;
+	}
+	
+	public void initialize(boolean clean, boolean readonly) throws StorageException {
 		try {
-			m_reader = IndexReader.open(directory);
+			if (!readonly)
+				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
+		} catch (LockObtainFailedException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public void addNeighborhoodBloomFilter(String uri, BloomFilter filter) throws StorageException {
+		try {
+			ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+			ObjectOutputStream objectOut = new ObjectOutputStream(byteArrayOut);
+			objectOut.writeObject(filter);
+			byte[] bytes = byteArrayOut.toByteArray(); 
+
+			Document doc = new Document();
+			doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.COMPRESS));
+			doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.NO, Field.Index.UN_TOKENIZED));
+			
+			m_writer.addDocument(doc);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -91,6 +125,31 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 			return m_reader.document(docId);
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public void optimize() throws StorageException {
+		try {
+			m_writer.optimize();
+			reopen();
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+	
+	public void reopen() throws StorageException {
+		try {
+			m_searcher.close();
+			m_reader.close();
+	
+			m_writer.flush();
+	
+			m_reader = IndexReader.open(m_directory);
+			m_searcher = new IndexSearcher(m_reader);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}

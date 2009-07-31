@@ -35,6 +35,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
@@ -73,6 +74,9 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 					addVertex(((EdgeElement)e).getSource());
 					addVertex(((EdgeElement)e).getTarget());
 					addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
+				}
+				else if (e instanceof StructuredMatchElement) {
+					
 				}
 			}
 		}

@@ -61,13 +61,16 @@ import edu.unika.aifb.graphindex.model.impl.Relation;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
 public class KeywordSearcher {
 	
 	private IndexReader reader; 
 	private IndexSearcher searcher;
+	private NeighborhoodStorage ns;
 	private Set<String> allAttributes;
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
@@ -79,12 +82,14 @@ public class KeywordSearcher {
 	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	
-	public KeywordSearcher(edu.unika.aifb.graphindex.index.IndexReader idxReader) {
+	public KeywordSearcher(edu.unika.aifb.graphindex.index.IndexReader idxReader) throws StorageException {
 		this.allAttributes = new HashSet<String>();
 		try {
 			reader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.KEYWORD_DIR));
 			searcher = new IndexSearcher(reader);
 			searchAllAttributes(allAttributes);
+			ns = new LuceneNeighborhoodStorage(idxReader.getIndexDirectory().getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
+			ns.initialize(false, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -448,17 +453,17 @@ public class KeywordSearcher {
 
 					if(type.equals(TypeUtil.CONCEPT)){
 						INamedConcept con = new NamedConcept(pruneString(doc.get(Constant.URI_FIELD)), doc.get(Constant.EXTENSION_FIELD));
-						KeywordElement ele = new KeywordElement(con, KeywordElement.CONCEPT, score, keyword);
+						KeywordElement ele = new KeywordElement(con, KeywordElement.CONCEPT, score, keyword, ns);
 						result.add(ele);
 					}
 					else if(type.equals(TypeUtil.RELATION)){
 						IRelation rel = new Relation(pruneString(doc.get(Constant.URI_FIELD)));
-						KeywordElement ele = new KeywordElement(rel, KeywordElement.RELATION, score, keyword);
+						KeywordElement ele = new KeywordElement(rel, KeywordElement.RELATION, score, keyword, ns);
 						result.add(ele);
 					}
 					else if(type.equals(TypeUtil.ATTRIBUTE)){
 						IAttribute attr = new Attribute(pruneString(doc.get(Constant.URI_FIELD)));
-						KeywordElement ele = new KeywordElement(attr, KeywordElement.ATTRIBUTE, score, keyword);
+						KeywordElement ele = new KeywordElement(attr, KeywordElement.ATTRIBUTE, score, keyword, ns);
 						result.add(ele);
 					}
 				}
@@ -579,7 +584,7 @@ public class KeywordSearcher {
 
 	    		if(type.equals(TypeUtil.ENTITY)){
 	    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score);
+	    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
 	    			KeywordSegment ks = new KeywordSegment(segement.getKeywords());
 	    			if(additionalKeyword != null) 
 	    				ks.addKeyword(additionalKeyword);

@@ -19,9 +19,11 @@ import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.ExploringHybridQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.exploration.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
@@ -135,9 +137,14 @@ public class V2Test {
 //			QueryEvaluator qe = new QueryEvaluator(ir);
 //			qe.evaluate(q);
 			
-			KeywordQuery kq = new KeywordQuery("q1", "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
-			DirectExploringQueryEvaluator keval = new DirectExploringQueryEvaluator(ir);
-			keval.evaluate(kq);
+			KeywordQuery kq = new KeywordQuery("q1", "fullprofessor1");
+			q = new StructuredQuery("q");
+			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
+			q.setAsSelect("?x");
+			HybridQuery hq = new HybridQuery("h1", q, kq);
+			
+			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
+			hy.evaluate(hq);
 		}
 		
 	}

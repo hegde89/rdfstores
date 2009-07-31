@@ -59,6 +59,10 @@ public class PrunedQuery extends StructuredQuery {
 		return m_prunedParts;
 	}
 	
+	public QueryGraph getPrunedQueryGraph() {
+		return m_prunedQueryGraph;
+	}
+	
 	public void pruneQuery(StructuredQuery query, StructureIndex index) {
 		Set<String> indexEdges = new HashSet<String>();
 		indexEdges.addAll(index.getBackwardEdges());

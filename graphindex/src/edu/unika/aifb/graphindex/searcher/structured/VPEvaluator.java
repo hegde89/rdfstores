@@ -155,11 +155,11 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 			GTable<String> result;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOS, targetTable.getColumn(trgLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOS, DataField.OBJECT, targetTable.getColumn(trgLabel));
 			}
 			else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, sourceTable.getColumn(srcLabel));
+				result = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.SUBJECT, sourceTable.getColumn(srcLabel));
 			}
 			else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
@@ -183,13 +183,13 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 		return resultTables.get(0);
 	}
 	
-	private GTable<String> joinWithTable(String property, String srcLabel, String trgLabel, GTable<String> table, IndexDescription index, int col) throws StorageException {
+	private GTable<String> joinWithTable(String property, String srcLabel, String trgLabel, GTable<String> table, IndexDescription index, DataField df, int col) throws StorageException {
 		GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
 		
 		Set<String> values = new HashSet<String>();
 		for (String[] row : table) {
 			if (values.add(row[col]))
-				t2.addRows(m_dataIndex.getIndexStorage().getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
+				t2.addRows(m_dataIndex.getIndexStorage().getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col])).getRows());
 		}
 		log.debug("unique values: " + values.size());
 		
@@ -216,7 +216,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private GTable<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, GTable<String> sourceTable, GTable<String> targetTable) throws StorageException {
 
-		GTable<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, sourceTable.getColumn(srcLabel));
+		GTable<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.OBJECT, sourceTable.getColumn(srcLabel));
 		
 		table.sort(trgLabel, true);
 		targetTable.sort(trgLabel, true);

@@ -90,6 +90,10 @@ public class IndexReader {
 			m_dataProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
 		return m_dataProperties;
 	}
+	
+	public int getSubjectCardinality(String property) {
+		return 0;
+	}
 
 	public int getObjectCardinality(String property) {
 		return 0;

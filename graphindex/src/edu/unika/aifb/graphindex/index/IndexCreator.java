@@ -57,6 +57,29 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 
+/**
+ * Create an index directory. An index directory consists of multiple indexes
+ * and other files.
+ * 
+ * Indexes:
+ * <ul>
+ * <li>Data index: the RDF graph stored in a vertical partitioned way using sextuple indexing.</li>
+ * <li>Structure index: structure index graph and structure index, created using a bisimulation algorithm
+ * with a specified path length.</li>
+ * <li>Keyword index (entity index): Index of entities, supporting keyword search on their attributes.</li>
+ * </ul>
+ * 
+ * There are multiple methods to set configuration options, such as which indexes to create and index-specific
+ * options. The data index is always created as it's used as a source for the creation of the other indexes.
+ * By default all indexes are created, the structure index with a path length of 1 and the keyword index without
+ * a neighborhood.
+ * 
+ * If the specified directory does not exists, it is created. If it does exist and is non-empty, all contents
+ * (including previously created indexes) are overwritten.
+ * 
+ * Use {@link IndexReader} for read-access to an index directory.
+ * @author gla
+ */
 public class IndexCreator implements TripleSink {
 
 	private IndexDirectory m_idxDirectory;
@@ -75,30 +98,63 @@ public class IndexCreator implements TripleSink {
 		m_properties = new HashSet<String>();
 	}
 	
+	/**
+	 * Setting to turn on creation of a structure index.
+	 * @param createSI
+	 */
 	public void setCreateStructureIndex(boolean createSI) {
 		m_idxConfig.set(IndexConfiguration.HAS_SP, createSI);
 	}
 
+	/**
+	 * Setting to turn on creation of the data index. Currently useless,
+	 * data index will always be created.
+	 * @param createDI
+	 */
 	public void setCreateDataIndex(boolean createDI) {
 		m_idxConfig.set(IndexConfiguration.HAS_SP, createDI);
 	}
 
+	/**
+	 * Setting to turn on creation of a keyword index.
+	 * @param createKW
+	 */
 	public void setCreateKeywordIndex(boolean createKW) {
 		m_idxConfig.set(IndexConfiguration.HAS_SP, createKW);
 	}
 	
+	/**
+	 * Sets the path length used for creation of the structure index.
+	 * @param pathLength
+	 */
 	public void setSIPathLength(int pathLength) {
 		m_idxConfig.set(IndexConfiguration.SP_PATH_LENGTH, pathLength);
 	}
 	
+	/**
+	 * Setting to turn on creation of data extensions. Off by default and is
+	 * usually not necessary.
+	 * @param createDataExts
+	 */
 	public void setSICreateDataExtensions(boolean createDataExts) {
 		m_idxConfig.set(IndexConfiguration.SP_DATA_EXTENSIONS, createDataExts);
 	}
 	
+	/**
+	 * Set to true (the default) the structure index will capture data value,
+	 * so that structure index evaluators can evaluate queries. This is different
+	 * from data extensions as the data values are ignored for the creation of
+	 * the structure index graph, but are indexed in the structure-based index.
+	 * @param dpSPBased
+	 */
 	public void setStructureBasedDataPartitioning(boolean dpSPBased) {
 		m_idxConfig.set(IndexConfiguration.DP_SP_BASED, dpSPBased);
 	}
 	
+	/**
+	 * Sets the neighborhood size.
+	 * @param nsize
+	 */
 	public void setKWNeighborhoodSize(int nsize) {
 		m_idxConfig.set(IndexConfiguration.KW_NSIZE, nsize);
 	}
@@ -107,21 +163,25 @@ public class IndexCreator implements TripleSink {
 		m_importer = importer;
 	}
 	
-	public void addDataIndex(IndexDescription idx) {
+	private void addDataIndex(IndexDescription idx) {
 		m_idxConfig.addIndex(IndexConfiguration.DI_INDEXES, idx);
 	}
 	
-	public void addSPIndex(IndexDescription idx) {
+	private void addSPIndex(IndexDescription idx) {
 		m_idxConfig.addIndex(IndexConfiguration.SP_INDEXES, idx);
 	}
 	
+	/**
+	 * Creates indexes. Option have to be set beforehand.
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws StorageException
+	 * @throws EnvironmentLockedException
+	 * @throws DatabaseException
+	 * @throws InterruptedException
+	 */
 	public void create() throws FileNotFoundException, IOException, StorageException, EnvironmentLockedException, DatabaseException, InterruptedException {
 		m_idxDirectory.create();
-
-//		addDataIndex(IndexDescription.OPS);
-//		addDataIndex(IndexDescription.POS);
-//		addDataIndex(IndexDescription.SPO);
-//		addDataIndex(IndexDescription.PSO);
 
 		addDataIndex(IndexDescription.SCOP);
 		addDataIndex(IndexDescription.OCPS);
@@ -135,15 +195,24 @@ public class IndexCreator implements TripleSink {
 		addSPIndex(IndexDescription.SES);
 		addSPIndex(IndexDescription.POES);
 		
-//		importData();
+		importData();
 		
-//		analyzeData();
+		analyzeData();
+
+		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
+			log.debug("creating structure index");
+			index();
+			createSPIndexes();
+		}
+		else
+			log.debug("not creating structure index");
 		
-		index();
-		
-		createSPIndexes();
-		
-		createKWIndex();
+		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_KW)) {
+			log.debug("creating keyword index");
+			createKWIndex();
+		}
+		else
+			log.debug("not creating keyword index");
 
 		m_idxConfig.store(m_idxDirectory);
 	}
@@ -386,9 +455,9 @@ public class IndexCreator implements TripleSink {
 		Map<DataField,String> valueMap = new HashMap<DataField,String>();
 		valueMap.put(DataField.PROPERTY, property);
 		
-		for (Iterator<String[]> i = dataIndex.getIndexStorage().iterator(idx, new DataField[] { DataField.PROPERTY }, property); i.hasNext(); ) {
+		for (Iterator<String[]> i = dataIndex.getIndexStorage().iterator(idx, new DataField[] { DataField.OBJECT }, property); i.hasNext(); ) {
 			String[] row = i.next();
-			if (Util.isEntity(row[2]))
+			if (Util.isEntity(row[0]))
 				return true;
 		}
 		return false;

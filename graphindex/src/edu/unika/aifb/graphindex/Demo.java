@@ -17,6 +17,7 @@ import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
+import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 import joptsimple.OptionParser;
@@ -63,39 +64,68 @@ public class Demo {
 			importer.addImports(files);
 
 			IndexCreator ic = new IndexCreator(new IndexDirectory(directory));
-			ic.setImporter(importer);
-			ic.setCreateDataIndex(true);
-			ic.setCreateStructureIndex(true);
-			ic.setCreateKeywordIndex(true);
-			ic.setKWNeighborhoodSize(2);
-			ic.setSIPathLength(1);
-			ic.setSICreateDataExtensions(false);
 			
+			// the importer is the data source
+			ic.setImporter(importer);
+			
+			// create a data index (default: true)
+			ic.setCreateDataIndex(true);
+			
+			// create structure index (default: true)
+			ic.setCreateStructureIndex(true);
+			
+			// create keyword index (default: true)
+			ic.setCreateKeywordIndex(true);
+			
+			// set neighborhood size to 2 (default: 0)
+			ic.setKWNeighborhoodSize(2);
+			
+			// set structure index path length to 1 (default: 1)
+			ic.setSIPathLength(1);
+			
+			// include data values in structure index (not graph) (default: true)
+			ic.setStructureBasedDataPartitioning(true);
+			
+			// create index
 			ic.create();
 		}
 		
 		if (action.equals("test")) {
+			// an index is accessed through an IndexReader object, which is passed
+			// to all evaluators and searchers
 			IndexReader ir = new IndexReader(new IndexDirectory(directory));
 			
+			// print all object properties in the data set
+			// IndexReader has other methods which report information about the data,
+			// e.g. cardinalities (some are not yet implemented)
+			System.out.println(ir.getObjectProperties());
+			
+			// create a structured query
 			StructuredQuery q = new StructuredQuery("q1");
+			
+			// add edges to the query
 			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
 			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom", "?y");
-//			q.addEdge("?t", "blah", "?x");
-//			q.addEdge("?y", "blah", "?x");
-//			q.addEdge("?y", "blah", "?z");
+			
+			// set select variables (currently has to be done after adding edges)
 			q.setAsSelect("?x");
-			
-			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
-			
-//			VPEvaluator eval = new VPEvaluator(ir);
-//			log.debug(eval.evaluate(q));
-			
-			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
-			cqe.setDoRefinement(true);
-			cqe.evaluate(q);
 
-			QueryEvaluator qe = new QueryEvaluator(ir);
-			qe.evaluate(q);
+			// use an VPEvaluator to execute the query
+			// VPEvaluator uses the data index only
+			VPEvaluator eval = new VPEvaluator(ir);
+			System.out.println(eval.evaluate(q));
+			
+			// use an CombinedEvaluator to execute the query
+			// CombinedEvaluator uses both the data and the structure index and
+			// will automatically prune queries
+			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
+			System.out.println(cqe.evaluate(q));
+			
+			// queries can be pruned like this
+			// pruning is dependent on the structure index and the path length used
+			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
+			System.out.println(pq.getQueryGraph().edgeCount() + " -> " + pq.getPrunedQueryGraph().edgeCount());
+			
 		}
 	}
 }

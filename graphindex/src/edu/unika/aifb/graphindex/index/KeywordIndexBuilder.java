@@ -50,8 +50,10 @@ import com.sleepycat.je.Environment;
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
 public class KeywordIndexBuilder {
@@ -77,12 +79,16 @@ public class KeywordIndexBuilder {
 	private IndexDirectory idxDirectory;
 	private DataIndex dataIndex;
 	private BlockCache  blockSearcher;
+	private NeighborhoodStorage ns;
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);
 	
-	public KeywordIndexBuilder(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException {
+	public KeywordIndexBuilder(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException, StorageException {
 		this.idxDirectory = idxDirectory;
 		this.dataIndex = new DataIndex(idxDirectory, idxConfig);
+		
+		this.ns = new LuceneNeighborhoodStorage(idxDirectory.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR, true));
+		this.ns.initialize(true, false);
 		
 		HOP = idxConfig.getInteger(IndexConfiguration.KW_NSIZE);
 		
@@ -113,6 +119,8 @@ public class KeywordIndexBuilder {
 			indexWriter.close();
 			
 			blockSearcher.close();
+			ns.optimize();
+			ns.close();
 		} 
 		catch (IOException e) {
 			e.printStackTrace();
@@ -274,11 +282,14 @@ public class KeywordIndexBuilder {
 						entity = entity.substring(7);
 					bf.add(entity);
 				} 
-				ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-				ObjectOutputStream objectOut = new ObjectOutputStream(byteArrayOut);
-				objectOut.writeObject(bf);
-				byte[] bytes = byteArrayOut.toByteArray(); 
-				doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.YES));
+//				ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+//				ObjectOutputStream objectOut = new ObjectOutputStream(byteArrayOut);
+//				objectOut.writeObject(bf);
+//				byte[] bytes = byteArrayOut.toByteArray(); 
+//				doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.YES));
+
+				ns.addNeighborhoodBloomFilter(uri, bf);
+				
 				doc.setBoost(ENTITY_BOOST);
 				indexWriter.addDocument(doc);
 				

@@ -83,7 +83,7 @@ public class PrunedQuery extends StructuredQuery {
 			if (node.isConstant() || node.isSelectVariable())
 				fixedNodes.add(node);
 		
-		for (QNode start : fixedNodes)
+		for (QNode start : new HashSet<QNode>(fixedNodes))
 			explorePath(m_queryGraph, start, new ArrayList<QNode>(), fixedNodes);
 		
 		log.debug(fixedNodes);

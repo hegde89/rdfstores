@@ -188,8 +188,17 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 		
 		Set<String> values = new HashSet<String>();
 		for (String[] row : table) {
-			if (values.add(row[col]))
-				t2.addRows(m_dataIndex.getIndexStorage().getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col])).getRows());
+			if (values.add(row[col])) {
+				
+				GTable<String> t3 = m_dataIndex.getIndexStorage().getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
+				if (Util.isConstant(trgLabel)) {
+					for (String[] t3row : t3)
+						if (t3row[1].equals(trgLabel))
+							t2.addRow(t3row);
+				}
+				else
+					t2.addRows(t3.getRows());
+			}
 		}
 		log.debug("unique values: " + values.size());
 		

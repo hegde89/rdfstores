@@ -34,6 +34,7 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
@@ -68,16 +69,11 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		for (Cursor c : cursors) {
 			if (c.getCost() > m_cost)
 				m_cost = c.getCost();
-			for (GraphElement e : c.getPath()) {
-				if (e instanceof EdgeElement) {
-					m_edges.add((EdgeElement)e);
-					addVertex(((EdgeElement)e).getSource());
-					addVertex(((EdgeElement)e).getTarget());
-					addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
-				}
-				else if (e instanceof StructuredMatchElement) {
-					
-				}
+			for (EdgeElement e : c.getEdges()) {
+				m_edges.add((EdgeElement)e);
+				addVertex(((EdgeElement)e).getSource());
+				addVertex(((EdgeElement)e).getTarget());
+				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
 			}
 		}
 
@@ -141,6 +137,9 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		int x = 1;
 		for (Cursor c : m_cursors) {
 			Cursor start = c.getStartCursor();
+			if (!(start.getGraphElement() instanceof NodeElement))
+				continue;
+				
 			NodeElement startElement = (NodeElement)start.getGraphElement();
 
 //			if (m_labels.containsKey(startElement.getLabel()))
@@ -185,7 +184,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 
 			String dst = m_labels.get(e.getTarget().getLabel());
 			if (dst == null) {
-				dst = "?x" + x++;
+				if (e.getTarget().getLabel().startsWith("b"))
+					dst = "?x" + x++;
+				else
+					dst = e.getTarget().getLabel();
 				m_labels.put(e.getTarget().getLabel(), dst);
 				m_vars.put(dst, e.getTarget().getLabel());
 			}
@@ -220,6 +222,9 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		
 		for (String select : m_selectVariables)
 			q.setAsSelect(select);
+		
+		for (QNode var : q.getVariables())
+			q.setAsSelect(var.getLabel());
 		
 //		log.debug(q);
 		
@@ -334,7 +339,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 			generateLabelMappings();
 		
 		for (NodeElement node : vertexSet()) {
-			if (outDegreeOf(node) + inDegreeOf(node) == 1 && !m_selectVariables.contains(m_labels.get(node.getLabel())))
+			if (outDegreeOf(node) + inDegreeOf(node) == 1 && !m_selectVariables.contains(m_labels.get(node.getLabel())) && node.getLabel().startsWith("b"))
 				return true;
 		}
 		

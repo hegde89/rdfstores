@@ -31,7 +31,8 @@ public class Cursor implements Comparable<Cursor> {
 
 	private Set<KeywordSegment> m_keywords;
 	private Cursor m_parent;
-	private GraphElement m_element, m_startElement;
+	protected GraphElement m_element;
+	private GraphElement m_startElement;
 	private int m_distance;
 	private int m_cost;
 	private List<GraphElement> m_path = null;
@@ -130,6 +131,14 @@ public class Cursor implements Comparable<Cursor> {
 		}
 		
 		return m_parents;
+	}
+	
+	public Set<EdgeElement> getEdges() {
+		Set<EdgeElement> edges = new HashSet<EdgeElement>();
+		for (GraphElement e : getPath())
+			if (e instanceof EdgeElement)
+				edges.add((EdgeElement) e);
+		return edges;
 	}
 
 	@Override

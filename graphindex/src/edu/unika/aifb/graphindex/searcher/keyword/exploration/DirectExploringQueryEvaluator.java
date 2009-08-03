@@ -104,6 +104,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		
 		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
 
+		GTable<String> result = null;
 		for (int i = 0; i < numberOfQueries; i++) {
 			PrunedQuery q = new PrunedQuery(queries.get(i), m_idxReader.getStructureIndex());
 			counters.set(Counters.QT_QUERY_EDGES, q.getQueryGraph().edgeCount());
@@ -199,6 +200,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 				m_validator.validateIndexMatches();
 			
 			log.debug("result: " + qe.getResult());
+			result = qe.getResult();
 			
 			if (qe.getResult() != null)
 				counters.inc(Counters.RESULTS, qe.getResult().rowCount());
@@ -208,7 +210,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		
 		timings.end(Timings.TOTAL_QUERY_EVAL);
 		
-		return null;
+		return result;
 	}
 	
 	private String getKSId(KeywordSegment ks) {

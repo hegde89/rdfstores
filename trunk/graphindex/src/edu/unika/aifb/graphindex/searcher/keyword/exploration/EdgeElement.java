@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
+
 public class EdgeElement extends GraphElement {
 	private NodeElement m_target;
 	private NodeElement m_source;
@@ -41,11 +43,13 @@ public class EdgeElement extends GraphElement {
 			neighbors.add(m_source);
 		}
 		else {
-			NodeElement prev = (NodeElement)cursor.getParent().getGraphElement();
-			if (m_source.equals(prev))
-				neighbors.add(m_target);
-			else
-				neighbors.add(m_source);
+			if (!(cursor.getParent().getGraphElement() instanceof StructuredMatchElement)) {
+				NodeElement prev = (NodeElement)cursor.getParent().getGraphElement();
+				if (m_source.equals(prev))
+					neighbors.add(m_target);
+				else
+					neighbors.add(m_source);
+			}
 		}
 			
 		return neighbors;

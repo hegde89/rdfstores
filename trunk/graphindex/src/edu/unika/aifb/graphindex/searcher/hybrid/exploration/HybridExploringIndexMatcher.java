@@ -36,6 +36,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.exploration.Cursor;
 import edu.unika.aifb.graphindex.searcher.keyword.exploration.EdgeElement;
@@ -144,7 +145,7 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					Set<NodeElement> nodes = new HashSet<NodeElement>();
 					for (NodeElement node : ((StructuredMatchElement)ele).getNodes()) {
 						NodeElement n = m_nodes.get(node.getLabel());
-						queue.add(new Cursor(keyword, n, null, 0));
+						queue.add(new StructuredQueryCursor(keyword, ele, null, 0, n));
 						nodes.add(n);
 					}
 					((StructuredMatchElement)ele).setNodes(nodes);
@@ -262,8 +263,12 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 									c.addKeywordSegment(ks);
 								cursorQueue.add(c);
 							}
-							else
-								cursorQueue.add(new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1));
+							else {
+								if (minCursor instanceof StructuredQueryCursor)
+									cursorQueue.add(new StructuredQueryCursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1, ((StructuredQueryCursor)minCursor).getStartNode()));
+								else
+									cursorQueue.add(new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1));
+							}
 						}
 
 					}
@@ -329,7 +334,7 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //					log.debug(c + " " + c.getStartCursor());
 //				}
 //				log.debug(sg.edgeSet().size());
-//				log.debug(sg.edgeSet());
+				log.debug(sg.edgeSet());
 //				log.debug("");
 				List<Subgraph> list = new ArrayList<Subgraph>();
 				list.add(sg);
@@ -408,8 +413,8 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 				}
 				
-				for (String var : sg.getSelectVariables())
-					q.setAsSelect(var);
+				for (QNode var : q.getVariables())
+					q.setAsSelect(var.getLabel());
 				
 				queries.add(q);
  			}

@@ -138,9 +138,17 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			Set<NodeElement> nodes = new HashSet<NodeElement>();
 			for (QNode s : query.getStructuredQuery().getVariables())
 				nodes.add(new NodeElement(m_si.getExtension(row[structuredResults.getColumn(s.getLabel())])));
+
 			GTable<String> table = new GTable<String>(structuredResults, false);
 			table.addRow(row);
-			StructuredMatchElement element = new StructuredMatchElement("structured-element-" + i, query, nodes, table);
+			
+			GTable<String> extTable = new GTable<String>(structuredResults, false);
+			String[] extRow = new String [row.length];
+			for (int j = 0; j < row.length; j++)
+				extRow[j] = m_si.getExtension(row[j]);
+			extTable.addRow(extRow);
+			
+			StructuredMatchElement element = new StructuredMatchElement("structured-element-" + i, query, nodes, table, extTable);
 			i++;
 			
 			elements.add(element);
@@ -185,9 +193,10 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		int numberOfQueries = 1;
 		
 		for (int i = 0; i < numberOfQueries; i++) {
+			log.debug(queries.get(i).getQueryGraph().edgeSet());
 			PrunedQuery q = new PrunedQuery(queries.get(i), m_idxReader.getStructureIndex());
 			counters.set(Counters.QT_QUERY_EDGES, q.getQueryGraph().edgeCount());
-			log.debug(q);
+			log.debug(q.getQueryGraph().edgeSet());
 
 			QueryExecution qe = new QueryExecution(q, m_idxReader);
 			QueryGraph queryGraph = qe.getQueryGraph();
@@ -234,6 +243,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 						continue;
 					if (q.isRemovedNode(selectNode))
 						continue;
+					if (select2ks.get(selectNode) == null)
+						continue;
 
 					boolean stop = false;
 					String ksCol = "";
@@ -279,6 +290,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 				m_validator.validateIndexMatches();
 			
 			log.debug("result: " + qe.getResult());
+			log.debug(qe.getResult().toDataString());
 			
 			if (qe.getResult() != null)
 				counters.inc(Counters.RESULTS, qe.getResult().rowCount());

@@ -10,7 +10,6 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.data.GTable;
 import edu.unika.aifb.graphindex.importer.Importer;
-import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
@@ -118,14 +117,11 @@ public class V2Test {
 			IndexReader ir = new IndexReader(dir);
 			
 			StructuredQuery q = new StructuredQuery("q1");
-			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
-			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom", "?y");
-//			q.addEdge("?t", "blah", "?x");
-//			q.addEdge("?y", "blah", "?x");
-//			q.addEdge("?y", "blah", "?z");
-			q.setAsSelect("?x");
+//			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
+//			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom", "?y");
+//			q.setAsSelect("?x");
 			
-			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
+//			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
 			
 			VPEvaluator eval = new VPEvaluator(ir);
 //			log.debug(eval.evaluate(q));
@@ -137,14 +133,21 @@ public class V2Test {
 //			QueryEvaluator qe = new QueryEvaluator(ir);
 //			qe.evaluate(q);
 			
-			KeywordQuery kq = new KeywordQuery("q1", "fullprofessor1");
 			q = new StructuredQuery("q");
 			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
+			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
+//			q.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
 			q.setAsSelect("?x");
+			q.setAsSelect("?y");
+			eval.evaluate(q);
+
+			KeywordQuery kq = new KeywordQuery("q1", "Course0 Publication");
+			
 			HybridQuery hq = new HybridQuery("h1", q, kq);
 			
 			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
 			hy.evaluate(hq);
+			
 		}
 		
 	}

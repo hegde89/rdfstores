@@ -36,7 +36,6 @@ import com.sleepycat.je.EnvironmentLockedException;
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.importer.Importer;
-import edu.unika.aifb.graphindex.importer.NTriplesImporter;
 import edu.unika.aifb.graphindex.importer.OntologyImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;

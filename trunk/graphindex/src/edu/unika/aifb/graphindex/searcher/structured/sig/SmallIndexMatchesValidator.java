@@ -215,7 +215,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 //		Tables.log.setLevel(Level.OFF);
 		
 //		m_counters.set(Counters.DM_REM_NODES, prunedQuery.getRemovedNodes().size());
-		m_counters.set(Counters.DM_PROCESSED_EDGES, toVisit.size());
+//		m_counters.set(Counters.DM_PROCESSED_EDGES, toVisit.size());
 		
 		log.debug("");
 		while (toVisit.size() > 0) {
@@ -484,16 +484,19 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				IndexDescription index;
 				GTable<String> prevTable;
 				int col;
+				DataField indexDF;
 				
 				if (sourceTable.rowCount() < targetTable.rowCount()) {
 					index = m_idxPSESO;
 					prevTable = sourceTable;
 					col = sourceTable.getColumn(srcLabel);
+					indexDF = DataField.SUBJECT;
 				}
 				else {
 					index = m_idxPOESS;
 					prevTable = targetTable;
 					col = targetTable.getColumn(trgLabel);
+					indexDF = DataField.OBJECT;
 				}
 				
 				String trgExt = ec.getMatch(trgLabel);
@@ -501,6 +504,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				for (String[] row : prevTable) {
 					if (!values.contains(row[col])) {
 						GTable<String> t2 = m_is.getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col], srcExt);
+						t2 = m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, indexDF, row[col], DataField.EXT_SUBJECT, srcExt));
 						if (prunedQuery.isRootOfPrunedPart(trgLabel)) {
 							for (String[] t2row : t2) {
 								if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, t2row[1]).equals(trgExt))

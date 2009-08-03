@@ -67,6 +67,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.type = type;
 		this.matchingScore = score;
 		this.doc = doc;
+		this.ns = ns;
 	}
 	
 	public KeywordElement(IResource resource, int type, double score, String keyword, NeighborhoodStorage ns) {

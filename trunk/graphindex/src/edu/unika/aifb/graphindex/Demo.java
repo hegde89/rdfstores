@@ -1,5 +1,23 @@
 package edu.unika.aifb.graphindex;
 
+/**
+ * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,12 +27,15 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.graphindex.importer.Importer;
-import edu.unika.aifb.graphindex.importer.NTriplesImporter;
+import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryEvaluator;
+import edu.unika.aifb.graphindex.searcher.keyword.exploration.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
@@ -57,7 +78,7 @@ public class Demo {
 
 			Importer importer;
 			if (files.get(0).contains(".nt"))
-				importer = new NTriplesImporter();
+				importer = new NxImporter();
 			else
 				throw new Exception("file type unknown");
 			
@@ -126,6 +147,10 @@ public class Demo {
 			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
 			System.out.println(pq.getQueryGraph().edgeCount() + " -> " + pq.getPrunedQueryGraph().edgeCount());
 			
+			// a keyword query, DirectExploringQueryEvaluator is the only currently usable for keyword queries
+			KeywordQuery kq = new KeywordQuery("q1", "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
+			KeywordQueryEvaluator kwEval = new DirectExploringQueryEvaluator(ir);
+			System.out.println(kwEval.evaluate(kq).toDataString());
 		}
 	}
 }

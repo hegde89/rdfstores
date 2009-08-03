@@ -31,7 +31,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
@@ -246,10 +246,10 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 					throw new UnsupportedOperationException("deferred edge should have processed node...");
 				
 				for (EvaluationClass ec : classes) {
-					GTable<String> ecTable = ec.findResult(srcLabel);
+					Table<String> ecTable = ec.findResult(srcLabel);
 					ec.getResults().remove(ecTable);
 					
-					GTable<String> table = new GTable<String>(ecTable, false);
+					Table<String> table = new Table<String>(ecTable, false);
 					int col = ecTable.getColumn(srcLabel);
 					for (String[] row : ecTable) {
 						if (m_entitySearcher.isType(row[col], trgLabel))
@@ -313,7 +313,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
-				GTable<String> targetTable = ec.findResult(trgLabel);
+				Table<String> targetTable = ec.findResult(trgLabel);
 				int trgCol = targetTable.getColumn(trgLabel);
 				ec.getResults().remove(targetTable);
 				
@@ -329,12 +329,12 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 //						continue;
 //				}
 				
-				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+				Table<String> table = new Table<String>(srcLabel, trgLabel);
 				
 				Set<String> values = new HashSet<String>();
 				for (String[] trgRow : targetTable) {
 					if (!values.contains(trgRow[trgCol])) {
-						GTable<String> t2 = m_is.getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgRow[trgCol], srcExt);
+						Table<String> t2 = m_is.getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgRow[trgCol], srcExt);
 						if (prunedQuery.isRootOfPrunedPart(trgLabel)) {
 							for (String[] row : t2) {
 								if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, row[1]).equals(trgExt)) 
@@ -379,7 +379,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		log.debug("target constant: " + targetConstant);
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
-				GTable<String> sourceTable = ec.findResult(srcLabel);
+				Table<String> sourceTable = ec.findResult(srcLabel);
 				int srcCol = sourceTable.getColumn(srcLabel);
 				ec.getResults().remove(sourceTable);
 				
@@ -389,12 +389,12 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 //				if (sourcesOfRemoved.contains(trgLabel) && !m_es.hasTriples(m_idxESPS, trgExt, removedProperties.get(trgLabel), null))
 //					continue;
 
-				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+				Table<String> table = new Table<String>(srcLabel, trgLabel);
 
 				Set<String> values = new HashSet<String>();
 				for (String[] srcRow : sourceTable) {
 					if (!values.contains(srcRow[srcCol])) {
-						GTable<String> t2 = m_is.getIndexTable(m_idxPSESO, DataField.SUBJECT, DataField.OBJECT, property, srcRow[srcCol], srcExt);
+						Table<String> t2 = m_is.getIndexTable(m_idxPSESO, DataField.SUBJECT, DataField.OBJECT, property, srcRow[srcCol], srcExt);
 						
 						if (!targetConstant)
 							table.addRows(t2.getRows());
@@ -434,12 +434,12 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		if (Util.isConstant(trgLabel)) {
 			// use ESPO index to load triples
 			for (String srcExt : ext2ec.keySet()) {
-				GTable<String> table = m_is.getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel, srcExt);
+				Table<String> table = m_is.getIndexTable(m_idxPOESS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel, srcExt);
 				if (table.rowCount() == 0)
 					continue;
 				
 				if (prunedQuery.isRootOfPrunedPart(srcLabel)) {
-					GTable<String> t2 = new GTable<String>(table, false);
+					Table<String> t2 = new Table<String>(table, false);
 					for (String[] row : table) {
 						if (m_is.getDataItem(m_idxSES, DataField.EXT_SUBJECT, row[0]).equals(srcExt)) 
 							t2.addRow(row);
@@ -472,17 +472,17 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
-				GTable<String> sourceTable = ec.findResult(srcLabel);
-				GTable<String> targetTable = ec.findResult(trgLabel);
+				Table<String> sourceTable = ec.findResult(srcLabel);
+				Table<String> targetTable = ec.findResult(trgLabel);
 
 				ec.getResults().remove(sourceTable);
 				ec.getResults().remove(targetTable);
 
-				GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+				Table<String> table = new Table<String>(srcLabel, trgLabel);
 				Set<String> values = new HashSet<String>();
 				
 				IndexDescription index;
-				GTable<String> prevTable;
+				Table<String> prevTable;
 				int col;
 				DataField indexDF;
 				
@@ -503,7 +503,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				
 				for (String[] row : prevTable) {
 					if (!values.contains(row[col])) {
-						GTable<String> t2 = m_is.getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col], srcExt);
+						Table<String> t2 = m_is.getIndexTable(index, DataField.SUBJECT, DataField.OBJECT, property, row[col], srcExt);
 						t2 = m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, indexDF, row[col], DataField.EXT_SUBJECT, srcExt));
 						if (prunedQuery.isRootOfPrunedPart(trgLabel)) {
 							for (String[] t2row : t2) {

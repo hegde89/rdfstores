@@ -48,7 +48,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -171,7 +171,7 @@ public class KeywordIndexBuilder {
 //						doc.add(new Field(Constant.SCHEMA_FIELD, label, Field.Store.YES,Field.Index.TOKENIZED));
 //					}
 //				} 
-				GTable<String> table = dataIndex.getTriples(uri, RDFS.LABEL.stringValue(), null);
+				Table<String> table = dataIndex.getTriples(uri, RDFS.LABEL.stringValue(), null);
 				for (String[] row : table) {
 					doc.add(new Field(Constant.SCHEMA_FIELD, row[2], Field.Store.YES,Field.Index.TOKENIZED));
 				}
@@ -328,7 +328,7 @@ public class KeywordIndexBuilder {
 //		} else 
 //			return null;
 		
-		GTable<String> table = dataIndex.getTriples(entityUri, RDF.TYPE.stringValue(), null);
+		Table<String> table = dataIndex.getTriples(entityUri, RDF.TYPE.stringValue(), null);
 		if (table.rowCount() == 0)
 			return null;
 		for (String[] row : table) {
@@ -358,7 +358,7 @@ public class KeywordIndexBuilder {
 //			return set;
 //		} else 
 //			return null;
-		GTable<String> table = dataIndex.getTriples(entityUri, RDFS.LABEL.stringValue(), null);
+		Table<String> table = dataIndex.getTriples(entityUri, RDFS.LABEL.stringValue(), null);
 		if (table.rowCount() == 0)
 			return null;
 		for (String[] row : table) {
@@ -398,7 +398,7 @@ public class KeywordIndexBuilder {
 //			return set;
 //		} else 
 //			return null;
-		GTable<String> table = dataIndex.getTriples(entityUri, null, null);
+		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)
 			return null;
 		for (String[] row : table) {
@@ -442,7 +442,7 @@ public class KeywordIndexBuilder {
 //					set.add(object);
 //			}
 //		} 
-		GTable<String> table = dataIndex.getTriples(entityUri, null, null);
+		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 
 		for (String[] row : table) {
 			String predicate = row[1];

@@ -34,7 +34,7 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import org.jgrapht.graph.DirectedMultigraph;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
@@ -90,7 +90,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		IndexStorage gs = m_idxReader.getStructureIndex().getGraphIndexStorage();
 
 		for (String property : m_idxReader.getObjectProperties()) {
-			GTable<String> table = gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property);
+			Table<String> table = gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property);
 			for (String[] row : table) {
 				String src = row[0];
 				String trg = row[1];
@@ -280,7 +280,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		}
 	}
 	
-	public void indexMatches(List<GTable<String>> indexMatches, List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> select2ks, boolean withAttributes) {
+	public void indexMatches(List<Table<String>> indexMatches, List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> select2ks, boolean withAttributes) {
 		List<List<Subgraph>> groups = new ArrayList<List<Subgraph>>();
 		
 		for (Subgraph sg : m_subgraphs) {
@@ -292,7 +292,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					list.add(sg);
 					
 					Map<String,String> vars = list.get(0).getVariableMapping();
-					GTable<String> table = indexMatches.get(i);
+					Table<String> table = indexMatches.get(i);
 					
 					for (Map<String,String> mapping : mappings) {
 						String[] row = new String [table.columnCount()];
@@ -321,7 +321,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				list.add(sg);
 				groups.add(list);
 				
-				GTable<String> table = new GTable<String>(sg.getQueryNodes());
+				Table<String> table = new Table<String>(sg.getQueryNodes());
 				String[] row = new String[table.columnCount()];
 				for (String col : table.getColumnNames()) {
 					row[table.getColumn(col)] = sg.getVariableMapping().get(col);

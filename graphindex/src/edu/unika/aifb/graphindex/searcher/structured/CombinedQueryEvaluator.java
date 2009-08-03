@@ -32,7 +32,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.PrunedQueryPart;
@@ -86,7 +86,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		m_doRefinement = doRefinement;
 	}
 
-	public GTable<String> evaluate(StructuredQuery q) throws StorageException, IOException {
+	public Table<String> evaluate(StructuredQuery q) throws StorageException, IOException {
 
 		Timings timings = new Timings();
 		Counters counters = new Counters();
@@ -102,7 +102,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		final QueryGraph queryGraph = m_qe.getQueryGraph();
 		final Map<String,Integer> proximites = m_qe.getProximities();
 
-		List<GTable<String>> resultTables = m_qe.getResultTables() == null ? new ArrayList<GTable<String>>() : m_qe.getResultTables(); 
+		List<Table<String>> resultTables = m_qe.getResultTables() == null ? new ArrayList<Table<String>>() : m_qe.getResultTables(); 
 
 		Queue<QueryEdge> toVisit = new PriorityQueue<QueryEdge>(queryGraph.edgeCount(), new Comparator<QueryEdge>() {
 			public int compare(QueryEdge e1, QueryEdge e2) {
@@ -171,8 +171,8 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			
 			log.debug(srcLabel + " -> " + trgLabel + " (" + property + ")");
 			
-			GTable<String> sourceTable = null, targetTable = null;
-			for (GTable<String> table : resultTables) {
+			Table<String> sourceTable = null, targetTable = null;
+			for (Table<String> table : resultTables) {
 				if (table.hasColumn(srcLabel))
 					sourceTable = table;
 				if (table.hasColumn(trgLabel))
@@ -187,7 +187,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 
 			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 
-			GTable<String> result;
+			Table<String> result;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
 				result = joinWithTable(property, srcLabel, trgLabel, targetTable, m_idxPOS, DataField.OBJECT, targetTable.getColumn(trgLabel));
@@ -233,9 +233,9 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		return m_qe.getResult();
 	}
 
-	private GTable<String> refineWithPrunedPart(PrunedQueryPart prunedQueryPart, String srcLabel, GTable<String> result) throws StorageException {
+	private Table<String> refineWithPrunedPart(PrunedQueryPart prunedQueryPart, String srcLabel, Table<String> result) throws StorageException {
 		Map<String,List<String[]>> ext2entity = new HashMap<String,List<String[]>>(100);
-		GTable<String> extTable = new GTable<String>(Arrays.asList(srcLabel));
+		Table<String> extTable = new Table<String>(Arrays.asList(srcLabel));
 		
 		int col = result.getColumn(srcLabel);
 		
@@ -257,7 +257,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		m_matcher.match();
 		
 		int rows = result.rowCount();
-		result = new GTable<String>(result, false);
+		result = new Table<String>(result, false);
 		for (String ext : m_matcher.getValidExtensions()) {
 			result.addRows(ext2entity.get(ext));
 		}
@@ -266,14 +266,14 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		return result;
 	}
 	
-	private GTable<String> joinWithTable(String property, String srcLabel, String trgLabel, GTable<String> table, IndexDescription index, DataField df, int col) throws StorageException, IOException {
-		GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
+	private Table<String> joinWithTable(String property, String srcLabel, String trgLabel, Table<String> table, IndexDescription index, DataField df, int col) throws StorageException, IOException {
+		Table<String> t2 = new Table<String>(srcLabel, trgLabel);
 		
 		boolean targetConstant = Util.isConstant(trgLabel);
 		Set<String> values = new HashSet<String>();
 		for (String[] row : table) {
 			if (values.add(row[col])) {
-				 GTable<String> t3 = m_ds.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
+				 Table<String> t3 = m_ds.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
 				 if (!targetConstant)
 					 t2.addRows(t3.getRows());
 				 else {
@@ -291,15 +291,15 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		table.sort(joinCol, true);
 		t2.sort(joinCol, true);
 
-		GTable<String> result = Tables.mergeJoin(table, t2, joinCol);
+		Table<String> result = Tables.mergeJoin(table, t2, joinCol);
 		
 		return result;
 	}
 	
-	private GTable<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException, IOException {
+	private Table<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException, IOException {
 		if (Util.isConstant(trgLabel)) {
 //			GTable<String> table = m_ds.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
-			GTable<String> table = m_ds.getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
+			Table<String> table = m_ds.getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;
@@ -308,12 +308,12 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			throw new UnsupportedOperationException("edges with two variables and both unprocessed should not happen");
 	}
 	
-	private GTable<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, GTable<String> sourceTable, GTable<String> targetTable) throws StorageException, IOException {
-		GTable<String> table;
+	private Table<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, Table<String> sourceTable, Table<String> targetTable) throws StorageException, IOException {
+		Table<String> table;
 		if (sourceTable == targetTable) {
 			int col = sourceTable.getColumn(srcLabel);
 			Set<String> values = new HashSet<String>();
-			GTable<String> t2 = new GTable<String>(srcLabel, trgLabel);
+			Table<String> t2 = new Table<String>(srcLabel, trgLabel);
 			for (String[] row : sourceTable) {
 				if (values.add(row[col]))
 					t2.addRows(m_ds.getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, row[col])).getRows());

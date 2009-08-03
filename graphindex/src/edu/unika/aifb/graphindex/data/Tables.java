@@ -35,19 +35,19 @@ import edu.unika.aifb.graphindex.util.Timings;
 
 public class Tables {
 	public interface JoinedRowValidator {
-		public void setTables(GTable<String> left, GTable<String> right);
+		public void setTables(Table<String> left, Table<String> right);
 		public boolean isValid(String[] leftRow, String[] rightRow);
 	}
 
 	public static final Logger log = Logger.getLogger(Tables.class);
 	public static Timings timings = null;
 	
-	public static GTable<String> mergeTables(List<GTable<String>> tables, final int col) {
+	public static Table<String> mergeTables(List<Table<String>> tables, final int col) {
 		if (timings != null)
 			timings.start(Timings.TBL_MERGE);
 		long start = System.currentTimeMillis();
 	
-		GTable<String> result = new GTable<String>(tables.get(0).getColumnNames());
+		Table<String> result = new Table<String>(tables.get(0).getColumnNames());
 		
 		if (tables.size() > 1) {
 			PriorityQueue<PeekIterator<String[]>> queue = new PriorityQueue<PeekIterator<String[]>>(tables.size(), new Comparator<PeekIterator<String[]>>() {
@@ -56,7 +56,7 @@ public class Tables {
 				}
 			});
 		
-			for (GTable<String> table : tables)
+			for (Table<String> table : tables)
 				queue.add(new PeekIterator<String[]>(table.iterator()));
 		
 		
@@ -80,7 +80,7 @@ public class Tables {
 		return result;
 	}
 
-	public static void verifySorted(GTable<String> table) {
+	public static void verifySorted(Table<String> table) {
 		String x = null;
 		int c = table.getColumn(table.getSortedColumn());
 		for (String[] row : table.getRows()) {
@@ -139,7 +139,7 @@ public class Tables {
 		return resultRow;
 	}
 
-	public static GTable<Integer> mergeJoinInteger(GTable<Integer> left, GTable<Integer> right, String col) {
+	public static Table<Integer> mergeJoinInteger(Table<Integer> left, Table<Integer> right, String col) {
 		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
 			throw new UnsupportedOperationException("merge join with unsorted tables");
 		if (timings != null)
@@ -156,7 +156,7 @@ public class Tables {
 		int lc = left.getColumn(col);
 		int rc = right.getColumn(col);
 	
-		GTable<Integer> result = new GTable<Integer>(resultColumns);
+		Table<Integer> result = new Table<Integer>(resultColumns);
 	
 		int l = 0, r = 0;
 		while (l < left.rowCount() && r < right.rowCount()) {
@@ -198,11 +198,11 @@ public class Tables {
 		return result;
 	}
 
-	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, String col) {
+	public static Table<String> mergeJoin(Table<String> left, Table<String> right, String col) {
 		return mergeJoin(left, right, col, null);
 	}
 	
-	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, String col, JoinedRowValidator validator) {
+	public static Table<String> mergeJoin(Table<String> left, Table<String> right, String col, JoinedRowValidator validator) {
 		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
 			throw new UnsupportedOperationException("merge join with unsorted tables");
 		if (timings != null)
@@ -210,7 +210,7 @@ public class Tables {
 		long start = System.currentTimeMillis();
 		
 		if (right.columnCount() > left.columnCount()) {
-			GTable<String> temp = right;
+			Table<String> temp = right;
 			right = left;
 			left = temp;
 		}
@@ -233,7 +233,7 @@ public class Tables {
 		if (validator != null)
 			validator.setTables(left, right);
 	
-		GTable<String> result = new GTable<String>(resultColumns, left.rowCount() + right.rowCount());
+		Table<String> result = new Table<String>(resultColumns, left.rowCount() + right.rowCount());
 	
 		int l = 0, r = 0;
 		while (l < left.rowCount() && r < right.rowCount()) {
@@ -293,7 +293,7 @@ public class Tables {
 		return resultRow;
 	}
 
-	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, List<String> cols) {
+	public static Table<String> mergeJoin(Table<String> left, Table<String> right, List<String> cols) {
 		return mergeJoin(left, right, cols, null);
 	}
 	
@@ -304,13 +304,13 @@ public class Tables {
 		return sb.toString();
 	}
 	
-	public static GTable<String> mergeJoin(GTable<String> left, GTable<String> right, List<String> cols, JoinedRowValidator validator) {
+	public static Table<String> mergeJoin(Table<String> left, Table<String> right, List<String> cols, JoinedRowValidator validator) {
 		if (timings != null)
 			timings.start(Timings.JOIN_MERGE);
 		long start = System.currentTimeMillis();
 		
 		if (right.columnCount() > left.columnCount()) {
-			GTable<String> temp = right;
+			Table<String> temp = right;
 			right = left;
 			left = temp;
 		}
@@ -334,7 +334,7 @@ public class Tables {
 		if (validator != null)
 			validator.setTables(left, right);
 	
-		GTable<String> result = new GTable<String>(resultColumns, left.rowCount() + right.rowCount());
+		Table<String> result = new Table<String>(resultColumns, left.rowCount() + right.rowCount());
 	
 		int l = 0, r = 0;
 		while (l < left.rowCount() && r < right.rowCount()) {
@@ -381,13 +381,13 @@ public class Tables {
 		return result;
 	}
 
-	public static GTable<Integer> hashJoinInteger(GTable<Integer> left, GTable<Integer> right, List<String> cols) {
+	public static Table<Integer> hashJoinInteger(Table<Integer> left, Table<Integer> right, List<String> cols) {
 		if (timings != null)
 			timings.start(Timings.JOIN_HASH);
 //		long start = System.currentTimeMillis();
 	
 		if (left.rowCount() >= right.rowCount()) {
-			GTable<Integer> tmpTable = left;
+			Table<Integer> tmpTable = left;
 			left = right;
 			right = tmpTable;
 		}
@@ -413,7 +413,7 @@ public class Tables {
 			if (!cols.contains(s))
 				resultColumns.add(s);
 	
-		GTable<Integer> result = new GTable<Integer>(resultColumns);
+		Table<Integer> result = new Table<Integer>(resultColumns);
 	
 		Map<String,List<Integer[]>> leftVal2Rows = new HashMap<String,List<Integer[]>>();
 		for (Integer[] row : left) {
@@ -454,13 +454,13 @@ public class Tables {
 		return result;
 	}
 
-	public static GTable<String> hashJoin(GTable<String> left, GTable<String> right, List<String> cols) {
+	public static Table<String> hashJoin(Table<String> left, Table<String> right, List<String> cols) {
 		if (timings != null)
 			timings.start(Timings.JOIN_HASH);
 		long start = System.currentTimeMillis();
 	
 		if (left.rowCount() >= right.rowCount()) {
-			GTable<String> tmpTable = left;
+			Table<String> tmpTable = left;
 			left = right;
 			right = tmpTable;
 		}
@@ -486,7 +486,7 @@ public class Tables {
 			if (!cols.contains(s))
 				resultColumns.add(s);
 	
-		GTable<String> result = new GTable<String>(resultColumns);
+		Table<String> result = new Table<String>(resultColumns);
 	
 		Map<String,List<String[]>> leftVal2Rows = new HashMap<String,List<String[]>>();
 		for (String[] row : left) {
@@ -527,7 +527,7 @@ public class Tables {
 		return result;
 	}
 
-	private static void sortTableComplete(GTable<String> table) {
+	private static void sortTableComplete(Table<String> table) {
 		List<String> colsSorted = table.getColumnNamesSorted();
 		final int[] cols = new int[table.columnCount()];
 		for (int i = 0; i < table.columnCount(); i++)
@@ -544,7 +544,7 @@ public class Tables {
 		});
 	}
 
-	private static void compareTables(GTable<String> t1, GTable<String> t2) {
+	private static void compareTables(Table<String> t1, Table<String> t2) {
 		sortTableComplete(t1);
 		sortTableComplete(t2);
 	

@@ -28,7 +28,7 @@ import java.util.PriorityQueue;
 import org.apache.log4j.Logger;
 import org.openrdf.model.vocabulary.RDF;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.model.impl.Entity;
@@ -59,11 +59,11 @@ public class EntityLoader extends Searcher {
 	
 	public TransformedGraph loadEntities(TransformedGraph tg, NeighborhoodStorage ns) throws IOException, StorageException {
 		for (TransformedGraphNode node : tg.getNodes()) {
-			List<GTable<String>> tables = new ArrayList<GTable<String>>();
+			List<Table<String>> tables = new ArrayList<Table<String>>();
 			for (String property : node.getAttributeQueries().keySet()) {
 				Collection<String> objects = node.getAttributeQueries().get(property);
 				for (String object : objects) {
-					GTable<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, object);
+					Table<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, object);
 					table.setColumnName(0, node.getNodeName());
 					table.setColumnName(1, object);
 					tables.add(table);
@@ -71,15 +71,15 @@ public class EntityLoader extends Searcher {
 			}
 			
 			for (String type : node.getTypeQueries()) {
-				GTable<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
+				Table<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
 				table.setColumnName(0, node.getNodeName());
 				table.setColumnName(1, type);
 				tables.add(table);
 			}
 			
 			if (tables.size() > 1) {
-				PriorityQueue<GTable<String>> pq = new PriorityQueue<GTable<String>>(tables.size(), new Comparator<GTable<String>>() {
-					public int compare(GTable<String> o1, GTable<String> o2) {
+				PriorityQueue<Table<String>> pq = new PriorityQueue<Table<String>>(tables.size(), new Comparator<Table<String>>() {
+					public int compare(Table<String> o1, Table<String> o2) {
 						return ((Integer)o1.rowCount()).compareTo(o2.rowCount());
 					}
 				});
@@ -87,10 +87,10 @@ public class EntityLoader extends Searcher {
 				pq.addAll(tables);
 				
 				while (pq.size() > 1) {
-					GTable<String> t1 = pq.poll();
-					GTable<String> t2 = pq.poll();
+					Table<String> t1 = pq.poll();
+					Table<String> t2 = pq.poll();
 					
-					GTable<String> res = Tables.mergeJoin(t1, t2, node.getNodeName());
+					Table<String> res = Tables.mergeJoin(t1, t2, node.getNodeName());
 					
 					pq.add(res);
 				}
@@ -100,7 +100,7 @@ public class EntityLoader extends Searcher {
 			}
 			
 			if (tables.size() > 0) {
-				GTable<String> table = tables.get(0);
+				Table<String> table = tables.get(0);
 				log.debug("table for " + node.getNodeName() + ": " + table);
 				
 				List<KeywordElement> entities = new ArrayList<KeywordElement>(table.rowCount());

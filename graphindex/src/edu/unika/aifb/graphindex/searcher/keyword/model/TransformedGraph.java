@@ -28,7 +28,7 @@ import java.util.Set;
 
 import org.openrdf.model.vocabulary.RDF;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.model.impl.Entity;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;

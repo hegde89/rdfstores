@@ -25,7 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
@@ -45,8 +45,8 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 	protected StructuredQuery m_query;
 	protected QueryGraph m_queryGraph;
 
-	protected Map<String,GTable<String>> m_p2to;
-	protected Map<String,GTable<String>> m_p2ts;
+	protected Map<String,Table<String>> m_p2to;
+	protected Map<String,Table<String>> m_p2ts;
 
 	protected Timings m_timings;
 	protected Counters m_counters;
@@ -64,8 +64,8 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 	}
 	
 	public void initialize() throws StorageException, IOException {
-		m_p2ts = new HashMap<String,GTable<String>>();
-		m_p2to = new HashMap<String,GTable<String>>();
+		m_p2ts = new HashMap<String,Table<String>>();
+		m_p2to = new HashMap<String,Table<String>>();
 		
 		IndexStorage gs = m_idxReader.getStructureIndex().getGraphIndexStorage();
 		
@@ -77,9 +77,9 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 		
 		log.debug("index graph edges: " + igedges);
 		
-		for (GTable<String> t : m_p2ts.values())
+		for (Table<String> t : m_p2ts.values())
 			t.sort(0);
-		for (GTable<String> t : m_p2to.values())
+		for (Table<String> t : m_p2to.values())
 			t.sort(1);
 	}
 	

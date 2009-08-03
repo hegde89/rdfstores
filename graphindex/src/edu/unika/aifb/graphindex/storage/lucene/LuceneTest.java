@@ -48,7 +48,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.LockObtainFailedException;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.Util;
@@ -92,7 +92,7 @@ public class LuceneTest {
 		return docIds;
 	}
 
-	private static void addToTable(GTable<String> table, Document doc, String allowedSubject) {
+	private static void addToTable(Table<String> table, Document doc, String allowedSubject) {
 		String[] subjectStrings;
 		String subjectString;
 		subjectString = doc.getField("subject").stringValue();
@@ -132,7 +132,7 @@ public class LuceneTest {
 		System.out.println("test1: retrieve doc ids and then load docs for each query");
 		for (Query q : queries) {
 			System.out.print(q + " ");
-			GTable<String> table = new GTable<String>("source", "target");
+			Table<String> table = new Table<String>("source", "target");
 			long start = System.currentTimeMillis();
 			List<Integer> docIds = getDocumentIds(q);
 			System.out.print(System.currentTimeMillis() - start + " ");
@@ -148,16 +148,16 @@ public class LuceneTest {
 		}
 	}
 
-	private static class Test1a implements Callable<GTable<String>> {
+	private static class Test1a implements Callable<Table<String>> {
 		private Query q;
 
 		public Test1a(Query q) {
 			this.q = q;
 		}
 
-		public GTable<String> call() throws Exception {
+		public Table<String> call() throws Exception {
 			System.out.println(q + " ");
-			GTable<String> table = new GTable<String>("source", "target");
+			Table<String> table = new Table<String>("source", "target");
 			long start = System.currentTimeMillis();
 			List<Integer> docIds = getDocumentIds(q);
 //			System.out.print(System.currentTimeMillis() - start + " ");
@@ -176,13 +176,13 @@ public class LuceneTest {
 	public static void test1a(List<Query> queries) throws StorageException, InterruptedException, ExecutionException {
 		System.out.println("test1a: retrieve doc ids and then load docs for each query with multiple threads");
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		ExecutorCompletionService<GTable<String>> cs = new ExecutorCompletionService<GTable<String>>(executor);
+		ExecutorCompletionService<Table<String>> cs = new ExecutorCompletionService<Table<String>>(executor);
 		for (Query q : queries) {
 			cs.submit(new Test1a(q));
 		}
 		
 		for (int i = 0; i < queries.size(); i++) {
-			GTable<String> table = cs.take().get();
+			Table<String> table = cs.take().get();
 		}
 		executor.shutdown();
 	}
@@ -191,7 +191,7 @@ public class LuceneTest {
 		System.out.println("test2: retrieve doc ids, load each doc");
 		for (Query q : queries) {
 			System.out.print(q + " ");
-			final GTable<String> table = new GTable<String>("source", "target");
+			final Table<String> table = new Table<String>("source", "target");
 			final long start = System.currentTimeMillis();
 			search(q, new DocumentIdCollector() {
 				public void collect(int docId) {
@@ -207,7 +207,7 @@ public class LuceneTest {
 		}
 	}
 	
-	private static class Test3 implements Callable<GTable<String>> {
+	private static class Test3 implements Callable<Table<String>> {
 
 		private List<Integer> m_docIds;
 
@@ -215,8 +215,8 @@ public class LuceneTest {
 			m_docIds = docIds;
 		}
 		
-		public GTable<String> call() throws Exception {
-			GTable<String> table = new GTable<String>("source", "target");
+		public Table<String> call() throws Exception {
+			Table<String> table = new Table<String>("source", "target");
 			for (int id : m_docIds) {
 				Document doc = getDocument(id);
 				addToTable(table, doc, null);
@@ -230,7 +230,7 @@ public class LuceneTest {
 	public static void test3(List<Query> queries) throws StorageException, InterruptedException, ExecutionException {
 		System.out.println("test3: retrieve doc ids, separate thread for loading docs for each query");
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		ExecutorCompletionService<GTable<String>> cs = new ExecutorCompletionService<GTable<String>>(executor);
+		ExecutorCompletionService<Table<String>> cs = new ExecutorCompletionService<Table<String>>(executor);
 		for (Query q : queries) {
 			System.out.print(q + " ");
 			long start = System.currentTimeMillis();
@@ -242,7 +242,7 @@ public class LuceneTest {
 		}
 		
 		for (int i = 0; i < queries.size(); i++) {
-			GTable<String> res = cs.take().get();
+			Table<String> res = cs.take().get();
 		}
 		executor.shutdown();
 	}

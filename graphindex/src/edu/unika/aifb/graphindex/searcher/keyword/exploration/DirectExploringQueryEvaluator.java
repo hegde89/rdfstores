@@ -30,7 +30,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
@@ -68,7 +68,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		m_validator = new SmallIndexMatchesValidator(reader);
 	}
 
-	public GTable<String> evaluate(KeywordQuery query) throws StorageException, IOException {
+	public Table<String> evaluate(KeywordQuery query) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
@@ -78,7 +78,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		m_validator.setCounters(counters);
 		m_idxReader.getCollector().addTimings(timings);
 		m_idxReader.getCollector().addCounters(counters);
-		GTable.timings = timings;
+		Table.timings = timings;
 		Tables.timings = timings;
 
 		log.info("evaluating...");
@@ -88,7 +88,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getQuery(), m_searcher, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 
-		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
+		List<Table<String>> indexMatches = new ArrayList<Table<String>>();
 		List<StructuredQuery> queries = new ArrayList<StructuredQuery>();
 		List<Map<String,Set<KeywordSegment>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegment>>>();
 		Map<KeywordSegment,List<GraphElement>> segment2elements = new HashMap<KeywordSegment,List<GraphElement>>();
@@ -104,7 +104,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 		
 		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
 
-		GTable<String> result = null;
+		Table<String> result = null;
 		for (int i = 0; i < numberOfQueries; i++) {
 			PrunedQuery q = new PrunedQuery(queries.get(i), m_idxReader.getStructureIndex());
 			counters.set(Counters.QT_QUERY_EDGES, q.getQueryGraph().edgeCount());
@@ -113,7 +113,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 			QueryExecution qe = new QueryExecution(q, m_idxReader);
 			QueryGraph queryGraph = qe.getQueryGraph();
 			
-			GTable<String> indexMatch = indexMatches.get(i);
+			Table<String> indexMatch = indexMatches.get(i);
 			qe.setIndexMatches(indexMatch);
 			log.debug(indexMatch);
 			
@@ -175,7 +175,7 @@ public class DirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 					List<String> columns = new ArrayList<String>();
 					columns.add(ksCol);
 					columns.add(selectNode);
-					GTable<String> table = new GTable<String>(columns);
+					Table<String> table = new Table<String>(columns);
 					int col = table.getColumn(selectNode);
 	
 					for (KeywordSegment ks : select2ks.get(selectNode)) {

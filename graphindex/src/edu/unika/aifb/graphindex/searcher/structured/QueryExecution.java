@@ -28,7 +28,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.index.StructureIndex;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
@@ -55,17 +55,17 @@ public class QueryExecution {
 	private Map<String,String> m_removedProperties;
 	
 	// vp stuff
-	private List<GTable<String>> m_resultTables = null;
+	private List<Table<String>> m_resultTables = null;
 	
 	// index matcher stuff
-	private List<GTable<String>> m_matchTables = null;
-	private GTable<String> m_indexMatches = null;
+	private List<Table<String>> m_matchTables = null;
+	private Table<String> m_indexMatches = null;
 	
 	// index matches validator stuff
 	private List<EvaluationClass> m_evaClasses = null;
 	private Map<String,Integer> m_cardinalityMap = null;
 
-	private GTable<String> m_result = null;
+	private Table<String> m_result = null;
 	
 	// compaction signatures
 	private Set<String> m_compactSigs;
@@ -149,11 +149,11 @@ public class QueryExecution {
 	
 	// vp ---------------------------
 	
-	public void setResultTables(List<GTable<String>> tables) {
+	public void setResultTables(List<Table<String>> tables) {
 		m_resultTables = tables;
 	}
 	
-	public List<GTable<String>> getResultTables() {
+	public List<Table<String>> getResultTables() {
 		return m_resultTables;
 	}
 	
@@ -172,19 +172,19 @@ public class QueryExecution {
 		m_imVisitedEdges.add(edge);
 	}
 	
-	public void setMatchTables(List<GTable<String>> tables) {
+	public void setMatchTables(List<Table<String>> tables) {
 		m_matchTables = tables;
 	}
 	
-	public List<GTable<String>> getMatchTables() {
+	public List<Table<String>> getMatchTables() {
 		return m_matchTables;
 	}
 	
-	public void setIndexMatches(GTable<String> indexMatches) {
+	public void setIndexMatches(Table<String> indexMatches) {
 		m_indexMatches = indexMatches;
 	}
 	
-	public GTable<String> getIndexMatches() {
+	public Table<String> getIndexMatches() {
 		return m_indexMatches;
 	}
 	
@@ -206,11 +206,11 @@ public class QueryExecution {
 		return m_cardinalityMap;
 	}
 	
-	private GTable<String> compactTable(GTable<String> table) {
+	private Table<String> compactTable(Table<String> table) {
 		m_rowsBeforeCompaction += table.rowCount();
 		
 		List<String> selectVars = m_query.getSelectVariableLabels();
-		GTable<String> result = new GTable<String>(selectVars);
+		Table<String> result = new Table<String>(selectVars);
 
 		int[] cols = new int [selectVars.size()];
 		for (int i = 0; i < selectVars.size(); i++)
@@ -233,7 +233,7 @@ public class QueryExecution {
 		return result;
 	}
 	
-	public void addResult(GTable<String> result, boolean compact) {
+	public void addResult(Table<String> result, boolean compact) {
 		if (compact)
 			result = compactTable(result);
 		
@@ -243,7 +243,7 @@ public class QueryExecution {
 			m_result.addRows(result.getRows());
 	}
 	
-	public GTable<String> getResult() {
+	public Table<String> getResult() {
 		return m_result;
 	}
 	

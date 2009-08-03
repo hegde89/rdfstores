@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 
 public interface IndexStorage {
 	public void initialize(boolean clean, boolean readonly);
@@ -41,8 +41,8 @@ public interface IndexStorage {
 	public Set<String> getDataSet(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException;
 	public String getDataItem(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException;
 	
-	public GTable<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException;
-	public GTable<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFieldValues) throws StorageException;
+	public Table<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException;
+	public Table<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFieldValues) throws StorageException;
 	
 	public void mergeIndex(IndexDescription index) throws StorageException;
 	public void optimize() throws StorageException;

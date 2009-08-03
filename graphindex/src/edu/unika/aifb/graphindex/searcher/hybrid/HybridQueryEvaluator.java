@@ -20,7 +20,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid;
 
 import java.io.IOException;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.searcher.Searcher;
@@ -32,5 +32,5 @@ public abstract class HybridQueryEvaluator extends Searcher {
 		super(idxReader);
 	}
 
-	public abstract GTable<String> evaluate(HybridQuery query) throws StorageException, IOException;
+	public abstract Table<String> evaluate(HybridQuery query) throws StorageException, IOException;
 }

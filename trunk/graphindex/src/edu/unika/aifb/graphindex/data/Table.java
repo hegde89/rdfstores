@@ -34,7 +34,7 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.util.Timings;
 
-public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
+public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
 	private int m_colCount;
 	private String[] m_colNames;
 	private Map<String,Integer> m_name2col;
@@ -42,24 +42,24 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 	private int m_sortedCol = -1;
 	
 	public static Timings timings;
-	private static final Logger log = Logger.getLogger(GTable.class);
+	private static final Logger log = Logger.getLogger(Table.class);
 	
-	public GTable(int cols) {
+	public Table(int cols) {
 		m_colCount = cols;
 		m_rows = new ArrayList<T[]>();
 		m_name2col = new HashMap<String,Integer>();
 	}
 	
-	public GTable(List<String> colNames) {
+	public Table(List<String> colNames) {
 		this(colNames.toArray(new String [colNames.size()]));
 	}
 	
-	public GTable(List<String> colNames, int initialCapacity) {
+	public Table(List<String> colNames, int initialCapacity) {
 		this(colNames.toArray(new String [colNames.size()]));
 		m_rows = new ArrayList<T[]>(initialCapacity);
 	}
 	
-	public GTable(String... colNames) {
+	public Table(String... colNames) {
 		this(colNames.length);
 		m_colNames = new String[colNames.length];
 		for (int i = 0; i < colNames.length; i++) {
@@ -68,11 +68,11 @@ public class GTable<T extends Comparable<T>> implements Iterable<T[]>, Cloneable
 		}
 	}
 	
-	public GTable(GTable<T> table) {
+	public Table(Table<T> table) {
 		this(table, true);
 	}
 
-	public GTable(GTable<T> table, boolean rows) {
+	public Table(Table<T> table, boolean rows) {
 		this(table.getColumnNames());
 		if (table.isSorted())
 			setSortedColumn(table.getSortedColumn());

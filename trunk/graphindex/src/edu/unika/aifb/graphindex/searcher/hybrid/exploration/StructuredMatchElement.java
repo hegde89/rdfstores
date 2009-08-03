@@ -7,7 +7,7 @@ import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.searcher.keyword.exploration.Cursor;
@@ -16,11 +16,11 @@ import edu.unika.aifb.graphindex.searcher.keyword.exploration.GraphElement;
 import edu.unika.aifb.graphindex.searcher.keyword.exploration.NodeElement;
 
 public class StructuredMatchElement extends GraphElement {
-	private GTable<String> m_table, m_extTable;
+	private Table<String> m_table, m_extTable;
 	private Set<NodeElement> m_nodes;
 	private HybridQuery m_query;
 	
-	public StructuredMatchElement(String label, HybridQuery query, Set<NodeElement> nodes, GTable<String> table, GTable<String> extTable) {
+	public StructuredMatchElement(String label, HybridQuery query, Set<NodeElement> nodes, Table<String> table, Table<String> extTable) {
 		super(label);
 		m_nodes = nodes;
 		m_table = table;

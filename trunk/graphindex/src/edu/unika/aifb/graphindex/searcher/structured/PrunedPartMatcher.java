@@ -32,7 +32,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.PrunedQueryPart;
@@ -46,7 +46,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 
 	private PrunedQueryPart m_part;
 	private String m_startNode;
-	private GTable<String> m_startNodeTable;
+	private Table<String> m_startNodeTable;
 	private Set<String> m_validExtensions;
 	
 	private static final Logger log = Logger.getLogger(PrunedPartMatcher.class);
@@ -61,7 +61,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 		return true;
 	}
 
-	public void setPrunedPart(PrunedQueryPart part, String startNode, GTable<String> startNodeTable) {
+	public void setPrunedPart(PrunedQueryPart part, String startNode, Table<String> startNodeTable) {
 		m_part = part;
 		m_startNode = startNode;
 		m_startNodeTable = startNodeTable;
@@ -109,7 +109,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 		Set<String> visited = new HashSet<String>();
 		visited.add(m_startNode);
 		
-		List<GTable<String>> resultTables = new ArrayList<GTable<String>>();
+		List<Table<String>> resultTables = new ArrayList<Table<String>>();
 		resultTables.add(m_startNodeTable);
 		
 		while (toVisit.size() > 0) {
@@ -131,8 +131,8 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 			
 			log.debug(" " + srcLabel + " -> " + trgLabel + " (" + property + ")");
 			
-			GTable<String> sourceTable = null, targetTable = null, result;
-			for (GTable<String> table : resultTables) {
+			Table<String> sourceTable = null, targetTable = null, result;
+			for (Table<String> table : resultTables) {
 				if (table.hasColumn(srcLabel))
 					sourceTable = table;
 				if (table.hasColumn(trgLabel))
@@ -146,13 +146,13 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 			
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				Table<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
 
 				targetTable.sort(trgLabel, true);
 				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel);
 			} else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
+				Table<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0);
 
 				sourceTable.sort(srcLabel, true);
 				result = Tables.mergeJoin(sourceTable, edgeTable, srcLabel);
@@ -162,9 +162,9 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 					result = Tables.mergeJoin(sourceTable, getEdgeTable(property, srcLabel, trgLabel, 0), Arrays.asList(srcLabel, trgLabel));
 				}
 				else {
-					GTable<String> first, second;
+					Table<String> first, second;
 					String firstCol, secondCol;
-					GTable<String> edgeTable;
+					Table<String> edgeTable;
 	
 					// start with smaller table
 					if (sourceTable.rowCount() < targetTable.rowCount()) {
@@ -206,7 +206,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 			resultTables.add(result);
 		}
 
-		for (GTable<String> resultTable : resultTables) {
+		for (Table<String> resultTable : resultTables) {
 			if (resultTable.hasColumn(m_startNode)) {
 				int col = resultTable.getColumn(m_startNode);
 				for (String[] row : resultTable)
@@ -216,8 +216,8 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 		}
 	}
 	
-	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
-		GTable<String> edgeTable;
+	private Table<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
+		Table<String> edgeTable;
 		if (orderedBy == 0)
 			edgeTable = m_p2ts.get(property);
 		else
@@ -227,7 +227,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 			throw new UnsupportedOperationException("error");
 		}
 
-		GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+		Table<String> table = new Table<String>(srcLabel, trgLabel);
 		table.setRows(edgeTable.getRows());
 		table.setSortedColumn(orderedBy);
 

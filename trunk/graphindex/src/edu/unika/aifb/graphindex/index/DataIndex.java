@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
@@ -65,7 +65,7 @@ public class DataIndex extends Index {
 		return m_is;
 	}
 
-	public GTable<String> getTriples(String s, String p, String o) throws StorageException {
+	public Table<String> getTriples(String s, String p, String o) throws StorageException {
 		List<DataField> indexFields = new ArrayList<DataField>();
 		Map<DataField,String> indexValues = new HashMap<DataField,String>();
 
@@ -92,7 +92,7 @@ public class DataIndex extends Index {
 		return m_is.getTable(index, new DataField[] { DataField.SUBJECT, DataField.PROPERTY, DataField.OBJECT }, index.createValueArray(indexValues));
 	}
 
-	public GTable<String> getQuads(String s, String p, String o, String c) throws StorageException {
+	public Table<String> getQuads(String s, String p, String o, String c) throws StorageException {
 		List<DataField> indexFields = new ArrayList<DataField>();
 		Map<DataField,String> indexValues = new HashMap<DataField,String>();
 
@@ -126,7 +126,7 @@ public class DataIndex extends Index {
 
 	public Map<String,Set<String>> getImage(String node, boolean preimage) throws StorageException {
 		IndexDescription index = getSuitableIndex(preimage ? DataField.OBJECT : DataField.SUBJECT);
-		GTable<String> table = m_is.getTable(index, new DataField[] { preimage ? DataField.SUBJECT : DataField.OBJECT } , 
+		Table<String> table = m_is.getTable(index, new DataField[] { preimage ? DataField.SUBJECT : DataField.OBJECT } , 
 				index.createValueArray(preimage ? DataField.OBJECT : DataField.SUBJECT, node));
 		
 		Map<String,Set<String>> image = new HashMap<String,Set<String>>();

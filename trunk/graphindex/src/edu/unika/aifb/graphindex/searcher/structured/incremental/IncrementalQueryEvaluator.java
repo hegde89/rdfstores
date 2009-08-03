@@ -31,7 +31,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.openrdf.model.vocabulary.RDF;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.index.StructureIndex;
@@ -97,7 +97,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public GTable<String> evaluate(StructuredQuery q) throws StorageException, IOException {
+	public Table<String> evaluate(StructuredQuery q) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
@@ -107,7 +107,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		m_validator.setCounters(counters);
 		m_idxReader.getCollector().addTimings(timings);
 		m_idxReader.getCollector().addCounters(counters);
-		GTable.timings = timings;
+		Table.timings = timings;
 		Tables.timings = timings;
 
 		counters.set(Counters.ES_CUTOFF, m_cutoff);
@@ -140,7 +140,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		asm.setCounters(counters);
 		
 		timings.start(Timings.STEP_ASM);
-		GTable<KeywordElement> asmResult = asm.matching();
+		Table<KeywordElement> asmResult = asm.matching();
 		timings.end(Timings.STEP_ASM);
 		
 		counters.set(Counters.ASM_RESULT_SIZE, asmResult.rowCount());
@@ -165,7 +165,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 			log.error("not enough nodes from ASM, probably nk of this index too small for this query");
 			timings.end(Timings.STEP_IM);
 			timings.end(Timings.TOTAL_QUERY_EVAL);
-			return new GTable<String>(q.getSelectVariableLabels());
+			return new Table<String>(q.getSelectVariableLabels());
 		}
 		
 		// result of ASM step, mapping query node labels to extensions
@@ -174,8 +174,8 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		List<String> columns = new ArrayList<String>();
 		columns.addAll(Arrays.asList(asmResult.getColumnNames()));
 		columns.addAll(constants);
-		GTable<String> resultTable = new GTable<String>(columns);
-		GTable<String> matchTable = new GTable<String>(columns);
+		Table<String> resultTable = new Table<String>(columns);
+		Table<String> matchTable = new Table<String>(columns);
 
 		Set<String> matchSignatures = new HashSet<String>(asmResult.rowCount() / 4);
 		Map<String,List<String[]>> matchRows = new HashMap<String,List<String[]>>(asmResult.rowCount() / 4);
@@ -227,7 +227,7 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 			}
 		}
 		
-		qe.setMatchTables(new ArrayList<GTable<String>>(Arrays.asList(matchTable)));
+		qe.setMatchTables(new ArrayList<Table<String>>(Arrays.asList(matchTable)));
 		
 		m_matcher.setQueryExecution(qe);
 		m_matcher.match();
@@ -255,14 +255,14 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 			classes.addAll(newClasses);					
 		}
 		
-		GTable<String> resultsAfterIM = new GTable<String>(resultTable, false);
+		Table<String> resultsAfterIM = new Table<String>(resultTable, false);
 		int rowsAfterIM = 0;
 		for (EvaluationClass ec : classes) {
 			StringBuilder sig = new StringBuilder();
 			for (String col : asmResult.getColumnNames())
 				sig.append(ec.getMatch(col)).append("_");
 			
-			GTable<String> table = new GTable<String>(resultTable.getColumnNames());
+			Table<String> table = new Table<String>(resultTable.getColumnNames());
 			table.addRows(matchRows.get(sig.toString()));
 			resultsAfterIM.addRows(matchRows.get(sig.toString()));
 			ec.getResults().add(table);
@@ -318,10 +318,10 @@ public class IncrementalQueryEvaluator extends StructuredQueryEvaluator {
 		if (qe.getResult() != null)
 			return qe.getResult();
 		else
-			return new GTable<String>(q.getSelectVariableLabels());
+			return new Table<String>(q.getSelectVariableLabels());
 	}
 	
-	public void entitiesForColumn(GTable<String> table, String colName, Set<String> entities) {
+	public void entitiesForColumn(Table<String> table, String colName, Set<String> entities) {
 		int col = table.getColumn(colName);
 		for (String[] row : table)
 			entities.add(row[col]);

@@ -50,7 +50,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
@@ -204,7 +204,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		}
 	}
 	
-	private void loadDocuments(GTable<String> table, List<Integer> docIds, IndexDescription index, int[] valueIdxs, String[] indexValues) throws StorageException {
+	private void loadDocuments(Table<String> table, List<Integer> docIds, IndexDescription index, int[] valueIdxs, String[] indexValues) throws StorageException {
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
 			
@@ -229,7 +229,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		}		
 	}
 	
-	private void loadDocuments(GTable<String> table, List<Integer> docIds, IndexDescription index, int valueCol, String indexValue) throws StorageException {
+	private void loadDocuments(Table<String> table, List<Integer> docIds, IndexDescription index, int valueCol, String indexValue) throws StorageException {
 		for (int docId : docIds) {
 			Document doc = getDocument(docId);
 			
@@ -300,18 +300,18 @@ public class LuceneIndexStorage implements IndexStorage {
 	}
 	
 	private void getData(IndexDescription index, DataField field, Collection<String> values, String... indexFieldValues) throws StorageException {
-		GTable<String> table = getTable(index, new DataField[] { field }, indexFieldValues);
+		Table<String> table = getTable(index, new DataField[] { field }, indexFieldValues);
 		for (String[] row : table)
 			values.add(row[0]);
 	}
 	
 	@SuppressWarnings("unchecked")
-	public GTable<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException {
+	public Table<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException {
 		List<String> cols = new ArrayList<String>();
 		for (DataField df : columns)
 			cols.add(df.toString());
 		
-		GTable<String> table = new GTable<String>(cols);
+		Table<String> table = new Table<String>(cols);
 
 		boolean usesValueField = false;
 		int[] valueIdxs = new int [columns.length];
@@ -375,11 +375,11 @@ public class LuceneIndexStorage implements IndexStorage {
 		return table;
 	}
 	
-	public GTable<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException {
+	public Table<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException {
 		if (indexFields.length < index.getIndexFields().size())
 			return getIndexTables(index, col1, col2, indexFields);
 
-		GTable<String> table = new GTable<String>("source", "target");
+		Table<String> table = new Table<String>("source", "target");
 		
 		TermQuery q = new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
 		
@@ -409,7 +409,7 @@ public class LuceneIndexStorage implements IndexStorage {
 	}
 
 	@SuppressWarnings("unchecked")
-	private GTable<String> getIndexTables(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException {
+	private Table<String> getIndexTables(IndexDescription index, DataField col1, DataField col2, String... indexFields) throws StorageException {
 		PrefixQuery pq = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
 		
 		List<TermQuery> queries = new ArrayList<TermQuery>();
@@ -439,7 +439,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			dis.add(new Object[] { indexTerms[indexValue], getDocumentIds(q) });
 		}
 		
-		GTable<String> table = new GTable<String>("source", "target");
+		Table<String> table = new Table<String>("source", "target");
 
 		for (Object[] o : dis) {
 			String so = (String)o[0];

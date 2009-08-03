@@ -20,7 +20,7 @@ package edu.unika.aifb.graphindex.searcher.structured;
 
 import java.io.IOException;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
@@ -33,5 +33,5 @@ public abstract class StructuredQueryEvaluator extends Searcher {
 		super(idxReader);
 	}
 
-	public abstract GTable<String> evaluate(StructuredQuery q) throws StorageException, IOException;
+	public abstract Table<String> evaluate(StructuredQuery q) throws StorageException, IOException;
 }

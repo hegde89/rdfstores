@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
@@ -57,7 +57,7 @@ public class QueryEvaluator extends StructuredQueryEvaluator {
 		return m_mlv;
 	}
 	
-	public GTable<String> evaluate(StructuredQuery query) throws StorageException, IOException {
+	public Table<String> evaluate(StructuredQuery query) throws StorageException, IOException {
 		log.info("evaluating...");
 
 		m_idxReader.getCollector().clear();
@@ -77,7 +77,7 @@ public class QueryEvaluator extends StructuredQueryEvaluator {
 		m_matcher.setCounters(m_counters);
 		m_matcher.setQueryExecution(qe);
 
-		GTable.timings = m_timings;
+		Table.timings = m_timings;
 		Tables.timings = m_timings;
 		
 		m_matcher.match();

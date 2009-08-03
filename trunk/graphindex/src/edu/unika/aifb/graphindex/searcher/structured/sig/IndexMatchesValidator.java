@@ -21,7 +21,7 @@ package edu.unika.aifb.graphindex.searcher.structured.sig;
 import java.io.IOException;
 import java.util.List;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Counters;

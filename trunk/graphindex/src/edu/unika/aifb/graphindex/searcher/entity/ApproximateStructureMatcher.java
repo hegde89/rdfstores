@@ -28,7 +28,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraph;
 import edu.unika.aifb.graphindex.searcher.keyword.model.TransformedGraphNode;
@@ -43,7 +43,7 @@ public class ApproximateStructureMatcher {
 	private TransformedGraph m_graph;
 	private Set<String> m_nodesWithNoEntities;
 	private TransformedGraphNode m_startNode;
-	private GTable<KeywordElement> m_table;
+	private Table<KeywordElement> m_table;
 	private NeighborhoodStorage m_ns;
 	
 	private Timings m_timings;
@@ -103,12 +103,12 @@ public class ApproximateStructureMatcher {
 		return resultRow;
 	}
 	
-	public GTable<KeywordElement> mergeJoin(GTable<KeywordElement> left, GTable<KeywordElement> right, String col) {
+	public Table<KeywordElement> mergeJoin(Table<KeywordElement> left, Table<KeywordElement> right, String col) {
 		if (!left.isSorted() || !left.getSortedColumn().equals(col) || !right.isSorted() || !right.getSortedColumn().equals(col))
 			throw new UnsupportedOperationException("merge join with unsorted tables");
 		long start = System.currentTimeMillis();
 		if (right.columnCount() > left.columnCount()) {
-			GTable<KeywordElement> temp = right;
+			Table<KeywordElement> temp = right;
 			right = left;
 			left = temp;
 		}
@@ -125,7 +125,7 @@ public class ApproximateStructureMatcher {
 		
 		log.debug("merge join: " + left + " x " + right);
 		
-		GTable<KeywordElement> result = new GTable<KeywordElement>(resultColumns, left.rowCount() + right.rowCount());
+		Table<KeywordElement> result = new Table<KeywordElement>(resultColumns, left.rowCount() + right.rowCount());
 	
 		int l = 0, r = 0;
 		while (l < left.rowCount() && r < right.rowCount()) {
@@ -186,7 +186,7 @@ public class ApproximateStructureMatcher {
 			List<KeywordElement> remainingFilterElements = new ArrayList<KeywordElement>(filterElements.size());
 			Set<KeywordElement> removedFilterElements = new HashSet<KeywordElement>(filterElements.size());
 			Set<KeywordElement> allJoinedElements = new HashSet<KeywordElement>(filterElements.size());
-			GTable<KeywordElement> joinedTable = new GTable<KeywordElement>(filterNode.getNodeName(), node.getNodeName());
+			Table<KeywordElement> joinedTable = new Table<KeywordElement>(filterNode.getNodeName(), node.getNodeName());
 			
 			for(KeywordElement filterElement : filterElements) {
 				long start = System.currentTimeMillis();
@@ -260,14 +260,14 @@ public class ApproximateStructureMatcher {
 		}
 	}
 	
-	public GTable<KeywordElement> matching() {
+	public Table<KeywordElement> matching() {
 		if(m_startNode == null)
 			return null;
 		
 		m_startNode.setPathLength(0);
 		m_startNode.setFilter(m_startNode);
 		
-		m_table = new GTable<KeywordElement>(m_startNode.getNodeName());
+		m_table = new Table<KeywordElement>(m_startNode.getNodeName());
 		List<KeywordElement[]> list = new ArrayList<KeywordElement[]>();
 		for(KeywordElement ele : m_startNode.getEntities()) {
 			KeywordElement[] row = new KeywordElement[1];

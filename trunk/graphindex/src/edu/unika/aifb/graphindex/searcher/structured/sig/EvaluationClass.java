@@ -27,25 +27,25 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 
 public class EvaluationClass {
 	private Map<String,String> m_matches;
-	private GTable<String> m_mappings;
+	private Table<String> m_mappings;
 //	private GTable<String> m_result;
-	private List<GTable<String>> m_results;
+	private List<Table<String>> m_results;
 	private boolean m_empty = false;
 	
 	public EvaluationClass(Map<String,String> matches, String[] colNames) {
 		m_matches = matches;
-		m_mappings = new GTable<String>(colNames);
-		m_results = new ArrayList<GTable<String>>();
+		m_mappings = new Table<String>(colNames);
+		m_results = new ArrayList<Table<String>>();
 	}
 	
-	public EvaluationClass(GTable<String> mappings) {
+	public EvaluationClass(Table<String> mappings) {
 		m_mappings = mappings;
 		m_matches = new HashMap<String,String>();
-		m_results = new ArrayList<GTable<String>>();
+		m_results = new ArrayList<Table<String>>();
 	}
 	
 	public void setEmpty(boolean empty) {
@@ -60,7 +60,7 @@ public class EvaluationClass {
 		return m_matches;
 	}
 	
-	public GTable<String> getMappings() {
+	public Table<String> getMappings() {
 		return m_mappings;
 	}
 	
@@ -72,16 +72,16 @@ public class EvaluationClass {
 		return m_matches.get(key);
 	}
 	
-	public List<GTable<String>> getResults() {
+	public List<Table<String>> getResults() {
 		return m_results;
 	}
 	
-	public void setResults(List<GTable<String>> results) {
+	public void setResults(List<Table<String>> results) {
 		m_results = results;
 	}
 	
-	public GTable<String> findResult(String column) {
-		for (GTable<String> result : m_results)
+	public Table<String> findResult(String column) {
+		for (Table<String> result : m_results)
 			if (result.hasColumn(column))
 				return result;
 		return null;
@@ -142,8 +142,8 @@ public class EvaluationClass {
 		List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
 		Map<String,EvaluationClass> val2class = new HashMap<String,EvaluationClass>();
 
-		GTable<String> mappings = m_mappings;
-		m_mappings = new GTable<String>(mappings.getColumnNames());
+		Table<String> mappings = m_mappings;
+		m_mappings = new Table<String>(mappings.getColumnNames());
 		for (String[] map : mappings) {
 			String val = mappings.getValue(map, key);
 			if (val2class.size() == 0) {
@@ -175,7 +175,7 @@ public class EvaluationClass {
 					Map<String,String> newMatches = new HashMap<String,String>(m_matches);
 					newMatches.put(key, val);
 					ec = new EvaluationClass(newMatches, mappings.getColumnNames());
-					ec.setResults(new ArrayList<GTable<String>>(getResults()));
+					ec.setResults(new ArrayList<Table<String>>(getResults()));
 					newClasses.add(ec);
 					val2class.put(val, ec);
 					

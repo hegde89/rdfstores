@@ -41,7 +41,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.model.IEntity;
 import edu.unika.aifb.graphindex.model.impl.Entity;
@@ -69,7 +69,7 @@ public class IndirectExploringQueryEvaluator extends ExploringQueryEvaluator {
 	}
 
 	@Override
-	public GTable<String> evaluate(KeywordQuery query) throws StorageException,
+	public Table<String> evaluate(KeywordQuery query) throws StorageException,
 			IOException {
 		// TODO Auto-generated method stub
 		return null;

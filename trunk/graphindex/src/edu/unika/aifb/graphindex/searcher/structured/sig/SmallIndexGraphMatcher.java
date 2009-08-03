@@ -33,7 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.sun.tools.extcheck.ExtCheck;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.data.Tables.JoinedRowValidator;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -57,7 +57,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 		public boolean alwaysPurge = false;
 
-		public void setTables(GTable<String> left, GTable<String> right) {
+		public void setTables(Table<String> left, Table<String> right) {
 			leftSigCols = getSignatureColumns(left);
 			rightSigCols = getSignatureColumns(right);
 
@@ -169,8 +169,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 				if ((g1 && g2) || (!g1 && !g2)) {
 					// if both or neither have constants, prefer the edge with smaller edge table
-					GTable<String> t1 = m_p2to.get(e1.getLabel());
-					GTable<String> t2 = m_p2to.get(e2.getLabel());
+					Table<String> t1 = m_p2to.get(e1.getLabel());
+					Table<String> t2 = m_p2to.get(e2.getLabel());
 
 					if (t1 == null || t2 == null)
 						return 0;
@@ -191,7 +191,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 			}
 		});
 
-		List<GTable<String>> resultTables = new ArrayList<GTable<String>>();
+		List<Table<String>> resultTables = new ArrayList<Table<String>>();
 		Set<String> visited = new HashSet<String>();
 
 		if (m_qe.getIMVisited().size() > 0) {
@@ -231,8 +231,8 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 			log.debug(srcLabel + " -> " + trgLabel + " (" + property + ")");
 
-			GTable<String> sourceTable = null, targetTable = null, result;
-			for (GTable<String> table : resultTables) {
+			Table<String> sourceTable = null, targetTable = null, result;
+			for (Table<String> table : resultTables) {
 				if (table.hasColumn(srcLabel))
 					sourceTable = table;
 				if (table.hasColumn(trgLabel))
@@ -254,19 +254,19 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 //			m_validator.alwaysPurge = true;
 			if (sourceTable == null && targetTable != null) {
 				// cases 1 a,d: edge has one unprocessed node, the source
-				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
+				Table<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 1);
 
 				targetTable.sort(trgLabel, true);
 				result = Tables.mergeJoin(targetTable, edgeTable, trgLabel, m_validator);
 			} else if (sourceTable != null && targetTable == null) {
 				// cases 1 b,c: edge has one unprocessed node, the target
-				GTable<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0, sourceTable);
+				Table<String> edgeTable = getEdgeTable(property, srcLabel, trgLabel, 0, sourceTable);
 
 				sourceTable.sort(srcLabel, true);
 				result = Tables.mergeJoin(sourceTable, edgeTable, srcLabel, m_validator);
 			} else if (sourceTable == null && targetTable == null) {
 				// case 2: edge has two unprocessed nodes
-				GTable<String> edgeTable;
+				Table<String> edgeTable;
 				if (Util.isConstant(srcLabel) || Util.isConstant(trgLabel)) {
 					int is = findNextIntersection(currentEdge, toVisit);
 					if (is == QueryEdge.IS_SRC || is == QueryEdge.IS_SRCDST)
@@ -284,9 +284,9 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 					result = Tables.mergeJoin(sourceTable, getEdgeTable(property, srcLabel, trgLabel, 0), Arrays.asList(srcLabel, trgLabel));
 				}
 				else {
-					GTable<String> first, second;
+					Table<String> first, second;
 					String firstCol, secondCol;
-					GTable<String> edgeTable;
+					Table<String> edgeTable;
 	
 					// start with smaller table
 					if (sourceTable.rowCount() < targetTable.rowCount()) {
@@ -341,15 +341,15 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 //		log.debug(m_qe.getIndexMatches().toDataString());
 	}
 
-	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
+	private Table<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy) throws StorageException {
 		return getEdgeTable(property, srcLabel, trgLabel, orderedBy, null);
 	}
 
 	private Map<String,String> m_inventedExtensions = new HashMap<String,String>();
 	private int m_extCounter = 0;
 
-	private GTable<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy, GTable<String> sourceTable) throws StorageException {
-		GTable<String> edgeTable;
+	private Table<String> getEdgeTable(String property, String srcLabel, String trgLabel, int orderedBy, Table<String> sourceTable) throws StorageException {
+		Table<String> edgeTable;
 		if (orderedBy == 0)
 			edgeTable = m_p2ts.get(property);
 		else
@@ -366,7 +366,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 				doTrgFilter = false;
 				List<String> subjectExtensions = m_is.getDataList(m_idxPOES, DataField.EXT_SUBJECT, m_idxPOES.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 				log.debug("subject extensions: " + subjectExtensions.size());
-				edgeTable = new GTable<String>(srcLabel, trgLabel);
+				edgeTable = new Table<String>(srcLabel, trgLabel);
 				for (String subjectExt : subjectExtensions)
 					edgeTable.addRow(new String[] { subjectExt, inventedExtension });
 				edgeTable.sort(orderedBy);
@@ -386,7 +386,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		edgeTable.setColumnName(0, srcLabel);
 		edgeTable.setColumnName(1, trgLabel);
 
-		GTable<String> table = new GTable<String>(srcLabel, trgLabel);
+		Table<String> table = new Table<String>(srcLabel, trgLabel);
 		table.setRows(edgeTable.getRows());
 		table.setSortedColumn(orderedBy);
 
@@ -463,7 +463,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 		return sb.toString();
 	}
 
-	private List<Integer> getSignatureColumns(GTable<String> table) {
+	private List<Integer> getSignatureColumns(Table<String> table) {
 		List<Integer> sigCols = new ArrayList<Integer>();
 
 		for (String colName : table.getColumnNames())

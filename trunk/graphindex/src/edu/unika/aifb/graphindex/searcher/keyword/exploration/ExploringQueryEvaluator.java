@@ -33,7 +33,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.openrdf.model.vocabulary.RDF;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
@@ -69,7 +69,7 @@ public abstract class ExploringQueryEvaluator extends KeywordQueryEvaluator {
 		return res;
 	}
 	
-	protected void explore(Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, List<GTable<String>> indexMatches,
+	protected void explore(Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, List<Table<String>> indexMatches,
 			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> selectMappings, Map<KeywordSegment,List<GraphElement>> segment2elements,
 			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException {
 		

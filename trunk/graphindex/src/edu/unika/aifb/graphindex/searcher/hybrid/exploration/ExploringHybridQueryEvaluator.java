@@ -31,7 +31,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.graphindex.data.GTable;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.index.StructureIndex;
@@ -83,7 +83,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		return res;
 	}
 	
-	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, HybridExploringIndexMatcher matcher, List<GTable<String>> indexMatches,
+	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, HybridExploringIndexMatcher matcher, List<Table<String>> indexMatches,
 			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> selectMappings, Map<KeywordSegment,List<GraphElement>> segment2elements,
 			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException, IOException {
 		
@@ -132,17 +132,17 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		}
 		
 		List<GraphElement> elements = new ArrayList<GraphElement>();
-		GTable<String> structuredResults = m_eval.evaluate(query.getStructuredQuery());
+		Table<String> structuredResults = m_eval.evaluate(query.getStructuredQuery());
 		int i = 0;
 		for (String[] row : structuredResults) {
 			Set<NodeElement> nodes = new HashSet<NodeElement>();
 			for (QNode s : query.getStructuredQuery().getVariables())
 				nodes.add(new NodeElement(m_si.getExtension(row[structuredResults.getColumn(s.getLabel())])));
 
-			GTable<String> table = new GTable<String>(structuredResults, false);
+			Table<String> table = new Table<String>(structuredResults, false);
 			table.addRow(row);
 			
-			GTable<String> extTable = new GTable<String>(structuredResults, false);
+			Table<String> extTable = new Table<String>(structuredResults, false);
 			String[] extRow = new String [row.length];
 			for (int j = 0; j < row.length; j++)
 				extRow[j] = m_si.getExtension(row[j]);
@@ -164,7 +164,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		log.debug("queries: " + queries.size());
 	}
 
-	public GTable<String> evaluate(HybridQuery query) throws StorageException, IOException {
+	public Table<String> evaluate(HybridQuery query) throws StorageException, IOException {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
@@ -175,7 +175,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 
-		List<GTable<String>> indexMatches = new ArrayList<GTable<String>>();
+		List<Table<String>> indexMatches = new ArrayList<Table<String>>();
 		List<StructuredQuery> queries = new ArrayList<StructuredQuery>();
 		List<Map<String,Set<KeywordSegment>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegment>>>();
 		Map<KeywordSegment,List<GraphElement>> segment2elements = new HashMap<KeywordSegment,List<GraphElement>>();
@@ -201,7 +201,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			QueryExecution qe = new QueryExecution(q, m_idxReader);
 			QueryGraph queryGraph = qe.getQueryGraph();
 			
-			GTable<String> indexMatch = indexMatches.get(i);
+			Table<String> indexMatch = indexMatches.get(i);
 			qe.setIndexMatches(indexMatch);
 			log.debug(indexMatch);
 			
@@ -265,7 +265,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					List<String> columns = new ArrayList<String>();
 					columns.add(ksCol);
 					columns.add(selectNode);
-					GTable<String> table = new GTable<String>(columns);
+					Table<String> table = new Table<String>(columns);
 					int col = table.getColumn(selectNode);
 	
 					for (KeywordSegment ks : select2ks.get(selectNode)) {

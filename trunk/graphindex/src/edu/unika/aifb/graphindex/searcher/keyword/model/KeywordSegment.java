@@ -36,32 +36,25 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 	
 	public KeywordSegment(String keyword) {
 		this();
-		this.addKeyword(keyword);
+		addKeyword(keyword);
 	}
 
 
 	public KeywordSegment(Collection<String> keywords) {
 		this();
-		for(String keyword : keywords) {
-			boolean added = this.keywords.add(keyword);
-			if(added)
-				this.query += keyword + " ";
-		}
-			
+		addKeywords(keywords);
 	}
 	
 	public void addKeyword(String keyword) {
+		keyword = keyword.trim();
 		boolean added = this.keywords.add(keyword);
 		if(added)
 			this.query += keyword + " ";
 	}
 	
 	public void addKeywords(Collection<String> keywords) {
-		for(String keyword : keywords) {
-			boolean added = this.keywords.add(keyword);
-			if(added)
-				this.query += keyword + " ";
-		}
+		for(String keyword : keywords)
+			addKeyword(keyword);
 	}
 	
 	public Set<String> getKeywords() {
@@ -94,10 +87,7 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 	}
 	
 	public String toString() {
-		String str = "";
-		for(String keyword : keywords)
-			str += keyword + " ";
-		return str;
+		return keywords.toString();
 	}
 
 	public int compareTo(KeywordSegment ks) {

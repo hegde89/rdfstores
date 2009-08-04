@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword.exploration;
+package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
@@ -41,7 +41,6 @@ import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
 
-@Deprecated
 public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> implements Comparable<Subgraph> {
 	private static final long serialVersionUID = -5730502189634789126L;
 	
@@ -70,8 +69,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		for (Cursor c : cursors) {
 			if (c.getCost() > m_cost)
 				m_cost = c.getCost();
+			
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add((EdgeElement)e);
+				
 				addVertex(((EdgeElement)e).getSource());
 				addVertex(((EdgeElement)e).getTarget());
 				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
@@ -86,11 +87,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 			}
 		}	
 		if (start != null)
-			m_cost = getLongestPath(start, new HashSet<String>()) * 2;
-
-		//		log.debug(" " + m_cost);
-//		m_cost = edgeSet().size();
-//		log.debug(" " + m_cost);
+			m_cost = getLongestPath(start, new HashSet<String>());
 	}
 	
 	public Set<Cursor> getCursors() {
@@ -117,7 +114,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				max = length;
 		}
 		
-		return Math.max(max, path.size());
+		return Math.max(max, newPath.size() - 1);
 	}
 	
 	public int getCost() {

@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword.exploration;
+package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
@@ -19,32 +19,49 @@ package edu.unika.aifb.graphindex.searcher.keyword.exploration;
  */
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
-@Deprecated
 public class NodeElement extends GraphElement {
 
-	private String m_attributeUri;
+	private Set<String> m_entities;
+	private Map<String,List<NodeElement>> m_augmentEdges;
 	
 	public NodeElement(String label) {
 		super(label);
+		m_entities = new HashSet<String>();
+		m_augmentEdges = new HashMap<String,List<NodeElement>>();
 	}
 	
-	public NodeElement(String label, String attributeUri) {
-		super(label);
-		m_attributeUri = attributeUri;
+	public int getCost() {
+		return 0;
 	}
 	
-	public String getAttributeUri() {
-		return m_attributeUri;
+	public void addFrom(NodeElement node) {
+		addEntities(node.getEntities());
+		for (String property : node.m_augmentEdges.keySet())
+			for (NodeElement target : node.m_augmentEdges.get(property))
+				addAugmentedEdge(property, target);
 	}
 	
-	public void setAttributeUri(String uri) {
-		m_attributeUri = uri;
+	public void addAugmentedEdge(String property, NodeElement target) {
+		List<NodeElement> targets = m_augmentEdges.get(property);
+		if (targets == null) {
+			targets = new ArrayList<NodeElement>();
+			m_augmentEdges.put(property, targets);
+		}
+		targets.add(target);
 	}
-
+	
+	public Map<String,List<NodeElement>> getAugmentedEdges() {
+		return m_augmentEdges;
+	}
+	
 	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {
 		EdgeElement prevEdge = (EdgeElement)(cursor.getParent() != null ? cursor.getParent().getGraphElement() : null);
 
@@ -59,6 +76,18 @@ public class NodeElement extends GraphElement {
 	}
 	
 	public String toString() {
-		return m_label + "[" + m_keywordCursors.size() + "]";
+		return m_label + "[" + m_keywordCursors.size() + "," + m_entities.size() + "," + m_augmentEdges.size() + "]";
+	}
+
+	public void addEntity(String uri) {
+		m_entities.add(uri);
+	}
+	
+	public void addEntities(Set<String> entities) {
+		m_entities.addAll(entities);
+	}
+
+	public Set<String> getEntities() {
+		return m_entities;
 	}
 }

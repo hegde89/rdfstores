@@ -19,6 +19,7 @@ package edu.unika.aifb.graphindex.index;
  */
 
 import edu.unika.aifb.graphindex.storage.IndexStorage;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class KeywordIndex extends Index {
 	private IndexStorage m_is;
@@ -26,6 +27,12 @@ public class KeywordIndex extends Index {
 	public KeywordIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig) {
 		super(idxDirectory, idxConfig);
 
+	}
+
+	@Override
+	public void close() throws StorageException {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

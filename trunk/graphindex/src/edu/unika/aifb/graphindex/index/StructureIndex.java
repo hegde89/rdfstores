@@ -29,7 +29,7 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class StructureIndex extends Index {
-
+	private IndexStorage m_is;
 	private Set<String> m_backwardSet, m_forwardSet;
 	private LuceneIndexStorage m_gs;
 	
@@ -77,5 +77,11 @@ public class StructureIndex extends Index {
 			m_gs.initialize(false, true);
 		}
 		return m_gs;
+	}
+
+	@Override
+	public void close() throws StorageException {
+		// TODO Auto-generated method stub
+		
 	}
 }

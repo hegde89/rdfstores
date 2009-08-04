@@ -30,6 +30,7 @@ import org.openrdf.model.vocabulary.RDF;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.model.impl.Entity;
 import edu.unika.aifb.graphindex.searcher.Searcher;
@@ -44,13 +45,13 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class EntityLoader extends Searcher {
 	private int m_cutoff = -1;
-	private IndexStorage m_is;
+	private DataIndex m_dataIndex;
 	
 	private static final Logger log = Logger.getLogger(EntityLoader.class);
 	
 	public EntityLoader(IndexReader reader) throws StorageException, IOException {
 		super(reader);
-		m_is = reader.getDataIndex().getIndexStorage();
+		m_dataIndex = reader.getDataIndex();
 	}
 	
 	public void setCutoff(int cutoff) {
@@ -63,7 +64,7 @@ public class EntityLoader extends Searcher {
 			for (String property : node.getAttributeQueries().keySet()) {
 				Collection<String> objects = node.getAttributeQueries().get(property);
 				for (String object : objects) {
-					Table<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, object);
+					Table<String> table = m_dataIndex.getIndexStorage(IndexDescription.POS).getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, object);
 					table.setColumnName(0, node.getNodeName());
 					table.setColumnName(1, object);
 					tables.add(table);
@@ -71,7 +72,7 @@ public class EntityLoader extends Searcher {
 			}
 			
 			for (String type : node.getTypeQueries()) {
-				Table<String> table = m_is.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
+				Table<String> table = m_dataIndex.getIndexStorage(IndexDescription.POS).getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, RDF.TYPE.toString(), type);
 				table.setColumnName(0, node.getNodeName());
 				table.setColumnName(1, type);
 				tables.add(table);

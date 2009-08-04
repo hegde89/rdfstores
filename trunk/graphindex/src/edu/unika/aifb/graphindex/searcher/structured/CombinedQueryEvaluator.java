@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.PrunedQueryPart;
 import edu.unika.aifb.graphindex.query.QueryEdge;
@@ -55,7 +56,8 @@ import edu.unika.aifb.graphindex.util.Util;
 public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 
 	private PrunedPartMatcher m_matcher;
-	private IndexStorage m_is, m_ds;
+	private IndexStorage m_is;
+	private DataIndex m_ds;
 	private QueryExecution m_qe;
 	private boolean m_doRefinement = true;
 	private IndexDescription m_idxPOS;
@@ -69,7 +71,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		m_matcher = new PrunedPartMatcher(idxReader);
 		m_matcher.initialize();
 		
-		m_ds = idxReader.getDataIndex().getIndexStorage();
+		m_ds = idxReader.getDataIndex();
 		m_is = idxReader.getStructureIndex().getSPIndexStorage();
 
 		m_idxPSO = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
@@ -273,7 +275,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		Set<String> values = new HashSet<String>();
 		for (String[] row : table) {
 			if (values.add(row[col])) {
-				 Table<String> t3 = m_ds.getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
+				 Table<String> t3 = m_ds.getIndexStorage(index).getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
 				 if (!targetConstant)
 					 t2.addRows(t3.getRows());
 				 else {
@@ -299,7 +301,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	private Table<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException, IOException {
 		if (Util.isConstant(trgLabel)) {
 //			GTable<String> table = m_ds.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property, trgLabel);
-			Table<String> table = m_ds.getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
+			Table<String> table = m_ds.getIndexStorage(m_idxPOS).getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;
@@ -316,7 +318,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			Table<String> t2 = new Table<String>(srcLabel, trgLabel);
 			for (String[] row : sourceTable) {
 				if (values.add(row[col]))
-					t2.addRows(m_ds.getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, row[col])).getRows());
+					t2.addRows(m_ds.getIndexStorage(m_idxPSO).getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, row[col])).getRows());
 //					t2.addRows(m_ds.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
 			}
 			log.debug("unique values: " + values.size());

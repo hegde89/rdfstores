@@ -86,7 +86,7 @@ public class IndexCreator implements TripleSink {
 	private IndexConfiguration m_idxConfig;
 	private Importer m_importer;
 	
-	private IndexStorage m_vp;
+	private Map<IndexDescription,IndexStorage> m_dataIndexes;
 	
 	private Set<String> m_properties;
 	
@@ -219,8 +219,13 @@ public class IndexCreator implements TripleSink {
 	
 	private void importData() throws IOException, StorageException {
 		m_importer.setTripleSink(this);
-		m_vp = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true));
-		m_vp.initialize(true, false);
+		
+		m_dataIndexes = new HashMap<IndexDescription,IndexStorage>();
+		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
+			IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + idx.getIndexFieldName()));
+			is.initialize(true, false);
+			m_dataIndexes.put(idx, is);
+		}
 		
 		m_importer.doImport();
 		
@@ -228,12 +233,11 @@ public class IndexCreator implements TripleSink {
 
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
-			m_vp.mergeIndex(idx);
+			m_dataIndexes.get(idx).mergeIndex(idx);
+			log.debug("optimizing");
+			m_dataIndexes.get(idx).optimize();
+			m_dataIndexes.get(idx).close();
 		}
-		log.debug("optimizing...");
-		m_vp.optimize();
-		m_vp.close();
-		
 	}
 	
 	private void analyzeData() throws StorageException, IOException {
@@ -455,7 +459,7 @@ public class IndexCreator implements TripleSink {
 		Map<DataField,String> valueMap = new HashMap<DataField,String>();
 		valueMap.put(DataField.PROPERTY, property);
 		
-		for (Iterator<String[]> i = dataIndex.getIndexStorage().iterator(idx, new DataField[] { DataField.OBJECT }, property); i.hasNext(); ) {
+		for (Iterator<String[]> i = dataIndex.getIndexStorage(idx).iterator(idx, new DataField[] { DataField.OBJECT }, property); i.hasNext(); ) {
 			String[] row = i.next();
 			if (Util.isEntity(row[0]))
 				return true;
@@ -501,7 +505,7 @@ public class IndexCreator implements TripleSink {
 			}
 			
 			try {
-				m_vp.addData(idx, indexFields, value);
+				m_dataIndexes.get(idx).addData(idx, indexFields, value);
 			} catch (StorageException e) {
 				e.printStackTrace();
 			}

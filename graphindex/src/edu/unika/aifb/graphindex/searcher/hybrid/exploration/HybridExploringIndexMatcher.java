@@ -38,11 +38,6 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.Cursor;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.EdgeElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.GraphElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.NodeElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.Subgraph;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.structured.sig.AbstractIndexGraphMatcher;
 import edu.unika.aifb.graphindex.storage.DataField;
@@ -129,9 +124,15 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
 			m_keywords.addAll(keyword.getKeywords());
 			for (GraphElement ele : keywords.get(keyword)) {
+				Set<KeywordSegment> keywordSet = new HashSet<KeywordSegment>();
+				keywordSet.add(keyword);
+				
 				if (ele instanceof NodeElement) {
+					// HACK replace NodeElement objects with their equivalent from the graph
 					NodeElement node = m_nodes.get(ele.getLabel());
-					queue.add(new Cursor(keyword, node, null, 0));
+					node.addFrom((NodeElement)ele); // don't forget to copy stuff
+					
+					queue.add(new NodeCursor(keywordSet, node));
 				}
 				else if (ele instanceof EdgeElement) {
 					Set<KeywordSegment> edgeKeywords = m_edgeUri2Keywords.get(ele.getLabel());
@@ -144,8 +145,11 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				else if (ele instanceof StructuredMatchElement) {
 					Set<NodeElement> nodes = new HashSet<NodeElement>();
 					for (NodeElement node : ((StructuredMatchElement)ele).getNodes()) {
-						NodeElement n = m_nodes.get(node.getLabel());
-						queue.add(new StructuredQueryCursor(keyword, ele, null, 0, n));
+						// HACK replace NodeElement objects with their equivalent from the graph
+						NodeElement n = m_nodes.get(node.getLabel()); 
+						n.addFrom(node); // don't forget to copy stuff
+						
+						queue.add(new StructuredQueryCursor(keywordSet, ele, n));
 						nodes.add(n);
 					}
 					((StructuredMatchElement)ele).setNodes(nodes);
@@ -166,6 +170,7 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		for (KeywordSegment ks : keywords.keySet())
 			if (!m_keywordQueues.containsKey(ks))
 				edgeKeywords.addAll(ks.getKeywords());
+		
 		log.debug("node keywords: " + nodeKeywords);
 		log.debug("edge keywords: " + edgeKeywords);
 		
@@ -198,15 +203,6 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //			log.debug(m_subgraphs.size());
 			List<List<Cursor>> combinations = currentElement.getCursorCombinations();
 			for (List<Cursor> combination : combinations) {
-//				Set<String> combinationKeywords = new HashSet<String>();
-//				for (Cursor c : combination)
-//					for (KeywordSegement ks : c.getKeywordSegments())
-//						combinationKeywords.addAll(ks.getKeywords());
-//				
-//				if (!combinationKeywords.equals(m_keywords)) {
-//					log.debug(combination);
-//					continue;
-//				}
 				Subgraph sg = new Subgraph(new HashSet<Cursor>(combination));
 
 				if (!m_subgraphs.contains(sg)) {
@@ -231,7 +227,8 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		int highestCost = m_subgraphs.get(m_subgraphs.size() - 1).getCost();
 		int lowestCost = m_queues.peek().peek().getCost();
 		
-//		log.debug(highestCost + " " + lowestCost); 
+//		log.debug(m_subgraphs.get(m_subgraphs.size() - 1).edgeSet().size() + " "  + m_queues.peek().peek().getEdges().size());
+//		log.debug(highestCost + " " + lowestCost + " " + m_queues.peek().peek()); 
 		
 		if (highestCost < lowestCost) {
 			log.debug("done");
@@ -242,7 +239,6 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	}
 	
 	public void match() throws StorageException {
-//		int edgeCursorsStarted = 0;
 		while (m_queues.size() > 0) {
 			PriorityQueue<Cursor> cursorQueue = m_queues.poll();
 			Cursor minCursor = cursorQueue.poll();
@@ -257,20 +253,19 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_indexGraph, minCursor);
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor)) {
-							if (neighbor instanceof EdgeElement && m_edgeUri2Keywords.containsKey(neighbor.getLabel())) {
-								Cursor c = new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1);
+							Cursor c = minCursor.getNextCursor(neighbor);
+							cursorQueue.add(c);
+
+							// if a cursor crosses an edge whose property was matched to one or more keyword
+							// segments, add these segments to the new cursor
+							// only the last cursor will have complete information about which segments are covered,
+							// i.e. the cursor at the connecting element
+							// (this is by design as a cursor can be parent to multiple other cursors, which will not
+							// necessarily cover the same segments later on)
+							if (neighbor instanceof EdgeElement && m_edgeUri2Keywords.containsKey(neighbor.getLabel())) 
 								for (KeywordSegment ks : m_edgeUri2Keywords.get(neighbor.getLabel()))
 									c.addKeywordSegment(ks);
-								cursorQueue.add(c);
-							}
-							else {
-								if (minCursor instanceof StructuredQueryCursor)
-									cursorQueue.add(new StructuredQueryCursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1, ((StructuredQueryCursor)minCursor).getStartNode()));
-								else
-									cursorQueue.add(new Cursor(minCursor.getKeywordSegments(), neighbor, minCursor, minCursor.getCost() + 1));
-							}
 						}
-
 					}
 				}
 				
@@ -283,10 +278,10 @@ public class HybridExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			
 			if (!cursorQueue.isEmpty())
 				m_queues.add(cursorQueue);
-//			String s = "";
-//			for (KeywordSegement ks : m_keywordQueues.keySet())
-//				s += ks.toString() + ": " + m_keywordQueues.get(ks).size() + ", ";
-//			log.debug(s);
+			String s = "";
+			for (KeywordSegment ks : m_keywordQueues.keySet())
+				s += ks.toString() + ": " + (m_keywordQueues.get(ks).peek() != null ? m_keywordQueues.get(ks).peek().getCost() : "x") + "/" + m_keywordQueues.get(ks).size() + ", ";
+			log.debug(s);
 			
 //			String s = "";
 //			for (PriorityQueue<Cursor> q : m_queues)

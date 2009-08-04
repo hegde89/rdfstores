@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword.exploration;
+package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
@@ -30,7 +30,6 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
-@Deprecated
 public abstract class GraphElement {
 	protected String m_label;
 	protected Map<String,List<Cursor>> m_keywordCursors;
@@ -45,6 +44,8 @@ public abstract class GraphElement {
 	public String getLabel() {
 		return m_label;
 	}
+	
+	public abstract int getCost();
 	
 	public void addCursor(Cursor c) {
 		for (KeywordSegment ks : c.getKeywordSegments()) {

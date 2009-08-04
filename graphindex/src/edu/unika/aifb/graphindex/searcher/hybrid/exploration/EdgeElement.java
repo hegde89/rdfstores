@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword.exploration;
+package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
@@ -19,13 +19,15 @@ package edu.unika.aifb.graphindex.searcher.keyword.exploration;
  */
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
-@Deprecated
 public class EdgeElement extends GraphElement {
 	private NodeElement m_target;
 	private NodeElement m_source;
@@ -35,7 +37,11 @@ public class EdgeElement extends GraphElement {
 		m_source = source;
 		m_target = target;
 	}
-
+	
+	public int getCost() {
+		return 1;
+	}
+	
 	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
@@ -44,13 +50,13 @@ public class EdgeElement extends GraphElement {
 			neighbors.add(m_source);
 		}
 		else {
-//			if (!(cursor.getParent().getGraphElement() instanceof StructuredMatchElement)) {
+			if (!(cursor.getParent().getGraphElement() instanceof StructuredMatchElement)) {
 				NodeElement prev = (NodeElement)cursor.getParent().getGraphElement();
 				if (m_source.equals(prev))
 					neighbors.add(m_target);
 				else
 					neighbors.add(m_source);
-//			}
+			}
 		}
 			
 		return neighbors;

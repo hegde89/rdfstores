@@ -10,17 +10,14 @@ import org.jgrapht.graph.DirectedMultigraph;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.QueryEdge;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.Cursor;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.EdgeElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.GraphElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.NodeElement;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 public class StructuredMatchElement extends GraphElement {
 	private Table<String> m_table, m_extTable;
 	private Set<NodeElement> m_nodes;
-	private HybridQuery m_query;
+	private StructuredQuery m_query;
 	
-	public StructuredMatchElement(String label, HybridQuery query, Set<NodeElement> nodes, Table<String> table, Table<String> extTable) {
+	public StructuredMatchElement(String label, StructuredQuery query, Set<NodeElement> nodes, Table<String> table, Table<String> extTable) {
 		super(label);
 		m_nodes = nodes;
 		m_table = table;
@@ -36,8 +33,13 @@ public class StructuredMatchElement extends GraphElement {
 		m_nodes = nodes;
 	}
 	
-	public HybridQuery getQuery() {
+	public StructuredQuery getQuery() {
 		return m_query;
+	}
+	
+	public int getCost() {
+		return 0;
+//		return m_query.getQueryGraph().edgeSet().size();
 	}
 	
 	private NodeElement getNode(String label) {
@@ -50,7 +52,7 @@ public class StructuredMatchElement extends GraphElement {
 	
 	public Set<EdgeElement> getQueryEdges() {
 		Set<EdgeElement> edges = new HashSet<EdgeElement>();
-		for (QueryEdge queryEdge : m_query.getStructuredQuery().getQueryGraph().edgeSet()) {
+		for (QueryEdge queryEdge : m_query.getQueryGraph().edgeSet()) {
 			NodeElement src = getNode(queryEdge.getSource().getLabel());
 			NodeElement trg = getNode(queryEdge.getTarget().getLabel());
 			if (trg == null)
@@ -67,8 +69,12 @@ public class StructuredMatchElement extends GraphElement {
 		
 		for (NodeElement node : m_nodes)
 			neighbors.addAll(node.getNeighbors(graph, cursor));
+		neighbors.removeAll(m_nodes);
 		
 		return new ArrayList<GraphElement>(neighbors);
 	}
 
+	public String toString() {
+		return m_label + "(" + m_nodes.toString() + ")";
+	}
 }

@@ -43,9 +43,6 @@ import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.HybridQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.EdgeElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.GraphElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.NodeElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
@@ -87,48 +84,37 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> selectMappings, Map<KeywordSegment,List<GraphElement>> segment2elements,
 			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException, IOException {
 		
+		int augmentedEdgeCount = 0;
 		for (KeywordSegment ks : entities.keySet()) {
-			Set<String> nodes = new HashSet<String>();
-			Set<String> edges = new HashSet<String>();
-//			log.debug(ks);
-			List<String> keywords = new ArrayList<String>(ks.getKeywords());
-			Collections.sort(keywords);
-			String id = keywords.toString();
-//			log.debug(id);
+			List<GraphElement> elements = new ArrayList<GraphElement>(entities.get(ks).size());
+			Map<String,NodeElement> label2node = new HashMap<String,NodeElement>();
+
 			for (KeywordElement ele : entities.get(ks)) {
-//				log.debug(" " + ele + " " + ele.getType());
 				if (ele.getType() == KeywordElement.CONCEPT || ele.getType() == KeywordElement.ENTITY) {
 					String ext = ele.getExtensionId();
 					
-					Set<String> extEntities = ext2entities.get(ext + id);
-					if (extEntities == null) {
-						extEntities = new HashSet<String>(50);
-						ext2entities.put(ext + id, extEntities);
+					NodeElement node = label2node.get(ext);
+					if (node == null) {
+						node = new NodeElement(ext);
+						// add keywords as virtual edges to node
+						for (String keyword : ks.getKeywords())
+							node.addAugmentedEdge("???" + ++augmentedEdgeCount, new NodeElement(keyword));
+						label2node.put(ext, node);
+						elements.add(node);
 					}
-					extEntities.add(ele.getUri());
-//					log.debug(ext + id + ": " + extEntities);
-//					log.debug(ext + " " + ks.toString() + " " + extEntities.size());
-					nodes.add(ext);
+					
+					node.addEntity(ele.getUri());
 				}
 				else if (ele.getType() == KeywordElement.RELATION || ele.getType() == KeywordElement.ATTRIBUTE) {
-					edges.add(ele.getUri());
+					elements.add(new EdgeElement(null, ele.getUri(), null));
 				}
 				else
 					log.error("unknown type...");
 			}
 
-			List<GraphElement> elements = new ArrayList<GraphElement>(nodes.size() + edges.size());
-			for (String node : nodes) {
-				elements.add(new NodeElement(node));
-			}
-			
-			for (String uri : edges) {
-				elements.add(new EdgeElement(null, uri, null));
-			}
-			
 			segment2elements.put(ks, elements);
 			
-			log.debug("segment: " + ks.getKeywords() + ", elements: " + elements.size());
+			log.debug("segment: " + ks + ", elements: " + elements.size());
 		}
 		
 		List<GraphElement> elements = new ArrayList<GraphElement>();
@@ -148,7 +134,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 				extRow[j] = m_si.getExtension(row[j]);
 			extTable.addRow(extRow);
 			
-			StructuredMatchElement element = new StructuredMatchElement("structured-element-" + i, query, nodes, table, extTable);
+			StructuredMatchElement element = new StructuredMatchElement("structured-element-" + i, query.getStructuredQuery(), nodes, table, extTable);
 			i++;
 			
 			elements.add(element);
@@ -159,7 +145,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		matcher.setKeywords(segment2elements);
 		matcher.match();
 		
-		matcher.indexMatches(indexMatches, queries, selectMappings, true);
+//		matcher.indexMatches(indexMatches, queries, selectMappings, true);
 		
 		log.debug("queries: " + queries.size());
 	}

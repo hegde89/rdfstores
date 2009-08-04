@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword.exploration;
+package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
@@ -27,46 +27,36 @@ import java.util.Set;
 
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
-@Deprecated
-public class Cursor implements Comparable<Cursor> {
+public abstract class Cursor implements Comparable<Cursor> {
 
-	private Set<KeywordSegment> m_keywords;
-	private Cursor m_parent;
+	protected Set<KeywordSegment> m_keywords;
+	protected Cursor m_parent;
 	protected GraphElement m_element;
-	private GraphElement m_startElement;
-	private int m_distance;
-	private int m_cost;
+	protected int m_distance;
+	protected int m_cost;
 	private List<GraphElement> m_path = null;
 	private Set<GraphElement> m_parents;
-	private boolean m_fakeStart = false;
 	
-	public Cursor(KeywordSegment keyword, GraphElement element) {
-		this(keyword, element, null, 0);
+	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
+		this(keywords, element, null);
 	}
 	
-	public Cursor(KeywordSegment keyword, GraphElement element, Cursor parent, int cost) {
-		this(new HashSet<KeywordSegment>(Arrays.asList(keyword)), element, parent, cost);
-	}
-	
-	public Cursor(Set<KeywordSegment> keywords, GraphElement element, Cursor parent, int cost) {
+	public Cursor(Set<KeywordSegment> keywords, GraphElement element, Cursor parent) {
 		m_keywords = new HashSet<KeywordSegment>(keywords);
 		m_element = element;
 		m_parent = parent;
 		if (m_parent != null) {
 			m_distance = m_parent.getDistance() + 1;
-		}	
-		else
+			m_cost = m_parent.getCost();
+		}
+		else {
 			m_distance = 0;
-		m_cost = m_distance + 1;
+			m_cost = 0;
+		}
+		m_cost += m_element.getCost();
 	}
 	
-	public void setFakeStart(boolean fs) {
-		m_fakeStart = fs;
-	}
-	
-	public boolean isFakeStart() {
-		return m_fakeStart;
-	}
+	public abstract Cursor getNextCursor(GraphElement element);
 	
 	public int getDistance() {
 		return m_distance;
@@ -105,10 +95,9 @@ public class Cursor implements Comparable<Cursor> {
 	
 	public GraphElement getStartElement() {
 		if (m_parent == null)
-			m_startElement = m_element;
+			return m_element;
 		else
-			m_startElement =  m_parent.getStartElement();
-		return m_startElement;
+			return m_parent.getStartElement();
 	}
 	
 	public List<GraphElement> getPath() {

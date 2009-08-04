@@ -112,7 +112,7 @@ public class IndexCreator implements TripleSink {
 	 * @param createDI
 	 */
 	public void setCreateDataIndex(boolean createDI) {
-		m_idxConfig.set(IndexConfiguration.HAS_SP, createDI);
+		m_idxConfig.set(IndexConfiguration.HAS_DI, createDI);
 	}
 
 	/**
@@ -120,7 +120,7 @@ public class IndexCreator implements TripleSink {
 	 * @param createKW
 	 */
 	public void setCreateKeywordIndex(boolean createKW) {
-		m_idxConfig.set(IndexConfiguration.HAS_SP, createKW);
+		m_idxConfig.set(IndexConfiguration.HAS_KW, createKW);
 	}
 	
 	/**

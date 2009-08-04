@@ -3,24 +3,25 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 import java.util.HashSet;
 import java.util.Set;
 
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.Cursor;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.EdgeElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.GraphElement;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.NodeElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
 public class StructuredQueryCursor extends Cursor {
 
 	private NodeElement m_startNode;
 	
-	public StructuredQueryCursor(KeywordSegment keyword, GraphElement element, Cursor parent, int cost, NodeElement startNode) {
-		super(keyword, element, parent, cost);
+	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element, NodeElement startNode) {
+		super(keywordSegments, element);
 		m_startNode = startNode;
 	}
 
-	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement neighbor, Cursor minCursor, int cost, NodeElement startNode) {
-		super(keywordSegments, neighbor, minCursor, cost);
+	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element, Cursor parent, NodeElement startNode) {
+		super(keywordSegments, element, parent);
 		m_startNode = startNode;
+	}
+
+	@Override
+	public Cursor getNextCursor(GraphElement element) {
+		return new StructuredQueryCursor(m_keywords, element, this, m_startNode);
 	}
 
 	public NodeElement getStartNode() {
@@ -33,4 +34,5 @@ public class StructuredQueryCursor extends Cursor {
 		edges.addAll(((StructuredMatchElement)getStartElement()).getQueryEdges());
 		return edges;
 	}
+
 }

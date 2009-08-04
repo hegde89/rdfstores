@@ -26,8 +26,10 @@ import java.util.List;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -120,6 +122,11 @@ public class Demo {
 			// IndexReader has other methods which report information about the data,
 			// e.g. cardinalities (some are not yet implemented)
 			System.out.println(ir.getObjectProperties());
+			
+			// quad/triple retrieval with arbitrarily specified positions
+			DataIndex di = ir.getDataIndex();
+			Table<String> table = di.getQuads(null, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, null);
+			System.out.println("type property quads: " + table);
 			
 			// create a structured query
 			StructuredQuery q = new StructuredQuery("q1");

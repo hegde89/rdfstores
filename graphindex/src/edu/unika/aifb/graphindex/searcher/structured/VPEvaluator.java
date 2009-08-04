@@ -190,7 +190,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 		for (String[] row : table) {
 			if (values.add(row[col])) {
 				
-				Table<String> t3 = m_dataIndex.getIndexStorage().getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
+				Table<String> t3 = m_dataIndex.getIndexStorage(index).getTable(index, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, index.createValueArray(DataField.PROPERTY, property, df, row[col]));
 				if (Util.isConstant(trgLabel)) {
 					for (String[] t3row : t3)
 						if (t3row[1].equals(trgLabel))
@@ -214,7 +214,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private Table<String> evaluateBothUnmatched(String property, String srcLabel, String trgLabel) throws StorageException {
 		if (Util.isConstant(trgLabel)) {
-			Table<String> table = m_dataIndex.getIndexStorage().getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
+			Table<String> table = m_dataIndex.getIndexStorage(m_idxPOS).getTable(m_idxPOS, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPOS.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, trgLabel));
 			table.setColumnName(0, srcLabel);
 			table.setColumnName(1, trgLabel);
 			return table;

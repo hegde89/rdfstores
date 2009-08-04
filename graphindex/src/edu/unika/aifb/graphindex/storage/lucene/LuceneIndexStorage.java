@@ -209,6 +209,24 @@ public class LuceneIndexStorage implements IndexStorage {
 			Document doc = getDocument(docId);
 			
 			String values = doc.getField(index.getValueFieldName()).stringValue();
+			
+			// hack if the value field is empty, mainly for triple data (instead of quads)
+			if (values.length() == 0) {
+				String[] row = new String [table.columnCount()];
+				for (int i = 0; i < table.columnCount(); i++) {
+					int idx = valueIdxs[i];
+					
+					if (idx == -1)
+						row[i] = null;
+					else
+						row[i] = indexValues[idx];
+				}
+				
+				table.addRow(row);
+				
+				return;
+			}
+			
 			StringSplitter splitter = new StringSplitter(values, "\n");
 			
 			String s;

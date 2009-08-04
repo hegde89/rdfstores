@@ -22,7 +22,7 @@ import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public abstract class Index {
-	protected IndexStorage m_is;
+//	protected IndexStorage m_is;
 	protected IndexDirectory m_idxDirectory;
 	protected IndexConfiguration m_idxConfig;
 	
@@ -31,7 +31,5 @@ public abstract class Index {
 		m_idxConfig = idxConfig;
 	}
 	
-	public void close() throws StorageException {
-		m_is.close();
-	}
+	public abstract void close() throws StorageException;
 }

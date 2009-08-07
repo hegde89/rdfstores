@@ -150,7 +150,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 			resultTables.remove(sourceTable);
 			resultTables.remove(targetTable);
 
-			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
+//			log.debug("src table: " + sourceTable + ", trg table: " + targetTable);
 
 			Table<String> result;
 			if (sourceTable == null && targetTable != null) {
@@ -200,7 +200,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 					t2.addRows(t3.getRows());
 			}
 		}
-		log.debug("unique values: " + values.size());
+//		log.debug("unique values: " + values.size());
 		
 		String joinCol = table.getColumnName(col);
 		

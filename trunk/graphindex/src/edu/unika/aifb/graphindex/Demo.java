@@ -36,8 +36,8 @@ import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.keyword.ExploringKeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryEvaluator;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
@@ -156,7 +156,7 @@ public class Demo {
 			
 			// a keyword query, DirectExploringQueryEvaluator is the only currently usable for keyword queries
 			KeywordQuery kq = new KeywordQuery("q1", "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
-			KeywordQueryEvaluator kwEval = new DirectExploringQueryEvaluator(ir);
+			KeywordQueryEvaluator kwEval = new ExploringKeywordQueryEvaluator(ir);
 			System.out.println(kwEval.evaluate(kq).toDataString());
 		}
 	}

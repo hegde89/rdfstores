@@ -88,8 +88,7 @@ public class KeywordSearcher {
 			reader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.KEYWORD_DIR));
 			searcher = new IndexSearcher(reader);
 			searchAllAttributes(allAttributes);
-			ns = new LuceneNeighborhoodStorage(idxReader.getIndexDirectory().getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
-			ns.initialize(false, true);
+			ns = idxReader.getNeighborhoodStorage();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

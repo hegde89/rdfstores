@@ -30,11 +30,11 @@ public class QueryGraph extends DirectedMultigraph<QNode,QueryEdge> {
 		super(QueryEdge.class);
 	}
 
-	public void addEdge(String src, String property, String trg) {
-		addEdge(new QNode(src), property, new QNode(trg));
+	public QueryEdge addEdge(String src, String property, String trg) {
+		return addEdge(new QNode(src), property, new QNode(trg));
 	}
 	
-	public void addEdge(QNode src, String property, QNode trg) {
+	public QueryEdge addEdge(QNode src, String property, QNode trg) {
 		if (!containsVertex(src))
 			addVertex(src);
 		else
@@ -47,6 +47,7 @@ public class QueryGraph extends DirectedMultigraph<QNode,QueryEdge> {
 		
 		QueryEdge e = new QueryEdge(src, trg, property, this);
 		addEdge(src, trg, e);
+		return e;
 	}
 	
 	public QNode getNodeByLabel(String label) {

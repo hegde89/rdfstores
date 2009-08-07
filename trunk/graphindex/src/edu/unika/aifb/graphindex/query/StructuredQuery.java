@@ -42,12 +42,12 @@ public class StructuredQuery extends Query {
 	}
 
 	
-	public void addEdge(String src, String property, String trg) {
-		m_queryGraph.addEdge(src, property, trg);
+	public QueryEdge addEdge(String src, String property, String trg) {
+		return m_queryGraph.addEdge(src, property, trg);
 	}
 	
-	public void addEdge(QNode src, String property, QNode trg) {
-		m_queryGraph.addEdge(src, property, trg);
+	public QueryEdge addEdge(QNode src, String property, QNode trg) {
+		return m_queryGraph.addEdge(src, property, trg);
 	}
 
 	public QueryGraph getQueryGraph() {
@@ -153,5 +153,16 @@ public class StructuredQuery extends Query {
 
 	public void setName(String queryName) {
 		m_name = queryName;
+	}
+	
+	public String toString() {
+		String s = "";
+		String add = "";
+		for (QueryEdge e : m_queryGraph.edgeSet()) {
+			s += add + e.getSource() + " " + e.getLabel() + " "  + e.getTarget();
+			add = "\n";
+		}
+				
+		return s;
 	}
 }

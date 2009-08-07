@@ -9,30 +9,30 @@ public class StructuredQueryCursor extends Cursor {
 
 	private NodeElement m_startNode;
 	
-	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element, NodeElement startNode) {
+	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element) {
 		super(keywordSegments, element);
-		m_startNode = startNode;
+//		m_startNode = startNode;
 	}
 
-	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element, Cursor parent, NodeElement startNode) {
+	public StructuredQueryCursor(Set<KeywordSegment> keywordSegments, GraphElement element, Cursor parent) {
 		super(keywordSegments, element, parent);
-		m_startNode = startNode;
+//		m_startNode = startNode;
 	}
 
 	@Override
 	public Cursor getNextCursor(GraphElement element) {
-		return new StructuredQueryCursor(m_keywords, element, this, m_startNode);
+		return new StructuredQueryCursor(m_keywords, element, this);
 	}
 
 	public NodeElement getStartNode() {
 		return m_startNode;
 	}
 	
-	public Set<EdgeElement> getEdges() {
-		Set<EdgeElement> edges = new HashSet<EdgeElement>();
-		edges.addAll(super.getEdges());
-		edges.addAll(((StructuredMatchElement)getStartElement()).getQueryEdges());
-		return edges;
-	}
+//	public Set<EdgeElement> getEdges() {
+//		Set<EdgeElement> edges = new HashSet<EdgeElement>();
+//		edges.addAll(super.getEdges());
+//		edges.addAll(((StructuredMatchElement)getStartElement()).getQueryEdges());
+//		return edges;
+//	}
 
 }

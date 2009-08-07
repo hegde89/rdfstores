@@ -27,15 +27,18 @@ import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
+import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+
 public class NodeElement extends GraphElement {
 
-	private Set<String> m_entities;
-	private Map<String,List<NodeElement>> m_augmentEdges;
+	private Map<String,List<KeywordSegment>> m_augmentEdges;
+	private Map<KeywordSegment,Table<String>> m_segmentEntities;
 	
 	public NodeElement(String label) {
 		super(label);
-		m_entities = new HashSet<String>();
-		m_augmentEdges = new HashMap<String,List<NodeElement>>();
+		m_augmentEdges = new HashMap<String,List<KeywordSegment>>();
+		m_segmentEntities = new HashMap<KeywordSegment,Table<String>>();
 	}
 	
 	public int getCost() {
@@ -43,22 +46,36 @@ public class NodeElement extends GraphElement {
 	}
 	
 	public void addFrom(NodeElement node) {
-		addEntities(node.getEntities());
 		for (String property : node.m_augmentEdges.keySet())
-			for (NodeElement target : node.m_augmentEdges.get(property))
-				addAugmentedEdge(property, target);
+			for (KeywordSegment ks : node.m_augmentEdges.get(property))
+				addAugmentedEdge(property, ks);
+		for (KeywordSegment ks : node.m_segmentEntities.keySet())
+			m_segmentEntities.put(ks, new Table<String>(node.m_segmentEntities.get(ks), true));
 	}
 	
-	public void addAugmentedEdge(String property, NodeElement target) {
-		List<NodeElement> targets = m_augmentEdges.get(property);
-		if (targets == null) {
-			targets = new ArrayList<NodeElement>();
-			m_augmentEdges.put(property, targets);
+	public void addAugmentedEdge(String property, KeywordSegment ks) {
+		List<KeywordSegment> kss = m_augmentEdges.get(property);
+		if (kss == null) {
+			kss = new ArrayList<KeywordSegment>();
+			m_augmentEdges.put(property, kss);
 		}
-		targets.add(target);
+		kss.add(ks);
 	}
 	
-	public Map<String,List<NodeElement>> getAugmentedEdges() {
+	public Table<String> getSegmentEntities(KeywordSegment ks) {
+		return m_segmentEntities.get(ks);
+	}
+	
+	public void addSegmentEntity(KeywordSegment segment, String entity) {
+		Table<String> entities = m_segmentEntities.get(segment);
+		if (entities == null) {
+			entities = new Table<String>(m_label, segment.toString());
+			m_segmentEntities.put(segment, entities);
+		}
+		entities.addRow(new String[] { entity, segment.toString() });
+	}
+	
+	public Map<String,List<KeywordSegment>> getAugmentedEdges() {
 		return m_augmentEdges;
 	}
 	
@@ -76,18 +93,6 @@ public class NodeElement extends GraphElement {
 	}
 	
 	public String toString() {
-		return m_label + "[" + m_keywordCursors.size() + "," + m_entities.size() + "," + m_augmentEdges.size() + "]";
-	}
-
-	public void addEntity(String uri) {
-		m_entities.add(uri);
-	}
-	
-	public void addEntities(Set<String> entities) {
-		m_entities.addAll(entities);
-	}
-
-	public Set<String> getEntities() {
-		return m_entities;
+		return m_label + "[" + m_keywordCursors.size() + "," + m_segmentEntities.size() + "," + m_augmentEdges.size() + "]";
 	}
 }

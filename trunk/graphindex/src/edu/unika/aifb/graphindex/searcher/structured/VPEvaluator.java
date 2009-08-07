@@ -225,7 +225,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private Table<String> evaluateBothMatched(String property, String srcLabel, String trgLabel, Table<String> sourceTable, Table<String> targetTable) throws StorageException {
 
-		Table<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.OBJECT, sourceTable.getColumn(srcLabel));
+		Table<String> table = joinWithTable(property, srcLabel, trgLabel, sourceTable, m_idxPSO, DataField.SUBJECT, sourceTable.getColumn(srcLabel));
 		
 		table.sort(trgLabel, true);
 		targetTable.sort(trgLabel, true);

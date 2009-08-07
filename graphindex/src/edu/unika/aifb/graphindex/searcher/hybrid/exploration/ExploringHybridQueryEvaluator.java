@@ -35,6 +35,7 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.index.StructureIndex;
+import edu.unika.aifb.graphindex.model.impl.Entity;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.QNode;
@@ -49,7 +50,9 @@ import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.sig.EvaluationClass;
 import edu.unika.aifb.graphindex.searcher.structured.sig.SmallIndexMatchesValidator;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
 import edu.unika.aifb.graphindex.util.Counters;
 import edu.unika.aifb.graphindex.util.Timings;
 
@@ -80,10 +83,9 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		return res;
 	}
 	
-	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, HybridExploringIndexMatcher matcher, List<Table<String>> indexMatches,
-			List<StructuredQuery> queries, List<Map<String,Set<KeywordSegment>>> selectMappings, Map<KeywordSegment,List<GraphElement>> segment2elements,
-			Map<String,Set<String>> ext2entities, Timings timings, Counters counters) throws StorageException, IOException {
-		
+	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, HybridExploringIndexMatcher matcher, 
+			List<TranslatedQuery> queries, Map<KeywordSegment,List<GraphElement>> segment2elements, Timings timings, Counters counters) throws StorageException, IOException {
+		Set<KeywordElement> keywordNodeElements = new HashSet<KeywordElement>();
 		int augmentedEdgeCount = 0;
 		for (KeywordSegment ks : entities.keySet()) {
 			List<GraphElement> elements = new ArrayList<GraphElement>(entities.get(ks).size());
@@ -97,13 +99,13 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					if (node == null) {
 						node = new NodeElement(ext);
 						// add keywords as virtual edges to node
-						for (String keyword : ks.getKeywords())
-							node.addAugmentedEdge("???" + ++augmentedEdgeCount, new NodeElement(keyword));
+						node.addAugmentedEdge("???" + ++augmentedEdgeCount, ks);
 						label2node.put(ext, node);
 						elements.add(node);
 					}
 					
-					node.addEntity(ele.getUri());
+					node.addSegmentEntity(ks, ele.getUri());
+					keywordNodeElements.add(ele);
 				}
 				else if (ele.getType() == KeywordElement.RELATION || ele.getType() == KeywordElement.ATTRIBUTE) {
 					elements.add(new EdgeElement(null, ele.getUri(), null));
@@ -117,37 +119,90 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			log.debug("segment: " + ks + ", elements: " + elements.size());
 		}
 		
-		List<GraphElement> elements = new ArrayList<GraphElement>();
-		Table<String> structuredResults = m_eval.evaluate(query.getStructuredQuery());
-		int i = 0;
-		for (String[] row : structuredResults) {
-			Set<NodeElement> nodes = new HashSet<NodeElement>();
-			for (QNode s : query.getStructuredQuery().getVariables())
-				nodes.add(new NodeElement(m_si.getExtension(row[structuredResults.getColumn(s.getLabel())])));
+		Map<String,Set<QNode>> ext2var = new HashMap<String,Set<QNode>>();
+		Table<String> structuredResults = null;
+		Table<String> queryIndexMatches = null;
+		
+		if (query.getStructuredQuery() != null) {
+			List<GraphElement> elements = new ArrayList<GraphElement>();
+			structuredResults = m_eval.evaluate(query.getStructuredQuery());
+			queryIndexMatches = new Table<String>(structuredResults, false);
+			log.debug(structuredResults.toDataString());
+			
+			Set<String> sqExts = new HashSet<String>();
+			for (String[] row : structuredResults) {
+				// first check if any of the entities is in the neighborhood of a keyword matched entity
+				boolean found = false;
+				for (QNode s : query.getStructuredQuery().getVariables()) {
+					String entity = row[structuredResults.getColumn(s.getLabel())];
 
-			Table<String> table = new Table<String>(structuredResults, false);
-			table.addRow(row);
+					for (KeywordElement ele: keywordNodeElements) {
+						if (ele.isReachable(new KeywordElement(new Entity(entity), KeywordElement.ENTITY, null))) {
+							found = true;
+							break;
+						}
+					}
+					
+					if (found)
+						break;
+				}
+				
+				if (found) {
+					log.debug("row connected");
+					String[] extRow = new String[queryIndexMatches.columnCount()];
+					for (QNode s : query.getStructuredQuery().getQueryGraph().vertexSet()) {
+						if (s.isVariable()) {
+							String ext = m_si.getExtension(row[structuredResults.getColumn(s.getLabel())]);
+							sqExts.add(ext);
+							extRow[queryIndexMatches.getColumn(s.getLabel())] = ext;
+  							
+							// record for which variables an extension appears
+							Set<QNode> vars = ext2var.get(ext);
+							if (vars == null) {
+								vars = new HashSet<QNode>();
+								ext2var.put(ext, vars);
+							}
+							vars.add(s);
+						}
+						else
+							extRow[queryIndexMatches.getColumn(s.getLabel())] = s.getLabel();
+					}
+					queryIndexMatches.addRow(extRow);
+				}
+				else
+					log.debug("ignored row");
+			}
 			
-			Table<String> extTable = new Table<String>(structuredResults, false);
-			String[] extRow = new String [row.length];
-			for (int j = 0; j < row.length; j++)
-				extRow[j] = m_si.getExtension(row[j]);
-			extTable.addRow(extRow);
+			log.debug(ext2var);
+			log.debug("extensions from sq: " + sqExts.size());
 			
-			StructuredMatchElement element = new StructuredMatchElement("structured-element-" + i, query.getStructuredQuery(), nodes, table, extTable);
-			i++;
+			for (String ext : sqExts)
+				elements.add(new NodeElement(ext));
 			
-			elements.add(element);
+			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
 		}
 		
-		segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
-
 		matcher.setKeywords(segment2elements);
 		matcher.match();
 		
-//		matcher.indexMatches(indexMatches, queries, selectMappings, true);
-		
+		queries.addAll(matcher.indexMatches(query.getStructuredQuery(), ext2var));
 		log.debug("queries: " + queries.size());
+		
+		if (query.getStructuredQuery() != null) {
+			// join the index matches of the structured part to those of the keyword part
+			for (int i = 0; i < queries.size(); i++) {
+				TranslatedQuery q = queries.get(i);
+				Table<String> indexMatches = q.getIndexMatches();
+				
+				indexMatches.sort(q.getConnectingNode().getLabel());
+				queryIndexMatches.sort(q.getConnectingNode().getLabel(), true);
+				
+				indexMatches = Tables.mergeJoin(indexMatches, queryIndexMatches, q.getConnectingNode().getLabel());
+				q.setIndexMatches(indexMatches);
+				
+				q.addResult(structuredResults);
+			}
+		}
 	}
 
 	public Table<String> evaluate(HybridQuery query) throws StorageException, IOException {
@@ -161,14 +216,11 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, timings);
 		timings.end(Timings.STEP_KWSEARCH);
 
-		List<Table<String>> indexMatches = new ArrayList<Table<String>>();
-		List<StructuredQuery> queries = new ArrayList<StructuredQuery>();
-		List<Map<String,Set<KeywordSegment>>> selectMappings = new ArrayList<Map<String,Set<KeywordSegment>>>();
+		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();
 		Map<KeywordSegment,List<GraphElement>> segment2elements = new HashMap<KeywordSegment,List<GraphElement>>();
-		Map<String,Set<String>> ext2entities = new HashMap<String,Set<String>>();
 
 		timings.start(Timings.STEP_EXPLORE);
-		explore(query, decomposition, m_matcher, indexMatches, queries, selectMappings, segment2elements, ext2entities, timings, counters);
+		explore(query, decomposition, m_matcher, queries, segment2elements, timings, counters);
 		timings.end(Timings.STEP_EXPLORE);
 		
 		timings.start(Timings.STEP_IQA);
@@ -176,110 +228,57 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		counters.set(Counters.QT_QUERIES, queries.size());
 		
 //		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
-		int numberOfQueries = 1;
+		int numberOfQueries = 2;
 		
 		for (int i = 0; i < numberOfQueries; i++) {
-			log.debug(queries.get(i).getQueryGraph().edgeSet());
-			PrunedQuery q = new PrunedQuery(queries.get(i), m_idxReader.getStructureIndex());
-			counters.set(Counters.QT_QUERY_EDGES, q.getQueryGraph().edgeCount());
-			log.debug(q.getQueryGraph().edgeSet());
+			TranslatedQuery translated = queries.get(i);
+			counters.set(Counters.QT_QUERY_EDGES, translated.getQueryGraph().edgeCount());
+			log.debug(translated);
 
-			QueryExecution qe = new QueryExecution(q, m_idxReader);
+			QueryExecution qe = new QueryExecution(translated, m_idxReader);
 			QueryGraph queryGraph = qe.getQueryGraph();
 			
-			Table<String> indexMatch = indexMatches.get(i);
-			qe.setIndexMatches(indexMatch);
-			log.debug(indexMatch);
-			
-			Map<String,Set<KeywordSegment>> select2ks = selectMappings.get(i);
+			log.debug(translated.getIndexMatches().toDataString());
+			qe.setIndexMatches(translated.getIndexMatches());
 			
 			List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
-			classes.add(new EvaluationClass(indexMatch));
+			classes.add(new EvaluationClass(translated.getIndexMatches()));
 			
-			for (QueryEdge edge : queryGraph.edgeSet()) {
-				String src = edge.getSource().getLabel();
-				String trg = edge.getTarget().getLabel();
-				
-				if (q.getSelectVariableLabels().contains(src)) {
-					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
-					for (EvaluationClass ec : classes) {
-						newClasses.addAll(ec.addMatch(src, false, null, null));
-					}
-					classes.addAll(newClasses);					
+			for (QNode var : translated.getSelectVariables()) {
+				List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
+				for (EvaluationClass ec : classes) {
+					newClasses.addAll(ec.addMatch(var.getLabel(), false, null, null));
 				}
-				
-				if (q.getSelectVariableLabels().contains(trg)) {
-					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
-					for (EvaluationClass ec : classes) {
-						newClasses.addAll(ec.addMatch(trg, false, null, null));
-					}
-					classes.addAll(newClasses);					
-				}
-				
-				if (edge.getLabel().startsWith("???")) {
-					qe.visited(edge);
-				}
+				classes.addAll(newClasses);					
 			}
-//			log.debug("ext2entities: " + ext2entities.keySet());
+			
+			log.debug("visited edges:");
+			for (QueryEdge edge : translated.getStructuredEdges()) {
+				qe.visited(edge);
+				log.debug(" " + edge);
+			}
+			for (QueryEdge edge : translated.getAttributeEdges()) {
+				qe.visited(edge);
+				log.debug(" " + edge);
+			}
+
 			for (Iterator<EvaluationClass> j = classes.iterator(); j.hasNext(); ) {
 				EvaluationClass ec = j.next();
+				ec.getResults().addAll(translated.getResults());
 				log.debug(ec);
-				for (String selectNode : q.getSelectVariableLabels()) {
-					if (!ec.getMappings().hasColumn(selectNode))
-						continue;
-					if (q.isRemovedNode(selectNode))
-						continue;
-					if (select2ks.get(selectNode) == null)
-						continue;
-
-					boolean stop = false;
-					String ksCol = "";
-					for (KeywordSegment ks : select2ks.get(selectNode)) {
-						ksCol += ks.toString().replaceAll(" ", "_");
-//						log.debug("ks: " + ks + ", " + getKSId(ks) + ": " + ec.getMatch(selectNode) + getKSId(ks));
-						if (ext2entities.get(ec.getMatch(selectNode) + getKSId(ks)) == null) {
-							j.remove();
-							stop = true;
-//							log.debug("stop");
-							break;
-						}
-					}
-					
-					if (stop)
-						break;
-
-					List<String> columns = new ArrayList<String>();
-					columns.add(ksCol);
-					columns.add(selectNode);
-					Table<String> table = new Table<String>(columns);
-					int col = table.getColumn(selectNode);
-	
-					for (KeywordSegment ks : select2ks.get(selectNode)) {
-						for (String entity : ext2entities.get(ec.getMatch(selectNode) + getKSId(ks))) {
-							String[] row = new String [2];
-							row[col] = entity;
-							row[0] = ksCol;
-							table.addRow(row);
-						}
-					}
-					ec.getResults().add(table);
-//					log.debug(table.toDataString());
-				}
-//					log.debug(ec);
 			}
-			
-			log.debug(classes);
+
 			qe.setEvaluationClasses(classes);
 			m_validator.setQueryExecution(qe);
 			
 			if (classes.size() > 0)
 				m_validator.validateIndexMatches();
-			
+//			
 			log.debug("result: " + qe.getResult());
-			log.debug(qe.getResult().toDataString());
-			
-			if (qe.getResult() != null)
-				counters.inc(Counters.RESULTS, qe.getResult().rowCount());
+//			log.debug(qe.getResult().toDataString());
+//			
+//			if (qe.getResult() != null)
+//				counters.inc(Counters.RESULTS, qe.getResult().rowCount());
 		}
 
 		timings.end(Timings.STEP_IQA);

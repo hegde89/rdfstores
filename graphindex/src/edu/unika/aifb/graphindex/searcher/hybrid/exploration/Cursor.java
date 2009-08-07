@@ -137,7 +137,7 @@ public abstract class Cursor implements Comparable<Cursor> {
 		int result = 1;
 		result = prime * result + ((m_element == null) ? 0 : m_element.hashCode());
 		result = prime * result + ((m_keywords == null) ? 0 : m_keywords.hashCode());
-		result = prime * result + ((m_path == null) ? 0 : m_path.hashCode());
+		result = prime * result + ((getPath() == null) ? 0 : getPath().hashCode());
 		return result;
 	}
 

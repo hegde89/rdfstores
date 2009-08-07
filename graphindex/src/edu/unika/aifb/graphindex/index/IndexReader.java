@@ -24,6 +24,10 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.storage.IndexDescription;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -39,6 +43,7 @@ public class IndexReader {
 	private DataIndex m_dataIndex;
 	private StructureIndex m_structureIndex;
 	private KeywordIndex m_keywordIndex;
+	private NeighborhoodStorage m_neighborhoodStorage;
 	private Set<String> m_objectProperties;
 	private Set<String> m_dataProperties;
 	
@@ -89,6 +94,14 @@ public class IndexReader {
 		if (m_dataProperties == null)
 			m_dataProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
 		return m_dataProperties;
+	}
+	
+	public NeighborhoodStorage getNeighborhoodStorage() throws StorageException, IOException {
+		if (m_neighborhoodStorage == null) {
+			m_neighborhoodStorage = new LuceneNeighborhoodStorage(m_idxDirectory.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
+			m_neighborhoodStorage.initialize(false, true);
+		}
+		return m_neighborhoodStorage;
 	}
 	
 	public int getSubjectCardinality(String property) {

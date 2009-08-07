@@ -293,6 +293,9 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			
 			log.debug("classes: " + classes.size());
 			log.debug("time: " + (System.currentTimeMillis() - start));
+			for (EvaluationClass ec : classes)
+				for (Table<String> t : ec.getResults())
+					log.debug(t.toDataString());
 			log.debug("");
 		}
 		

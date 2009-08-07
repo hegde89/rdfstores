@@ -35,9 +35,11 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.query.QNode;
+import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+import edu.unika.aifb.graphindex.util.Util;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
 
@@ -47,19 +49,24 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	private Set<Cursor> m_cursors;
 	private Set<EdgeElement> m_edges;
 	private int m_cost;
-	private Map<NodeElement,Set<String>> m_startElements;
-	private Map<String,String> m_labels;
-	private Map<String,String> m_vars;
-	private List<String> m_selectVariables;
+	private Map<String,String> m_label2var;
+	private NodeElement m_structuredNode = null;
+	private Set<Map<NodeElement,NodeElement>> m_mappings;
+	private Set<NodeElement> m_augmentedNodes;
+	private Map<NodeElement,Set<KeywordSegment>> m_nodeSegments;
 
 	private HashMap<String,Set<KeywordSegment>> m_select2ks;
-	
+
+
 	private static final Logger log = Logger.getLogger(Subgraph.class);
 	
 	public Subgraph(Class<? extends EdgeElement> arg0) {
 		super(arg0);
-		
+		m_mappings = new HashSet<Map<NodeElement,NodeElement>>();
 		m_edges = new HashSet<EdgeElement>();
+		m_label2var = new HashMap<String,String>();
+		m_augmentedNodes = new HashSet<NodeElement>();
+		m_nodeSegments = new HashMap<NodeElement,Set<KeywordSegment>>();
 	}
 
 	public Subgraph(Set<Cursor> cursors) {
@@ -70,6 +77,18 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 			if (c.getCost() > m_cost)
 				m_cost = c.getCost();
 			
+			if (c instanceof StructuredQueryCursor)
+				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
+			else {
+				Cursor startCursor = c.getStartCursor();
+				NodeElement startNode = (NodeElement)startCursor.getGraphElement();
+				Set<KeywordSegment> kss = m_nodeSegments.get(startNode);
+				if (kss == null) {
+					kss = new HashSet<KeywordSegment>();
+					m_nodeSegments.put(startNode, kss);
+				}
+				kss.addAll(startCursor.getKeywordSegments());
+			}
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add((EdgeElement)e);
 				
@@ -87,21 +106,38 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 			}
 		}	
 		if (start != null)
-			m_cost = getLongestPath(start, new HashSet<String>());
+			m_cost = getLongestPath(start, new ArrayList<String>());
+		else
+			m_cost = m_edges.size();
+		
+//		if (m_edges.size() == 3 && m_cost == 3)
+//			log.debug("blah");
 	}
 	
 	public Set<Cursor> getCursors() {
 		return m_cursors;
 	}
 	
-	private int getLongestPath(NodeElement node, Set<String> path) {
-		Set<String> newPath = new HashSet<String>(path);
+	public NodeElement getStructuredNode() {
+		return m_structuredNode;
+	}
+	
+	public void addMappings(List<Map<NodeElement,NodeElement>> maps) {
+		m_mappings.addAll(maps);
+	}
+	
+	public Set<Map<NodeElement,NodeElement>> getMappings() {
+		return m_mappings;
+	}
+	
+	private int getLongestPath(NodeElement node, List<String> path) {
+		List<String> newPath = new ArrayList<String>(path);
 		newPath.add(node.getLabel());
 		
 		Set<NodeElement> next = new HashSet<NodeElement>();
 		
-		for (EdgeElement edge : outgoingEdgesOf(node)) 
-			if (!path.contains(edge.getTarget().getLabel())) 
+		for (EdgeElement edge : outgoingEdgesOf(node))
+			if (!path.contains(edge.getTarget().getLabel()))
 				next.add(edge.getTarget());
 		for (EdgeElement edge : incomingEdgesOf(node)) 
 			if (!path.contains(edge.getSource().getLabel()))
@@ -125,145 +161,165 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		return ((Integer)getCost()).compareTo(o.getCost());
 	}
 	
-	private void generateLabelMappings() {
-		m_startElements = new HashMap<NodeElement,Set<String>>();
-		m_selectVariables = new ArrayList<String>();
-		m_select2ks = new HashMap<String,Set<KeywordSegment>>();
-		m_labels = new HashMap<String,String>();
-		m_vars = new HashMap<String,String>();
-
-		int x = 1;
-		for (Cursor c : m_cursors) {
-			Cursor start = c.getStartCursor();
-			if (!(start.getGraphElement() instanceof NodeElement))
-				continue;
+	private void addAugmentedEdges() {
+		for (NodeElement node : m_nodeSegments.keySet()) {
+			for (String property : node.getAugmentedEdges().keySet()) {
+				m_augmentedNodes.add(node);
 				
-			NodeElement startElement = (NodeElement)start.getGraphElement();
-
-//			if (m_labels.containsKey(startElement.getLabel()))
-//				continue;
-			
-			assert start.getKeywordSegments().size() == 1;
-			KeywordSegment startKS = null;
-			for (KeywordSegment ks : start.getKeywordSegments())
-				startKS = ks;
-			
-			if (!m_startElements.containsKey(startElement)) {
-				String var = "?x" + x++;
-				m_startElements.put(startElement, new HashSet<String>(startKS.getKeywords()));
-				m_labels.put(startElement.getLabel(), var);
-				m_vars.put(var, startElement.getLabel());
-				m_selectVariables.add(var);
-				m_select2ks.put(var, new HashSet<KeywordSegment>(Arrays.asList(startKS)));
-			}
-			else {
-				m_startElements.get(startElement).addAll(startKS.getKeywords());
-				m_select2ks.get(m_labels.get(startElement.getLabel())).add(startKS);
-			}
-			
-//			if (!start.isFakeStart() && c.getStartElement() instanceof NodeElement) {
-//				m_startElements.put((NodeElement)c.getStartElement(), c.getKeywordSegments()());
-//				if (!m_labels.containsKey(c.getStartElement().getLabel())) {
-//					m_labels.put(c.getStartElement().getLabel(), "?x" + x++);
-//					m_vars.put(m_labels.get(c.getStartElement().getLabel()), c.getStartElement().getLabel());
-//					m_selectVariables.add(m_labels.get(c.getStartElement().getLabel()));
-//					m_select2ks.put(m_labels.get(c.getStartElement().getLabel()), c.getKeyword());
-//				}
-//			}
-		}
-
-		for (EdgeElement e : m_edges) {
-			String src = m_labels.get(e.getSource().getLabel());
-			if (src == null) {
-				src = "?x" + x++;
-				m_labels.put(e.getSource().getLabel(), src);
-				m_vars.put(src, e.getSource().getLabel());
-			}
-
-			String dst = m_labels.get(e.getTarget().getLabel());
-			if (dst == null) {
-				if (e.getTarget().getLabel().startsWith("b"))
-					dst = "?x" + x++;
-				else
-					dst = e.getTarget().getLabel();
-				m_labels.put(e.getTarget().getLabel(), dst);
-				m_vars.put(dst, e.getTarget().getLabel());
+				Set<KeywordSegment> segments = m_nodeSegments.get(node);
+				log.debug("node: " + node + ", property: " + property + ", segments: " + segments);
+				
+				List<KeywordSegment> augmentedKS = node.getAugmentedEdges().get(property);
+				log.debug(" augmented ks: "+ augmentedKS);
+				for (KeywordSegment ks : augmentedKS) {
+					if (segments.contains(ks)) {
+						NodeElement target = new NodeElement(ks.toString());
+						addVertex(target);
+						addEdge(node, target, new EdgeElement(node, property, target));
+						
+						m_label2var.put(target.getLabel(), target.getLabel());
+					}
+				}
 			}
 		}
 	}
 	
-	public List<String> getSelectVariables() {
-		if (m_selectVariables == null)
-			generateLabelMappings();
-		return m_selectVariables;
-	}
-	
-	public StructuredQuery toQuery(boolean withAttributes) {
-		if (m_selectVariables == null)
-			generateLabelMappings();
+	private TranslatedQuery attachQuery(StructuredQuery query, QNode var, Table<String> indexMatches, List<Table<String>> resultTables) {
+		TranslatedQuery q = new TranslatedQuery(query.getName() + "-" + var.getLabel(), var);
 		
-		StructuredQuery q = new StructuredQuery(null);
+		Map<String,String> label2var = new HashMap<String,String>(m_label2var);
+		label2var.put(m_structuredNode.getLabel(), var.getLabel());
 		
-		for (EdgeElement e : m_edges) {
-			String src = m_labels.get(e.getSource().getLabel());
-			String dst = m_labels.get(e.getTarget().getLabel());
-			q.addEdge(src, e.getLabel(), dst);
+		// index match table first contains column only for the explored subgraph,
+		// those for the query will be joined later by the query evaluator
+		indexMatches.setColumnName(indexMatches.columnCount() - 1, var.getLabel());
+		// add connecting var to all ext mappings (is the last in each row)
+//		for (String[] row : indexMatches)
+//			row[row.length - 1] = m_structuredNode.getLabel();
+		
+		q.setIndexMatches(indexMatches);
+		
+		for (EdgeElement edge : edgeSet())
+			q.addEdge(label2var.get(edge.getSource().getLabel()), edge.getLabel(), label2var.get(edge.getTarget().getLabel()), false);
+		for (QueryEdge edge : query.getQueryGraph().edgeSet()) 
+			q.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget(), true);
+
+		for (QNode node : query.getVariables())
+			q.setAsSelect(node.getLabel());
+		for (NodeElement node : m_augmentedNodes)
+			q.setAsSelect(m_label2var.get(node.getLabel()));
+		
+		for (Table<String> table : resultTables) {
+			Table<String> copy = new Table<String>(table, true);
+			copy.setColumnName(0, label2var.get(copy.getColumnName(0)));
+			q.addResult(copy);
 		}
-		
-		if (withAttributes) {
-			int x = 0;
-			for (NodeElement startElement : m_startElements.keySet()) {
-				for (String keyword : m_startElements.get(startElement))
-					q.addEdge(m_labels.get(startElement.getLabel()), "???" + x++, keyword);
-			}
-		}
-		
-		for (String select : m_selectVariables)
-			q.setAsSelect(select);
-		
-		for (QNode var : q.getVariables())
-			q.setAsSelect(var.getLabel());
-		
-//		log.debug(q);
 		
 		return q;
 	}
 	
-	public Map<String,String> getLabels() {
-		if (m_labels == null)
-			generateLabelMappings();
-		return m_labels;
-	}
-	
-
-	public List<String> getQueryNodes() {
-		if (m_selectVariables == null)
-			generateLabelMappings();
+	public List<TranslatedQuery> attachQuery(StructuredQuery query, Map<String,Set<QNode>> ext2vars) {
+		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();
 		
-		List<String> nodes = new ArrayList<String>();
-		for (String label : m_labels.values())
-			if (!nodes.contains(label))
-				nodes.add(label);
-		return nodes;
-	}
-	
-	public Map<String,String> getVariableMapping() {
-		if (m_vars == null)
-			generateLabelMappings();
-		return m_vars;
-	}
-	
-	public HashMap<String,Set<KeywordSegment>> getKSMapping() {
-		if (m_vars == null)
-			generateLabelMappings();
-		return m_select2ks;
+		addAugmentedEdges();
+
+		int x = 0;
+		for (EdgeElement edge : edgeSet()) {
+			String src = m_label2var.get(edge.getSource().getLabel());
+			if (src == null && !edge.getSource().equals(m_structuredNode)) {
+				src = "?x" + ++x;
+				m_label2var.put(edge.getSource().getLabel(), src);
+			}
+			
+			String trg = m_label2var.get(edge.getTarget().getLabel());
+			if (trg == null && !edge.getTarget().equals(m_structuredNode)) {
+				trg = "?x" + ++x;
+				m_label2var.put(edge.getTarget().getLabel(), trg);
+			}
+		}
+
+		// m_mappings contains ext->ext mappings from this subgraph to
+		// isomorphic subgraphs found during exploration
+		// create maps containing query var->extension mappings
+		List<String> columns = new ArrayList<String>();
+		for (String ext : m_label2var.keySet()) {
+			String v = m_label2var.get(ext);
+			if (Util.isVariable(v))
+				columns.add(v);
+		}
+		if (query != null) {
+			columns.add("?PLACEHOLDER");
+			m_label2var.put(m_structuredNode.getLabel(), "?PLACEHOLDER");
+		}
+		
+		Table<String> indexMatches = new Table<String>(columns);
+		
+		// don't forget this subgraph
+		String[] row = new String[indexMatches.columnCount()];
+		for (String ext : m_label2var.keySet()) {
+			String v = m_label2var.get(ext);
+			if (Util.isVariable(v))
+				row[indexMatches.getColumn(v)] = ext;
+		}
+		indexMatches.addRow(row);
+		
+		// from the isomorphic subgraphs
+		for (Map<NodeElement,NodeElement> extMap : m_mappings) {
+			row = new String[indexMatches.columnCount()];
+			for (NodeElement node : extMap.keySet()) {
+				String ext = node.getLabel();
+				String v = m_label2var.get(ext);
+				if (v != null && Util.isVariable(v)) // v is null if the node is the connecting node to a structured query
+					row[indexMatches.getColumn(v)] = extMap.get(node).getLabel();
+			}
+			indexMatches.addRow(row);
+		}
+		
+		// build a result table for each augmented edge
+		List<Table<String>> resultTables = new ArrayList<Table<String>>();
+		for (NodeElement augmentedNode : m_augmentedNodes) {
+			Set<KeywordSegment> kss = m_nodeSegments.get(augmentedNode);
+			assert kss.size() == 1;
+			for (KeywordSegment ks : kss) {
+				Table<String> table = new Table<String>(augmentedNode.getLabel(), ks.toString());
+				table.addRows(augmentedNode.getSegmentEntities(ks).getRows());
+				Set<String> alreadyAdded = new HashSet<String>();
+				for (Map<NodeElement,NodeElement> map : m_mappings)
+					if (alreadyAdded.add(map.get(augmentedNode).getLabel()))
+						table.addRows(map.get(augmentedNode).getSegmentEntities(ks).getRows());
+				resultTables.add(table);
+			}
+		}
+
+		if (query != null) {
+			for (QNode var : ext2vars.get(m_structuredNode.getLabel())) {
+				// deep copy extension mappings, which will be extended by attachQuery
+				Table<String> copy = new Table<String>(indexMatches, false);
+				for (String[] r : indexMatches)
+					copy.addRow(r.clone());
+				queries.add(attachQuery(query, var, copy, resultTables));
+			}
+		}
+		else {
+			TranslatedQuery q = new TranslatedQuery("qt", null);
+			for (EdgeElement edge : edgeSet()) {
+				q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
+			}
+			q.setIndexMatches(indexMatches);
+			for (Table table : resultTables) {
+				Table<String> copy = new Table<String>(table, true);
+				copy.setColumnName(0, m_label2var.get(copy.getColumnName(0)));
+				q.addResult(copy);
+			}
+		}
+		
+		return queries;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public List<Map<String,String>> isIsomorphicTo(Subgraph sg) {
+	public List<Map<NodeElement,NodeElement>> isIsomorphicTo(Subgraph sg) {
 		GraphIsomorphismInspector<IsomorphismRelation> t =  AdaptiveIsomorphismInspectorFactory.createIsomorphismInspector(this, sg, 
 			new EquivalenceComparator() {
-
 				public boolean equivalenceCompare(Object arg0, Object arg1, Object arg2, Object arg3) {
 					return true;
 				}
@@ -271,30 +327,26 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				public int equivalenceHashcode(Object arg0, Object arg1) {
 					return 0;
 				}
+			}, 
+			new EquivalenceComparator() {
+				public boolean equivalenceCompare(Object arg0, Object arg1, Object arg2, Object arg3) {
+					return ((EdgeElement)arg0).getLabel().equals(((EdgeElement)arg1).getLabel());
+				}
+	
+				public int equivalenceHashcode(Object arg0, Object arg1) {
+					return arg0.hashCode();
+				}
+			});
 
-		}, 
-		new EquivalenceComparator() {
-
-			public boolean equivalenceCompare(Object arg0, Object arg1, Object arg2, Object arg3) {
-				return ((EdgeElement)arg0).getLabel().equals(((EdgeElement)arg1).getLabel());
-			}
-
-			public int equivalenceHashcode(Object arg0, Object arg1) {
-				return arg0.hashCode();
-			}
-		});
-		Set<String> fixedNodes = new HashSet<String>();
-		for (String selectNode : m_selectVariables)
-			fixedNodes.add(m_vars.get(selectNode));
-		List<Map<String,String>> mappings = new ArrayList<Map<String,String>>();
+		List<Map<NodeElement,NodeElement>> mappings = new ArrayList<Map<NodeElement,NodeElement>>();
 		
 		if (sg.vertexSet().size() == vertexSet().size() && sg.edgeSet().size() == edgeSet().size() && t.isIsomorphic()) {
 			while (t.hasNext()) {
 				IsomorphismRelation rel = t.next();
 
-				HashMap<String,String> mapping = new HashMap<String,String>();
+				HashMap<NodeElement,NodeElement> mapping = new HashMap<NodeElement,NodeElement>();
 				for (NodeElement v1 : vertexSet()) {
-					mapping.put(v1.getLabel(), ((NodeElement)rel.getVertexCorrespondence(v1, true)).getLabel());
+					mapping.put(v1, (NodeElement)rel.getVertexCorrespondence(v1, true));
 				}
 				mappings.add(mapping);
 			}
@@ -304,7 +356,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	}
 	
 	public String toString() {
-		return "subgraph size: " + m_edges.size() + ", cost: " + m_cost + ", " + m_edges;
+		return "subgraph size: " + m_edges.size() + ", cost: " + m_cost + ", strucstart: " + m_structuredNode + ", " + m_edges;
 	}
 
 	@Override
@@ -333,11 +385,15 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	}
 
 	public boolean hasDanglingEdge() {
-		if (m_selectVariables == null)
-			generateLabelMappings();
+		if (edgeSet().size() == 1)
+			return false;
 		
 		for (NodeElement node : vertexSet()) {
-			if (outDegreeOf(node) + inDegreeOf(node) == 1 && !m_selectVariables.contains(m_labels.get(node.getLabel())) && node.getLabel().startsWith("b"))
+			// a node is the end of a dangling edge if
+			// - if it's a "dead end", i.e. total degree is 1
+			// - the node has no augmented edges (which will be attached later)
+			// - the node is not the link to the structured query (if there is any)
+			if (outDegreeOf(node) + inDegreeOf(node) == 1 && node.getAugmentedEdges().size() == 0 && !node.equals(m_structuredNode))
 				return true;
 		}
 		

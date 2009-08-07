@@ -23,7 +23,6 @@ import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.PrunedQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.ExploringHybridQueryEvaluator;
-import edu.unika.aifb.graphindex.searcher.keyword.exploration.DirectExploringQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
@@ -149,19 +148,19 @@ public class V2Test {
 			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
 			hy.evaluate(hq);
 			
-			StructuredQuery q2 = new StructuredQuery("asd");
-			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teachingAssistantOf", "?x2");
-			q2.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?x2");
-			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "GraduateStudent36");
-            q2.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#AssistantProfessor");
-            q2.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
-            q2.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "Course35");
-            q2.setAsSelect("?x");
-            q2.setAsSelect("?y");
-            q2.setAsSelect("?x1");
-            q2.setAsSelect("?x2");
-
-            log.debug(eval.evaluate(q2).toDataString());
+//			StructuredQuery q2 = new StructuredQuery("asd");
+//			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teachingAssistantOf", "?x2");
+//			q2.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?x2");
+//			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "GraduateStudent36");
+//            q2.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#AssistantProfessor");
+//            q2.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
+//            q2.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "Course35");
+//            q2.setAsSelect("?x");
+//            q2.setAsSelect("?y");
+//            q2.setAsSelect("?x1");
+//            q2.setAsSelect("?x2");
+//
+//            log.debug(eval.evaluate(q2).toDataString());
 		}
 		
 	}

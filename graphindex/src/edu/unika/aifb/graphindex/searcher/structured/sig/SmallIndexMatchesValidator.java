@@ -85,14 +85,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	public void validateIndexMatches() throws StorageException, IOException {
 		PrunedQuery prunedQuery = m_qe.getPrunedQuery();
 		final QueryGraph prunedQueryGraph = m_qe.getPrunedQueryGraph();
-		List<String> selectVariables = prunedQuery.getSelectVariableLabels();
 		
 		final Map<String,Integer> scores = m_qe.getProximities();
 		for (String label : scores.keySet())
 			if (scores.get(label) > 1)
 				scores.put(label, 10);
 		
-		log.debug("constant proximities: " + scores);
+//		log.debug("constant proximities: " + scores);
 
 		final Set<String> matchedNodes = new HashSet<String>();
 
@@ -111,7 +110,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 		for (String node : matchCardinalities.keySet())
 			if (Util.isConstant(node))
 				matchCardinalities.put(node, 1);
-		log.debug("match cardinalities: " + matchCardinalities);
+//		log.debug("match cardinalities: " + matchCardinalities);
 		evc = null;
 		
 		final List<QueryEdge> deferred = m_deferredTypeEdges;
@@ -293,9 +292,6 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			
 			log.debug("classes: " + classes.size());
 			log.debug("time: " + (System.currentTimeMillis() - start));
-			for (EvaluationClass ec : classes)
-				for (Table<String> t : ec.getResults())
-					log.debug(t.toDataString());
 			log.debug("");
 		}
 		
@@ -309,7 +305,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 	
 	// case 1 a,d: target node is matched, source is not
 	private List<EvaluationClass> evaluateTargetMatched(PrunedQuery prunedQuery, QueryEdge edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingTarget) throws StorageException {
-		log.debug("target matched");
+//		log.debug("target matched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
@@ -373,13 +369,13 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	// case 1 b,c: source node is matched, target is not
 	private List<EvaluationClass> evaluateSourceMatched(PrunedQuery prunedQuery, QueryEdge edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filterUsingSource) throws StorageException {
-		log.debug("source matched");
+//		log.debug("source matched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 
 		int filteredRows = 0, totalRows = 0;
 		
 		boolean targetConstant = Util.isConstant(trgLabel);
-		log.debug("target constant: " + targetConstant);
+//		log.debug("target constant: " + targetConstant);
 		for (String srcExt : ext2ec.keySet()) {
 			for (EvaluationClass ec : ext2ec.get(srcExt)) {
 				Table<String> sourceTable = ec.findResult(srcLabel);
@@ -432,7 +428,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	// case 2: neither node is matched
 	private List<EvaluationClass> evaluateUnmatched(PrunedQuery prunedQuery, QueryEdge edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec) throws StorageException {
-		log.debug("both unmatched");
+//		log.debug("both unmatched");
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 		if (Util.isConstant(trgLabel)) {
 			// use ESPO index to load triples
@@ -467,7 +463,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	// TODO handle sourceTable == targetTable (hash join or new multi-column merge join)
 	private List<EvaluationClass> evaluateBothMatched(PrunedQuery prunedQuery, QueryEdge edge, String property, String srcLabel, String trgLabel, List<EvaluationClass> classes, Map<String,List<EvaluationClass>> ext2ec, boolean filter) throws StorageException {
-		log.debug("both matched");
+//		log.debug("both matched");
 		
 		List<EvaluationClass> remainingClasses = new ArrayList<EvaluationClass>();
 		
@@ -578,7 +574,7 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 			newClasses.addAll(ec.addMatch(key, Util.isConstant(key), valueMapNode, valueMap));
 		classes.addAll(newClasses);
 		
-		log.debug("update classes: " + x + " -> " + classes.size() + " in " + (System.currentTimeMillis() - start) + (valueMap != null ? ", value map: " + valueMap.keySet().size() : ""));
+//		log.debug("update classes: " + x + " -> " + classes.size() + " in " + (System.currentTimeMillis() - start) + (valueMap != null ? ", value map: " + valueMap.keySet().size() : ""));
 		
 		t.end(Timings.DM_CLASSES);
 	}
@@ -591,7 +587,6 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 				val2ec.put(val, new ArrayList<EvaluationClass>());
 			val2ec.get(val).add(ec);
 		}
-		log.debug("distinct exts for " + node + ": " + val2ec.keySet().size());
 		return val2ec;
 	}
 

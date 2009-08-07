@@ -86,8 +86,8 @@ public class PrunedQuery extends StructuredQuery {
 		for (QNode start : new HashSet<QNode>(fixedNodes))
 			explorePath(m_queryGraph, start, new ArrayList<QNode>(), fixedNodes);
 		
-		log.debug(fixedNodes);
-		log.debug(m_queryGraph.edgeSet());
+//		log.debug(fixedNodes);
+//		log.debug(m_queryGraph.edgeSet());
 		
 		QueryGraph prunedQueryGraph = new QueryGraph();
 		Map<QNode,PrunedQueryPart> parts = new HashMap<QNode,PrunedQueryPart>();
@@ -127,7 +127,7 @@ public class PrunedQuery extends StructuredQuery {
 		}
 		
 		m_prunedParts = new HashSet<PrunedQueryPart>(parts.values());
-		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
+//		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
 		
 		for (PrunedQueryPart part : m_prunedParts) {
 			List<QueryEdge> edges = part.trim(m_si.getPathLength());
@@ -136,8 +136,10 @@ public class PrunedQuery extends StructuredQuery {
 			for (QueryEdge edge : edges)
 				prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
 		}
-		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
-		log.debug("pruned query: " + prunedQueryGraph.edgeSet());
+//		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
+//		log.debug("pruned query: " + prunedQueryGraph.edgeSet());
+
+		log.debug("pruning: removed " + m_removeNodes.size() + " nodes, " + (m_queryGraph.edgeSet().size() - prunedQueryGraph.edgeSet().size()) + " edges");
 		
 		Map<String,Set<String>> bwEdgeSources = new HashMap<String,Set<String>>();
 		Map<String,Set<String>> fwEdgeTargets = new HashMap<String,Set<String>>();

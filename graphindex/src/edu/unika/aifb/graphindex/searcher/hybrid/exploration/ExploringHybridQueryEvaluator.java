@@ -59,7 +59,7 @@ import edu.unika.aifb.graphindex.util.Timings;
 public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	private StructureIndex m_si;
 	private VPEvaluator m_eval;
-	private HybridExploringIndexMatcher m_matcher;
+	private ExploringIndexMatcher m_matcher;
 	private KeywordSearcher m_searcher;
 	private SmallIndexMatchesValidator m_validator;
 
@@ -70,7 +70,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		
 		m_si = idxReader.getStructureIndex();
 		m_eval = new VPEvaluator(idxReader);
-		m_matcher = new HybridExploringIndexMatcher(idxReader);
+		m_matcher = new ExploringIndexMatcher(idxReader);
 		m_matcher.initialize();
 		m_searcher = new KeywordSearcher(idxReader);
 		m_validator = new SmallIndexMatchesValidator(idxReader);
@@ -78,12 +78,12 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	
 	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) {
 		List<String> list = KeywordSearcher.getKeywordList(query);
-		log.debug("keyword list: " + list);
+//		log.debug("keyword list: " + list);
 		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
 		return res;
 	}
 	
-	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, HybridExploringIndexMatcher matcher, 
+	protected void explore(HybridQuery query, Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, 
 			List<TranslatedQuery> queries, Map<KeywordSegment,List<GraphElement>> segment2elements, Timings timings, Counters counters) throws StorageException, IOException {
 		Set<KeywordElement> keywordNodeElements = new HashSet<KeywordElement>();
 		int augmentedEdgeCount = 0;
@@ -126,8 +126,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		if (query.getStructuredQuery() != null) {
 			List<GraphElement> elements = new ArrayList<GraphElement>();
 			structuredResults = m_eval.evaluate(query.getStructuredQuery());
+
 			queryIndexMatches = new Table<String>(structuredResults, false);
-			log.debug(structuredResults.toDataString());
 			
 			Set<String> sqExts = new HashSet<String>();
 			for (String[] row : structuredResults) {
@@ -148,7 +148,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 				}
 				
 				if (found) {
-					log.debug("row connected");
+//					log.debug("row connected");
 					String[] extRow = new String[queryIndexMatches.columnCount()];
 					for (QNode s : query.getStructuredQuery().getQueryGraph().vertexSet()) {
 						if (s.isVariable()) {
@@ -169,12 +169,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					}
 					queryIndexMatches.addRow(extRow);
 				}
-				else
-					log.debug("ignored row");
 			}
-			
-			log.debug(ext2var);
-			log.debug("extensions from sq: " + sqExts.size());
 			
 			for (String ext : sqExts)
 				elements.add(new NodeElement(ext));
@@ -227,18 +222,17 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		
 		counters.set(Counters.QT_QUERIES, queries.size());
 		
-//		int numberOfQueries = m_allQueries ? indexMatches.size() : Math.min(1, indexMatches.size());
-		int numberOfQueries = 2;
+//		int numberOfQueries = m_allQueries ? queries.size() : Math.min(1, queries.size());
+		int numberOfQueries = 1;
 		
 		for (int i = 0; i < numberOfQueries; i++) {
+			log.debug("------- query " + i + "/" + queries.size());
 			TranslatedQuery translated = queries.get(i);
 			counters.set(Counters.QT_QUERY_EDGES, translated.getQueryGraph().edgeCount());
 			log.debug(translated);
 
 			QueryExecution qe = new QueryExecution(translated, m_idxReader);
-			QueryGraph queryGraph = qe.getQueryGraph();
-			
-			log.debug(translated.getIndexMatches().toDataString());
+
 			qe.setIndexMatches(translated.getIndexMatches());
 			
 			List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
@@ -265,7 +259,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			for (Iterator<EvaluationClass> j = classes.iterator(); j.hasNext(); ) {
 				EvaluationClass ec = j.next();
 				ec.getResults().addAll(translated.getResults());
-				log.debug(ec);
+//				log.debug(ec);
 			}
 
 			qe.setEvaluationClasses(classes);
@@ -275,6 +269,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 				m_validator.validateIndexMatches();
 //			
 			log.debug("result: " + qe.getResult());
+			if (qe.getResult() != null)
+				return qe.getResult();
 //			log.debug(qe.getResult().toDataString());
 //			
 //			if (qe.getResult() != null)

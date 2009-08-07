@@ -156,7 +156,7 @@ public class StructuredQuery extends Query {
 	}
 	
 	public String toString() {
-		String s = "";
+		String s = "structured query " + m_name + ", select: " + getSelectVariableLabels() + "\n";
 		String add = "";
 		for (QueryEdge e : m_queryGraph.edgeSet()) {
 			s += add + e.getSource() + " " + e.getLabel() + " "  + e.getTarget();

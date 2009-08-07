@@ -89,6 +89,7 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				}
 				kss.addAll(startCursor.getKeywordSegments());
 			}
+			
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add((EdgeElement)e);
 				
@@ -167,10 +168,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				m_augmentedNodes.add(node);
 				
 				Set<KeywordSegment> segments = m_nodeSegments.get(node);
-				log.debug("node: " + node + ", property: " + property + ", segments: " + segments);
+//				log.debug("node: " + node + ", property: " + property + ", segments: " + segments);
 				
 				List<KeywordSegment> augmentedKS = node.getAugmentedEdges().get(property);
-				log.debug(" augmented ks: "+ augmentedKS);
+//				log.debug(" augmented ks: "+ augmentedKS);
 				for (KeywordSegment ks : augmentedKS) {
 					if (segments.contains(ks)) {
 						NodeElement target = new NodeElement(ks.toString());
@@ -292,6 +293,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		}
 
 		if (query != null) {
+			// in the results of the structured query, a single variable
+			// may be mapped to different extensions in different answers
+			// if these extensions occur in the current subgraph as nodes, we can
+			// attach the structured query at multiple points
 			for (QNode var : ext2vars.get(m_structuredNode.getLabel())) {
 				// deep copy extension mappings, which will be extended by attachQuery
 				Table<String> copy = new Table<String>(indexMatches, false);
@@ -303,14 +308,19 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		else {
 			TranslatedQuery q = new TranslatedQuery("qt", null);
 			for (EdgeElement edge : edgeSet()) {
-				q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
+				q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()), false);
 			}
+
 			q.setIndexMatches(indexMatches);
-			for (Table table : resultTables) {
+			
+			for (Table<String> table : resultTables) {
 				Table<String> copy = new Table<String>(table, true);
 				copy.setColumnName(0, m_label2var.get(copy.getColumnName(0)));
 				q.addResult(copy);
+				q.setAsSelect(copy.getColumnName(0));
 			}
+			
+			queries.add(q);
 		}
 		
 		return queries;

@@ -180,7 +180,7 @@ public class IndexCreator implements TripleSink {
 	 * @throws DatabaseException
 	 * @throws InterruptedException
 	 */
-	public void create() throws FileNotFoundException, IOException, StorageException, EnvironmentLockedException, DatabaseException, InterruptedException {
+	public void create() throws FileNotFoundException, IOException, StorageException, InterruptedException {
 		m_idxDirectory.create();
 
 		addDataIndex(IndexDescription.SCOP);
@@ -201,8 +201,14 @@ public class IndexCreator implements TripleSink {
 
 		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
 			log.debug("creating structure index");
-			index();
-			createSPIndexes();
+			try {
+				index();
+				createSPIndexes();
+			} catch (EnvironmentLockedException e) {
+				throw new StorageException(e);
+			} catch (DatabaseException e) {
+				throw new StorageException(e);
+			}
 		}
 		else
 			log.debug("not creating structure index");
@@ -234,8 +240,6 @@ public class IndexCreator implements TripleSink {
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
 			m_dataIndexes.get(idx).mergeIndex(idx);
-			log.debug("optimizing");
-			m_dataIndexes.get(idx).optimize();
 			m_dataIndexes.get(idx).close();
 		}
 	}

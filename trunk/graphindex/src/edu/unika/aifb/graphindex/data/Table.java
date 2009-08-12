@@ -32,6 +32,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
@@ -58,6 +59,12 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		this(colNames.toArray(new String [colNames.size()]));
 		m_rows = new ArrayList<T[]>(initialCapacity);
 	}
+	
+	public Table(DataField... cols) {
+		String[] colNames = new String[cols.length];
+		for (int i = 0; i < cols.length; i++)
+			colNames[i] = cols[i].toString();
+ 	}
 	
 	public Table(String... colNames) {
 		this(colNames.length);

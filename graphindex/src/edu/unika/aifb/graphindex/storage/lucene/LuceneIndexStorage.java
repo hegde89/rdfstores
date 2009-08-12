@@ -56,6 +56,7 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.StringSplitter;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class LuceneIndexStorage implements IndexStorage {
 	
@@ -80,7 +81,8 @@ public class LuceneIndexStorage implements IndexStorage {
 		try {
 			if (!m_readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
-				m_writer.setRAMBufferSizeMB(128);
+				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 10);
+				log.debug("IndexWriter ram buffer size set to " + m_writer.getRAMBufferSizeMB() + "MB");
 			}
 			
 			m_reader = IndexReader.open(m_directory);
@@ -181,6 +183,8 @@ public class LuceneIndexStorage implements IndexStorage {
 			m_searcher.search(q, new HitCollector() {
 				public void collect(int docId, float score) {
 					docIds.add(docId);
+//					if (docIds.size() > 6)
+//						log.debug(docIds.size());
 				}
 			});
 		} catch (IOException e) {
@@ -506,23 +510,43 @@ public class LuceneIndexStorage implements IndexStorage {
 		try {
 			reopen();
 
-			TermEnum te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
+			int termsProcessed = 0, numTerms = 0, docsMerged = 0, maxValues = 0;
+			TermEnum te = m_reader.terms();
+			while (te.next())
+				numTerms++;
+			te.close();
+			log.debug("terms: " + numTerms);
+			
+			if (numTerms == m_reader.maxDoc()) {
+				log.debug("only one doc for each term, no merge necessary");
+				log.debug("optimizing");
+				optimize();
+				return;
+			}
+
+			m_writer.close();
+
+			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf("/")) + "/" + index.getIndexFieldName() + "_merged");
+			log.debug("writing to " + newDir);
+			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), true, new WhitespaceAnalyzer(), true);
+			
+			te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
 			do {
 				Term t = te.term();
 				
-				if (!t.field().equals(index.getIndexFieldName()))
-					break;
-				
 				List<Integer> docIds = getDocumentIds(new TermQuery(t));
-				if (docIds.size() == 1)
-					continue;
+				docsMerged += docIds.size();
 				
 				TreeSet<String> values = new TreeSet<String>();
 				for (int docId : docIds) {
 					Document doc = getDocument(docId);
 					values.add(doc.getField(index.getValueFieldName()).stringValue().trim());
 				}
-				m_writer.deleteDocuments(t);
+				
+				if (maxValues < values.size())
+					maxValues = values.size();
+
+//				m_writer.deleteDocuments(t);
 				
 				StringBuilder sb = new StringBuilder();
 				for (String s : values)
@@ -531,9 +555,28 @@ public class LuceneIndexStorage implements IndexStorage {
 				Document doc = new Document();
 				doc.add(new Field(index.getIndexFieldName(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
 				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
-				m_writer.addDocument(doc);
+				writer.addDocument(doc);
+				
+				termsProcessed++;
+
+				if (termsProcessed % 200000 == 0) {
+					System.gc();
+					log.debug("terms: " + termsProcessed + "/" + numTerms + ", docs merged: " + docsMerged + ", max values: " + maxValues + ", " + Util.memory());
+				}
 			}
 			while (te.next());
+			te.close();
+			
+			m_searcher.close();
+			m_reader.close();
+
+			log.debug("optimizing new index");
+			writer.optimize();
+			writer.close();
+			
+			Util.deleteDirectory(m_directory);
+			newDir.renameTo(m_directory);
+			initialize(false, m_readonly);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}

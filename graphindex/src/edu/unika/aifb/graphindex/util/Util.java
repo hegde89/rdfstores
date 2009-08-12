@@ -182,6 +182,16 @@ public class Util {
 		out.writeObject(object);
 		out.close();
 	}
+	
+	public static void deleteDirectory(File dir) {
+		for (File f : dir.listFiles()) {
+			if (f.isDirectory())
+				deleteDirectory(f);
+			else
+				f.delete();
+		}
+		dir.delete();
+	}
 
 	public static boolean pathContains(List<String> path, String source, String label, String target) {
 		for (int i = 0; i < path.size() - 2; i += 2) {

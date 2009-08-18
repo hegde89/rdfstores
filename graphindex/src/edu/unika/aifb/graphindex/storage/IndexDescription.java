@@ -86,6 +86,8 @@ public class IndexDescription {
 		DataField.PROPERTY, DataField.OBJECT, DataField.SUBJECT);
 	public static final IndexDescription PSO = new IndexDescription("ps", "o",
 		DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
+	public static final IndexDescription SOP = new IndexDescription("so", "p",
+		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY);
 
 	public static final IndexDescription SCOP = new IndexDescription("sco", "p",
 		DataField.SUBJECT, DataField.CONTEXT, DataField.OBJECT, DataField.PROPERTY);

@@ -322,6 +322,8 @@ public class IndexCreator implements TripleSink {
 				if (indexEdges.add(indexEdge)) {
 					gs.addData(IndexDescription.PSO, new String[] { property, subExt }, objExt);
 					gs.addData(IndexDescription.POS, new String[] { property, objExt }, subExt);
+					gs.addData(IndexDescription.SOP, new String[] { subExt, objExt }, property);
+					gs.addData(IndexDescription.OPS, new String[] { objExt, property }, subExt);
 				}
 				
 				// add triples to extensions

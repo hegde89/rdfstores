@@ -534,6 +534,9 @@ public class LuceneIndexStorage implements IndexStorage {
 			do {
 				Term t = te.term();
 				
+				if (!t.field().equals(index.getIndexFieldName()))
+					break;
+				
 				List<Integer> docIds = getDocumentIds(new TermQuery(t));
 				docsMerged += docIds.size();
 				

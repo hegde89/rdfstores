@@ -251,7 +251,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
 		Collections.sort(m_subgraphs);
 		
-		for (int i = m_subgraphs.size() - 1; i > m_k; i--)
+		for (int i = m_subgraphs.size() - 1; i >= m_k; i--)
 			m_subgraphs.remove(i);
 
 		if (m_queues.peek() == null || m_queues.peek().peek() == null)

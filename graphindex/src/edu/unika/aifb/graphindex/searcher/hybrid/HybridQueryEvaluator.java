@@ -19,11 +19,13 @@ package edu.unika.aifb.graphindex.searcher.hybrid;
  */
 
 import java.io.IOException;
+import java.util.List;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.searcher.Searcher;
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.TranslatedQuery;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public abstract class HybridQueryEvaluator extends Searcher {
@@ -31,6 +33,7 @@ public abstract class HybridQueryEvaluator extends Searcher {
 	protected HybridQueryEvaluator(IndexReader idxReader) {
 		super(idxReader);
 	}
-
+	
+	public abstract List<TranslatedQuery> evaluate(HybridQuery query, int numberOfQueries, int queryResults) throws StorageException, IOException;
 	public abstract Table<String> evaluate(HybridQuery query) throws StorageException, IOException;
 }

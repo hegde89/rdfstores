@@ -526,7 +526,7 @@ public class LuceneIndexStorage implements IndexStorage {
 
 			m_writer.close();
 
-			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf("/")) + "/" + index.getIndexFieldName() + "_merged");
+			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf(File.separator)) + File.separator + index.getIndexFieldName() + "_merged");
 			log.debug("writing to " + newDir);
 			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), true, new WhitespaceAnalyzer(), true);
 			

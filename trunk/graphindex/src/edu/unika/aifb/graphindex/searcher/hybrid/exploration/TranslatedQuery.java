@@ -15,6 +15,7 @@ public class TranslatedQuery extends StructuredQuery {
 	private List<QueryEdge> m_structuredEdges;
 	private List<QueryEdge> m_attributeEdges;
 	private List<Table<String>> m_results;
+	private Table<String> m_result;
 	
 	public TranslatedQuery(String name, QNode connectingNode) {
 		super(name);
@@ -68,5 +69,13 @@ public class TranslatedQuery extends StructuredQuery {
 	
 	public void addResult(Table<String> table) {
 		m_results.add(table);
+	}
+	
+	public void setResult(Table<String> result) {
+		m_result = result;
+	}
+
+	public Table<String> getResult() {
+		return m_result;
 	}
 }

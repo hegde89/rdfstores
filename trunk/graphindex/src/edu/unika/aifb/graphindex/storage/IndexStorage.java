@@ -44,6 +44,7 @@ public interface IndexStorage {
 	public Table<String> getTable(IndexDescription index, DataField[] columns, String... indexFieldValues) throws StorageException;
 	public Table<String> getIndexTable(IndexDescription index, DataField col1, DataField col2, String... indexFieldValues) throws StorageException;
 	
+	public void mergeSingleIndex(IndexDescription index) throws StorageException;
 	public void mergeIndex(IndexDescription index) throws StorageException;
 	public void optimize() throws StorageException;
 

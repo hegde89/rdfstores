@@ -239,7 +239,7 @@ public class IndexCreator implements TripleSink {
 
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
-			m_dataIndexes.get(idx).mergeIndex(idx);
+			m_dataIndexes.get(idx).mergeSingleIndex(idx);
 			m_dataIndexes.get(idx).close();
 		}
 	}
@@ -296,10 +296,13 @@ public class IndexCreator implements TripleSink {
 	
 	private void createSPIndexes() throws StorageException, IOException, DatabaseException {
 		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
+		
 		IndexStorage is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR, true));
 		is.initialize(true, false);
+		
 		IndexStorage gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR, true));
 		gs.initialize(true, false);
+		
 		BlockCache bc = new BlockCache(m_idxDirectory);
 		
 		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));

@@ -506,7 +506,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		}
 	}
 
-	public void mergeIndex(IndexDescription index) throws StorageException {
+	public void mergeSingleIndex(IndexDescription index) throws StorageException {
 		try {
 			reopen();
 
@@ -549,8 +549,6 @@ public class LuceneIndexStorage implements IndexStorage {
 				if (maxValues < values.size())
 					maxValues = values.size();
 
-//				m_writer.deleteDocuments(t);
-				
 				StringBuilder sb = new StringBuilder();
 				for (String s : values)
 					sb.append(s).append('\n');
@@ -586,6 +584,44 @@ public class LuceneIndexStorage implements IndexStorage {
 
 	}
 	
+	@Override
+	public void mergeIndex(IndexDescription index) throws StorageException {
+		try {
+			reopen();
+
+			TermEnum te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
+			do {
+				Term t = te.term();
+				
+				if (!t.field().equals(index.getIndexFieldName()))
+					break;
+				
+				List<Integer> docIds = getDocumentIds(new TermQuery(t));
+				if (docIds.size() == 1)
+					continue;
+				
+				TreeSet<String> values = new TreeSet<String>();
+				for (int docId : docIds) {
+					Document doc = getDocument(docId);
+					values.add(doc.getField(index.getValueFieldName()).stringValue().trim());
+				}
+				m_writer.deleteDocuments(t);
+				
+				StringBuilder sb = new StringBuilder();
+				for (String s : values)
+					sb.append(s).append('\n');
+				
+				Document doc = new Document();
+				doc.add(new Field(index.getIndexFieldName(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
+				m_writer.addDocument(doc);
+			}
+			while (te.next());
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
+
 	public void optimize() throws StorageException {
 		if (!m_readonly) {
 			try {
@@ -703,5 +739,4 @@ public class LuceneIndexStorage implements IndexStorage {
 		
 		return new TriplesIterator(index, queries, columns);
 	}
-
 }

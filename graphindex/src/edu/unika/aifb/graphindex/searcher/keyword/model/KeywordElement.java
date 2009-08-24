@@ -57,6 +57,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	private Set<String> reachableKeywords; 
 	private Document doc;
 	private BloomFilter bloomFilter;
+	private String attributeUri;
 
 	protected int type;
 
@@ -114,6 +115,14 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public Collection<String> getKeywords() {
 		return keywords;
+	}
+	
+	public String getAttributeUri() {
+		return attributeUri;
+	}
+	
+	public void setAttributeUri(String attr) {
+		attributeUri = attr;
 	}
 	
 	public void addReachableKeywords(Collection<String> keywords) {
@@ -249,11 +258,11 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		if(!(object instanceof KeywordElement)) return false;
 		
 		KeywordElement vertex = (KeywordElement)object;
-		return getResource().getUri().equals(vertex.getResource().getUri());
+		return getResource().getUri().equals(vertex.getResource().getUri()) && this.attributeUri.equals(vertex.attributeUri);
 	}
 	
 	public int hashCode(){
-		return resource.hashCode();
+		return resource.hashCode() + (attributeUri != null ? attributeUri.hashCode() : 0);
 	}
 
 	public int compareTo(KeywordElement o) {

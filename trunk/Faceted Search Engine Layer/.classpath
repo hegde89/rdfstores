@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.3.2.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/graphindex"/>
+	<classpathentry kind="lib" path="lib/jdsl-2.1.1/lib/jdsl.jar" sourcepath="lib/jdsl-2.1.1/src"/>
+	<classpathentry kind="lib" path="lib/jgrapht-0.8.1/jgrapht-jdk1.6.jar" sourcepath="lib/jgrapht-0.8.1/src"/>
+	<classpathentry kind="lib" path="lib/hermesDataStructure.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

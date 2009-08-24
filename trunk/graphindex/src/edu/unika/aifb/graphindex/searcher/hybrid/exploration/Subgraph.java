@@ -200,10 +200,14 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		
 		q.setIndexMatches(indexMatches);
 		
-		for (EdgeElement edge : edgeSet())
-			q.addEdge(label2var.get(edge.getSource().getLabel()), edge.getLabel(), label2var.get(edge.getTarget().getLabel()), false);
+		for (EdgeElement edge : edgeSet()) {
+			if (Util.isVariable(edge.getTarget().getLabel()))
+				q.addEdge(label2var.get(edge.getSource().getLabel()), edge.getLabel(), label2var.get(edge.getTarget().getLabel()));
+			else
+				q.addAttributeEdge(label2var.get(edge.getSource().getLabel()), edge.getLabel(), label2var.get(edge.getTarget().getLabel()));
+		}
 		for (QueryEdge edge : query.getQueryGraph().edgeSet()) 
-			q.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget(), true);
+			q.addStructuredEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
 
 		for (QNode node : query.getVariables())
 			q.setAsSelect(node.getLabel());
@@ -308,7 +312,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		else {
 			TranslatedQuery q = new TranslatedQuery("qt", null);
 			for (EdgeElement edge : edgeSet()) {
-				q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()), false);
+				if (Util.isVariable(m_label2var.get(edge.getTarget().getLabel())))
+					q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
+				else
+					q.addAttributeEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
 			}
 
 			q.setIndexMatches(indexMatches);

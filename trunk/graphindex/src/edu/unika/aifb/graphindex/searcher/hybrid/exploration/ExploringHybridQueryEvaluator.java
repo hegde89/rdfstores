@@ -78,7 +78,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		m_validator = new SmallIndexMatchesValidator(idxReader);
 	}
 	
-	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) {
+	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) throws StorageException {
 		List<String> list = KeywordSearcher.getKeywordList(query);
 //		log.debug("keyword list: " + list);
 		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
@@ -101,7 +101,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					if (node == null) {
 						node = new NodeElement(ext);
 						// add keywords as virtual edges to node
-						node.addAugmentedEdge("???" + ++augmentedEdgeCount, ks);
+//						node.addAugmentedEdge("???" + ++augmentedEdgeCount, ks);
+						node.addAugmentedEdge(ele.getAttributeUri(), ks);
 						label2node.put(ext, node);
 						elements.add(node);
 					}

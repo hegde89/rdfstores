@@ -34,6 +34,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.SetBasedFieldSelector;
@@ -488,13 +489,25 @@ public class KeywordSearcher {
 						continue;
 					}
 					
-					boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
+					boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute, entitiesWithSegement, segementsWithEntities, keywordsWithentities, null);
 					
 					if(hasResults)
 						segementsWithResults.add(segement);
 				}
 			}
 		}
+	}
+	
+	private Map<String,Query> getFieldQueries(String query, Set<String> fields, Analyzer analyzer) throws ParseException {
+		 Map<String,Query> queries = new HashMap<String,Query>();
+		
+		for (String f : fields) {
+			QueryParser qp = new QueryParser(f, analyzer);
+			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
+			queries.put(f, qp.parse(query));
+		}
+		
+		return queries;
 	}
 	
 	private void searchEntitiesByValues(SortedSet<KeywordSegment> segements, Map<String, Collection<KeywordElement>> attributes, 
@@ -515,7 +528,9 @@ public class KeywordSearcher {
 		for (KeywordSegment segement : segements) {
 			try {
 				Query q = parser.parse(segement.getQuery());
-				searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
+				Map<String,Query> queries = getFieldQueries(segement.getQuery(), fields, analyzer);
+				for (String attributeUri : queries.keySet())
+					searchEntitiesWithClause(queries.get(attributeUri), segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities, attributeUri);
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}
@@ -549,7 +564,7 @@ public class KeywordSearcher {
 		
 	private boolean searchEntitiesWithClause(Query clause, KeywordSegment segement, String additionalKeyword, 
 			Map<KeywordElement, KeywordSegment> entitiesWithSegment, Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> keywordsWithEntities) throws IOException {
+			Map<String, Collection<KeywordElement>> keywordsWithEntities, String attributeUri) throws IOException {
 		
 		Set<String> loadFieldNames = new HashSet<String>();
 	    loadFieldNames.add(Constant.URI_FIELD);
@@ -562,7 +577,7 @@ public class KeywordSearcher {
 	    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 	    
 	    ScoreDoc[] docHits = getTopDocuments(clause, MAX_KEYWORDRESULT_SIZE);
-	    if (docHits.length == 0 || docHits[0] != null)
+	    if (docHits.length == 0 || docHits[0] == null)
 	    	return false;
 
 	    float maxScore = docHits[0].score;
@@ -583,6 +598,8 @@ public class KeywordSearcher {
     			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
     			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
     			KeywordSegment ks = new KeywordSegment(segement.getKeywords());
+    			
+    			ele.setAttributeUri(attributeUri);
     			
     			if (additionalKeyword != null) 
     				ks.addKeyword(additionalKeyword);
@@ -625,7 +642,7 @@ public class KeywordSearcher {
 				Document doc = hits.doc(i);
 				allAttributes.add(doc.get(Constant.URI_FIELD));
 			}
-			allAttributes.add(Constant.LOCALNAME_FIELD);
+//			allAttributes.add(Constant.LOCALNAME_FIELD);
 			allAttributes.add(Constant.LABEL_FIELD);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

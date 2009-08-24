@@ -37,21 +37,27 @@ public class TranslatedQuery extends StructuredQuery {
 		return m_connectingNode;
 	}
 	
-	public QueryEdge addEdge(String src, String property, String trg, boolean fromStructured) {
+	public QueryEdge addStructuredEdge(String src, String property, String trg) {
 		QueryEdge e = super.addEdge(src, property, trg);
-		if (fromStructured)
-			m_structuredEdges.add(e);
-		else if (property.startsWith("???"))
-			m_attributeEdges.add(e);
+		m_structuredEdges.add(e);
 		return e;
 	}
 	
-	public QueryEdge addEdge(QNode src, String property, QNode trg, boolean fromStructured) {
+	public QueryEdge addStructuredEdge(QNode src, String property, QNode trg) {
 		QueryEdge e = super.addEdge(src, property, trg);
-		if (fromStructured)
-			m_structuredEdges.add(e);
-		else if (property.startsWith("???"))
-			m_attributeEdges.add(e);
+		m_structuredEdges.add(e);
+		return e;
+	}
+
+	public QueryEdge addAttributeEdge(String src, String property, String trg) {
+		QueryEdge e = super.addEdge(src, property, trg);
+		m_attributeEdges.add(e);
+		return e;
+	}
+	
+	public QueryEdge addAttributeEdge(QNode src, String property, QNode trg) {
+		QueryEdge e = super.addEdge(src, property, trg);
+		m_attributeEdges.add(e);
 		return e;
 	}
 

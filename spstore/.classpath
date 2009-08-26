@@ -9,10 +9,26 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
-	<classpathentry kind="lib" path="/Users/gla/Downloads/apache-tomcat-6.0.20/lib/servlet-api.jar"/>
-	<classpathentry kind="lib" path="libs/json_simple-1.1.jar"/>
-	<classpathentry kind="lib" path="libs/httpunit.jar"/>
-	<classpathentry kind="lib" path="libs/junit-4.7.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/graphindex"/>
+	<classpathentry kind="lib" path="libs/json_simple-1.1.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/httpunit.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/junit-4.7.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/graphindex-0.0.1-SNAPSHOT-jar-with-dependencies.jar">
+		<attributes>
+			<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/servlet-api.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -29,10 +30,28 @@ public class Searcher extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private JSONParser m_parser;
 	private IndexReader m_reader;
+	
+	private static final String CONFIG_INDEX_DIRECTORY = "index_directory";
 
-    public Searcher() throws IOException {
+    public Searcher() {
     	m_parser = new JSONParser();
-    	m_reader = new IndexReader(new IndexDirectory("/data/sp/indexes/sp/v2"));
+//    	m_reader = new IndexReader(new IndexDirectory("/data/sp/indexes/sp/v2"));
+    }
+    
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		
+    	String dir = config.getInitParameter(CONFIG_INDEX_DIRECTORY);
+    	
+    	if (dir == null)
+    		throw new ServletException("no index directory specified in configuration");
+    	
+    	try {
+			m_reader = new IndexReader(new IndexDirectory(dir));
+		} catch (IOException e) {
+			throw new ServletException(e);
+		}
     }
     
     private SearchRequest createSearchRequest(JSONObject object, HttpServletResponse response) throws IOException, StorageException {

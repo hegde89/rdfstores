@@ -62,18 +62,24 @@ public class Searcher extends HttpServlet {
     	
     	System.out.println(object.keySet());
     	
-    	if (object.containsKey(JSONFormat.OPT_STRUCTURED_QUERY) && object.containsKey(JSONFormat.OPT_KEYWORD_QUERY)) {
-    		return new HybridSearchRequest(m_reader, object);
+    	try {
+	    	if (object.containsKey(JSONFormat.OPT_STRUCTURED_QUERY) && object.containsKey(JSONFormat.OPT_KEYWORD_QUERY)) {
+	    		return new HybridSearchRequest(m_reader, object);
+	    	}
+	    	else if (object.containsKey(JSONFormat.OPT_STRUCTURED_QUERY)) {
+	    		return new StructuredSearchRequest(m_reader, object);
+	    	}
+	    	else if (object.containsKey(JSONFormat.OPT_KEYWORD_QUERY)) {
+	    		return new KeywordSearchRequest(m_reader, object);
+	    	}
+	    	else {
+	    		response.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing options");
+	    	}
     	}
-    	else if (object.containsKey(JSONFormat.OPT_STRUCTURED_QUERY)) {
-    		return new StructuredSearchRequest(m_reader, object);
+    	catch (IllegalArgumentException e) {
+    		response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
     	}
-    	else if (object.containsKey(JSONFormat.OPT_KEYWORD_QUERY)) {
-    		return new KeywordSearchRequest(m_reader, object);
-    	}
-    	else {
-    		response.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing options");
-    	}
+    	
     	
     	return null;
     }

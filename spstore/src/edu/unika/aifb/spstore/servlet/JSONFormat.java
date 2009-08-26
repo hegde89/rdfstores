@@ -26,6 +26,25 @@ public class JSONFormat {
 	public static final String OPT_ROWS = "rows";
 	public static final String OPT_RESULT = "result";
 	
+	public static class QueryTranslationInformation {
+		private int m_numberOfInterpretations;
+
+		private int m_withResults;
+		
+		public QueryTranslationInformation(int numberOfInterpretations, int withResults) {
+			m_numberOfInterpretations = numberOfInterpretations;
+			m_withResults = withResults;
+		}
+		
+		public int getNumberOfInterpretations() {
+			return m_numberOfInterpretations;
+		}
+
+		public int getWithResults() {
+			return m_withResults;
+		}
+	}
+	
 	public static StructuredQuery structuredQuery(JSONObject object) {
 		if (!object.containsKey(OPT_TRIPLE_PATTERNS) || !(object.get(OPT_TRIPLE_PATTERNS) instanceof JSONArray))
 			throw new IllegalArgumentException("triple patterns missing or not array");
@@ -47,6 +66,47 @@ public class JSONFormat {
 			q.setAsSelect((String)var);
 		
 		return q;
+	}
+	
+	public static QueryTranslationInformation translation(JSONObject object) {
+		int interpretations = 0, withResults = 0;
+		
+		if (!object.containsKey(JSONFormat.OPT_INTERPRETATIONS))
+			throw new IllegalArgumentException(OPT_INTERPRETATIONS + " missing in translation");
+		if (!object.containsKey(JSONFormat.OPT_WITHRESULTS))
+			throw new IllegalArgumentException(OPT_WITHRESULTS + " missing in translation");
+		
+		if (object.get(JSONFormat.OPT_INTERPRETATIONS) instanceof Number)
+			interpretations = ((Number)object.get(JSONFormat.OPT_INTERPRETATIONS)).intValue();
+		else if (object.get(JSONFormat.OPT_INTERPRETATIONS) instanceof String) {
+			if (((String)object.get(JSONFormat.OPT_INTERPRETATIONS)).equals("all"))
+				interpretations = -1;
+			else {
+				try {
+					interpretations = Integer.parseInt((String)object.get(JSONFormat.OPT_INTERPRETATIONS));
+				}
+				catch (NumberFormatException e) {
+					throw new IllegalArgumentException(JSONFormat.OPT_INTERPRETATIONS + " has to be either a number or 'all'");
+				}
+			}
+		}
+			
+		if (object.get(JSONFormat.OPT_WITHRESULTS) instanceof Number)
+			withResults = ((Number)object.get(JSONFormat.OPT_WITHRESULTS)).intValue();
+		else if (object.get(JSONFormat.OPT_WITHRESULTS) instanceof String) {
+			if (((String)object.get(JSONFormat.OPT_WITHRESULTS)).equals("all"))
+				withResults = -1;
+			else {
+				try {
+					interpretations = Integer.parseInt((String)object.get(JSONFormat.OPT_WITHRESULTS));
+				}
+				catch (NumberFormatException e) {
+					throw new IllegalArgumentException(JSONFormat.OPT_WITHRESULTS + " has to be either a number or 'all'");
+				}
+			}
+		}
+		
+		return new QueryTranslationInformation(interpretations, withResults);
 	}
 	
 	@SuppressWarnings("unchecked")

@@ -14,6 +14,7 @@ import edu.unika.aifb.graphindex.searcher.hybrid.exploration.ExploringHybridQuer
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.TranslatedQuery;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.spstore.servlet.JSONFormat;
+import edu.unika.aifb.spstore.servlet.JSONFormat.QueryTranslationInformation;
 
 
 public class HybridSearchRequest extends SearchRequest {
@@ -33,9 +34,9 @@ public class HybridSearchRequest extends SearchRequest {
 		
 		m_query = new HybridQuery("json-hybrid", sq, kq);
 		
-		JSONObject translation = (JSONObject)obj.get(JSONFormat.OPT_TRANSLATION);
-		m_numberOfInterpretations = ((Number)translation.get(JSONFormat.OPT_INTERPRETATIONS)).intValue();
-		m_interpretationResults = ((Number)translation.get(JSONFormat.OPT_WITHRESULTS)).intValue();
+		QueryTranslationInformation qti = JSONFormat.translation((JSONObject)obj.get(JSONFormat.OPT_TRANSLATION));
+		m_numberOfInterpretations = qti.getNumberOfInterpretations();
+		m_interpretationResults = qti.getWithResults();
 	}
 
 	@SuppressWarnings("unchecked")

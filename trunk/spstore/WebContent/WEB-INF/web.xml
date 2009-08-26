@@ -8,6 +8,10 @@
 		<servlet-name>Searcher</servlet-name>
 		<servlet-class>
 		edu.unika.aifb.spstore.servlet.Searcher</servlet-class>
+		<init-param>
+			<param-name>index_directory</param-name>
+			<param-value>/data/sp/indexes/sp/v2</param-value>
+		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Searcher</servlet-name>

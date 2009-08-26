@@ -37,7 +37,7 @@ Hybrid query request:
 
 	“translation”: {
 		“interpretations”: “all”,
-		“with-results”: “first”
+		“with-results”: “1”
 	},
 
 	“structured-query”: {

@@ -21,7 +21,7 @@ public class KeywordSearchRequest extends SearchRequest {
 	private int m_interpretationResults = 0;
 	private ExploringHybridQueryEvaluator m_evaluator;
 
-	public KeywordSearchRequest(IndexReader reader, JSONObject obj) throws IOException, StorageException {
+	public KeywordSearchRequest(IndexReader reader, JSONObject obj) throws IOException, StorageException, IllegalArgumentException {
 		super(reader, obj);
 		
 		m_evaluator = new ExploringHybridQueryEvaluator(reader);
@@ -29,8 +29,23 @@ public class KeywordSearchRequest extends SearchRequest {
 		m_query = new KeywordQuery("from-json", (String)obj.get(JSONFormat.OPT_KEYWORD_QUERY));
 		
 		JSONObject translation = (JSONObject)obj.get(JSONFormat.OPT_TRANSLATION);
-		m_numberOfInterpretations = ((Number)translation.get(JSONFormat.OPT_INTERPRETATIONS)).intValue();
-		m_interpretationResults = ((Number)translation.get(JSONFormat.OPT_WITHRESULTS)).intValue();
+		if (translation.get(JSONFormat.OPT_INTERPRETATIONS) instanceof Number)
+			m_numberOfInterpretations = ((Number)translation.get(JSONFormat.OPT_INTERPRETATIONS)).intValue();
+		else if (translation.get(JSONFormat.OPT_INTERPRETATIONS) instanceof String) {
+			if (((String)translation.get(JSONFormat.OPT_INTERPRETATIONS)).equals("all"))
+				m_numberOfInterpretations = -1;
+			else
+				throw new IllegalArgumentException(JSONFormat.OPT_INTERPRETATIONS + " has to be either a number or 'all'");
+		}
+			
+		if (translation.get(JSONFormat.OPT_WITHRESULTS) instanceof Number)
+			m_interpretationResults = ((Number)translation.get(JSONFormat.OPT_WITHRESULTS)).intValue();
+		else if (translation.get(JSONFormat.OPT_WITHRESULTS) instanceof String) {
+			if (((String)translation.get(JSONFormat.OPT_WITHRESULTS)).equals("all"))
+				m_interpretationResults = -1;
+			else
+				throw new IllegalArgumentException(JSONFormat.OPT_WITHRESULTS + " has to be either a number or 'all'");
+		}
 	}
 
 	@SuppressWarnings("unchecked")

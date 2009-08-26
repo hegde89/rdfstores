@@ -220,6 +220,11 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		Timings timings = new Timings();
 		Counters counters = new Counters();
 		
+		if (numberOfQueries < 0)
+			numberOfQueries = MAX_INTERPRETATIONS;
+		if (queryResults < 0)
+			queryResults = MAX_INTERPRETATIONS;
+		
 		log.info("evaluating...");
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 

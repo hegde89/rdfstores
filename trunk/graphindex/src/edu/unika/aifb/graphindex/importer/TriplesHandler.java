@@ -21,6 +21,7 @@ package edu.unika.aifb.graphindex.importer;
 import org.apache.log4j.Logger;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -30,10 +31,15 @@ class TriplesHandler implements RDFHandler {
 
 	private int m_triplesTotal;
 	private int m_triplesAdded;
+	private String m_defaultContext;
 	private TripleSink m_sink;
 
 	public TriplesHandler(TripleSink sink) {
 		m_sink = sink;
+	}
+	
+	public void setDefaultContext(String context) {
+		m_defaultContext = context;
 	}
 
 	public void endRDF() throws RDFHandlerException {
@@ -90,8 +96,17 @@ class TriplesHandler implements RDFHandler {
 			return;
 		}
 		
+		if (source.equals("") || target.equals("")) {
+			log.warn("subject or object empty, ignoring " + st);
+			return;
+		}
+		
+		String context = m_defaultContext;
+		if (st.getContext() != null)
+			context = st.getContext().toString();
+		
 		if (source != null && target != null && label != null) {
-			m_sink.triple(source, label, target, null);
+			m_sink.triple(source, label, target, context);
 			m_triplesAdded++;
 //				if (m_triplesAdded % 500000 == 0)
 //					log.debug("nt importer: " + m_triplesAdded + " triples imported");

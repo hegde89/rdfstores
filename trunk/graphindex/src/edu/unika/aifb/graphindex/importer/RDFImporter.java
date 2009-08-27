@@ -44,9 +44,11 @@ public class RDFImporter extends Importer {
 	
 	@Override
 	public void doImport() {
-		RDFHandler handler = new TriplesHandler(m_sink);
+		TriplesHandler handler = new TriplesHandler(m_sink);
 		
 		for (String file : m_files) {
+			handler.setDefaultContext(file);
+			
 			RDFXMLParser parser = new RDFXMLParser();
 			parser.setDatatypeHandling(DatatypeHandling.VERIFY);
 			parser.setStopAtFirstError(false);

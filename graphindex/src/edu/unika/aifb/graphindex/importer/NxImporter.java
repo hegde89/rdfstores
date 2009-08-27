@@ -62,6 +62,8 @@ public class NxImporter extends Importer {
 						else
 							log.error("context is not a resource");
 					}
+					else
+						context = file;
 					
 					m_sink.triple(subject, property, object, context);
 					

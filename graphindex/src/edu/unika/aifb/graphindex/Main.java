@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
+import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
@@ -56,6 +57,8 @@ public class Main {
 		Importer importer;
 		if (files.get(0).contains(".nt"))
 			importer = new NxImporter();
+		else if (files.get(0).endsWith(".rdf") || files.get(0).endsWith(".xml"))
+			importer = new RDFImporter();
 		else  {
 			log.warn("unknown extension, assuming n-triples format");
 			importer = new NxImporter();

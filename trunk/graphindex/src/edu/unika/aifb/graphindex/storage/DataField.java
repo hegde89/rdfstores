@@ -25,6 +25,8 @@ public class DataField {
 	public static final String FIELD_EXT_SUBJECT = "es";
 	public static final String FIELD_EXT_OBJECT = "eo";
 	public static final String FIELD_CONTEXT = "c";
+	public static final String FIELD_EXT = "ext";
+	public static final String FIELD_ENT = "ent";
 	
 	public static final DataField SUBJECT = new DataField(FIELD_SUBJECT);
 	public static final DataField OBJECT = new DataField(FIELD_OBJECT);
@@ -32,6 +34,9 @@ public class DataField {
 	public static final DataField EXT_SUBJECT = new DataField(FIELD_EXT_SUBJECT);
 	public static final DataField EXT_OBJECT = new DataField(FIELD_EXT_OBJECT);
 	public static final DataField CONTEXT = new DataField(FIELD_CONTEXT);
+	
+	public static final DataField EXT = new DataField(FIELD_EXT);
+	public static final DataField ENT = new DataField(FIELD_ENT);
 	
 	private String m_type;
 	

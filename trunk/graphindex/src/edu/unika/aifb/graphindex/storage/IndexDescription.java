@@ -78,6 +78,9 @@ public class IndexDescription {
 	public static final IndexDescription SES = new IndexDescription("ses", "es",
 		DataField.SUBJECT, DataField.EXT_SUBJECT);
 	
+	public static final IndexDescription EXTENT = new IndexDescription("ext", "ent",
+		DataField.EXT, DataField.ENT);
+	
 	public static final IndexDescription OPS = new IndexDescription("op", "s",
 		DataField.OBJECT, DataField.PROPERTY, DataField.SUBJECT);
 	public static final IndexDescription SPO = new IndexDescription("sp", "o",

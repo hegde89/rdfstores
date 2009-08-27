@@ -194,6 +194,7 @@ public class IndexCreator implements TripleSink {
 		addSPIndex(IndexDescription.POESS);
 		addSPIndex(IndexDescription.SES);
 		addSPIndex(IndexDescription.POES);
+		addSPIndex(IndexDescription.EXTENT);
 		
 		importData();
 		
@@ -335,6 +336,9 @@ public class IndexCreator implements TripleSink {
 				is.addData(IndexDescription.SES, new String[] { s }, subExt);
 				is.addData(IndexDescription.POES, new String[] { property, o }, subExt);
 				
+				is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
+				is.addData(IndexDescription.EXTENT, new String[] { objExt }, o);
+				
 				triples++;
 				
 				if (triples % 100000 == 0)
@@ -363,6 +367,8 @@ public class IndexCreator implements TripleSink {
 					is.addData(IndexDescription.POESS, new String[] { property, o, subExt}, Arrays.asList(s));
 					is.addData(IndexDescription.POES, new String[] { property, o }, subExt);
 					
+//					is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
+
 					triples++;
 					
 					if (triples % 100000 == 0)

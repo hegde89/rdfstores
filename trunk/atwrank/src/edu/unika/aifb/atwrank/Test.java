@@ -19,13 +19,13 @@ public class Test {
 			e.printStackTrace();
 		}
 		
-		WikiReadTest wikitest = new WikiReadTest();
+		/*WikiReadTest wikitest = new WikiReadTest();
 		try {
 			System.out.println(wikitest.readTest());
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	
 	}
 

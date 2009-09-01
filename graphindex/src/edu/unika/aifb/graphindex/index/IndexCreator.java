@@ -348,35 +348,51 @@ public class IndexCreator implements TripleSink {
 		
 		log.debug("index graph edges: " + indexEdges.size());
 		
-		if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {
-			triples = 0;
-			for (String property : dataProperties) {
-				log.debug("data prop: " + property);
-				for (Iterator<String[]> ti = dataIndex.iterator(property); ti.hasNext(); ) {
-					String[] triple = ti.next();
-					String s = triple[0];
-					String o = triple[2];
-					
-					String subExt = bc.getBlockName(s);
-					
-					if (subExt == null)
-						continue;
-					
+		triples = 0;
+		for (String property : dataProperties) {
+			log.debug("data prop: " + property);
+			for (Iterator<String[]> ti = dataIndex.iterator(property); ti.hasNext(); ) {
+				String[] triple = ti.next();
+				String s = triple[0];
+				String o = triple[2];
+				
+				String subExt = bc.getBlockName(s);
+				
+				if (subExt == null)
+					continue;
+
+				if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {
 					// add triples to extensions
 					is.addData(IndexDescription.PSESO, new String[] { property, s, subExt}, Arrays.asList(o));
 					is.addData(IndexDescription.POESS, new String[] { property, o, subExt}, Arrays.asList(s));
 					is.addData(IndexDescription.POES, new String[] { property, o }, subExt);
 					
-//					is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
-
 					triples++;
-					
+
 					if (triples % 100000 == 0)
 						log.debug("triples: " + triples);
 				}
+				
+				if (m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS)) {
+					String objExt = bc.getBlockName(o);
+
+					String indexEdge = new StringBuilder().append(subExt).append("__").append(property).append("__").append(objExt).toString();
+					if (indexEdges.add(indexEdge)) {
+						gs.addData(IndexDescription.PSO, new String[] { property, subExt }, objExt);
+						gs.addData(IndexDescription.POS, new String[] { property, objExt }, subExt);
+						gs.addData(IndexDescription.SOP, new String[] { subExt, objExt }, property);
+						gs.addData(IndexDescription.OPS, new String[] { objExt, property }, subExt);
+					}
+
+					if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {
+						is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
+						is.addData(IndexDescription.EXTENT, new String[] { objExt }, o);
+					}
+				}
+				
 			}
-			log.debug("data triples: " + triples);
 		}
+		log.debug("data triples: " + triples);
 		
 		log.debug("merging indexes...");
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))

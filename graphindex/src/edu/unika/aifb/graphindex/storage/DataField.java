@@ -28,6 +28,11 @@ public class DataField {
 	public static final String FIELD_EXT = "ext";
 	public static final String FIELD_ENT = "ent";
 	
+//	Fields for facet index	
+	public static final String FIELD_VECTOR_POS = "v";
+	public static final String FIELD_ELL = "ell";
+	public static final String FIELD_DIS = "dis";
+	
 	public static final DataField SUBJECT = new DataField(FIELD_SUBJECT);
 	public static final DataField OBJECT = new DataField(FIELD_OBJECT);
 	public static final DataField PROPERTY = new DataField(FIELD_PROPERTY);
@@ -37,6 +42,12 @@ public class DataField {
 	
 	public static final DataField EXT = new DataField(FIELD_EXT);
 	public static final DataField ENT = new DataField(FIELD_ENT);
+	
+	
+//	Fields for facet index
+	public static final DataField VECTOR_POS = new DataField(FIELD_VECTOR_POS);
+	public static final DataField ELL = new DataField(FIELD_ELL);
+	public static final DataField DIS = new DataField(FIELD_DIS);
 	
 	private String m_type;
 	

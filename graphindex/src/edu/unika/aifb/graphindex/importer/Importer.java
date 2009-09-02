@@ -22,9 +22,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
 public abstract class Importer {
+
+	private boolean m_ignoreDataTypes = true;
 
 	protected TripleSink m_sink;
 	protected List<String> m_files;
@@ -32,18 +32,33 @@ public abstract class Importer {
 	protected Importer() {
 		m_files = new ArrayList<String>();
 	}
-	
+
 	public void addImport(String fileName) {
 		m_files.add(fileName);
 	}
-	
+
 	public void addImports(Collection<String> fileNames) {
 		m_files.addAll(fileNames);
+	}
+
+	public abstract void doImport();
+
+	/**
+	 * @return the m_ignoreDataTypes
+	 */
+	public boolean ignoreDataTypesEnabled() {
+		return m_ignoreDataTypes;
+	}
+
+	/**
+	 * @param m_ignoreDataTypes
+	 *            the m_ignoreDataTypes to set
+	 */
+	public void setIgnoreDataTypes(boolean m_ignoreDataTypes) {
+		this.m_ignoreDataTypes = m_ignoreDataTypes;
 	}
 
 	public void setTripleSink(TripleSink gb) {
 		m_sink = gb;
 	}
-
-	public abstract void doImport();
 }

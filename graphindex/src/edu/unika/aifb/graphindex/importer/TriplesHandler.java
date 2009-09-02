@@ -21,7 +21,6 @@ package edu.unika.aifb.graphindex.importer;
 import org.apache.log4j.Logger;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -29,17 +28,15 @@ import org.openrdf.rio.RDFHandlerException;
 class TriplesHandler implements RDFHandler {
 	private static Logger log = Logger.getLogger(TriplesHandler.class);
 
+	private boolean m_ignoreDataTypes;
 	private int m_triplesTotal;
 	private int m_triplesAdded;
 	private String m_defaultContext;
 	private TripleSink m_sink;
 
-	public TriplesHandler(TripleSink sink) {
+	public TriplesHandler(TripleSink sink, boolean ignoreDataTypes) {
 		m_sink = sink;
-	}
-	
-	public void setDefaultContext(String context) {
-		m_defaultContext = context;
+		m_ignoreDataTypes = ignoreDataTypes;
 	}
 
 	public void endRDF() throws RDFHandlerException {
@@ -48,72 +45,82 @@ class TriplesHandler implements RDFHandler {
 	public void handleComment(String arg0) throws RDFHandlerException {
 	}
 
-	public void handleNamespace(String arg0, String arg1) throws RDFHandlerException {
+	public void handleNamespace(String arg0, String arg1)
+			throws RDFHandlerException {
 	}
 
 	public void handleStatement(Statement st) throws RDFHandlerException {
 		m_triplesTotal++;
-		
+
 		String label = st.getPredicate().toString();
-		String source = null; 
-		
+		String source = null;
+
 		if (st.getSubject() instanceof org.openrdf.model.URI) {
-			source = ((org.openrdf.model.URI)st.getSubject()).toString();
-		}
-		else if (st.getSubject() instanceof BNode) {
-			BNode bn = (BNode)st.getSubject();
+			source = ((org.openrdf.model.URI) st.getSubject()).toString();
+		} else if (st.getSubject() instanceof BNode) {
+			BNode bn = (BNode) st.getSubject();
 			source = bn.getID();
-//				log.debug(source);
-			if (!source.startsWith("http"))
+			// log.debug(source);
+			if (!source.startsWith("http")) {
 				source = "_:" + source;
-		}
-		else {
-			log.warn("subject is not an URI or a blank node, ignoring " + st.getSubject().getClass());
+			}
+		} else {
+			log.warn("subject is not an URI or a blank node, ignoring "
+					+ st.getSubject().getClass());
 			return;
 		}
-		
+
 		String target = null;
 		if (st.getObject() instanceof org.openrdf.model.URI) {
-			target = ((org.openrdf.model.URI)st.getObject()).toString();
-		}
-		else if (st.getObject() instanceof Literal) {
-			Literal l = (Literal)st.getObject();
-//				log.debug("datatype: " + l.getDatatype());
-//				if (l.getDatatype() != null)
-//					target = l.getDatatype().toString();
-			target = l.stringValue();
+			target = ((org.openrdf.model.URI) st.getObject()).toString();
+		} else if (st.getObject() instanceof Literal) {
+			Literal lit = (Literal) st.getObject();
+			// log.debug("datatype: " + l.getDatatype());
+			// if (l.getDatatype() != null)
+			// target = l.getDatatype().toString();
+
+			target = m_ignoreDataTypes ? lit.stringValue() : lit.stringValue()
+					+ Character.toString((char) 94)
+					+ lit.getDatatype().toString();
+
 			target = target.replaceAll("\n", "\\\\" + "n");
-		}
-		else if (st.getObject() instanceof BNode) {
-			BNode bn = (BNode)st.getObject();
+		} else if (st.getObject() instanceof BNode) {
+			BNode bn = (BNode) st.getObject();
 			target = bn.getID();
-			if (!target.startsWith("http"))
+			if (!target.startsWith("http")) {
 				target = "_:" + target;
-//				log.debug(target + " " + label + " " + source);
-		}
-		else {
-			log.warn("object is not an URI, a literal or a blank node, ignoring " + st);
+				// log.debug(target + " " + label + " " + source);
+			}
+		} else {
+			log
+					.warn("object is not an URI, a literal or a blank node, ignoring "
+							+ st);
 			return;
 		}
-		
+
 		if (source.equals("") || target.equals("")) {
 			log.warn("subject or object empty, ignoring " + st);
 			return;
 		}
-		
+
 		String context = m_defaultContext;
-		if (st.getContext() != null)
+		if (st.getContext() != null) {
 			context = st.getContext().toString();
-		
-		if (source != null && target != null && label != null) {
+		}
+
+		if ((source != null) && (target != null) && (label != null)) {
 			m_sink.triple(source, label, target, context);
 			m_triplesAdded++;
-//				if (m_triplesAdded % 500000 == 0)
-//					log.debug("nt importer: " + m_triplesAdded + " triples imported");
-		}
-		else {
+			// if (m_triplesAdded % 500000 == 0)
+			// log.debug("nt importer: " + m_triplesAdded +
+			// " triples imported");
+		} else {
 			log.debug(source + " " + label + " " + target);
 		}
+	}
+
+	public void setDefaultContext(String context) {
+		m_defaultContext = context;
 	}
 
 	public void startRDF() throws RDFHandlerException {

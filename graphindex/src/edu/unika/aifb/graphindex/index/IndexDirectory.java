@@ -56,6 +56,10 @@ public class IndexDirectory {
 	public static final int TEMP_DIR = addDirectory("temp");
 	public static final int NEIGHBORHOOD_DIR = addDirectory("neighborhood");
 	
+	public static final int FACET_TREE_DIR = addDirectory("facets"+ "/"+"trees");
+	public static final int FACET_DISTANCES_DIR = addDirectory("facets"+ "/"+"distances");
+	public static final int FACET_VPOS_DIR = addDirectory("facets"+ "/"+"vpos");
+	
 	private String m_directory;
 	
 	public IndexDirectory(String dir) throws IOException {

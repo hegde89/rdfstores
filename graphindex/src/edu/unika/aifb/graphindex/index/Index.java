@@ -18,18 +18,19 @@ package edu.unika.aifb.graphindex.index;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import edu.unika.aifb.graphindex.storage.IndexStorage;
+import com.sleepycat.je.DatabaseException;
+
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public abstract class Index {
-//	protected IndexStorage m_is;
+	// protected IndexStorage m_is;
 	protected IndexDirectory m_idxDirectory;
 	protected IndexConfiguration m_idxConfig;
-	
+
 	public Index(IndexDirectory idxDirectory, IndexConfiguration idxConfig) {
-		m_idxDirectory = idxDirectory;
-		m_idxConfig = idxConfig;
+		this.m_idxDirectory = idxDirectory;
+		this.m_idxConfig = idxConfig;
 	}
-	
-	public abstract void close() throws StorageException;
+
+	public abstract void close() throws StorageException, DatabaseException;
 }

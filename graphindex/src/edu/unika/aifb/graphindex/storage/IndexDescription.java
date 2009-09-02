@@ -106,6 +106,21 @@ public class IndexDescription {
 		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY, DataField.CONTEXT);
 
 
+	// Facet indices
+	
+	/**
+	 * Extension + subject (contained in this extension) > position in vector (for subject)
+	 */
+	public static final IndexDescription ESV = new IndexDescription("es", "v",
+			DataField.EXT_SUBJECT, DataField.VECTOR_POS);
+	
+	/**
+	 * Extension + literal1 + literal2 (both contained in this extension) > distance between lit1 and lit2
+	 */
+	public static final IndexDescription ELLD = new IndexDescription("ell", "d",
+			DataField.EXT_SUBJECT, DataField.VECTOR_POS);
+	
+	
 	/**
 	 * Creates a new IndexDescription object. The parameter <code>fields</code> contains
 	 * the index and value fields. The last element of the array is assumed to be the value field.

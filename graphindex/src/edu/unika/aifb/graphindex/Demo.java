@@ -19,16 +19,13 @@ package edu.unika.aifb.graphindex;
  */
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
+import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -39,10 +36,7 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.ExploringKeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
-import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
-import edu.unika.aifb.graphindex.storage.StorageException;
-
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
@@ -81,9 +75,12 @@ public class Demo {
 			Importer importer;
 			if (files.get(0).contains(".nt"))
 				importer = new NxImporter();
+			else if (files.get(0).contains(".rdf"))
+				importer = new RDFImporter();
 			else
 				throw new Exception("file type unknown");
 			
+			importer.setIgnoreDataTypes(true);
 			importer.addImports(files);
 
 			IndexCreator ic = new IndexCreator(new IndexDirectory(directory));
@@ -100,6 +97,9 @@ public class Demo {
 			// create keyword index (default: true)
 			ic.setCreateKeywordIndex(true);
 			
+			// create facet index (default: false)
+			ic.setCreateFacetIndex(false);
+			
 			// set neighborhood size to 2 (default: 0)
 			ic.setKWNeighborhoodSize(2);
 			
@@ -108,6 +108,8 @@ public class Demo {
 			
 			// include data values in structure index (not graph) (default: true)
 			ic.setStructureBasedDataPartitioning(true);
+			
+			ic.setSICreateDataExtensions(true);
 			
 			// create index
 			ic.create();

@@ -24,39 +24,37 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import org.apache.log4j.Logger;
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFParser.DatatypeHandling;
-import org.openrdf.rio.ntriples.NTriplesParser;
-import org.openrdf.rio.rdfxml.RDFXMLParser;
-import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
+import org.openrdf.rio.RDFParser.DatatypeHandling;
+import org.openrdf.rio.rdfxml.RDFXMLParser;
 
 public class RDFImporter extends Importer {
+	@SuppressWarnings("unused")
 	private static Logger log = Logger.getLogger(RDFImporter.class);
 
 	public RDFImporter() {
 		super();
 		log = Logger.getLogger(RDFImporter.class);
 	}
-	
+
 	@Override
 	public void doImport() {
-		TriplesHandler handler = new TriplesHandler(m_sink);
-		
+		TriplesHandler handler = new TriplesHandler(m_sink,
+				ignoreDataTypesEnabled());
+
 		for (String file : m_files) {
 			handler.setDefaultContext(file);
-			
+
 			RDFXMLParser parser = new RDFXMLParser();
 			parser.setDatatypeHandling(DatatypeHandling.VERIFY);
 			parser.setStopAtFirstError(false);
 			parser.setRDFHandler(handler);
 			parser.setVerifyData(false);
-			
+
 			try {
-				parser.parse(new BufferedReader(new FileReader(file), 10000000), "");
+				parser.parse(
+						new BufferedReader(new FileReader(file), 10000000), "");
 			} catch (RDFParseException e) {
 				e.printStackTrace();
 			} catch (RDFHandlerException e) {

@@ -31,8 +31,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import com.sun.tools.extcheck.ExtCheck;
-
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.data.Tables.JoinedRowValidator;

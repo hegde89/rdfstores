@@ -63,8 +63,7 @@ public class IndexConfiguration {
 	public static final Option HAS_DI = addOption("has_di", true);
 	public static final Option HAS_SP = addOption("has_si", true);
 	public static final Option HAS_KW = addOption("has_kw", true);
-	public static final Option HAS_FI = addOption("has_fi", false);
-
+	
 	public static final Option SP_PATH_LENGTH = addOption("sp_path_length", 1);
 	public static final Option SP_DATA_EXTENSIONS = addOption("sp_data_extensions", false);
 	public static final Option SP_INDEXES = addOption("sp_indexes");

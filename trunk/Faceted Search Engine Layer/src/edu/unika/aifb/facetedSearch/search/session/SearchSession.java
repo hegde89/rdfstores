@@ -62,9 +62,12 @@ public class SearchSession {
 	}
 
 	public void clean() {
+		
 		this.m_facetTreeDelegator.clean();
 		this.m_rankingDelegator.clean();
 		this.m_constructionDelegator.clean();
+		
+		System.gc();
 	}
 
 	/**

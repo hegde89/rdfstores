@@ -38,7 +38,9 @@ public class BrowsingObject extends AbstractObject implements IBrowsingObject {
 	 * @see edu.unika.aifb.facetedSearch.api.model.IBrowsingObject#getLeave()
 	 */
 	public StaticFacetValueClusterLeave getLeave() {
-		return super.getSession().getFacetTreeDelegator().getFacetTree(super.getExtension()).;
+//		return super.getSession().getFacetTreeDelegator().getFacetTree(super.getExtension()).;
+//		TODO
+		return null;
 	}
 
 	/* (non-Javadoc)

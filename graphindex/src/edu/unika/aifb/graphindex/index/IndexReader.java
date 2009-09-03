@@ -27,7 +27,6 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.graphindex.facets.index.FacetIndex;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -46,7 +45,6 @@ public class IndexReader {
 
 	private DataIndex m_dataIndex;
 	private StructureIndex m_structureIndex;
-	private FacetIndex m_facetIndex;
 	private NeighborhoodStorage m_neighborhoodStorage;
 	private Set<String> m_objectProperties;
 	private Set<String> m_dataProperties;
@@ -91,26 +89,6 @@ public class IndexReader {
 					.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
 		}
 		return this.m_dataProperties;
-	}
-
-	public FacetIndex getFacetIndex() {
-
-		this.m_facetIndex = null;
-
-		try {
-			if (this.m_facetIndex == null) {
-				this.m_facetIndex = new FacetIndex(this.m_idxDirectory,
-						this.m_idxConfig);
-			}
-		} catch (EnvironmentLockedException e) {
-			e.printStackTrace();
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return this.m_facetIndex;
 	}
 
 	public IndexConfiguration getIndexConfiguration() {

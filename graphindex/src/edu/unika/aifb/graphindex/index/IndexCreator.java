@@ -47,7 +47,6 @@ import com.sleepycat.je.EnvironmentLockedException;
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.facets.index.FacetIndex;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.storage.DataField;
@@ -102,16 +101,6 @@ public class IndexCreator implements TripleSink {
 		m_idxDirectory = indexDirectory;
 		m_idxConfig = new IndexConfiguration();
 		m_properties = new HashSet<String>();
-	}
-
-	/**
-	 * Setting to turn on creation of a facet index.
-	 * 
-	 * @param createFI
-	 */
-
-	public void setCreateFacetIndex(boolean createFI) {
-		m_idxConfig.set(IndexConfiguration.HAS_FI, createFI);
 	}
 
 	/**
@@ -244,28 +233,6 @@ public class IndexCreator implements TripleSink {
 		} else
 			log.debug("not creating keyword index");
 
-		if (this.m_idxConfig.getBoolean(IndexConfiguration.HAS_FI)) {
-
-			if (this.m_idxConfig.getBoolean(IndexConfiguration.HAS_SP)
-					&& this.m_idxConfig
-							.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS)) {
-
-				log.debug("creating facet index ...");
-
-				this.m_idxConfig.store(this.m_idxDirectory);
-				this.createFacetIndex();
-
-				log.debug("facet index finished!");
-			} else {
-				log
-						.debug("sorry can't create facet index. need structure (with data extensions (!)) " +
-								"index enabled in order to build facet index.");
-			}
-
-		} else {
-			log.debug("not creating facet index");
-		}
-
 		m_idxConfig.store(m_idxDirectory);
 	}
 
@@ -357,26 +324,6 @@ public class IndexCreator implements TripleSink {
 		rcp.createIndexGraph(pathLength);
 
 		dataIndex.close();
-	}
-
-	private void createFacetIndex() {
-
-		try {
-
-			FacetIndex facetIndex = new FacetIndex(this.m_idxDirectory,
-					this.m_idxConfig);
-			facetIndex.build();
-			facetIndex.close();
-
-		} catch (EnvironmentLockedException e) {
-			e.printStackTrace();
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (StorageException e) {
-			e.printStackTrace();
-		}
 	}
 
 	private void createSPIndexes() throws StorageException, IOException,

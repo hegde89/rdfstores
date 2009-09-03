@@ -96,10 +96,7 @@ public class Demo {
 			
 			// create keyword index (default: true)
 			ic.setCreateKeywordIndex(true);
-			
-			// create facet index (default: false)
-			ic.setCreateFacetIndex(false);
-			
+						
 			// set neighborhood size to 2 (default: 0)
 			ic.setKWNeighborhoodSize(2);
 			

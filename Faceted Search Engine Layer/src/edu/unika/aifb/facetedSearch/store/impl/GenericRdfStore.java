@@ -33,6 +33,7 @@ import edu.unika.aifb.facetedSearch.api.model.IIndividual;
 import edu.unika.aifb.facetedSearch.converter.hermes2fsl.QueryConverter;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
+import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.IStore;
 import edu.unika.aifb.graphindex.data.Table;
@@ -155,6 +156,7 @@ public class GenericRdfStore implements IStore {
 					Environment.FILES, ExceptionHelper.Cause.NOT_VALID));
 		}
 
+		importer.setIgnoreDataTypes(false);
 		importer.addImports(file_list);
 
 		IndexCreator ic = new IndexCreator(this.m_idxDir = new IndexDirectory(
@@ -187,9 +189,15 @@ public class GenericRdfStore implements IStore {
 		ic.setStructureBasedDataPartitioning(new Boolean(props
 				.getProperty(Environment.STRUCTURE_BASED_DATA_PARTIONING)));
 
+		ic.setSICreateDataExtensions(true);
+		
 		// create index
 		ic.create();
 
+		// create facet indices
+		FacetIndexCreator fic = new FacetIndexCreator(m_idxDir);		
+		fic.create();
+		
 		this.m_idxReader = new IndexReader(this.m_idxDir);
 	}
 

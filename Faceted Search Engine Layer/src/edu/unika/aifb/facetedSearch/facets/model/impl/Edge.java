@@ -68,7 +68,6 @@ public abstract class Edge extends DefaultWeightedEdge implements IEdge {
 	 * 
 	 * @see edu.unika.aifb.facetedSearch.facets.api.IFacet#getScore()
 	 */
-	@Override
 	public double getWeight() {
 		return m_weight;
 	}

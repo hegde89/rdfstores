@@ -33,6 +33,8 @@ public class LiteralFactory {
 	}
 
 	public ILiteral makeLiteral(String value) {
-		return new Literal(this.m_session, value);
+//		return new Literal(this.m_session, value);
+//		TODO
+		return null;
 	}
 }

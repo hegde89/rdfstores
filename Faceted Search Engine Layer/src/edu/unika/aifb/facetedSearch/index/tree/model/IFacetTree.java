@@ -15,27 +15,24 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model.impl;
+package edu.unika.aifb.facetedSearch.index.tree.model;
 
-import edu.unika.aifb.facetedSearch.api.model.IIndividual;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession;
+import java.util.Set;
+
+import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
 
 /**
  * @author andi
  * 
  */
-public class IndividualFactorty {
+public interface IFacetTree {
 
-	private SearchSession m_session;
+	public Set<Node> getInnerNodes();
 
-	public IndividualFactorty(SearchSession session) {
-		this.m_session = session;
-	}
+	public Set<Node> getLeaves();
 
-	public IIndividual makeIndividual(String value) {
-//		return new Individual(this.m_session, value);
-//		TODO
-		return null;
-	}
+	public Node getNodeById(double id);
+
+	public Node getRoot();
 
 }

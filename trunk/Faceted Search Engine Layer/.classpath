@@ -6,8 +6,9 @@
 	<classpathentry kind="lib" path="lib/lucene-core-2.3.2.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/graphindex"/>
 	<classpathentry kind="lib" path="lib/hermesDataStructure.jar"/>
-	<classpathentry kind="lib" path="lib/colt.jar"/>
-	<classpathentry kind="lib" path="lib/je-3.3.87.jar"/>
+	<classpathentry kind="lib" path="lib/colt.jar" sourcepath="lib/src/colt/src"/>
+	<classpathentry kind="lib" path="lib/je-3.3.87.jar" sourcepath="lib/src/je-3.3.87/src"/>
 	<classpathentry kind="lib" path="lib/jgrapht-jdk1.6.jar"/>
+	<classpathentry kind="lib" path="lib/simmetrics_jar_v1_6_2_d07_02_07.jar" sourcepath="lib/src/simmetrics/src"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

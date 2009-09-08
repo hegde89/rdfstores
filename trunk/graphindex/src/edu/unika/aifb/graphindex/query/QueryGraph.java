@@ -65,6 +65,10 @@ public class QueryGraph extends DirectedMultigraph<QNode,QueryEdge> {
 		return vertexSet().size();
 	}
 	
+	public int degreeOf(QNode node) {
+		return inDegreeOf(node) + outDegreeOf(node);
+	}
+	
 	public Set<QNode> predecessors(QNode node) {
 		Set<QNode> preds = new HashSet<QNode>();
 		for (QueryEdge e : incomingEdgesOf(node))

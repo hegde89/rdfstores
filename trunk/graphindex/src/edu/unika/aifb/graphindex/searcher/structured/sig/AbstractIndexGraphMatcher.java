@@ -53,7 +53,7 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 	
 	private final static Logger log = Logger.getLogger(AbstractIndexGraphMatcher.class);
 	
-	protected AbstractIndexGraphMatcher(IndexReader idxReader) throws IOException {
+	protected AbstractIndexGraphMatcher(IndexReader idxReader) throws IOException, StorageException {
 		m_idxReader = idxReader;
 
 		m_timings = new Timings();
@@ -89,7 +89,7 @@ public abstract class AbstractIndexGraphMatcher implements IndexGraphMatcher {
 		m_queryGraph = qe.getQueryGraph();
 	}
 	
-	protected abstract boolean isCompatibleWithIndex() throws IOException;
+	protected abstract boolean isCompatibleWithIndex() throws IOException, StorageException;
 
 	public void setTimings(Timings timings) {
 		m_timings = timings;

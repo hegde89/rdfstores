@@ -60,12 +60,12 @@ public class SmallIndexMatchesValidator extends AbstractIndexMatchesValidator {
 
 	private static final Logger log = Logger.getLogger(SmallIndexMatchesValidator.class);
 
-	public SmallIndexMatchesValidator(IndexReader idxReader) throws IOException {
+	public SmallIndexMatchesValidator(IndexReader idxReader) throws IOException, StorageException {
 		super(idxReader);
 		m_is = idxReader.getStructureIndex().getSPIndexStorage();
 	}
 	
-	protected boolean isCompatibleWithIndex() throws IOException {
+	protected boolean isCompatibleWithIndex() throws IOException, StorageException {
 		m_idxPSESO = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
 		m_idxPOESS = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
 		m_idxPOES = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);

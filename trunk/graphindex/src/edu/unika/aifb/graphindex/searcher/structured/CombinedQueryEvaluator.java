@@ -32,6 +32,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.sleepycat.je.DatabaseException;
+
+import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.DataIndex;
@@ -62,6 +65,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	private boolean m_doRefinement = true;
 	private IndexDescription m_idxPOS;
 	private IndexDescription m_idxPSO;
+	private BlockCache m_bc;
 	
 	private static final Logger log = Logger.getLogger(CombinedQueryEvaluator.class);
 
@@ -73,6 +77,11 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		
 		m_ds = idxReader.getDataIndex();
 		m_is = idxReader.getStructureIndex().getSPIndexStorage();
+		try {
+			m_bc = idxReader.getStructureIndex().getBlockCache();
+		} catch (DatabaseException e) {
+			throw new StorageException(e);
+		}
 
 		m_idxPSO = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
 		m_idxPOS = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.OBJECT);
@@ -92,8 +101,8 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 
 		Timings timings = new Timings();
 		Counters counters = new Counters();
-//		m_index.getCollector().addTimings(timings);
-//		m_index.getCollector().addCounters(counters);
+		m_idxReader.getCollector().addTimings(timings);
+		m_idxReader.getCollector().addCounters(counters);
 		
 		m_qe = new QueryExecution(q, m_idxReader);
 		m_matcher.setQueryExecution(m_qe);
@@ -143,12 +152,12 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 
 		Map<String,PrunedQueryPart> prunedParts = new HashMap<String,PrunedQueryPart>();
 		if (m_doRefinement) {
+			int removedEdges = 0;
 			for (PrunedQueryPart part : m_qe.getPrunedQuery().getPrunedParts()) {
 				prunedParts.put(part.getRoot().getLabel(), part);
+				removedEdges += part.getQueryGraph().edgeCount();
 			}
-		
-//			counters.set(Counters.DM_REM_EDGES, q.getPrunedEdges().size());
-//			counters.set(Counters.DM_REM_NODES, q.getRemovedNodes().size());
+			m_counters.set(Counters.DM_REM_EDGES, removedEdges);
 		}
 		
 		Set<String> visited = new HashSet<String>();
@@ -207,12 +216,16 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 				result = evaluateBothMatched(property, srcLabel, trgLabel, sourceTable, targetTable);
 			}
 			
+			
+			if (srcLabel.equals("?x4") && trgLabel.equals("?x3")) 
 			if (m_doRefinement && prunedParts.containsKey(srcLabel) && !verified.contains(srcLabel)) {
+				log.debug("source refinement");
 				result = refineWithPrunedPart(prunedParts.get(srcLabel), srcLabel, result);
 				verified.add(srcLabel);
 			}
 			
 			if (m_doRefinement && prunedParts.containsKey(trgLabel) && !verified.contains(trgLabel)) {
+				log.debug("target refinement");
 				result = refineWithPrunedPart(prunedParts.get(trgLabel), trgLabel, result);
 				verified.add(trgLabel);
 			}
@@ -236,6 +249,8 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 	}
 
 	private Table<String> refineWithPrunedPart(PrunedQueryPart prunedQueryPart, String srcLabel, Table<String> result) throws StorageException {
+		m_timings.start(Timings.STEP_CB_REFINE);
+		
 		Map<String,List<String[]>> ext2entity = new HashMap<String,List<String[]>>(100);
 		Table<String> extTable = new Table<String>(Arrays.asList(srcLabel));
 		
@@ -244,6 +259,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		Set<String> values = new HashSet<String>();
 		for (String[] row : result) {
 			String ext = m_is.getDataItem(IndexDescription.SES, DataField.EXT_SUBJECT, row[col]);
+
 			if (values.add(ext))
 				extTable.addRow(new String[] { ext });
 			
@@ -265,6 +281,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		}
 		log.debug(" refined: " + rows + " => " + result.rowCount());
 		
+		m_timings.end(Timings.STEP_CB_REFINE);
 		return result;
 	}
 	
@@ -318,7 +335,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			Table<String> t2 = new Table<String>(srcLabel, trgLabel);
 			for (String[] row : sourceTable) {
 				if (values.add(row[col]))
-					t2.addRows(m_ds.getIndexStorage(m_idxPSO).getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.OBJECT, row[col])).getRows());
+					t2.addRows(m_ds.getIndexStorage(m_idxPSO).getTable(m_idxPSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, m_idxPSO.createValueArray(DataField.PROPERTY, property, DataField.SUBJECT, row[col])).getRows());
 //					t2.addRows(m_ds.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property, row[col]).getRows());
 			}
 			log.debug("unique values: " + values.size());

@@ -51,7 +51,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 	
 	private static final Logger log = Logger.getLogger(PrunedPartMatcher.class);
 
-	protected PrunedPartMatcher(IndexReader idxReader) throws IOException {
+	protected PrunedPartMatcher(IndexReader idxReader) throws IOException, StorageException {
 		super(idxReader);
 
 	}

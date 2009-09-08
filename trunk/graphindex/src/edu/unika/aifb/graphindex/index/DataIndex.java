@@ -37,6 +37,8 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class DataIndex extends Index {
 	private Map<IndexDescription,IndexStorage> m_indexes;
@@ -47,15 +49,21 @@ public class DataIndex extends Index {
 		public void node(String node);
 	}
 	
-	public DataIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException {
+	public DataIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException, StorageException {
 		super(idxDirectory, idxConfig);
 		m_indexes = new HashMap<IndexDescription, IndexStorage>();
+		openAllIndexes();
 	}
 	
 	public void close() throws StorageException {
 		for (IndexStorage is : m_indexes.values())
 			is.close();
 		m_indexes.clear();
+	}
+	
+	private void openAllIndexes() throws StorageException {
+		for (IndexDescription index : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
+			getIndexStorage(index);
 	}
 	
 	public IndexDescription getCompatibleIndex(DataField... fields) {
@@ -76,8 +84,9 @@ public class DataIndex extends Index {
 		IndexStorage is = m_indexes.get(index);
 		if (is == null) {
 			try {
-				is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()));
+				is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 				is.initialize(false, true);
+				((LuceneIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 				m_indexes.put(index, is);
 			} catch (IOException e) {
 				throw new StorageException(e);

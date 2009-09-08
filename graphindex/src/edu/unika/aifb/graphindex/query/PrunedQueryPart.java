@@ -19,6 +19,7 @@ package edu.unika.aifb.graphindex.query;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -27,24 +28,33 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.jgrapht.alg.ConnectivityInspector;
 
 public class PrunedQueryPart extends StructuredQuery {
+	private PrunedQuery m_prunedQuery;
 	private QNode m_root;
+	private List<QueryEdge> m_reclaimedEdges;
 	
 	private static final Logger log = Logger.getLogger(PrunedQueryPart.class);
 	
-	public PrunedQueryPart(String name) {
+	public PrunedQueryPart(String name, PrunedQuery prunedQuery) {
 		super(name);
-		// TODO Auto-generated constructor stub
+		m_prunedQuery = prunedQuery;
+		m_reclaimedEdges = new ArrayList<QueryEdge>();
 	}
 	
 	public QNode getRoot() {
 		return m_root;
 	}
-
-	public List<QueryEdge> trim(int length) {
-		if (m_queryGraph.edgeCount() < length)
-			return new ArrayList<QueryEdge>();
+	
+	public List<QueryEdge> getReclaimedEdges() {
+		return m_reclaimedEdges;
+	}
+	
+	public List<PrunedQueryPart> trim(int length) {
+//		if (m_queryGraph.edgeCount() < length) {
+//			return new ArrayList<PrunedQueryPart>(Arrays.asList(this));
+//		}
 		
 		log.debug("trim " + this);
 
@@ -54,8 +64,18 @@ public class PrunedQueryPart extends StructuredQuery {
 				startNode = node;
 				break;
 			}
-				
 		}
+		
+		if (startNode == null) {
+			int maxDegree = 0;
+			for (QNode node : m_queryGraph.vertexSet()) {
+				if (m_queryGraph.inDegreeOf(node) + m_queryGraph.outDegreeOf(node) > maxDegree) {
+					startNode = node;
+					maxDegree = m_queryGraph.inDegreeOf(node) + m_queryGraph.outDegreeOf(node);
+				}
+			}
+		}
+		
 		log.debug("start node: " + startNode);
 		m_root = startNode;
 		
@@ -65,8 +85,10 @@ public class PrunedQueryPart extends StructuredQuery {
 		log.debug(distances + " " + max + " " + reclaimDistance);
 		
 		Set<QNode> reclaimedNodes = new HashSet<QNode>();
-		List<QueryEdge> reclaimedEdges = new ArrayList<QueryEdge>();
-		
+		m_reclaimedEdges = new ArrayList<QueryEdge>();
+
+		List<PrunedQueryPart> parts = new ArrayList<PrunedQueryPart>();
+
 		if (reclaimDistance > 0) {
 			for (QNode node : distances.keySet()) {
 				if (distances.get(node) <= reclaimDistance && !(node.isSelectVariable() || node.isConstant())) {
@@ -89,19 +111,41 @@ public class PrunedQueryPart extends StructuredQuery {
 			notRemovedNodes.add(startNode);
 			
 			for (QueryEdge edge : m_queryGraph.edgeSet()) {
-				
 				if (notRemovedNodes.contains(edge.getSource()) && notRemovedNodes.contains(edge.getTarget())) {
 //					i.remove();
-					reclaimedEdges.add(edge);
+					m_reclaimedEdges.add(edge);
 				}
 			}
 			
-			m_queryGraph.removeAllEdges(reclaimedEdges);
+			m_queryGraph.removeAllEdges(m_reclaimedEdges);
 			
-			log.debug(" reclaimed edges: " + reclaimedEdges);
+			ConnectivityInspector<QNode,QueryEdge> connectivityInspector = new ConnectivityInspector<QNode,QueryEdge>(m_queryGraph);
+			List<Set<QNode>> components = connectivityInspector.connectedSets();
+
+			for (Set<QNode> component : components) {
+				if (component.size() <= 1)
+					continue;
+				
+				PrunedQueryPart part = new PrunedQueryPart("part", m_prunedQuery);
+				QNode root = null;
+
+				for (QNode node : component) {
+					for (QueryEdge edge : m_queryGraph.outgoingEdgesOf(node))
+						part.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
+					
+					if (reclaimedNodes.contains(node) || node.isSelectVariable())
+						root = node;
+				}
+				
+				part.m_root = root;
+				parts.add(part);
+				log.debug("new part: " + part + " " + part.getRoot());
+			}
 		}
+		else
+			parts.add(this);
 		
-		return reclaimedEdges;
+		return parts;
 	}
 	
 	private int calcDistances(QNode node, int distance, Map<QNode,Integer> distances) {

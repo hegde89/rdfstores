@@ -21,6 +21,9 @@ package edu.unika.aifb.graphindex.index;
 import java.io.IOException;
 import java.util.Set;
 
+import com.sleepycat.je.DatabaseException;
+
+import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
@@ -32,12 +35,20 @@ public class StructureIndex extends Index {
 	private IndexStorage m_is;
 	private Set<String> m_backwardSet, m_forwardSet;
 	private LuceneIndexStorage m_gs;
+	private BlockCache m_bc;
 	
-	public StructureIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException {
-		super(idxDirectory, idxConfig);
+	public StructureIndex(IndexReader reader) throws IOException, StorageException {
+		super(reader);
 		
-		m_backwardSet = Util.readEdgeSet(idxDirectory.getFile(IndexDirectory.BW_EDGESET_FILE));
-		m_forwardSet = Util.readEdgeSet(idxDirectory.getFile(IndexDirectory.FW_EDGESET_FILE));
+		m_backwardSet = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.BW_EDGESET_FILE));
+		m_forwardSet = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.FW_EDGESET_FILE));
+		
+		openAllIndexes();
+	}
+	
+	private void openAllIndexes() throws StorageException, IOException {
+		for (IndexDescription index : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
+			((LuceneIndexStorage)getSPIndexStorage()).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 	}
 	
 	public IndexDescription getCompatibleIndex(DataField... fields) {
@@ -61,7 +72,7 @@ public class StructureIndex extends Index {
 
 	public IndexStorage getSPIndexStorage() throws IOException {
 		if (m_is == null) {
-			m_is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR));
+			m_is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR), m_idxReader.getCollector());
 			m_is.initialize(false, true);
 		}
 		return m_is;
@@ -73,10 +84,17 @@ public class StructureIndex extends Index {
 
 	public IndexStorage getGraphIndexStorage() throws IOException {
 		if (m_gs == null) {
-			m_gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR));
+			m_gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR), m_idxReader.getCollector());
 			m_gs.initialize(false, true);
 		}
 		return m_gs;
+	}
+	
+	public BlockCache getBlockCache() throws IOException, DatabaseException {
+		if (m_bc == null) {
+			m_bc = new BlockCache(m_idxDirectory);
+		}
+		return m_bc;
 	}
 
 	@Override

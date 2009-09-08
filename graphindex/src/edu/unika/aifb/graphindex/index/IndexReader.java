@@ -19,17 +19,14 @@ package edu.unika.aifb.graphindex.index;
  */
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.EnvironmentLockedException;
-
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
@@ -45,93 +42,77 @@ public class IndexReader {
 
 	private DataIndex m_dataIndex;
 	private StructureIndex m_structureIndex;
+	private KeywordIndex m_keywordIndex;
 	private NeighborhoodStorage m_neighborhoodStorage;
 	private Set<String> m_objectProperties;
 	private Set<String> m_dataProperties;
-
+	
 	private StatisticsCollector m_collector;
-
+	
 	private static final Logger log = Logger.getLogger(IndexReader.class);
-
+	
 	public IndexReader(IndexDirectory idxDirectory) throws IOException {
-		this.m_idxDirectory = idxDirectory;
-		this.m_idxConfig = new IndexConfiguration();
-		this.m_idxConfig.load(this.m_idxDirectory);
-
-		for (IndexDescription idx : this.m_idxConfig
-				.getIndexes(IndexConfiguration.SP_INDEXES)) {
+		m_idxDirectory = idxDirectory;
+		m_idxConfig = new IndexConfiguration();
+		m_idxConfig.load(m_idxDirectory);
+		
+		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
 			log.info("sp index: " + idx);
-		}
-		for (IndexDescription idx : this.m_idxConfig
-				.getIndexes(IndexConfiguration.DI_INDEXES)) {
+		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
 			log.info("di index: " + idx);
-		}
-
-		this.m_collector = new StatisticsCollector();
+		
+		m_collector = new StatisticsCollector();
 	}
-
-	public StatisticsCollector getCollector() {
-		return this.m_collector;
+	
+	public DataIndex getDataIndex() throws IOException, StorageException {
+		if (m_dataIndex == null) 
+			m_dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
+		return m_dataIndex;
 	}
-
-	public DataIndex getDataIndex() throws IOException {
-		if (this.m_dataIndex == null) {
-			this.m_dataIndex = new DataIndex(this.m_idxDirectory,
-					this.m_idxConfig);
-		}
-		return this.m_dataIndex;
-	}
-
-	public Set<String> getDataProperties() throws IOException {
-		if (this.m_dataProperties == null) {
-			this.m_dataProperties = new HashSet<String>();
-			m_dataProperties.addAll(Util.readEdgeSet(this.m_idxDirectory
-					.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
-		}
-		return this.m_dataProperties;
+	
+	public StructureIndex getStructureIndex() throws IOException, StorageException {
+		if (m_structureIndex == null)
+			m_structureIndex = new StructureIndex(this);
+		return m_structureIndex;
 	}
 
 	public IndexConfiguration getIndexConfiguration() {
-		return this.m_idxConfig;
+		return m_idxConfig;
 	}
-
+	
 	public IndexDirectory getIndexDirectory() {
-		return this.m_idxDirectory;
+		return m_idxDirectory;
 	}
-
-	public NeighborhoodStorage getNeighborhoodStorage()
-			throws StorageException, IOException {
-		if (this.m_neighborhoodStorage == null) {
-			this.m_neighborhoodStorage = new LuceneNeighborhoodStorage(
-					this.m_idxDirectory
-							.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
-			this.m_neighborhoodStorage.initialize(false, true);
+	
+	public Set<String> getObjectProperties() throws IOException {
+		if (m_objectProperties == null)
+			m_objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
+		return m_objectProperties;
+	}
+	
+	public Set<String> getDataProperties() throws IOException {
+		if (m_dataProperties == null)
+			m_dataProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
+		return m_dataProperties;
+	}
+	
+	public NeighborhoodStorage getNeighborhoodStorage() throws StorageException, IOException {
+		if (m_neighborhoodStorage == null) {
+			m_neighborhoodStorage = new LuceneNeighborhoodStorage(m_idxDirectory.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR));
+			m_neighborhoodStorage.initialize(false, true);
 		}
-		return this.m_neighborhoodStorage;
+		return m_neighborhoodStorage;
+	}
+	
+	public int getSubjectCardinality(String property) {
+		return 0;
 	}
 
 	public int getObjectCardinality(String property) {
 		return 0;
 	}
 
-	public Set<String> getObjectProperties() throws IOException {
-		if (this.m_objectProperties == null) {
-			this.m_objectProperties = new HashSet<String>();
-			this.m_objectProperties.addAll(Util.readEdgeSet(this.m_idxDirectory
-					.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE)));
-		}
-		return this.m_objectProperties;
-	}
-
-	public StructureIndex getStructureIndex() throws IOException {
-		if (this.m_structureIndex == null) {
-			this.m_structureIndex = new StructureIndex(this.m_idxDirectory,
-					this.m_idxConfig);
-		}
-		return this.m_structureIndex;
-	}
-
-	public int getSubjectCardinality(String property) {
-		return 0;
+	public StatisticsCollector getCollector() {
+		return m_collector;
 	}
 }

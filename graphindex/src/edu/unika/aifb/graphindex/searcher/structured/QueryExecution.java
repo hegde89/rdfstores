@@ -36,6 +36,7 @@ import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.structured.sig.EvaluationClass;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class QueryExecution {
 	private IndexReader m_idxReader;
@@ -106,7 +107,7 @@ public class QueryExecution {
 		return m_query;
 	}
 	
-	public PrunedQuery getPrunedQuery() throws IOException {
+	public PrunedQuery getPrunedQuery() throws IOException, StorageException {
 		if (m_prunedQuery == null) {
 			m_prunedQuery = new PrunedQuery(m_query, m_idxReader.getStructureIndex());
 			m_prunedQueryGraph = m_prunedQuery.getQueryGraph();
@@ -252,7 +253,7 @@ public class QueryExecution {
 			log.info("compaction: " + m_rowsBeforeCompaction + " => " + m_result.rowCount());
 	}
 
-	public QueryGraph getPrunedQueryGraph() throws IOException {
+	public QueryGraph getPrunedQueryGraph() throws IOException, StorageException {
 		return getPrunedQuery().getQueryGraph();
 	}
 } 

@@ -64,7 +64,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
 	
-	public ExploringIndexMatcher(IndexReader idxReader) throws IOException {
+	public ExploringIndexMatcher(IndexReader idxReader) throws IOException, StorageException {
 		super(idxReader);
 	
 		m_subgraphs = new ArrayList<Subgraph>();

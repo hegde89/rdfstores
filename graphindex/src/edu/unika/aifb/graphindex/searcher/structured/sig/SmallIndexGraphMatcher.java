@@ -111,7 +111,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 
 	private static final Logger log = Logger.getLogger(SmallIndexGraphMatcher.class);
 
-	public SmallIndexGraphMatcher(IndexReader idxReader) throws IOException {
+	public SmallIndexGraphMatcher(IndexReader idxReader) throws IOException, StorageException {
 		super(idxReader);
 		m_signatureNodes = new HashSet<String>();
 		m_joinNodes = new HashSet<String>();
@@ -122,7 +122,7 @@ public class SmallIndexGraphMatcher extends AbstractIndexGraphMatcher {
 	}
 
 	@Override
-	protected boolean isCompatibleWithIndex() throws IOException {
+	protected boolean isCompatibleWithIndex() throws IOException, StorageException {
 		m_idxPSESO = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT, DataField.OBJECT);
 		m_idxPOESS = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT, DataField.SUBJECT);
 		m_idxPOES = m_idxReader.getStructureIndex().getCompatibleIndex(DataField.PROPERTY, DataField.OBJECT, DataField.EXT_SUBJECT);

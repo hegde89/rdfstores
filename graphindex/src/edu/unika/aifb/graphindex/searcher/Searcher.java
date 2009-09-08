@@ -19,11 +19,19 @@ package edu.unika.aifb.graphindex.searcher;
  */
 
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.Timings;
 
 public abstract class Searcher {
 	protected IndexReader m_idxReader;
+	protected Timings m_timings;
+	protected Counters m_counters;
 
 	protected Searcher(IndexReader idxReader) {
 		m_idxReader = idxReader;
+		m_timings = new Timings();
+		m_counters = new Counters();
+		m_idxReader.getCollector().addTimings(m_timings);
+		m_idxReader.getCollector().addCounters(m_counters);
 	}
 }

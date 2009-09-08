@@ -36,7 +36,7 @@ public abstract class AbstractIndexMatchesValidator implements IndexMatchesValid
 	protected Counters m_counters;
 	protected IndexReader m_idxReader;
 	
-	public AbstractIndexMatchesValidator(IndexReader idxReader) throws IOException {
+	public AbstractIndexMatchesValidator(IndexReader idxReader) throws IOException, StorageException {
 		m_idxReader = idxReader;
 		m_collector = idxReader.getCollector();
 		t = new Timings();
@@ -61,5 +61,5 @@ public abstract class AbstractIndexMatchesValidator implements IndexMatchesValid
 		m_qe = qe;
 	}
 	
-	protected abstract boolean isCompatibleWithIndex() throws IOException;
+	protected abstract boolean isCompatibleWithIndex() throws IOException, StorageException;
 }

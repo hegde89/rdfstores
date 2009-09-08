@@ -118,7 +118,7 @@ public class PrunedQuery extends StructuredQuery {
 					parts.put(e.getSource(), part);
 				}
 				else {
-					PrunedQueryPart part = new PrunedQueryPart(getName() + "-part");
+					PrunedQueryPart part = new PrunedQueryPart(getName() + "-part", this);
 					part.addEdge(e.getSource(), e.getLabel(), e.getTarget());
 					parts.put(e.getSource(), part);
 					parts.put(e.getTarget(), part);
@@ -126,18 +126,19 @@ public class PrunedQuery extends StructuredQuery {
 			}
 		}
 		
-		m_prunedParts = new HashSet<PrunedQueryPart>(parts.values());
-//		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
-		
-		for (PrunedQueryPart part : m_prunedParts) {
-			List<QueryEdge> edges = part.trim(m_si.getPathLength());
-			m_roots.add(part.getRoot());
-			m_removeNodes.addAll(part.getQueryGraph().vertexSet());
-			for (QueryEdge edge : edges)
-				prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
+		m_prunedParts = new HashSet<PrunedQueryPart>();
+
+		for (PrunedQueryPart oldPart : new HashSet<PrunedQueryPart>(parts.values())) {
+			List<PrunedQueryPart> newPrunedParts = oldPart.trim(m_si.getPathLength());
+			for (PrunedQueryPart part : newPrunedParts) {
+				log.debug(part.getRoot() + " " + part);
+				m_prunedParts.add(part);
+				m_roots.add(part.getRoot());
+				m_removeNodes.addAll(part.getQueryGraph().vertexSet());
+				for (QueryEdge edge : part.getReclaimedEdges())
+					prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
+			}
 		}
-//		log.debug("pruned parts: " + m_prunedParts.size() + " " + m_prunedParts);
-//		log.debug("pruned query: " + prunedQueryGraph.edgeSet());
 
 		log.debug("pruning: removed " + m_removeNodes.size() + " nodes, " + (m_queryGraph.edgeSet().size() - prunedQueryGraph.edgeSet().size()) + " edges");
 		
@@ -157,7 +158,7 @@ public class PrunedQuery extends StructuredQuery {
 		return isRemovedNode(new QNode(node));
 	}
 	
-	private static void explorePath(QueryGraph g, QNode node, List<QNode> path, Set<QNode> fixedNodes) {
+	private void explorePath(QueryGraph g, QNode node, List<QNode> path, Set<QNode> fixedNodes) {
 		path.add(node);
 		
 		if (node.isSelectVariable() || node.isConstant()) {

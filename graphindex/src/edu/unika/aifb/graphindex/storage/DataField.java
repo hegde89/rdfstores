@@ -68,6 +68,10 @@ public class DataField {
 			return EXT_OBJECT;
 		if (type.equals(FIELD_CONTEXT))
 			return CONTEXT;
+		if (type.equals(FIELD_EXT))
+			return EXT;
+		if (type.equals(FIELD_ENT))
+			return ENT;
 		return null;
 	}
 	

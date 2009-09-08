@@ -55,7 +55,10 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.StringSplitter;
+import edu.unika.aifb.graphindex.util.Timings;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class LuceneIndexStorage implements IndexStorage {
@@ -67,12 +70,24 @@ public class LuceneIndexStorage implements IndexStorage {
 	private boolean m_readonly = true;
 	private File m_directory;
 	
+	private LRUCache<Integer,Document> m_docCache;
+	
+	private StatisticsCollector m_collector;
+	private Timings m_timings;
+	private Counters m_counters;
+	
 	private static final String KEY_DELIM = Character.toString((char)31);
 	
 	private static final Logger log = Logger.getLogger(LuceneIndexStorage.class);
 
-	public LuceneIndexStorage(File dir) {
+	public LuceneIndexStorage(File dir, StatisticsCollector collector) {
 		m_directory = dir;
+		m_collector = collector;
+		
+		m_timings = new Timings();
+		m_counters = new Counters();
+		m_collector.addTimings(m_timings);
+		m_collector.addCounters(m_counters);
 	}
 	
 	public void initialize(boolean clean, boolean readonly) {
@@ -88,10 +103,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 			
-			
-//			m_dataSetCache = new LRUCache<String,Set<String>>(50000);
-//			m_dataListCache = new LRUCache<String,List<String>>(50000);
-//			m_dataItemCache = new LRUCache<String,String>(50000);
+			m_docCache = new LRUCache<Integer,Document>(5000);
 		} catch (CorruptIndexException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -180,17 +192,16 @@ public class LuceneIndexStorage implements IndexStorage {
 	public List<Integer> getDocumentIds(Query q) throws StorageException {
 		final List<Integer> docIds = new ArrayList<Integer>();
 		try {
+			m_timings.start(Timings.LOAD_DOCIDS);
 			m_searcher.search(q, new HitCollector() {
 				public void collect(int docId, float score) {
 					docIds.add(docId);
-//					if (docIds.size() > 6)
-//						log.debug(docIds.size());
 				}
 			});
+			m_timings.end(Timings.LOAD_DOCIDS);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
-//		log.debug(q + "  " + docIds.size() + " docs");
 		
 		Collections.sort(docIds);
 		
@@ -199,7 +210,13 @@ public class LuceneIndexStorage implements IndexStorage {
 	
 	private Document getDocument(int docId) throws StorageException {
 		try {
-			Document doc = m_reader.document(docId);
+			m_timings.start(Timings.LOAD_DOC);
+			Document doc = m_docCache.get(docId);
+			if (doc == null) {
+				doc = m_reader.document(docId);
+				m_docCache.put(docId, doc);
+			}
+			m_timings.end(Timings.LOAD_DOC);
 			return doc;
 		} catch (CorruptIndexException e) {
 			throw new StorageException(e);
@@ -295,6 +312,7 @@ public class LuceneIndexStorage implements IndexStorage {
 	public String getDataItem(IndexDescription index, DataField field, String... indexFieldValues) throws StorageException {
 		if (indexFieldValues.length < index.getIndexFields().size())
 			throw new UnsupportedOperationException("getDataItem supports only queries with one result document");
+		m_timings.start(Timings.LOAD_DATA_ITEM);
 		
 		String value = null;
 		
@@ -306,6 +324,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			value = doc.getField(index.getValueFieldName()).stringValue().trim();
 		}
 
+		m_timings.end(Timings.LOAD_DATA_ITEM);
 		return value;
 	}
 
@@ -503,6 +522,13 @@ public class LuceneIndexStorage implements IndexStorage {
 			return hits.length() > 0;
 		} catch (IOException e) {
 			throw new StorageException(e);
+		}
+	}
+	
+	public void warmup(IndexDescription index, Set<String> terms) throws StorageException {
+		log.debug("warmup " + index + " with " + terms.size() + " terms");
+		for (String term : terms) {
+			getDocumentIds(new TermQuery(new Term(index.getIndexFieldName(), term)));
 		}
 	}
 

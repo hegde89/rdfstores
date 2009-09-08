@@ -37,6 +37,8 @@ public class Timings {
 	
 	public static final Stat ASM_REACHABLE = addStat("asm_reachable");
 	
+	public static final Stat LOAD_DOC = addStat("load_doc");
+	public static final Stat LOAD_DOCIDS = addStat("load_docids");
 	public static final Stat LOAD_DATA_LIST = addStat("load_data_list");
 	public static final Stat LOAD_DATA_SET = addStat("load_data_set");
 	public static final Stat LOAD_DATA_ITEM = addStat("load_data_item");
@@ -63,6 +65,7 @@ public class Timings {
 	public static final Stat STEP_IM = addStat("step_im");
 	public static final Stat STEP_IM2DM = addStat("step_im2dm");
 	public static final Stat STEP_DM = addStat("step_dm");
+	public static final Stat STEP_CB_REFINE = addStat("step_cb_refine");
 	
 	public static final Stat VP_LOAD = addStat("vp_load");
 	

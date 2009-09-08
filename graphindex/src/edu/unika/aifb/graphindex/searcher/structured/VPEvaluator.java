@@ -59,7 +59,7 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 	
 	private static final Logger log = Logger.getLogger(VPEvaluator.class);
 	
-	public VPEvaluator(IndexReader indexReader) throws IOException {
+	public VPEvaluator(IndexReader indexReader) throws IOException, StorageException {
 		super(indexReader);
 		m_dataIndex = indexReader.getDataIndex();
 		

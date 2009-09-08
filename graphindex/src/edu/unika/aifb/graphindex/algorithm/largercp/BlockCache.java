@@ -36,6 +36,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.PreloadConfig;
 import com.sleepycat.je.dbi.Operation;
 
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -84,6 +85,10 @@ public class BlockCache {
 		
 		m_blocks = new HashMap<Integer,Block>();
 		m_nodeCache = new HashMap<Integer,Set<String>>();
+		
+		PreloadConfig pc = new PreloadConfig();
+		pc.setMaxMillisecs(2000);
+		m_nodeDb.preload(pc);
 	}
 	
 	public void close() throws DatabaseException {

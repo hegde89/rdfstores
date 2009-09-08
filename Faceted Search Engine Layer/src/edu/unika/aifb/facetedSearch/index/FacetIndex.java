@@ -33,15 +33,12 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexBuilderHelper;
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeBuilder;
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetVPosIndexBuilder;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
-import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -61,10 +58,10 @@ public class FacetIndex extends Index {
 	private LuceneIndexStorage m_vPosIndex;
 
 	private Environment m_env;
-
 	private Database m_treeDB;
-
 	private Database m_leaveDB;
+	private Database m_literalDB;
+	private Database m_propEndPointDB;
 
 	/**
 	 * @param idxDirectory
@@ -79,34 +76,6 @@ public class FacetIndex extends Index {
 		super(idxDirectory, idxConfig);
 
 		this.m_idxDirectory = idxDirectory;
-	}
-
-	public void build() throws EnvironmentLockedException, DatabaseException,
-			IOException, StorageException {
-
-		IndexReader idxReader = new IndexReader(this.m_idxDirectory);
-
-		FacetIndexBuilderHelper helper = FacetIndexBuilderHelper.getInstance(
-				idxReader, this.m_idxDirectory);
-
-		// Vector Position Index
-		FacetVPosIndexBuilder vPosIndexBuilder = new FacetVPosIndexBuilder(
-				this.m_idxDirectory, idxReader, helper);
-		vPosIndexBuilder.build();
-		vPosIndexBuilder.close();
-
-		helper.setVPosIndex(this.getVPosIndex());
-
-		// Distance Index
-
-		// Facet Tree Index
-
-		FacetTreeBuilder treeBuilder = new FacetTreeBuilder(
-				this.m_idxDirectory, this.m_idxConfig, idxReader, helper);
-		treeBuilder.build();
-		treeBuilder.close();
-
-		FacetIndexBuilderHelper.close();
 	}
 
 	/*
@@ -125,14 +94,10 @@ public class FacetIndex extends Index {
 			this.m_leaveDB.close();
 		}
 
-		if ((this.m_treeDB != null) || (this.m_leaveDB != null)) {
-			this.m_env.close();
-		}
-
 		if (this.m_vPosIndex != null) {
 			this.m_vPosIndex.close();
 		}
-		
+
 		if (this.m_env != null) {
 			this.m_env.close();
 		}
@@ -213,6 +178,55 @@ public class FacetIndex extends Index {
 		return nodes;
 	}
 
+	
+	/**
+	 * @return the endpointDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 * @throws EnvironmentLockedException
+	 */
+	public Database getEndPointDB() throws EnvironmentLockedException,
+			DatabaseException, IOException {
+
+		if (m_propEndPointDB == null) {
+			initDBs();
+		}
+
+		return m_propEndPointDB;
+	}
+	
+	/**
+	 * @return the leaveDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 * @throws EnvironmentLockedException
+	 */
+	public Database getLeaveDB() throws EnvironmentLockedException,
+			DatabaseException, IOException {
+
+		if (m_leaveDB == null) {
+			initDBs();
+		}
+
+		return m_leaveDB;
+	}
+
+	/**
+	 * @return the literalDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 * @throws EnvironmentLockedException
+	 */
+	public Database getLiteralDB() throws EnvironmentLockedException,
+			DatabaseException, IOException {
+
+		if (m_literalDB == null) {
+			initDBs();
+		}
+
+		return m_literalDB;
+	}
+
 	/**
 	 * 
 	 * @param extension
@@ -226,17 +240,14 @@ public class FacetIndex extends Index {
 	public int getPosition(String extension, String subject)
 			throws IOException, StorageException {
 
-		int pos = -1;
-
 		if (this.m_vPosIndex == null) {
 			this.initIndices();
 		}
 
-		pos = Integer.getInteger(this.m_vPosIndex.getDataItem(
-				IndexDescription.ESV, DataField.VECTOR_POS, new String[] {
-						extension, subject }));
+		String posString = this.m_vPosIndex.getDataItem(IndexDescription.ESV,
+				DataField.VECTOR_POS, new String[] { extension, subject });
 
-		return pos;
+		return posString == null ? -1 : Integer.parseInt(posString);
 	}
 
 	public BitVector getSourceVectorForNode(double nodeId) {
@@ -244,6 +255,22 @@ public class FacetIndex extends Index {
 		// TODO
 
 		return null;
+	}
+
+	/**
+	 * @return the treeDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 * @throws EnvironmentLockedException
+	 */
+	public Database getTreeDB() throws EnvironmentLockedException,
+			DatabaseException, IOException {
+
+		if (m_treeDB == null) {
+			initDBs();
+		}
+
+		return m_treeDB;
 	}
 
 	/**
@@ -278,9 +305,16 @@ public class FacetIndex extends Index {
 		config.setDeferredWrite(true);
 
 		this.m_treeDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.TREE, config);
+				FacetDbUtils.DatabaseNames.TREE, config);
+
 		this.m_leaveDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.LEAVE, config);
+				FacetDbUtils.DatabaseNames.LEAVE, config);
+
+		this.m_propEndPointDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.ENDPOINT, config);
+
+		this.m_literalDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.LITERAL, config);
 
 		s_log.debug("got db connection!");
 	}

@@ -50,35 +50,34 @@ package edu.unika.aifb.facetedSearch.util;
 
 import java.util.StringTokenizer;
 
-import edu.unika.aifb.facetedSearch.Environment;
-import edu.unika.aifb.facetedSearch.Environment.DataType;
-import edu.unika.aifb.facetedSearch.api.model.IAbstractObject;
-import edu.unika.aifb.facetedSearch.api.model.ILiteral;
+import org.apache.log4j.Logger;
+import org.openrdf.model.URI;
+import org.openrdf.model.datatypes.XMLDatatypeUtil;
+import org.openrdf.model.impl.URIImpl;
+import org.openrdf.model.vocabulary.XMLSchema;
 
-public class Util {
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 
-	public static boolean isVariable(String label) {
-		return label.startsWith("?");
+public class FacetUtil {
+
+	private static Logger s_log = Logger.getLogger(FacetUtil.class);
+
+	public static String getLiteralValue(String lit) {
+
+		return lit.lastIndexOf(FacetEnvironment.DEFAULT_LITERAL_DELIM) == -1 ? lit
+				: lit
+						.substring(
+								0,
+								lit
+										.lastIndexOf(FacetEnvironment.DEFAULT_LITERAL_DELIM));
 	}
 
-	public static boolean isConstant(String label) {
-		return !isVariable(label);
-	}
+	public static DataType getLiteralDataType(String literalString) {
 
-	public static boolean isDataValue(String label) {
-		return !isEntity(label);
-	}
+		StringTokenizer tokenizer = new StringTokenizer(literalString,
+				FacetEnvironment.DEFAULT_LITERAL_DELIM);
 
-	public static boolean isEntity(String label) {
-
-		return label.startsWith("http") || label.startsWith("_:")
-				|| label.startsWith("ttp://");
-	}
-
-	public static DataType getDataType(ILiteral lit) {
-
-		StringTokenizer tokenizer = new StringTokenizer(((IAbstractObject) lit)
-				.getValue(), Environment.DEFAULT_LITERAL_DELIM);
 		String last_token = null;
 
 		while (tokenizer.hasMoreTokens()) {
@@ -87,46 +86,62 @@ public class Util {
 
 		if (last_token != null) {
 
-			if (last_token.toLowerCase().equals(Environment.XML.DataType.DATE)) {
-				return DataType.DATE;
-			} else if (last_token.toLowerCase().equals(
-					Environment.XML.DataType.TIME)) {
-				return DataType.TIME;
-			} else if (last_token.toLowerCase().equals(
-					Environment.XML.DataType.NUMERICAL)) {
-				return DataType.NUMERICAL;
-			}
-			// default value is string
-			else {
-				return DataType.STRING;
+			try {
+
+				URI datatype = new URIImpl(last_token);
+
+				if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
+
+					if (datatype.equals(XMLSchema.DATETIME)) {
+
+						return DataType.DATE_TIME;
+
+					} else if (datatype.equals(XMLSchema.TIME)) {
+
+						return DataType.TIME;
+
+					} else if (datatype.equals(XMLSchema.DATE)) {
+
+						return DataType.DATE;
+
+					} else {
+
+						return DataType.UNKNOWN;
+
+					}
+
+				} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
+						.contains(datatype.stringValue())) {
+
+					return DataType.NUMERICAL;
+
+				} else if (FacetEnvironment.XMLS.STRING_TYPES.contains(datatype
+						.stringValue())) {
+
+					return DataType.STRING;
+
+				} else {
+
+					return DataType.UNKNOWN;
+
+				}
+			} catch (IllegalArgumentException e) {
+
+				s_log.error("datatype "+last_token + " is no valid URI!");
+				return null;
 			}
 		} else {
+
+			s_log.debug("found no datatype attached to literal.");
 			return null;
 		}
 	}
 
-	public static String getValueOfLiteral(ILiteral lit) {
+	public static String getValueOfLiteral(String lit) {
 
-		StringTokenizer tokenizer = new StringTokenizer(((IAbstractObject) lit)
-				.getValue(), Environment.DEFAULT_LITERAL_DELIM);
+		StringTokenizer tokenizer = new StringTokenizer(lit,
+				FacetEnvironment.DEFAULT_LITERAL_DELIM);
 
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : null;
 	}
-
-	public static String getLocalName(String uri) {
-
-		for (String stopWord : Environment.stopWords) {
-			uri = uri.replaceAll(stopWord, "");
-		}
-		if (uri.lastIndexOf("#") != -1) {
-			return uri.substring(uri.lastIndexOf("#") + 1);
-		} else if (uri.lastIndexOf("/") != -1) {
-			return uri.substring(uri.lastIndexOf("/") + 1);
-		} else if (uri.lastIndexOf(":") != -1) {
-			return uri.substring(uri.lastIndexOf(":") + 1);
-		} else {
-			return uri;
-		}
-	}
-
 }

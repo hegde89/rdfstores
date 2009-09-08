@@ -20,28 +20,26 @@ package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
-import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
-import com.sleepycat.je.LockMode;
-import com.sleepycat.je.OperationStatus;
 
-import edu.unika.aifb.facetedSearch.index.FacetDbUtils;
-import edu.unika.aifb.facetedSearch.index.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.index.distance.model.impl.LiteralList;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeType;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -53,7 +51,6 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
-import edu.unika.aifb.graphindex.util.Util;
 
 public class FacetIndexBuilderHelper {
 
@@ -67,6 +64,9 @@ public class FacetIndexBuilderHelper {
 	private static FacetIndexBuilderHelper s_instance;
 	private static ArrayList<String> s_objectProperties;
 	private static ArrayList<String> s_dataProperties;
+	private static Database s_literalDB;
+	private static Database s_leaveDB;
+	private static Database s_propEndPointDB;
 
 	private static DirectedMultigraph<NodeElement, EdgeElement> s_indexGraph;
 
@@ -76,7 +76,7 @@ public class FacetIndexBuilderHelper {
 		s_structureIndex.close();
 		s_cacheDB.close();
 
-		s_env.removeDatabase(null, FacetDbUtils.DatabaseName.FH_CACHE);
+		s_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FH_CACHE);
 		s_env.close();
 
 		s_classes = null;
@@ -112,30 +112,13 @@ public class FacetIndexBuilderHelper {
 
 	}
 
-	private Object get(String key) throws DatabaseException {
-
-		Object res = null;
-
-		DatabaseEntry dbKey = new DatabaseEntry(Util.intToBytes(key.hashCode()));
-		DatabaseEntry out = new DatabaseEntry();
-
-		Cursor cursor = s_cacheDB.openCursor(null, null);
-
-		if (cursor.getSearchKey(dbKey, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-
-			if (out.getData() != null) {
-				res = Util.bytesToObject(out.getData());
-			}
-		}
-
-		return res;
-	}
-
-	public String getClass(String individual) throws DatabaseException {
+	public String getClass(String individual) throws DatabaseException,
+			IOException {
 
 		String clazz = null;
 
-		if ((clazz = (String) this.get("class_" + individual)) == null) {
+		if ((clazz = (String) FacetDbUtils
+				.get(s_cacheDB, "class_" + individual)) == null) {
 
 			try {
 
@@ -168,7 +151,7 @@ public class FacetIndexBuilderHelper {
 
 		String extension = null;
 
-		if ((extension = (String) this.get("ex_" + object)) == null) {
+		if ((extension = (String) FacetDbUtils.get(s_cacheDB, "ex_" + object)) == null) {
 
 			extension = s_structureIndex.getExtension(object);
 
@@ -182,6 +165,21 @@ public class FacetIndexBuilderHelper {
 
 	public DirectedMultigraph<NodeElement, EdgeElement> getIndexGraph() {
 		return s_indexGraph;
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashSet<Node> getLeaves(String extension, String object)
+			throws DatabaseException, IOException {
+
+		return (HashSet<Node>) FacetDbUtils.get(s_leaveDB, FacetDbUtils
+				.getKey(new String[] { extension, object }));
+	}
+
+	public LiteralList getLiterals(String extension, String property)
+			throws DatabaseException, IOException {
+
+		return (LiteralList) FacetDbUtils.get(s_literalDB, FacetDbUtils
+				.getKey(new String[] { extension, property }));
 	}
 
 	public int getPosition(String extension, String subject)
@@ -202,12 +200,32 @@ public class FacetIndexBuilderHelper {
 		return Integer.parseInt(posString);
 	}
 
-	public Node getRange(Node property) throws DatabaseException {
+	/**
+	 * @return the propEndPointDB
+	 */
+	public Database getPropEndPointDB() {
+		return s_propEndPointDB;
+	}
+
+	/**
+	 * @return the propEndPointDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 */
+	@SuppressWarnings("unchecked")
+	public HashMap<Node, HashSet<String>> getPropEndPoints(String extension)
+			throws DatabaseException, IOException {
+
+		return (HashMap<Node, HashSet<String>>) FacetDbUtils.get(
+				s_propEndPointDB, extension);
+	}
+
+	public Node getRange(Node property) throws DatabaseException, IOException {
 
 		String rangeClassLabel = null;
 
-		if ((rangeClassLabel = (String) this
-				.get("range_" + property.getValue())) == null) {
+		if ((rangeClassLabel = (String) FacetDbUtils.get(s_cacheDB, "range_"
+				+ property.getValue())) == null) {
 
 			try {
 
@@ -237,11 +255,13 @@ public class FacetIndexBuilderHelper {
 				NodeType.RANGE_TOP, NodeContent.CLASS);
 	}
 
-	public Node getSuperClass(String clazz) throws DatabaseException {
+	public Node getSuperClass(String clazz) throws DatabaseException,
+			IOException {
 
 		String superClass = null;
 
-		if ((superClass = (String) this.get("superClass_" + clazz)) == null) {
+		if ((superClass = (String) FacetDbUtils.get(s_cacheDB, "superClass_"
+				+ clazz)) == null) {
 
 			try {
 
@@ -276,7 +296,8 @@ public class FacetIndexBuilderHelper {
 
 		String superProperty = null;
 
-		if ((superProperty = (String) this.get("superProperty_" + property)) == null) {
+		if ((superProperty = (String) FacetDbUtils.get(s_cacheDB,
+				"superProperty_" + property)) == null) {
 
 			try {
 
@@ -307,7 +328,8 @@ public class FacetIndexBuilderHelper {
 				: NodeContent.OBJECT_PROPERTY);
 	}
 
-	public boolean hasRangeClass(Node property) throws DatabaseException {
+	public boolean hasRangeClass(Node property) throws DatabaseException,
+			IOException {
 
 		return this.getRange(property) == null ? false : true;
 	}
@@ -329,7 +351,7 @@ public class FacetIndexBuilderHelper {
 		config.setDeferredWrite(true);
 
 		s_cacheDB = s_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.FH_CACHE, config);
+				FacetDbUtils.DatabaseNames.FH_CACHE, config);
 
 	}
 
@@ -443,14 +465,15 @@ public class FacetIndexBuilderHelper {
 	 * @param class2
 	 * @return
 	 * @throws DatabaseException
+	 * @throws IOException
 	 */
 	public boolean isSubClassOf(Node class1, Node class2)
-			throws DatabaseException {
+			throws DatabaseException, IOException {
 
 		String isSubClass = null;
 
-		if ((isSubClass = (String) this.get("subClassOf_" + class1 + "_"
-				+ class2)) == null) {
+		if ((isSubClass = (String) FacetDbUtils.get(s_cacheDB, "subClassOf_"
+				+ class1 + "_" + class2)) == null) {
 
 			isSubClass = "0";
 
@@ -479,12 +502,29 @@ public class FacetIndexBuilderHelper {
 			}
 		}
 
-		return isSubClass.equals("0") ? false : true;
+		return !isSubClass.equals("0");
+	}
+
+	public void setLeaveDB(Database db) {
+		s_leaveDB = db;
+	}
+
+	public void setLiteralDB(Database db) {
+		s_literalDB = db;
+	}
+
+	public void setPropertyEndPointDB(Database db) {
+		s_propEndPointDB = db;
 	}
 
 	public void setVPosIndex(LuceneIndexStorage vPosIndex) {
-
 		s_vPosIndex = vPosIndex;
 	}
 
+	public void updateLiterals(LiteralList list, String extension,
+			String property) throws DatabaseException, IOException {
+
+		FacetDbUtils.store(s_literalDB, FacetDbUtils.getKey(new String[] {
+				extension, property }), list);
+	}
 }

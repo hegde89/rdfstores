@@ -19,7 +19,7 @@ package edu.unika.aifb.facetedSearch.facets.model.impl;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 
-import edu.unika.aifb.facetedSearch.Environment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.IEdge;
 
 /**
@@ -37,11 +37,11 @@ public abstract class Edge extends DefaultWeightedEdge implements IEdge {
 
 	public Edge(String name) {
 		m_name = name;
-		m_weight = Environment.DEFAULT_WEIGHT;
+		m_weight = FacetEnvironment.DEFAULT_WEIGHT;
 	}
 
 	public Edge() {
-		m_weight = Environment.DEFAULT_WEIGHT;
+		m_weight = FacetEnvironment.DEFAULT_WEIGHT;
 	}
 
 	/*

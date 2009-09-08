@@ -17,51 +17,44 @@
  */
 package edu.unika.aifb.facetedSearch.store.impl;
 
-import java.util.Iterator;
-
-import org.apexlab.service.session.datastructure.ResultItem;
-import org.apexlab.service.session.datastructure.ResultPage;
-import org.apexlab.service.session.datastructure.Table;
-
-import edu.unika.aifb.facetedSearch.Environment;
-import edu.unika.aifb.facetedSearch.util.Util;
 
 public class EvaluatorHelper {
 
-	public static ResultPage constructResultPage(
-			edu.unika.aifb.graphindex.data.Table<String> graphIndex_resultTable) {
-
-		ResultPage resultPage = new ResultPage();
-		Iterator<String[]> row_iter = graphIndex_resultTable.iterator();
-		int columnCount = graphIndex_resultTable.columnCount();
-
-		Table<ResultItem> hermes_resultTable = new Table<ResultItem>(
-				graphIndex_resultTable.getColumnNames());
-
-		while (row_iter.hasNext()) {
-
-			ResultItem[] resultItemRow = new ResultItem[columnCount];
-			String[] row = row_iter.next();
-
-			for (int i = 0; i < row.length; i++) {
-
-				ResultItem item = new ResultItem();
-				item
-						.setType(Util.isEntity(row[i]) ? Environment.ResultItemType.INDIVIDUAL
-								: Environment.ResultItemType.LITERAL);
-
-				item.setURL(row[i]);
-				item.setTitle(Util.getLocalName(row[i]));
-
-				resultItemRow[i] = item;
-			}
-
-			hermes_resultTable.addRow(resultItemRow);
-		}
-
-		resultPage.setResultItemTable(hermes_resultTable);
-
-		return resultPage;
-	}
+	// public static ResultPage constructResultPage(
+	// edu.unika.aifb.graphindex.data.Table<String> graphIndex_resultTable) {
+	//
+	// ResultPage resultPage = new ResultPage();
+	// Iterator<String[]> row_iter = graphIndex_resultTable.iterator();
+	// int columnCount = graphIndex_resultTable.columnCount();
+	//
+	// Table<ResultItem> hermes_resultTable = new Table<ResultItem>(
+	// graphIndex_resultTable.getColumnNames());
+	//
+	// while (row_iter.hasNext()) {
+	//
+	// ResultItem[] resultItemRow = new ResultItem[columnCount];
+	// String[] row = row_iter.next();
+	//
+	// for (int i = 0; i < row.length; i++) {
+	//
+	// ResultItem item = new ResultItem();
+	// item
+	// .setType(Util.isEntity(row[i]) ?
+	// FacetEnvironment.ResultItemType.INDIVIDUAL
+	// : FacetEnvironment.ResultItemType.LITERAL);
+	//
+	// item.setURL(row[i]);
+	// item.setTitle(Util.truncateUri(row[i]));
+	//
+	// resultItemRow[i] = item;
+	// }
+	//
+	// hermes_resultTable.addRow(resultItemRow);
+	// }
+	//
+	// resultPage.setResultItemTable(hermes_resultTable);
+	//
+	// return resultPage;
+	// }
 
 }

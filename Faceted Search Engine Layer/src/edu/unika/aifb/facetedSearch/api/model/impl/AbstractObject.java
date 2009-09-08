@@ -17,35 +17,43 @@
  */
 package edu.unika.aifb.facetedSearch.api.model.impl;
 
-import edu.unika.aifb.facetedSearch.Environment.ObjectType;
+import java.io.Serializable;
+
+import edu.unika.aifb.facetedSearch.FacetEnvironment.ObjectType;
 import edu.unika.aifb.facetedSearch.api.model.IAbstractObject;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.util.Util;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
  * 
  */
-public abstract class AbstractObject implements IAbstractObject {
+public abstract class AbstractObject implements IAbstractObject, Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7826628911084418605L;
+
+	private SearchSession m_session;
 	private String m_extension;
 	// only value, incl. data-type (if Literal)
 	private String m_value;
-	private SearchSession m_session;
 
-	protected AbstractObject(SearchSession session, String value,
-			String extension) {
-		this.m_value = value;
-		this.setSession(session);
-		this.setExtension(extension);
+	public AbstractObject(String value) {
+		m_value = value;
+	}
+
+	public AbstractObject(String value, String extension) {
+		m_value = value;
+		m_extension = extension;
 	}
 
 	@Override
 	public boolean equals(Object object) {
 
-		if (object instanceof IAbstractObject) {
-			return ((IAbstractObject) object).getValue()
-					.equals(this.getValue());
+		if (object instanceof IAbstractObject && object != null) {
+			return ((IAbstractObject) object).getValue().equals(getValue());
 		} else {
 			return false;
 		}
@@ -57,14 +65,14 @@ public abstract class AbstractObject implements IAbstractObject {
 	 * @see edu.unika.aifb.facetedSearch.api.objects.IEntity#getExtension()
 	 */
 	public String getExtension() {
-		return this.m_extension;
+		return m_extension;
 	}
 
 	/**
 	 * @return the session
 	 */
 	public SearchSession getSession() {
-		return this.m_session;
+		return m_session;
 	}
 
 	/*
@@ -74,7 +82,7 @@ public abstract class AbstractObject implements IAbstractObject {
 	 */
 	public ObjectType getType() {
 
-		return Util.isDataValue(this.m_value) ? ObjectType.LITERAL
+		return Util.isDataValue(m_value) ? ObjectType.LITERAL
 				: ObjectType.INDIVIDUAL;
 
 	}
@@ -105,7 +113,7 @@ public abstract class AbstractObject implements IAbstractObject {
 	 *            the session to set
 	 */
 	public void setSession(SearchSession session) {
-		this.m_session = session;
+		m_session = session;
 	}
 
 	/*
@@ -116,11 +124,11 @@ public abstract class AbstractObject implements IAbstractObject {
 	 * )
 	 */
 	public void setValue(String value) {
-		this.m_value = value;
+		m_value = value;
 	}
 
 	@Override
 	public String toString() {
-		return this.m_value;
+		return m_value;
 	}
 }

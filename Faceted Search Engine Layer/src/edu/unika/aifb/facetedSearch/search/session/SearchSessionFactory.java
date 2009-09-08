@@ -23,7 +23,7 @@ import java.util.Properties;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
-import edu.unika.aifb.facetedSearch.Environment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnection;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnectionProvider;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
@@ -40,9 +40,9 @@ public class SearchSessionFactory {
 	private RdfStoreConnection m_con;
 
 	private static SearchSessionFactory s_instance;
-	private static SearchSession s_pool[] = new SearchSession[Environment.MAX_SESSIONS];
-	private static ReentrantLock[] s_locks = new ReentrantLock[Environment.MAX_SESSIONS];
-	private static Semaphore s_sem = new Semaphore(Environment.MAX_SESSIONS);
+	private static SearchSession s_pool[] = new SearchSession[FacetEnvironment.MAX_SESSIONS];
+	private static ReentrantLock[] s_locks = new ReentrantLock[FacetEnvironment.MAX_SESSIONS];
+	private static Semaphore s_sem = new Semaphore(FacetEnvironment.MAX_SESSIONS);
 
 	public static SearchSessionFactory getInstance(Properties props) {
 		return s_instance == null ? s_instance = new SearchSessionFactory(props)
@@ -67,7 +67,7 @@ public class SearchSessionFactory {
 			e1.printStackTrace();
 		}
 
-		for (int i = 0; i < Environment.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetEnvironment.MAX_SESSIONS; i++) {
 			s_locks[i] = new ReentrantLock();
 			try {
 				s_pool[i] = new SearchSession(this.m_store, i, props);
@@ -79,7 +79,7 @@ public class SearchSessionFactory {
 
 	public int acquire() throws InterruptedException {
 		s_sem.acquire();
-		for (int i = 0; i < Environment.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetEnvironment.MAX_SESSIONS; i++) {
 			if (s_locks[i].tryLock()) {
 				return i;
 			}

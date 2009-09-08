@@ -15,22 +15,18 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
+package edu.unika.aifb.facetedSearch.index.algo.distance;
 
-import java.util.Map;
+import java.math.BigDecimal;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 
 /**
  * @author andi
  * 
  */
-public interface ILiteral extends IAbstractObject {
+public interface IDistanceMetric {
 
-	public DataType getDataType();
-
-	public void setDataType(DataType type);
-
-	public Map<String, IIndividual> getSubjects();
+	public BigDecimal getDistance(ILiteral lit1, ILiteral lit2);
 
 }

@@ -17,9 +17,6 @@
  */
 package edu.unika.aifb.facetedSearch.converter.hermes2fsl;
 
-import java.util.Iterator;
-
-import edu.unika.aifb.facetedSearch.converter.Environment;
 
 /**
  * @author andi
@@ -27,39 +24,44 @@ import edu.unika.aifb.facetedSearch.converter.Environment;
  */
 public class QueryConverter {
 
-	public static edu.unika.aifb.graphindex.query.Query convert(
-			Object hermesQuery) {
-
-		if (hermesQuery instanceof org.apexlab.service.session.datastructure.Facet) {
-
-			// TODO
-
-			return null;
-		} else if (hermesQuery instanceof org.apexlab.service.session.datastructure.Keywords) {
-
-			org.apexlab.service.session.datastructure.Keywords hermesKeywords = (org.apexlab.service.session.datastructure.Keywords) hermesQuery;
-
-			Iterator<String> iter_keywords = hermesKeywords.getWordList()
-					.iterator();
-			String keywords = "";
-
-			while (iter_keywords.hasNext()) {
-				keywords += " " + iter_keywords.next();
-			}
-
-			return new edu.unika.aifb.graphindex.query.KeywordQuery(
-					Environment.DEFAULT_QUERY_NAME, keywords);
-
-		} else if (hermesQuery instanceof org.apexlab.service.session.datastructure.QueryGraph) {
-
-			// TODO
-			return null;
-		} else if (hermesQuery instanceof org.apexlab.service.session.datastructure.Suggestion) {
-
-			// TODO
-			return null;
-		} else {
-			return null;
-		}
-	}
+	// public static edu.unika.aifb.graphindex.query.Query convert(
+	// Object hermesQuery) {
+	//
+	// if (hermesQuery instanceof
+	// org.apexlab.service.session.datastructure.Facet) {
+	//
+	// // TODO
+	//
+	// return null;
+	// } else if (hermesQuery instanceof
+	// org.apexlab.service.session.datastructure.Keywords) {
+	//
+	// org.apexlab.service.session.datastructure.Keywords hermesKeywords =
+	// (org.apexlab.service.session.datastructure.Keywords) hermesQuery;
+	//
+	// Iterator<String> iter_keywords = hermesKeywords.getWordList()
+	// .iterator();
+	// String keywords = "";
+	//
+	// while (iter_keywords.hasNext()) {
+	// keywords += " " + iter_keywords.next();
+	// }
+	//
+	// return new edu.unika.aifb.graphindex.query.KeywordQuery(
+	// Environment.DEFAULT_QUERY_NAME, keywords);
+	//
+	// } else if (hermesQuery instanceof
+	// org.apexlab.service.session.datastructure.QueryGraph) {
+	//
+	// // TODO
+	// return null;
+	// } else if (hermesQuery instanceof
+	// org.apexlab.service.session.datastructure.Suggestion) {
+	//
+	// // TODO
+	// return null;
+	// } else {
+	// return null;
+	// }
+	// }
 }

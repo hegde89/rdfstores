@@ -15,22 +15,45 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
-
-import java.util.Map;
+package edu.unika.aifb.facetedSearch.index.algo.distance.impl;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.index.algo.distance.IDistanceMetric;
 
 /**
  * @author andi
  * 
  */
-public interface ILiteral extends IAbstractObject {
+public class DistanceMetricPool {
 
-	public DataType getDataType();
+	public static IDistanceMetric getMetric(DataType type) {
 
-	public void setDataType(DataType type);
+		IDistanceMetric metric = null;
 
-	public Map<String, IIndividual> getSubjects();
+		switch (type) {
 
+		case NUMERICAL: {
+			metric = NumericalDistanceMetric.getInstance();
+			break;
+		}
+		case STRING: {
+			metric = StringDistanceMetric.getInstance();
+			break;
+		}
+		case TIME: {
+			metric = TimeDistanceMetric.getInstance();
+			break;
+		}
+		case DATE: {
+			metric = DateDistanceMetric.getInstance();
+			break;
+		}
+		case DATE_TIME: {
+			metric = DateTimeDistanceMetric.getInstance();
+			break;
+		}
+		}
+
+		return metric;
+	}
 }

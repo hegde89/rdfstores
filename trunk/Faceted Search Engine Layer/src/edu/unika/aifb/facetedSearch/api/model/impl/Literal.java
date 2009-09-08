@@ -19,11 +19,11 @@ package edu.unika.aifb.facetedSearch.api.model.impl;
 
 import java.util.Map;
 
-import edu.unika.aifb.facetedSearch.Environment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.api.model.IIndividual;
 import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.util.Util;
 
 /**
  * @author andi
@@ -31,35 +31,46 @@ import edu.unika.aifb.facetedSearch.util.Util;
  */
 public class Literal extends AbstractObject implements ILiteral {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -9061190356771959180L;
 	private DataType m_dataType;
-	// only value, no data-type
-	private String m_value;
 
-	protected Literal(SearchSession session, String value, String extension) {
-		super(session, value, extension);
-		this.m_value = Util.getValueOfLiteral(this);
+	public Literal(SearchSession session, String value, String extension) {
+		super(value, extension);
+		super.setSession(session);
+	}
+
+	public Literal(String value) {
+		super(value);
+	}
+
+	public Literal(String value, DataType type) {
+		super(value);
+		m_dataType = type;
+	}
+
+	public Literal(String value, String extension) {
+		super(value, extension);
 	}
 
 	public DataType getDataType() {
-		return this.m_dataType == null ? this.m_dataType = Util
-				.getDataType(this) : this.m_dataType;
+		return m_dataType;
 	}
 
 	public Map<String, IIndividual> getSubjects() {
-		return this.getSession().getStore().getSubjects(this);
-	}
-
-	@Override
-	public String getValue() {
-		return this.m_value;
+		return super.getSession() == null ? null : super.getSession()
+				.getStore().getSubjects(this);
 	}
 
 	public void setDataType(DataType type) {
-		this.m_dataType = type;
+		m_dataType = type;
 	}
 
 	@Override
 	public String toString() {
-		return this.m_value;
+		return super.getValue() + FacetEnvironment.DEFAULT_LITERAL_DELIM
+				+ m_dataType;
 	}
 }

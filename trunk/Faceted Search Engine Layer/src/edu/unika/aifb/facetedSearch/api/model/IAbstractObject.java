@@ -17,7 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.api.model;
 
-import edu.unika.aifb.facetedSearch.Environment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
@@ -28,16 +28,16 @@ public interface IAbstractObject {
 
 	public String getExtension();
 
-	public void setExtension(String extension);
+	public SearchSession getSession();
+
+	public FacetEnvironment.ObjectType getType();
 
 	public String getValue();
 
-	public void setValue(String value);
+	public void setExtension(String extension);
 
-	public Environment.ObjectType getType();
-	
-	public SearchSession getSession();
-	
 	public void setSession(SearchSession session);
+
+	public void setValue(String value);
 
 }

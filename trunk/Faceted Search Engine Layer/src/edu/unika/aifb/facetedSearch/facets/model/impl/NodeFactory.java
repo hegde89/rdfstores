@@ -17,7 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import edu.unika.aifb.facetedSearch.Environment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.INode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
@@ -33,7 +33,7 @@ public class NodeFactory {
 		m_session = session;
 	}
 
-	public INode makeNode(Environment.NodeType type) {
+	public INode makeNode(FacetEnvironment.NodeType type) {
 
 		switch (type) {
 

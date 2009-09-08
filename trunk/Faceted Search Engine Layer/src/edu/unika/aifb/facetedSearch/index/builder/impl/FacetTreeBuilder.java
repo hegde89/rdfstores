@@ -33,29 +33,28 @@ import org.apache.log4j.Logger;
 
 import cern.colt.bitvector.BitVector;
 
-import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
-import com.sleepycat.je.LockMode;
-import com.sleepycat.je.OperationStatus;
 
-import edu.unika.aifb.facetedSearch.index.FacetDbUtils;
-import edu.unika.aifb.facetedSearch.index.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.index.FacetEnvironment.RDF;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.RDF;
+import edu.unika.aifb.facetedSearch.api.model.ILiteral;
+import edu.unika.aifb.facetedSearch.api.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.index.builder.IFacetIndexBuilder;
+import edu.unika.aifb.facetedSearch.index.distance.model.impl.LiteralList;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Edge.EdgeType;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeType;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.util.FacetUtil;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
@@ -70,7 +69,7 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author andi
  * 
  */
-public class FacetTreeBuilder implements IFacetIndexBuilder{
+public class FacetTreeBuilder implements IFacetIndexBuilder {
 
 	private IndexReader m_idxReader;
 	private IndexDirectory m_idxDirectory;
@@ -78,8 +77,9 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	private Database m_vectorDB;
 	private Database m_treeDB;
 	private Database m_leaveDB;
-	private Database m_endPointDB;
+	private Database m_propertyEndPointDB;
 	private Database m_cacheDB;
+	private Database m_literalDB;
 
 	private FacetIndexBuilderHelper m_facetHelper;
 
@@ -88,10 +88,9 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	private final static Logger s_log = Logger
 			.getLogger(FacetTreeBuilder.class);
 
-	public FacetTreeBuilder(IndexDirectory idxDirectory,
-			IndexConfiguration idxConfig, IndexReader idxReader,
-			FacetIndexBuilderHelper helper)
-			throws EnvironmentLockedException, DatabaseException, IOException {
+	public FacetTreeBuilder(IndexDirectory idxDirectory, IndexReader idxReader,
+			FacetIndexBuilderHelper helper) throws EnvironmentLockedException,
+			DatabaseException, IOException {
 
 		this.m_idxDirectory = idxDirectory;
 		this.m_idxReader = idxReader;
@@ -100,45 +99,34 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 		this.m_facetHelper = helper;
 	}
 
-	public void close() throws DatabaseException {
-
-		this.m_treeDB.close();
-		this.m_leaveDB.close();
-		this.m_endPointDB.close();
-		this.m_cacheDB.close();
-		this.m_vectorDB.close();
-
-		this.m_env.removeDatabase(null, FacetDbUtils.DatabaseName.FTB_CACHE);
-		this.m_env.close();
-	}
-
-	public void build() throws IOException, StorageException,
-			DatabaseException {
+	public void build() throws IOException, StorageException, DatabaseException {
 
 		IndexStorage spIdx = this.m_idxReader.getStructureIndex()
 				.getSPIndexStorage();
 
-		Set<NodeElement> extensions = this.m_facetHelper.getIndexGraph()
+		Set<NodeElement> source_extensions = this.m_facetHelper.getIndexGraph()
 				.vertexSet();
 
 		int count = 0;
 
-		for (NodeElement extension : extensions) {
-			
-			s_log.debug("start building facet tree for extension: " + extension
-					+ " (" + (++count) + "/" + extensions.size() + ")");
+		for (NodeElement source_extension : source_extensions) {
+
+			s_log.debug("start building facet tree for extension: "
+					+ source_extension + " (" + (++count) + "/"
+					+ source_extensions.size() + ")");
+
+			if (count > 3) {
+				break;
+				// TODO
+			}
 
 			FacetTree facetTree = new FacetTree();
-			HashMap<Node, ArrayList<String>> endPoints = new HashMap<Node, ArrayList<String>>();
+			HashMap<Node, HashSet<String>> endPoints = new HashMap<Node, HashSet<String>>();
 
 			Set<EdgeElement> properties = this.m_facetHelper.getIndexGraph()
-					.outgoingEdgesOf(extension);
+					.outgoingEdgesOf(source_extension);
 
 			// get property-paths
-
-//			s_log.debug("extension " + extension + " has properties: "
-//					+ properties);
-
 			for (EdgeElement property : properties) {
 
 				String propertyLabel = property.getLabel();
@@ -199,15 +187,17 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 				s_log.debug("start going over endpoints... ");
 
 				List<String> individuals = spIdx.getDataList(
-						IndexDescription.EXTENT, DataField.ENT, extension
-								.getLabel());
+						IndexDescription.EXTENT, DataField.ENT,
+						source_extension.getLabel());
+
+				System.out.println("individuals: " + individuals);
 
 				int extensionSize = individuals.size();
 
 				s_log.debug("extension contains " + extensionSize
 						+ " individuals.");
 
-				for (Entry<Node, ArrayList<String>> endpointEntry : endPoints
+				for (Entry<Node, HashSet<String>> endpointEntry : endPoints
 						.entrySet()) {
 
 					Node property = endpointEntry.getKey();
@@ -240,7 +230,8 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 										classPath.push(nodeEndpoint);
 
 										ArrayList<String> keyElements = new ArrayList<String>();
-										keyElements.add(extension.getLabel());
+										keyElements.add(source_extension
+												.getLabel());
 										keyElements.add(property.getValue());
 										keyElements.add(object);
 
@@ -278,11 +269,12 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 
 										this.updateLeaveDB(cachedNodes
 												.get(FacetEnvironment.LEAVE),
-												extension.getLabel(), object);
+												source_extension.getLabel(),
+												object);
 
 										this.updateVectorDB(cachedNodes
 												.get(FacetEnvironment.SOURCE),
-												extension.getLabel(),
+												source_extension.getLabel(),
 												extensionSize, individual);
 
 									} else if (property.getContent() == NodeContent.OBJECT_PROPERTY) {
@@ -301,7 +293,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 											classPath.push(nodeEndpoint);
 
 											ArrayList<String> keyElements = new ArrayList<String>();
-											keyElements.add(extension
+											keyElements.add(source_extension
 													.getLabel());
 											keyElements
 													.add(property.getValue());
@@ -347,7 +339,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 													.updateLeaveDB(
 															cachedNodes
 																	.get(FacetEnvironment.LEAVE),
-															extension
+															source_extension
 																	.getLabel(),
 															object);
 
@@ -355,7 +347,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 													.updateVectorDB(
 															cachedNodes
 																	.get(FacetEnvironment.SOURCE),
-															extension
+															source_extension
 																	.getLabel(),
 															extensionSize,
 															individual);
@@ -363,7 +355,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 										} else {
 
 											ArrayList<String> keyElements = new ArrayList<String>();
-											keyElements.add(extension
+											keyElements.add(source_extension
 													.getLabel());
 											keyElements
 													.add(property.getValue());
@@ -394,7 +386,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 													.updateLeaveDB(
 															cachedNodes
 																	.get(FacetEnvironment.LEAVE),
-															extension
+															source_extension
 																	.getLabel(),
 															object);
 
@@ -402,7 +394,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 													.updateVectorDB(
 															cachedNodes
 																	.get(FacetEnvironment.SOURCE),
-															extension
+															source_extension
 																	.getLabel(),
 															extensionSize,
 															individual);
@@ -413,36 +405,39 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 								// DataPropery
 								else {
 
-									ArrayList<String> keyElements = new ArrayList<String>();
-									keyElements.add(extension.getLabel());
-									keyElements.add(property.getValue());
-									keyElements.add(object);
-
-									String key = FacetDbUtils
-											.getKey(keyElements
-													.toArray(new String[keyElements
-															.size()]));
+									String cacheKey = FacetDbUtils
+											.getKey(new String[] {
+													source_extension.getLabel(),
+													property.getValue(), object });
 
 									Map<String, Stack<Node>> cachedNodes = null;
 
-									if ((cachedNodes = this.getCachedNodes(key)) == null) {
+									if ((cachedNodes = this
+											.getCachedNodes(cacheKey)) == null) {
 
 										// insert object
 										cachedNodes = this.insertObject(
 												facetTree, property);
 
-										FacetDbUtils.store(this.m_cacheDB, key,
-												cachedNodes);
+										FacetDbUtils.store(this.m_cacheDB,
+												cacheKey, cachedNodes);
 									}
 
-									this.updateLeaveDB(cachedNodes
-											.get(FacetEnvironment.LEAVE),
-											extension.getLabel(), object);
+									this
+											.updateLeaveDB(
+													cachedNodes
+															.get(FacetEnvironment.LEAVE),
+													source_extension.getLabel(),
+													object);
 
 									this.updateVectorDB(cachedNodes
 											.get(FacetEnvironment.SOURCE),
-											extension.getLabel(),
+											source_extension.getLabel(),
 											extensionSize, individual);
+
+									this.updateLiteralDB(source_extension
+											.getLabel(), property.getValue(),
+											object);
 								}
 							}
 						} catch (StorageException e) {
@@ -458,15 +453,50 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 				facetTree = this.pruneRanges(facetTree);
 			}
 
-			s_log
-					.debug("finished facet tree for extension: " + extension
-							+ "!");
+			s_log.debug("finished facet tree for extension: "
+					+ source_extension + "!");
 
-			FacetDbUtils.store(this.m_endPointDB, extension.getLabel(),
-					endPoints);
-			FacetDbUtils.store(this.m_treeDB, extension.getLabel(), facetTree);
+			// store endpoints
+			FacetDbUtils.store(this.m_propertyEndPointDB, source_extension
+					.getLabel(), endPoints);
+
+			// store tree
+			FacetDbUtils.store(this.m_treeDB, source_extension.getLabel(),
+					facetTree);
 
 			System.gc();
+		}
+	}
+
+	public void close() throws DatabaseException {
+
+		if (m_treeDB != null) {
+			m_treeDB.close();
+		}
+
+		if (m_leaveDB != null) {
+			m_leaveDB.close();
+		}
+
+		if (m_propertyEndPointDB != null) {
+			m_propertyEndPointDB.close();
+		}
+
+		if (m_cacheDB != null) {
+			m_cacheDB.close();
+		}
+
+		if (m_vectorDB != null) {
+			m_vectorDB.close();
+		}
+
+		if (m_literalDB != null) {
+			m_literalDB.close();
+		}
+
+		if (m_env != null) {
+			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FTB_CACHE);
+			m_env.close();
 		}
 	}
 
@@ -474,28 +504,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	private Map<String, Stack<Node>> getCachedNodes(String key)
 			throws DatabaseException, IOException {
 
-		Map<String, Stack<Node>> nodes = null;
-
-		Cursor cursor = this.m_cacheDB.openCursor(null, null);
-
-		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
-
-		DatabaseEntry out = new DatabaseEntry();
-
-		if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-
-			if (out.getData() != null) {
-
-				Object object = Util.bytesToObject(out.getData());
-
-				if (object instanceof Map) {
-					nodes = (Map<String, Stack<Node>>) object;
-				}
-			}
-
-		}
-
-		return nodes;
+		return (Map<String, Stack<Node>>) FacetDbUtils.get(m_cacheDB, key);
 	}
 
 	private void initDBs() throws EnvironmentLockedException,
@@ -515,23 +524,27 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 		config.setDeferredWrite(true);
 
 		this.m_treeDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.TREE, config);
+				FacetDbUtils.DatabaseNames.TREE, config);
 
 		this.m_leaveDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.LEAVE, config);
+				FacetDbUtils.DatabaseNames.LEAVE, config);
 
-		this.m_endPointDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.ENDPOINT, config);
+		this.m_propertyEndPointDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.ENDPOINT, config);
 
 		this.m_vectorDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.VECTOR, config);
+				FacetDbUtils.DatabaseNames.VECTOR, config);
 
 		this.m_cacheDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseName.FTB_CACHE, config);
+				FacetDbUtils.DatabaseNames.FTB_CACHE, config);
+
+		this.m_literalDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.LITERAL, config);
 	}
 
 	private Map<String, Stack<Node>> insertClassPath(Stack<Node> classPath,
-			FacetTree facetTree, Node endpoint) throws DatabaseException {
+			FacetTree facetTree, Node endpoint) throws DatabaseException,
+			IOException {
 
 		// init
 		Map<String, Stack<Node>> nodes2cache = new HashMap<String, Stack<Node>>();
@@ -736,7 +749,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	}
 
 	private Map<String, Stack<Node>> insertObject(FacetTree facetTree,
-			Node endpoint) throws DatabaseException {
+			Node endpoint) throws DatabaseException, IOException {
 
 		// init
 		Map<String, Stack<Node>> nodes2cache = new HashMap<String, Stack<Node>>();
@@ -807,7 +820,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	}
 
 	private void insertPropertyPath(Stack<Node> path, FacetTree facetTree,
-			HashMap<Node, ArrayList<String>> endPoints) {
+			HashMap<Node, HashSet<String>> endPoints) {
 
 		Node currentNode = facetTree.getRoot();
 		Stack<Edge> edgesStack = new Stack<Edge>();
@@ -845,7 +858,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 			edge.setType(EdgeType.SUBPROPERTY_OF);
 
 			if (path.isEmpty()) {
-				endPoints.put(topNode, new ArrayList<String>(topNode
+				endPoints.put(topNode, new HashSet<String>(topNode
 						.getRangeExtensions()));
 			} else {
 
@@ -858,7 +871,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 					edge.setType(EdgeType.SUBPROPERTY_OF);
 
 					if (path.isEmpty()) {
-						endPoints.put(tar, new ArrayList<String>(tar
+						endPoints.put(tar, new HashSet<String>(tar
 								.getRangeExtensions()));
 					}
 
@@ -869,7 +882,7 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 	}
 
 	private Stack<Node> pruneClassPath(Node rangeTop, Stack<Node> classPath)
-			throws DatabaseException {
+			throws DatabaseException, IOException {
 
 		while (!classPath.isEmpty()) {
 
@@ -1025,35 +1038,36 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 		return currentTree;
 	}
 
-	@SuppressWarnings("unused")
-	private void test(Database db) {
-
-		DatabaseEntry key = new DatabaseEntry();
-		DatabaseEntry out = new DatabaseEntry();
-		Cursor cursor = null;
-
-		try {
-			cursor = db.openCursor(null, null);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		}
-
-		try {
-			while (cursor.getNext(key, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-
-				if (out.getData() != null) {
-
-					Object object = Util.bytesToObject(out.getData());
-
-					System.out.println("key = " + key.getData() + " data= "
-							+ object);
-
-				}
-			}
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		}
-	}
+	// @SuppressWarnings("unused")
+	// private void test(Database db) {
+	//
+	// DatabaseEntry key = new DatabaseEntry();
+	// DatabaseEntry out = new DatabaseEntry();
+	// Cursor cursor = null;
+	//
+	// try {
+	// cursor = db.openCursor(null, null);
+	// } catch (DatabaseException e) {
+	// e.printStackTrace();
+	// }
+	//
+	// try {
+	// while (cursor.getNext(key, out, LockMode.DEFAULT) ==
+	// OperationStatus.SUCCESS) {
+	//
+	// if (out.getData() != null) {
+	//
+	// Object object = Util.bytesToObject(out.getData());
+	//
+	// System.out.println("key = " + key.getData() + " data= "
+	// + object);
+	//
+	// }
+	// }
+	// } catch (DatabaseException e) {
+	// e.printStackTrace();
+	// }
+	// }
 
 	@SuppressWarnings("unchecked")
 	private void updateLeaveDB(Stack<Node> leaves, String extension,
@@ -1066,33 +1080,55 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 
 			HashSet<Node> nodes = null;
 
-			Cursor cursor = this.m_leaveDB.openCursor(null, null);
+			try {
 
-			DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
-
-			DatabaseEntry out = new DatabaseEntry();
-
-			if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-
-				if (out.getData() != null) {
-
-					Object res = Util.bytesToObject(out.getData());
-
-					if (res instanceof HashSet) {
-						nodes = (HashSet<Node>) res;
-					} else {
-						s_log
-								.error("found entry for key '"
-										+ key
-										+ "'. However, it's no HashSet<Node> instance.");
-					}
+				if ((nodes = (HashSet<Node>) FacetDbUtils.get(m_leaveDB, key)) == null) {
+					nodes = new HashSet<Node>();
 				}
-			} else {
+
+			} catch (ClassCastException e) {
+
+				s_log.error("found entry for key '" + key
+						+ "'. However, it's no HashSet<Node> instance.");
 				nodes = new HashSet<Node>();
 			}
 
-			nodes.add(leave);
-			FacetDbUtils.store(this.m_leaveDB, key, nodes);
+			if (!nodes.contains(leave)) {
+				nodes.add(leave);
+				FacetDbUtils.store(this.m_leaveDB, key, nodes);
+			}
+		}
+	}
+
+	private void updateLiteralDB(String extension, String endpointProp,
+			String literalString) throws DatabaseException, IOException,
+			StorageException {
+
+		String key = FacetDbUtils
+				.getKey(new String[] { extension, endpointProp });
+
+		LiteralList literalList = null;
+
+		try {
+
+			if ((literalList = (LiteralList) FacetDbUtils.get(m_literalDB, key)) == null) {
+				literalList = new LiteralList();
+			}
+
+		} catch (ClassCastException e) {
+
+			s_log.error("found entry for key '" + key
+					+ "'. However, it's no LiteralList instance.");
+
+			literalList = new LiteralList();
+		}
+
+		ILiteral lit = new Literal(FacetUtil.getLiteralValue(literalString),
+				FacetUtil.getLiteralDataType(literalString));
+
+		if (!literalList.contains(lit)) {
+			literalList.add(lit);
+			FacetDbUtils.store(this.m_literalDB, key, literalList);
 		}
 	}
 
@@ -1107,34 +1143,26 @@ public class FacetTreeBuilder implements IFacetIndexBuilder{
 			String key = FacetDbUtils.getKey(keyElements);
 
 			BitVector vector = null;
-			
-			int pos = this.m_facetHelper.getPosition(extension, sub);		
-			
-			Cursor cursor = this.m_vectorDB.openCursor(null, null);
+			int pos = this.m_facetHelper.getPosition(extension, sub);
 
-			DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+			try {
 
-			DatabaseEntry out = new DatabaseEntry();
-
-			if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-
-				if (out.getData() != null) {
-
-					Object res = Util.bytesToObject(out.getData());
-
-					if (res instanceof BitVector) {						
-						vector = (BitVector) res;												
-					} else {
-						s_log.error("found entry for key '" + key
-								+ "'. However, it's no bitvector instance.");
-					}
+				if ((vector = (BitVector) FacetDbUtils.get(m_vectorDB, key)) == null) {
+					vector = new BitVector(extensionSize);
 				}
-			} else {
+
+			} catch (ClassCastException e) {
+
+				s_log.error("found entry for key '" + key
+						+ "'. However, it's no bitvector instance.");
+
 				vector = new BitVector(extensionSize);
 			}
-			
-			vector.put(pos, true);
-			FacetDbUtils.store(this.m_vectorDB, key, vector);
+
+			if (!vector.get(pos)) {
+				vector.put(pos, true);
+				FacetDbUtils.store(this.m_vectorDB, key, vector);
+			}
 		}
 	}
 }

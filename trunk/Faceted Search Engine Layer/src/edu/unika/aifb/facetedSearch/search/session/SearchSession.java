@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import edu.unika.aifb.facetedSearch.Environment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.api.model.impl.IndividualFactorty;
@@ -58,7 +58,7 @@ public class SearchSession {
 	}
 
 	public void changeDefaultLevel(int level) {
-		Environment.DEFAULT_DEPTH_K = level;
+		FacetEnvironment.DEFAULT_DEPTH_K = level;
 	}
 
 	public void clean() {
@@ -134,7 +134,7 @@ public class SearchSession {
 
 	public boolean rankingEnabled() {
 		return Boolean.getBoolean(this.m_props
-				.getProperty(Environment.RANKING_ENABLED));
+				.getProperty(FacetEnvironment.RANKING_ENABLED));
 	}
 
 	/**

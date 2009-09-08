@@ -16,13 +16,17 @@
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package edu.unika.aifb.facetedSearch.index;
+package edu.unika.aifb.facetedSearch.util;
 
 import java.io.IOException;
+import java.util.Stack;
 
+import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.LockMode;
+import com.sleepycat.je.OperationStatus;
 
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -32,7 +36,7 @@ import edu.unika.aifb.graphindex.util.Util;
  */
 public class FacetDbUtils {
 
-	public class DatabaseName {
+	public class DatabaseNames {
 
 		public static final String TREE = "tree_db";
 
@@ -41,13 +45,55 @@ public class FacetDbUtils {
 		public static final String ENDPOINT = "endpoint_db";
 
 		public static final String FH_CACHE = "fh_cache_db";
-		
+
 		public static final String FTB_CACHE = "ftb_cache_db";
 
+		public static final String FDB_CACHE = "fdb_cache_db";
+
 		public static final String VECTOR = "vector_db";
+
+		public static final String LITERAL = "literal_db";
 	}
-	
-	public static final String KEY_DELIM = Character.toString((char)31);
+
+	public static final String KEY_DELIM = Character.toString((char) 31);
+
+	@SuppressWarnings("unchecked")
+	public static <T> T get(Database db, String key) throws DatabaseException,
+			IOException {
+
+		T res = null;
+		Cursor cursor = db.openCursor(null, null);
+		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry out = new DatabaseEntry();
+
+		if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+			res = (T) Util.bytesToObject(out.getData());
+		}
+
+		cursor.close();
+
+		return res;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> Stack<T> getAll(Database db, String key)
+			throws DatabaseException, IOException {
+
+		Stack<T> res = new Stack<T>();
+		Cursor cursor = db.openCursor(null, null);
+		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry out = new DatabaseEntry();
+
+		while (cursor.getNext(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+			Object nextRes = Util.bytesToObject(out.getData());
+			res.add((T) nextRes);
+
+		}
+
+		cursor.close();
+
+		return res;
+	}
 
 	public static String getKey(String... elems) {
 

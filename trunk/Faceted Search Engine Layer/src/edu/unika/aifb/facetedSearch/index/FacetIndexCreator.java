@@ -24,8 +24,13 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetDistanceIndexBuilder;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexBuilderHelper;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeBuilder;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetVPosIndexBuilder;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
+import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
@@ -40,8 +45,7 @@ public class FacetIndexCreator {
 	private final static Logger s_log = Logger
 			.getLogger(FacetIndexCreator.class);
 
-	public FacetIndexCreator(IndexDirectory indexDirectory)
-			throws IOException {
+	public FacetIndexCreator(IndexDirectory indexDirectory) throws IOException {
 		m_idxDirectory = indexDirectory;
 		m_idxConfig = new IndexConfiguration();
 	}
@@ -53,7 +57,44 @@ public class FacetIndexCreator {
 		try {
 
 			FacetIndex facetIndex = new FacetIndex(m_idxDirectory, m_idxConfig);
-			facetIndex.build();
+			IndexReader idxReader = new IndexReader(m_idxDirectory);
+			FacetIndexBuilderHelper helper = FacetIndexBuilderHelper
+					.getInstance(idxReader, m_idxDirectory);
+
+			s_log.debug("start building facet index vPos ... ");
+
+			// Vector Position Index
+			FacetVPosIndexBuilder vPosIndexBuilder = new FacetVPosIndexBuilder(
+					this.m_idxDirectory, idxReader, helper);
+			vPosIndexBuilder.build();
+			vPosIndexBuilder.close();
+
+			s_log.debug("facet index vPos finished!");
+
+			helper.setVPosIndex(facetIndex.getVPosIndex());
+
+			// Facet Tree Index
+
+			s_log.debug("start building facet trees ... ");
+
+			FacetTreeBuilder treeBuilder = new FacetTreeBuilder(
+					this.m_idxDirectory, idxReader, helper);
+			treeBuilder.build();
+			treeBuilder.close();
+
+			helper.setLeaveDB(facetIndex.getLeaveDB());
+			helper.setPropertyEndPointDB(facetIndex.getEndPointDB());
+			helper.setLiteralDB(facetIndex.getLiteralDB());
+
+			s_log.debug("facet trees finished!");
+
+			// Distance Index
+			FacetDistanceIndexBuilder distanceBuilder = new FacetDistanceIndexBuilder(
+					this.m_idxDirectory, idxReader, helper);
+			distanceBuilder.build();
+			distanceBuilder.close();
+
+			FacetIndexBuilderHelper.close();
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

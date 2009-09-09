@@ -17,8 +17,6 @@
  */
 package edu.unika.aifb.facetedSearch.index.algo.distance.impl;
 
-import java.math.BigDecimal;
-
 import org.apache.log4j.Logger;
 import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
@@ -43,11 +41,11 @@ public class NumericalDistanceMetric implements IDistanceMetric {
 	private NumericalDistanceMetric() {
 	}
 
-	public BigDecimal getDistance(ILiteral lit1, ILiteral lit2) {
+	public double getDistance(ILiteral lit1, ILiteral lit2) {
 
 		double double1 = XMLDatatypeUtil.parseDouble(lit1.getValue());
 		double double2 = XMLDatatypeUtil.parseDouble(lit2.getValue());
 
-		return new BigDecimal(Math.abs(double1 - double2));
+		return Math.abs(double1 - double2);
 	}
 }

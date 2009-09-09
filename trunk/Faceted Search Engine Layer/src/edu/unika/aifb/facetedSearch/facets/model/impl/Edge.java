@@ -37,11 +37,11 @@ public abstract class Edge extends DefaultWeightedEdge implements IEdge {
 
 	public Edge(String name) {
 		m_name = name;
-		m_weight = FacetEnvironment.DEFAULT_WEIGHT;
+		m_weight = FacetEnvironment.DefaultValue.WEIGHT;
 	}
 
 	public Edge() {
-		m_weight = FacetEnvironment.DEFAULT_WEIGHT;
+		m_weight = FacetEnvironment.DefaultValue.WEIGHT;
 	}
 
 	/*

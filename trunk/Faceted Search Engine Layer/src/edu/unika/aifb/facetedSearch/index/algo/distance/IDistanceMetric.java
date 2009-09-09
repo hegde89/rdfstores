@@ -17,8 +17,6 @@
  */
 package edu.unika.aifb.facetedSearch.index.algo.distance;
 
-import java.math.BigDecimal;
-
 import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 
 /**
@@ -27,6 +25,6 @@ import edu.unika.aifb.facetedSearch.api.model.ILiteral;
  */
 public interface IDistanceMetric {
 
-	public BigDecimal getDistance(ILiteral lit1, ILiteral lit2);
+	public double getDistance(ILiteral lit1, ILiteral lit2);
 
 }

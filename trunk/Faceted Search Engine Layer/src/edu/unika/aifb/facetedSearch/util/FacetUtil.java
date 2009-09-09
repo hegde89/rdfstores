@@ -63,20 +63,10 @@ public class FacetUtil {
 
 	private static Logger s_log = Logger.getLogger(FacetUtil.class);
 
-	public static String getLiteralValue(String lit) {
-
-		return lit.lastIndexOf(FacetEnvironment.DEFAULT_LITERAL_DELIM) == -1 ? lit
-				: lit
-						.substring(
-								0,
-								lit
-										.lastIndexOf(FacetEnvironment.DEFAULT_LITERAL_DELIM));
-	}
-
 	public static DataType getLiteralDataType(String literalString) {
 
 		StringTokenizer tokenizer = new StringTokenizer(literalString,
-				FacetEnvironment.DEFAULT_LITERAL_DELIM);
+				FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
 		String last_token = null;
 
@@ -127,7 +117,7 @@ public class FacetUtil {
 				}
 			} catch (IllegalArgumentException e) {
 
-				s_log.error("datatype "+last_token + " is no valid URI!");
+				s_log.error("datatype " + last_token + " is no valid URI!");
 				return null;
 			}
 		} else {
@@ -137,10 +127,20 @@ public class FacetUtil {
 		}
 	}
 
+	public static String getLiteralValue(String lit) {
+
+		return lit.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM) == -1 ? lit
+				: lit
+						.substring(
+								0,
+								lit
+										.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM));
+	}
+
 	public static String getValueOfLiteral(String lit) {
 
 		StringTokenizer tokenizer = new StringTokenizer(lit,
-				FacetEnvironment.DEFAULT_LITERAL_DELIM);
+				FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : null;
 	}

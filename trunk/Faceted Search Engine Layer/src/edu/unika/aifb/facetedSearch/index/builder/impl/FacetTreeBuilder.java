@@ -37,7 +37,6 @@ import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
@@ -54,6 +53,8 @@ import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeType;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.util.FacetUtil;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -114,11 +115,6 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 			s_log.debug("start building facet tree for extension: "
 					+ source_extension + " (" + (++count) + "/"
 					+ source_extensions.size() + ")");
-
-			if (count > 3) {
-				break;
-				// TODO
-			}
 
 			FacetTree facetTree = new FacetTree();
 			HashMap<Node, HashSet<String>> endPoints = new HashMap<Node, HashSet<String>>();
@@ -189,8 +185,6 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 				List<String> individuals = spIdx.getDataList(
 						IndexDescription.EXTENT, DataField.ENT,
 						source_extension.getLabel());
-
-				System.out.println("individuals: " + individuals);
 
 				int extensionSize = individuals.size();
 
@@ -510,24 +504,14 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 	private void initDBs() throws EnvironmentLockedException,
 			DatabaseException, IOException {
 
-		EnvironmentConfig envConfig = new EnvironmentConfig();
-		envConfig.setTransactional(false);
-		envConfig.setAllowCreate(true);
+		this.m_env = EnvironmentFactory.make(this.m_idxDirectory.getDirectory(
+				IndexDirectory.FACET_TREE_DIR, true));
 
-		this.m_env = new Environment(this.m_idxDirectory.getDirectory(
-				IndexDirectory.FACET_TREE_DIR, true), envConfig);
-
-		DatabaseConfig config = new DatabaseConfig();
-		config.setTransactional(false);
-		config.setAllowCreate(true);
-		config.setSortedDuplicates(false);
-		config.setDeferredWrite(true);
+		// Databases without duplicates
+		DatabaseConfig config = DbConfigFactory.make(false);
 
 		this.m_treeDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.TREE, config);
-
-		this.m_leaveDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.LEAVE, config);
 
 		this.m_propertyEndPointDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.ENDPOINT, config);
@@ -540,6 +524,13 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 
 		this.m_literalDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.LITERAL, config);
+
+		// Databases with duplicates
+		DatabaseConfig config2 = DbConfigFactory.make(true);
+
+		this.m_leaveDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.LEAVE, config2);
+
 	}
 
 	private Map<String, Stack<Node>> insertClassPath(Stack<Node> classPath,
@@ -1069,7 +1060,6 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 	// }
 	// }
 
-	@SuppressWarnings("unchecked")
 	private void updateLeaveDB(Stack<Node> leaves, String extension,
 			String object) throws DatabaseException, IOException {
 
@@ -1077,27 +1067,35 @@ public class FacetTreeBuilder implements IFacetIndexBuilder {
 		String key = FacetDbUtils.getKey(keyElements);
 
 		for (Node leave : leaves) {
-
-			HashSet<Node> nodes = null;
-
-			try {
-
-				if ((nodes = (HashSet<Node>) FacetDbUtils.get(m_leaveDB, key)) == null) {
-					nodes = new HashSet<Node>();
-				}
-
-			} catch (ClassCastException e) {
-
-				s_log.error("found entry for key '" + key
-						+ "'. However, it's no HashSet<Node> instance.");
-				nodes = new HashSet<Node>();
-			}
-
-			if (!nodes.contains(leave)) {
-				nodes.add(leave);
-				FacetDbUtils.store(this.m_leaveDB, key, nodes);
-			}
+			FacetDbUtils.store(this.m_leaveDB, key, leave);
 		}
+
+		// String[] keyElements = new String[] { extension, object };
+		// String key = FacetDbUtils.getKey(keyElements);
+		//
+		// for (Node leave : leaves) {
+		//
+		// HashSet<Node> nodes = null;
+		//
+		// try {
+		//
+		// if ((nodes = (HashSet<Node>) FacetDbUtils.get(m_leaveDB, key)) ==
+		// null) {
+		// nodes = new HashSet<Node>();
+		// }
+		//
+		// } catch (ClassCastException e) {
+		//
+		// s_log.error("found entry for key '" + key
+		// + "'. However, it's no HashSet<Node> instance.");
+		// nodes = new HashSet<Node>();
+		// }
+		//
+		// if (!nodes.contains(leave)) {
+		// nodes.add(leave);
+		// FacetDbUtils.store(this.m_leaveDB, key, nodes);
+		// }
+		// }
 	}
 
 	private void updateLiteralDB(String extension, String endpointProp,

@@ -49,9 +49,9 @@ public class TimeDistanceMetric implements IDistanceMetric {
 
 	}
 
-	public BigDecimal getDistance(ILiteral lit1, ILiteral lit2) {
+	public double getDistance(ILiteral lit1, ILiteral lit2) {
 
-		double distance = -1;
+		double distance = Double.NaN;
 
 		try {
 
@@ -66,8 +66,13 @@ public class TimeDistanceMetric implements IDistanceMetric {
 			distance += Math.abs(cal2.getMinute() - cal1.getMinute()) * 60;
 			distance += Math.abs(cal2.getSecond() - cal1.getSecond());
 
-			return (new BigDecimal(distance)).divide(s_maxDistance, 100,
-					RoundingMode.UP);
+			BigDecimal res = (new BigDecimal(distance)).divide(s_maxDistance, 100, RoundingMode.UP);
+
+			assert (res.max(BigDecimal.ONE).equals(BigDecimal.ONE) && (res
+					.min(BigDecimal.ZERO).equals(BigDecimal.ZERO) || res
+					.longValue() == BigDecimal.ZERO.longValue()));
+
+			return res.doubleValue();
 
 		} catch (NumberFormatException e) {
 
@@ -77,6 +82,6 @@ public class TimeDistanceMetric implements IDistanceMetric {
 
 		}
 
-		return new BigDecimal(distance);
+		return new BigDecimal(distance).doubleValue();
 	}
 }

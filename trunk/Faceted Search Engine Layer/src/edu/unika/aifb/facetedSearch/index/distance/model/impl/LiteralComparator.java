@@ -52,12 +52,18 @@ public class LiteralComparator implements Comparator<ILiteral> {
 
 			case STRING: {
 
-				BigDecimal dis1 = LexicalEditDistance.getDistance2Root(lit1
+				double dis1 = LexicalEditDistance.getDistance2Root(lit1
 						.getValue());
-				BigDecimal dis2 = LexicalEditDistance.getDistance2Root(lit2
+				double dis2 = LexicalEditDistance.getDistance2Root(lit2
 						.getValue());
-
-				return dis1.compareTo(dis2);
+				
+				if (dis1 > dis2) {
+					return 1;
+				} else if (dis1 < dis2){
+					return -1;
+				} else {
+					return 0;
+				}
 			}
 			case NUMERICAL: {
 

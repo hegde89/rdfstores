@@ -1,0 +1,13 @@
+idx.dir=D:/Data/DA/idx
+ranking.enabled=false
+files=D:/UNI/workspace/DA/Faceted Search Engine Layer/res/ontos/l1.nt
+ignoreDataTypes=false
+createDataIndex=true
+createStructureIndex=true
+createKeywordIndex=false
+createDataExtensions=true
+neighborhood.size=2
+structureIndex.pathLength=1
+structureBased.dataPartitioning=true
+onto.language=nt
+

@@ -18,13 +18,18 @@
  */
 package edu.unika.aifb.facetedSearch.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Stack;
 
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 
@@ -36,7 +41,7 @@ import edu.unika.aifb.graphindex.util.Util;
  */
 public class FacetDbUtils {
 
-	public class DatabaseNames {
+	public static class DatabaseNames {
 
 		public static final String TREE = "tree_db";
 
@@ -55,7 +60,39 @@ public class FacetDbUtils {
 		public static final String LITERAL = "literal_db";
 	}
 
+	public static class DbConfigFactory {
+
+		public static DatabaseConfig make(boolean allowDups) {
+
+			DatabaseConfig config = new DatabaseConfig();
+			config.setTransactional(false);
+			config.setAllowCreate(true);
+			config.setSortedDuplicates(allowDups);
+			config.setDeferredWrite(true);
+
+			return config;
+		}
+	}
+
+	public static class EnvironmentFactory {
+
+		public static Environment make(File dir)
+				throws EnvironmentLockedException, DatabaseException {
+
+			EnvironmentConfig envConfig = new EnvironmentConfig();
+			envConfig.setTransactional(false);
+			envConfig.setAllowCreate(true);
+
+			return new Environment(dir, envConfig);
+		}
+	}
+
 	public static final String KEY_DELIM = Character.toString((char) 31);
+
+	public static boolean contains(Database db, String key)
+			throws DatabaseException, IOException {
+		return get(db, key) == null ? false : true;
+	}
 
 	@SuppressWarnings("unchecked")
 	public static <T> T get(Database db, String key) throws DatabaseException,
@@ -109,6 +146,24 @@ public class FacetDbUtils {
 		}
 
 		return key;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T getNext(Cursor cursor, String key, String entry)
+			throws DatabaseException, IOException {
+
+		T res = null;
+
+		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry out = entry == null ? new DatabaseEntry()
+				: new DatabaseEntry(Util.objectToBytes(entry));
+
+		if (cursor.getNext(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+			Object nextRes = Util.bytesToObject(out.getData());
+			res = (T) nextRes;
+		}
+
+		return res;
 	}
 
 	public static void store(Database db, String key, Object object2store) {

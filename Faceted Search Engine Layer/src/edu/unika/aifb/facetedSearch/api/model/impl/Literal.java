@@ -70,7 +70,7 @@ public class Literal extends AbstractObject implements ILiteral {
 
 	@Override
 	public String toString() {
-		return super.getValue() + FacetEnvironment.DEFAULT_LITERAL_DELIM
+		return super.getValue() + FacetEnvironment.DefaultValue.LITERAL_DELIM
 				+ m_dataType;
 	}
 }

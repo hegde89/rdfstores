@@ -58,7 +58,7 @@ public class SearchSession {
 	}
 
 	public void changeDefaultLevel(int level) {
-		FacetEnvironment.DEFAULT_DEPTH_K = level;
+		FacetEnvironment.DefaultValue.DEPTH_K = level;
 	}
 
 	public void clean() {

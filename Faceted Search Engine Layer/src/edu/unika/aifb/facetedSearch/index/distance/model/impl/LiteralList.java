@@ -109,6 +109,10 @@ public class LiteralList implements Iterable<ILiteral>, Serializable {
 		m_literals = literals;
 	}
 
+	public int size() {
+		return m_literals.size();
+	}
+
 	public String toString() {
 		return "[Datatype: '" + m_dataType + "', Literals:" + m_literals + "]";
 	}

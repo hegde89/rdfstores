@@ -40,9 +40,10 @@ public class SearchSessionFactory {
 	private RdfStoreConnection m_con;
 
 	private static SearchSessionFactory s_instance;
-	private static SearchSession s_pool[] = new SearchSession[FacetEnvironment.MAX_SESSIONS];
-	private static ReentrantLock[] s_locks = new ReentrantLock[FacetEnvironment.MAX_SESSIONS];
-	private static Semaphore s_sem = new Semaphore(FacetEnvironment.MAX_SESSIONS);
+	private static SearchSession s_pool[] = new SearchSession[FacetEnvironment.DefaultValue.MAX_SESSIONS];
+	private static ReentrantLock[] s_locks = new ReentrantLock[FacetEnvironment.DefaultValue.MAX_SESSIONS];
+	private static Semaphore s_sem = new Semaphore(
+			FacetEnvironment.DefaultValue.MAX_SESSIONS);
 
 	public static SearchSessionFactory getInstance(Properties props) {
 		return s_instance == null ? s_instance = new SearchSessionFactory(props)
@@ -67,7 +68,7 @@ public class SearchSessionFactory {
 			e1.printStackTrace();
 		}
 
-		for (int i = 0; i < FacetEnvironment.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
 			s_locks[i] = new ReentrantLock();
 			try {
 				s_pool[i] = new SearchSession(this.m_store, i, props);
@@ -79,7 +80,7 @@ public class SearchSessionFactory {
 
 	public int acquire() throws InterruptedException {
 		s_sem.acquire();
-		for (int i = 0; i < FacetEnvironment.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
 			if (s_locks[i].tryLock()) {
 				return i;
 			}

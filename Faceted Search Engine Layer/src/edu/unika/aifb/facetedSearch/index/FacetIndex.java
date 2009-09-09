@@ -30,12 +30,13 @@ import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -110,6 +111,22 @@ public class FacetIndex extends Index {
 		System.gc();
 	}
 
+	/**
+	 * @return the endpointDB
+	 * @throws IOException
+	 * @throws DatabaseException
+	 * @throws EnvironmentLockedException
+	 */
+	public Database getEndPointDB() throws EnvironmentLockedException,
+			DatabaseException, IOException {
+
+		if (m_propEndPointDB == null) {
+			initDBs();
+		}
+
+		return m_propEndPointDB;
+	}
+
 	public FacetTree getFacetTree(String extension) throws DatabaseException,
 			IOException {
 
@@ -178,23 +195,6 @@ public class FacetIndex extends Index {
 		return nodes;
 	}
 
-	
-	/**
-	 * @return the endpointDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
-	 */
-	public Database getEndPointDB() throws EnvironmentLockedException,
-			DatabaseException, IOException {
-
-		if (m_propEndPointDB == null) {
-			initDBs();
-		}
-
-		return m_propEndPointDB;
-	}
-	
 	/**
 	 * @return the leaveDB
 	 * @throws IOException
@@ -291,30 +291,22 @@ public class FacetIndex extends Index {
 
 		s_log.debug("get db connection ...");
 
-		EnvironmentConfig envConfig = new EnvironmentConfig();
-		envConfig.setTransactional(false);
-		envConfig.setAllowCreate(false);
+		this.m_env = EnvironmentFactory.make(this.m_idxDirectory.getDirectory(
+				IndexDirectory.FACET_TREE_DIR, true));
 
-		this.m_env = new Environment(this.m_idxDirectory.getDirectory(
-				IndexDirectory.FACET_TREE_DIR, true), envConfig);
-
-		DatabaseConfig config = new DatabaseConfig();
-		config.setTransactional(false);
-		config.setAllowCreate(false);
-		config.setSortedDuplicates(false);
-		config.setDeferredWrite(true);
+		DatabaseConfig config = DbConfigFactory.make(false);
 
 		this.m_treeDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.TREE, config);
-
-		this.m_leaveDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.LEAVE, config);
 
 		this.m_propEndPointDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.ENDPOINT, config);
 
 		this.m_literalDB = this.m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.LITERAL, config);
+
+		this.m_leaveDB = this.m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.LEAVE, DbConfigFactory.make(true));
 
 		s_log.debug("got db connection!");
 	}

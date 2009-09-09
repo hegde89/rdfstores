@@ -1,7 +1,5 @@
 package edu.unika.aifb.facetedSearch.index.algo.distance.impl;
 
-import java.math.BigDecimal;
-
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.api.model.ILiteral;
@@ -22,7 +20,7 @@ public class StringDistanceMetric implements IDistanceMetric {
 	private StringDistanceMetric() {
 	}
 
-	public BigDecimal getDistance(ILiteral lit1, ILiteral lit2) {
+	public double getDistance(ILiteral lit1, ILiteral lit2) {
 		return LexicalEditDistance
 				.getDistance(lit1.getValue(), lit2.getValue());
 	}

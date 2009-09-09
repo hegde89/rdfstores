@@ -55,12 +55,19 @@ public class FacetEnvironment {
 	/*
 	 * Default Values
 	 */
-	public static String DEFAULT_INDEX_DIRECTORY = "D:/Data/DA/idx";
-	public static double DEFAULT_WEIGHT = -1.0;
-	public static boolean DEFAULT_RANKING_ENABLED = false;
-	public static int DEFAULT_DEPTH_K = 3;
-	public static String DEFAULT_LITERAL_DELIM = Character.toString((char) 94);
-	public static int MAX_SESSIONS = 1;
+	
+	public static class DefaultValue {
+		
+		public static String INDEX_DIRECTORY = "D:/Data/DA/idx";
+		public static double WEIGHT = -1.0;
+		public static boolean RANKING_ENABLED = false;
+		public static int DEPTH_K = 3;
+		public static String LITERAL_DELIM = Character.toString((char) 94);
+		public static int MAX_SESSIONS = 1;
+		public static int MAXLENGTH_STRING = 15;
+	}
+	
+
 
 	/*
 	 * evaluator types

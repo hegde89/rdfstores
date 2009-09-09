@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="MacRoman"?>
+<jardesc>
+<jar path="graphindex/target/evaluation.jar"/>
+<options buildIfNeeded="true" compress="true" descriptionLocation="/evaluation/export.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+<storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+<selectedProjects/>
+<manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+<sealing sealJar="false">
+<packagesToSeal/>
+<packagesToUnSeal/>
+</sealing>
+</manifest>
+<selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{QueryCodeGenerator.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{ERImportTest.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{EntityQuery.java"/>
+<folder path="/evaluation/libs"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{CombinedEval.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{StarQuery.java"/>
+<file path="/evaluation/.classpath"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{ErdosRenyi.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{QueryExecutor.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{CombinedNewEval.java"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{GraphQuery.java"/>
+<file path="/evaluation/.project"/>
+<javaElement handleIdentifier="=evaluation/src&lt;edu.unika.aifb.graphindex.evaluation{PathQuery.java"/>
+</selectedElements>
+</jardesc>

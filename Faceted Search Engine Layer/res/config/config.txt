@@ -1,5 +1,6 @@
 idx.dir=D:/Data/DA/idx
 ranking.enabled=false
+facets.enabled=false
 files=D:/UNI/workspace/DA/Faceted Search Engine Layer/res/ontos/l1.nt
 ignoreDataTypes=false
 createDataIndex=true

@@ -34,6 +34,7 @@ public class FacetEnvironment {
 	 */
 	public static final String INDEX_DIRECTORY = "idx.dir";
 	public static final String RANKING_ENABLED = "ranking.enabled";
+	public static final String FACETS_ENABLED = "facets.enabled";
 	public static final String ACTION = "action";
 	public static final String FILES = "files";
 	public static final String CREATE_DATA_INDEX = "createDataIndex";
@@ -65,6 +66,7 @@ public class FacetEnvironment {
 		public static String LITERAL_DELIM = Character.toString((char) 94);
 		public static int MAX_SESSIONS = 1;
 		public static int MAXLENGTH_STRING = 15;
+		public static int NUMBER_OF_RESULTS_PER_PAGE = 20;
 	}
 	
 
@@ -73,7 +75,7 @@ public class FacetEnvironment {
 	 * evaluator types
 	 */
 	public enum EvaluatorType {
-		VPEvaluator, CombinedQueryEvaluator, KeywordQueryEvaluator
+		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator
 	}
 
 	/*

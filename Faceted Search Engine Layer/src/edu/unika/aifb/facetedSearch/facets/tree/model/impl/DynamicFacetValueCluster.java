@@ -1,0 +1,55 @@
+package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
+
+import java.util.Map;
+
+import edu.unika.aifb.facetedSearch.api.model.IIndividual;
+import edu.unika.aifb.facetedSearch.facets.tree.model.IDynamicFacetValueCluster;
+import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
+
+public class DynamicFacetValueCluster extends FacetValueCluster implements
+		IDynamicFacetValueCluster {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3453365940192769709L;
+
+	private INode m_leftBorder;
+
+	private INode m_rightBorder;
+
+	public DynamicFacetValueCluster(String value, NodeContent content) {
+		super(value, content);
+	}
+
+	public DynamicFacetValueCluster(String value, NodeType type) {
+		super(value, type);
+	}
+
+	public DynamicFacetValueCluster(String value, NodeType type,
+			NodeContent content) {
+		super(value, type, content);
+	}
+
+	public INode getLeftBorder() {
+		return m_leftBorder;
+	}
+
+	public INode getRightBorder() {
+		return m_rightBorder;
+	}
+
+	@Override
+	public Map<IIndividual, Integer> getSources() {
+		// TODO GET SOURCES IMPORTANT
+		return null;
+	}
+
+	public void setLeftBorder(INode leftValue) {
+		m_leftBorder = leftValue;
+	}
+
+	public void setRightBorder(INode rightValue) {
+		m_rightBorder = rightValue;
+	}
+}

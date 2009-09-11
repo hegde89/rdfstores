@@ -15,20 +15,23 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
+package edu.unika.aifb.facetedSearch.algo.construction.tree;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+import java.io.IOException;
+
+import com.sleepycat.je.DatabaseException;
+
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
+import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * @author andi
  * 
  */
-public interface IBrowsingObject {
+public interface IFacetTreeBuilder {
 
-	public StaticFacetValueClusterLeave getLeave();
-
-	public String getSourceExtension();
-
-	public void setSourceExtension(String extension);
+	public FacetTree contruct(Table<String> results, int column)
+			throws StorageException, IOException, DatabaseException;
 
 }

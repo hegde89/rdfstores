@@ -20,16 +20,17 @@ package edu.unika.aifb.facetedSearch.algo.ranking;
 
 import java.util.List;
 
-import edu.unika.aifb.facetedSearch.facets.model.IEdge;
-import edu.unika.aifb.facetedSearch.facets.model.IFacetValueTuple;
-import edu.unika.aifb.facetedSearch.facets.model.INode;
+import edu.unika.aifb.facetedSearch.Delegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
  * 
  */
-public class RankingDelegator {
+public class RankingDelegator extends Delegator {
 
 	@SuppressWarnings("unused")
 	private SearchSession m_session;
@@ -46,11 +47,11 @@ public class RankingDelegator {
 
 	public void doRanking(IEdge edge, INode node){
 		
-		double score = 0L;
+//		double score = 0L;
 		
 //		TODO
-		
-		edge.setWeight(score);		
+//		
+//		edge.setWeight(score);		
 	}
 	
 	public List<IFacetValueTuple> doSorting(List<IFacetValueTuple> input){

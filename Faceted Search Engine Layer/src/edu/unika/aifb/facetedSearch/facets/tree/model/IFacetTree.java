@@ -15,20 +15,26 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
+package edu.unika.aifb.facetedSearch.facets.tree.model;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+import java.util.Set;
+
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 
 /**
  * @author andi
  * 
  */
-public interface IBrowsingObject {
+public interface IFacetTree {
 
-	public StaticFacetValueClusterLeave getLeave();
+	public Set<Node> getInnerNodes();
 
-	public String getSourceExtension();
+	public Set<Node> getLeaves();
 
-	public void setSourceExtension(String extension);
+	public Node getNodeById(double id);
+
+	public Node getRoot();
+
+	public boolean isEmpty();
 
 }

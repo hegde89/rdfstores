@@ -19,7 +19,7 @@
 package edu.unika.aifb.facetedSearch.index;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.apache.log4j.Logger;
 
@@ -27,13 +27,12 @@ import cern.colt.bitvector.BitVector;
 
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.index.tree.model.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
@@ -44,7 +43,7 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
-import edu.unika.aifb.graphindex.util.Util;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 
 /**
  * @author andi
@@ -85,28 +84,42 @@ public class FacetIndex extends Index {
 	 * @see edu.unika.aifb.graphindex.index.Index#close()
 	 */
 	@Override
-	public void close() throws StorageException, DatabaseException {
+	public void close() throws StorageException {
 
-		if (this.m_treeDB != null) {
-			this.m_treeDB.close();
+		if (m_treeDB != null) {
+
+			try {
+				m_treeDB.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
 		}
 
-		if (this.m_leaveDB != null) {
-			this.m_leaveDB.close();
+		if (m_leaveDB != null) {
+
+			try {
+				m_leaveDB.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
 		}
 
-		if (this.m_vPosIndex != null) {
-			this.m_vPosIndex.close();
+		if (m_vPosIndex != null) {
+			m_vPosIndex.close();
 		}
 
-		if (this.m_env != null) {
-			this.m_env.close();
+		if (m_env != null) {
+			try {
+				this.m_env.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
 		}
 
-		this.m_leaveDB = null;
-		this.m_treeDB = null;
-		this.m_env = null;
-		this.m_vPosIndex = null;
+		m_leaveDB = null;
+		m_treeDB = null;
+		m_env = null;
+		m_vPosIndex = null;
 
 		System.gc();
 	}
@@ -130,69 +143,23 @@ public class FacetIndex extends Index {
 	public FacetTree getFacetTree(String extension) throws DatabaseException,
 			IOException {
 
-		if (this.m_treeDB == null) {
-			this.initDBs();
+		if (m_treeDB == null) {
+			initDBs();
 		}
 
-		s_log.debug("looking for facet tree for extension: " + extension);
-
-		FacetTree tree = null;
-
-		DatabaseEntry dbKey = new DatabaseEntry(Util.intToBytes(extension
-				.hashCode()));
-		DatabaseEntry out = new DatabaseEntry();
-
-		this.m_treeDB.get(null, dbKey, out, null);
-
-		if (out.getData() != null) {
-
-			Object object = Util.bytesToObject(out.getData());
-
-			if (object instanceof FacetTree) {
-				tree = (FacetTree) object;
-			} else {
-				s_log.error("key found, however, data was no tree.");
-			}
-		} else {
-			s_log.debug("no tree found!");
-		}
-
-		return tree;
+		return FacetDbUtils.get(m_treeDB, FacetDbUtils
+				.getKey(new String[] { extension }));
 	}
 
-	@SuppressWarnings("unchecked")
-	public ArrayList<Node> getFacetTreeLeaves(String extension,
-			String objectValue) throws DatabaseException, IOException {
+	public HashSet<Node> getLeaves(String extension, String sourceIndividual)
+			throws DatabaseException, IOException {
 
-		if (this.m_leaveDB == null) {
-			this.initDBs();
+		if (m_leaveDB == null) {
+			initDBs();
 		}
 
-		s_log.debug("looking for leaves for extension / object: " + extension
-				+ " / " + objectValue);
-
-		ArrayList<Node> nodes = null;
-
-		DatabaseEntry dbKey = new DatabaseEntry(Util
-				.intToBytes((extension + objectValue).hashCode()));
-		DatabaseEntry out = new DatabaseEntry();
-
-		this.m_leaveDB.get(null, dbKey, out, null);
-
-		if (out.getData() != null) {
-
-			Object object = Util.bytesToObject(out.getData());
-
-			if (object instanceof ArrayList) {
-				nodes = (ArrayList<Node>) object;
-			} else {
-				s_log.error("key found, however, data was no arraylist.");
-			}
-		} else {
-			s_log.debug("no data found!");
-		}
-
-		return nodes;
+		return FacetDbUtils.get(m_leaveDB, FacetDbUtils.getKey(new String[] {
+				extension, sourceIndividual }));
 	}
 
 	/**
@@ -240,11 +207,11 @@ public class FacetIndex extends Index {
 	public int getPosition(String extension, String subject)
 			throws IOException, StorageException {
 
-		if (this.m_vPosIndex == null) {
-			this.initIndices();
+		if (m_vPosIndex == null) {
+			initIndices();
 		}
 
-		String posString = this.m_vPosIndex.getDataItem(IndexDescription.ESV,
+		String posString = m_vPosIndex.getDataItem(IndexDescription.ESV,
 				DataField.VECTOR_POS, new String[] { extension, subject });
 
 		return posString == null ? -1 : Integer.parseInt(posString);
@@ -279,11 +246,11 @@ public class FacetIndex extends Index {
 	 */
 	public LuceneIndexStorage getVPosIndex() throws IOException {
 
-		if (this.m_vPosIndex == null) {
-			this.initIndices();
+		if (m_vPosIndex == null) {
+			initIndices();
 		}
 
-		return this.m_vPosIndex;
+		return m_vPosIndex;
 	}
 
 	private void initDBs() throws EnvironmentLockedException,
@@ -291,30 +258,32 @@ public class FacetIndex extends Index {
 
 		s_log.debug("get db connection ...");
 
-		this.m_env = EnvironmentFactory.make(this.m_idxDirectory.getDirectory(
+		m_env = EnvironmentFactory.make(m_idxDirectory.getDirectory(
 				IndexDirectory.FACET_TREE_DIR, true));
 
 		DatabaseConfig config = DbConfigFactory.make(false);
 
-		this.m_treeDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.TREE, config);
+		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
+				config);
 
-		this.m_propEndPointDB = this.m_env.openDatabase(null,
+		m_propEndPointDB = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.ENDPOINT, config);
 
-		this.m_literalDB = this.m_env.openDatabase(null,
+		m_literalDB = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.LITERAL, config);
 
-		this.m_leaveDB = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.LEAVE, DbConfigFactory.make(true));
+		m_leaveDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.LEAVE,
+				DbConfigFactory.make(true));
 
 		s_log.debug("got db connection!");
 	}
 
 	private void initIndices() throws IOException {
-		this.m_vPosIndex = new LuceneIndexStorage(this.m_idxDirectory
-				.getDirectory(IndexDirectory.FACET_VPOS_DIR, false));
 
-		this.m_vPosIndex.initialize(true, true);
+		m_vPosIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
+				IndexDirectory.FACET_VPOS_DIR, false),
+				new StatisticsCollector());
+
+		m_vPosIndex.initialize(true, true);
 	}
 }

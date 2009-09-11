@@ -15,20 +15,16 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 
 /**
  * @author andi
  * 
  */
-public interface IBrowsingObject {
+public interface IDistanceMetric {
 
-	public StaticFacetValueClusterLeave getLeave();
-
-	public String getSourceExtension();
-
-	public void setSourceExtension(String extension);
+	public double getDistance(ILiteral lit1, ILiteral lit2);
 
 }

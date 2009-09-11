@@ -39,15 +39,15 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
  * @author andi
  * 
  */
-public class FacetVPosIndexBuilder implements IFacetIndexBuilder{
+public class FacetVPosIndexBuilder implements IFacetIndexBuilder {
 
 	private IndexReader m_idxReader;
 	private IndexDirectory m_idxDirectory;
-	private FacetIndexBuilderHelper m_helper;
+	private FacetIndexHelper m_helper;
 	private LuceneIndexStorage m_vPosIndex;
 
 	public FacetVPosIndexBuilder(IndexDirectory idxDirectory,
-			IndexReader idxReader, FacetIndexBuilderHelper helper) {
+			IndexReader idxReader, FacetIndexHelper helper) {
 
 		this.m_idxReader = idxReader;
 		this.m_idxDirectory = idxDirectory;
@@ -61,7 +61,8 @@ public class FacetVPosIndexBuilder implements IFacetIndexBuilder{
 				.getSPIndexStorage();
 
 		this.m_vPosIndex = new LuceneIndexStorage(this.m_idxDirectory
-				.getDirectory(IndexDirectory.FACET_VPOS_DIR, true));
+				.getDirectory(IndexDirectory.FACET_VPOS_DIR, true), m_idxReader
+				.getCollector());
 
 		this.m_vPosIndex.initialize(true, false);
 
@@ -71,16 +72,16 @@ public class FacetVPosIndexBuilder implements IFacetIndexBuilder{
 		Set<NodeElement> extensions = idxGraph.vertexSet();
 
 		for (NodeElement extension : extensions) {
-			
-			List<String> subjects = spIdx.getDataList(
-					IndexDescription.EXTENT, DataField.ENT, extension
-							.getLabel());
+
+			List<String> subjects = spIdx.getDataList(IndexDescription.EXTENT,
+					DataField.ENT, extension.getLabel());
 
 			int count = 0;
 
 			for (String subject : subjects) {
 				this.m_vPosIndex.addData(IndexDescription.ESV, new String[] {
-						extension.getLabel(), subject }, Integer.toString(count++));
+						extension.getLabel(), subject }, Integer
+						.toString(count++));
 			}
 		}
 

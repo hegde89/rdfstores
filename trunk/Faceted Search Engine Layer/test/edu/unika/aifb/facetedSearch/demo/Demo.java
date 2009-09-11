@@ -24,9 +24,9 @@ import java.util.Properties;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionFactory;
-import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.GenericQueryEvaluator;
 
 /**
  * @author andi

@@ -25,23 +25,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.EnvironmentLockedException;
+
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.api.model.IAbstractObject;
-import edu.unika.aifb.facetedSearch.api.model.IIndividual;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
+import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
+import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.IStore;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
+import edu.unika.aifb.graphindex.index.Index;
+import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
-import edu.unika.aifb.graphindex.searcher.Searcher;
-import edu.unika.aifb.graphindex.searcher.keyword.ExploringKeywordQueryEvaluator;
-import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
-import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
+import edu.unika.aifb.graphindex.index.StructureIndex;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
@@ -50,56 +52,18 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class GenericRdfStore implements IStore {
 
-	public class GenericQueryEvaluator {
-
-		private GenericQueryEvaluator() {
-
-		}
-
-		// public ResultPage evaluate(
-		// org.apexlab.service.session.datastructure.Query hermesQuery) {
-		//
-		// Query graphIndexQuery = QueryConverter.convert(hermesQuery);
-		//
-		// ResultPage resultPage = null;
-		//
-		// if (graphIndexQuery instanceof KeywordQuery) {
-		//
-		// KeywordQueryEvaluator eval = null;
-		// Table<String> resultTable;
-		//
-		// try {
-		// eval = (KeywordQueryEvaluator) GenericRdfStore.this
-		// .getEvaluator(FacetEnvironment.EvaluatorType.KeywordQueryEvaluator);
-		// resultTable = eval.evaluate((KeywordQuery) graphIndexQuery);
-		// GenericRdfStore.this.m_session.getConstructionDelegator()
-		// .doFacetConstruction(resultTable);
-		// resultPage = EvaluatorHelper
-		// .constructResultPage(resultTable);
-		//
-		// } catch (InvalidParameterException e) {
-		// e.printStackTrace();
-		// } catch (IOException e) {
-		// e.printStackTrace();
-		// } catch (StorageException e) {
-		// e.printStackTrace();
-		// }
-		//
-		// } else {
-		//
-		// // TODO
-		//
-		// }
-		//
-		// return resultPage;
-		// }
+	public enum IndexName {
+		FACET_INDEX, STRUCTURE_INDEX
 	}
 
-	@SuppressWarnings("unused")
 	private SearchSession m_session;
-	private IndexReader m_idxReader;
 
+	// IndexReader & IndexDir
+	private IndexReader m_idxReader;
 	private IndexDirectory m_idxDir;
+	// Indices
+	private FacetIndex m_facetIndex;
+	private StructureIndex m_structureIndex;
 
 	public GenericRdfStore(Properties props, String action) throws IOException,
 			StorageException, InterruptedException {
@@ -192,61 +156,85 @@ public class GenericRdfStore implements IStore {
 		ic.create();
 
 		// create facet indices
-		FacetIndexCreator fic = new FacetIndexCreator(m_idxDir);
-		fic.create();
+		if (Boolean.getBoolean(props
+				.getProperty(FacetEnvironment.FACETS_ENABLED))) {
+
+			FacetIndexCreator fic = new FacetIndexCreator(m_idxDir);
+			fic.create();
+		}
 
 		this.m_idxReader = new IndexReader(this.m_idxDir);
 	}
 
 	public GenericQueryEvaluator getEvaluator() {
-		return new GenericQueryEvaluator();
+		return new GenericQueryEvaluator(m_session, m_idxReader);
 	}
 
-	@SuppressWarnings("unused")
-	private Searcher getEvaluator(FacetEnvironment.EvaluatorType type)
-			throws IOException, StorageException, InvalidParameterException {
+	/**
+	 * @return the idxDir
+	 */
+	public IndexDirectory getIdxDir() {
+		return m_idxDir;
+	}
 
-		Searcher searcher = null;
+	/**
+	 * @return the idxReader
+	 */
+	public IndexReader getIdxReader() {
+		return m_idxReader;
+	}
 
-		switch (type) {
+	public Index getIndex(IndexName idxName) throws EnvironmentLockedException,
+			DatabaseException, IOException, StorageException {
 
-		case VPEvaluator: {
-			searcher = new VPEvaluator(this.m_idxReader);
-			break;
+		switch (idxName) {
+
+		case FACET_INDEX: {
+
+			if (m_facetIndex == null) {
+				m_facetIndex = new FacetIndex(m_idxDir,
+						new IndexConfiguration());
+			}
+			return m_facetIndex;
 		}
-		case CombinedQueryEvaluator: {
-			searcher = new CombinedQueryEvaluator(this.m_idxReader);
-			break;
+		case STRUCTURE_INDEX: {
+
+			if (m_structureIndex == null) {
+				m_structureIndex = new StructureIndex(m_idxReader);
+			}
+			return m_facetIndex;
 		}
-		case KeywordQueryEvaluator: {
-			searcher = new ExploringKeywordQueryEvaluator(this.m_idxReader);
-			break;
-		}
+
 		default: {
-			throw new InvalidParameterException(ExceptionHelper.createMessage(
-					"EvaluatorType", ExceptionHelper.Cause.NOT_VALID));
+			return null;
 		}
 		}
 
-		return searcher;
 	}
 
-	public Map<String, IAbstractObject> getObjects(IAbstractObject subject) {
-		// TODO
-		return null;
-	}
-
-	public Map<String, IIndividual> getSubjects(IAbstractObject object) {
-		// TODO
-		return null;
-	}
+	// public Map<String, String> getObjects(String subject) {
+	// // TODO
+	// return null;
+	// }
+	//
+	// // /**
+	// // * @return the session
+	// // */
+	// // public SearchSession getSession() {
+	// // return m_session;
+	// // }
+	//
+	// public Map<String, String> getSubjects(String object) {
+	// // TODO
+	// return null;
+	// }
 
 	private void loadStore(String dir) throws IOException {
 		this.m_idxReader = new IndexReader(this.m_idxDir = new IndexDirectory(
 				dir));
 	}
 
-	public void setSession(SearchSession session) {
-		this.m_session = session;
-	}
+	// public void setSession(SearchSession session) {
+	// this.m_session = session;
+	// }
 }

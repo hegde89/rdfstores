@@ -34,18 +34,19 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.DistanceMetricPool;
 import edu.unika.aifb.facetedSearch.api.model.ILiteral;
-import edu.unika.aifb.facetedSearch.index.algo.distance.IDistanceMetric;
-import edu.unika.aifb.facetedSearch.index.algo.distance.impl.DistanceMetricPool;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.index.builder.IFacetIndexBuilder;
-import edu.unika.aifb.facetedSearch.index.distance.model.impl.LiteralComparator;
-import edu.unika.aifb.facetedSearch.index.distance.model.impl.LiteralList;
-import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.index.tree.model.impl.Node.NodeContent;
+import edu.unika.aifb.facetedSearch.index.model.impl.LiteralComparator;
+import edu.unika.aifb.facetedSearch.index.model.impl.LiteralList;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
+import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.NodeElement;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -60,8 +61,10 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 
 	private DirectedMultigraph<NodeElement, EdgeElement> m_idxGraph;
 	private IndexDirectory m_idxDirectory;
-	private FacetIndexBuilderHelper m_indexHelper;
+	private IndexReader m_idxReader;
+	private FacetIndexHelper m_indexHelper;
 	private LuceneIndexStorage m_distanceIndex;
+	private boolean m_computeDistances;
 
 	private Database m_cache;
 	private Environment m_env;
@@ -72,33 +75,36 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 	private static final String DUMMY_ENTRY = "dummy";
 
 	public FacetDistanceBuilder(IndexDirectory idxDirectory,
-			FacetIndexBuilderHelper helper) {
+			FacetIndexHelper helper, IndexReader idxReader,
+			boolean computeDistances) {
 
+		m_computeDistances = computeDistances;
 		m_idxDirectory = idxDirectory;
+		m_idxReader = idxReader;
 		m_indexHelper = helper;
 
 	}
 
 	public void build() throws IOException, DatabaseException, StorageException {
 
-		// init stuff
-//		m_distanceIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
-//				IndexDirectory.FACET_DISTANCES_DIR, true));
-//
-//		m_distanceIndex.initialize(true, false);
+		if (m_computeDistances) {
 
-		m_idxGraph = this.m_indexHelper.getIndexGraph();
+			m_distanceIndex = new LuceneIndexStorage(m_idxDirectory
+					.getDirectory(IndexDirectory.FACET_DISTANCES_DIR, true),
+					m_idxReader.getCollector());
 
-//		initDB();
+			m_distanceIndex.initialize(true, false);
 
-		// build distance matrix
-//		buildDistanceIndex();
+			m_idxGraph = this.m_indexHelper.getIndexGraph();
+
+			initDB();
+			buildDistanceIndex();
+		}
+
 		// sort lists
 		sortLiteralLists();
-
 	}
 
-	@SuppressWarnings("unused")
 	private void buildDistanceIndex() throws StorageException, IOException,
 			DatabaseException {
 
@@ -232,9 +238,8 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 								// + lit2 + " dis:" + distance);
 								// System.out.println();
 
-								m_distanceIndex.addData(
-										IndexDescription.ELELD, new String[] {
-												lit1.getExtension(),
+								m_distanceIndex.addData(IndexDescription.ELELD,
+										new String[] { lit1.getExtension(),
 												lit1.getValue(),
 												lit2.getExtension(),
 												lit2.getValue() }, String
@@ -249,14 +254,14 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 														lit2.getValue() }),
 												DUMMY_ENTRY);
 
-							} 
-//							else {
-//
-//								s_log.debug("skipped literal "
-//										+ lit1.getValue() + " / literal "
-//										+ lit2.getValue() + "!");
-//
-//							}
+							}
+							// else {
+							//
+							// s_log.debug("skipped literal "
+							// + lit1.getValue() + " / literal "
+							// + lit2.getValue() + "!");
+							//
+							// }
 						}
 					}
 
@@ -287,7 +292,6 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	private void initDB() throws EnvironmentLockedException, DatabaseException,
 			IOException {
 

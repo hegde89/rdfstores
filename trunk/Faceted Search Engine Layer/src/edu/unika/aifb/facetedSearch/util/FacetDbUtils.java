@@ -18,8 +18,12 @@
  */
 package edu.unika.aifb.facetedSearch.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Stack;
 
 import com.sleepycat.je.Cursor;
@@ -32,8 +36,6 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
-
-import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -89,6 +91,25 @@ public class FacetDbUtils {
 
 	public static final String KEY_DELIM = Character.toString((char) 31);
 
+	@SuppressWarnings( { "unchecked" })
+	public static <T> T bytes2Object(byte[] bytes) {
+
+		T object = null;
+		try {
+
+			object = (T) new ObjectInputStream(new ByteArrayInputStream(bytes))
+					.readObject();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		return object;
+	}
+
 	public static boolean contains(Database db, String key)
 			throws DatabaseException, IOException {
 		return get(db, key) == null ? false : true;
@@ -100,11 +121,11 @@ public class FacetDbUtils {
 
 		T res = null;
 		Cursor cursor = db.openCursor(null, null);
-		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry keyEntry = new DatabaseEntry(object2Bytes(key));
 		DatabaseEntry out = new DatabaseEntry();
 
 		if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-			res = (T) Util.bytesToObject(out.getData());
+			res = (T) bytes2Object(out.getData());
 		}
 
 		cursor.close();
@@ -118,11 +139,11 @@ public class FacetDbUtils {
 
 		Stack<T> res = new Stack<T>();
 		Cursor cursor = db.openCursor(null, null);
-		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry keyEntry = new DatabaseEntry(object2Bytes(key));
 		DatabaseEntry out = new DatabaseEntry();
 
 		while (cursor.getNext(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-			Object nextRes = Util.bytesToObject(out.getData());
+			Object nextRes = bytes2Object(out.getData());
 			res.add((T) nextRes);
 
 		}
@@ -154,28 +175,41 @@ public class FacetDbUtils {
 
 		T res = null;
 
-		DatabaseEntry keyEntry = new DatabaseEntry(Util.objectToBytes(key));
+		DatabaseEntry keyEntry = new DatabaseEntry(object2Bytes(key));
 		DatabaseEntry out = entry == null ? new DatabaseEntry()
-				: new DatabaseEntry(Util.objectToBytes(entry));
+				: new DatabaseEntry(object2Bytes(entry));
 
 		if (cursor.getNext(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-			Object nextRes = Util.bytesToObject(out.getData());
+			Object nextRes = bytes2Object(out.getData());
 			res = (T) nextRes;
 		}
 
 		return res;
 	}
 
-	public static void store(Database db, String key, Object object2store) {
+	public static <T> byte[] object2Bytes(T object) {
+
+		ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 
 		try {
-			db.put(null, new DatabaseEntry(Util.objectToBytes(key)),
-					new DatabaseEntry(Util.objectToBytes(object2store)));
-		} catch (DatabaseException e) {
-			e.printStackTrace();
+
+			ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
+			objectStream.writeObject(object);
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		return byteStream.toByteArray();
 	}
 
+	public static void store(Database db, String key, Object object2store) {
+
+		try {
+			db.put(null, new DatabaseEntry(object2Bytes(key)),
+					new DatabaseEntry(object2Bytes(object2store)));
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+	}
 }

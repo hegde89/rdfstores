@@ -60,8 +60,13 @@ public class Literal extends AbstractObject implements ILiteral {
 	}
 
 	public Map<String, IIndividual> getSubjects() {
-		return super.getSession() == null ? null : super.getSession()
-				.getStore().getSubjects(this);
+
+		// return super.getSession() == null ? null : super.getSession()
+		// .getStore().getSubjects(this);
+
+		// TODO
+
+		return null;
 	}
 
 	public void setDataType(DataType type) {

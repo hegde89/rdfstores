@@ -25,8 +25,8 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetDistanceBuilder;
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexBuilderHelper;
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeBuilder;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexHelper;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeIndexBuilder;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetVPosIndexBuilder;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -58,8 +58,8 @@ public class FacetIndexCreator {
 
 			FacetIndex facetIndex = new FacetIndex(m_idxDirectory, m_idxConfig);
 			IndexReader idxReader = new IndexReader(m_idxDirectory);
-			FacetIndexBuilderHelper helper = FacetIndexBuilderHelper
-					.getInstance(idxReader, m_idxDirectory);
+			FacetIndexHelper helper = FacetIndexHelper.getInstance(idxReader,
+					m_idxDirectory);
 
 			s_log.debug("start building facet index vPos ... ");
 
@@ -77,7 +77,7 @@ public class FacetIndexCreator {
 
 			s_log.debug("start building facet trees ... ");
 
-			FacetTreeBuilder treeBuilder = new FacetTreeBuilder(
+			FacetTreeIndexBuilder treeBuilder = new FacetTreeIndexBuilder(
 					this.m_idxDirectory, idxReader, helper);
 			treeBuilder.build();
 			treeBuilder.close();
@@ -92,14 +92,14 @@ public class FacetIndexCreator {
 
 			// Distance Index
 			FacetDistanceBuilder distanceBuilder = new FacetDistanceBuilder(
-					this.m_idxDirectory, helper);
-			
+					this.m_idxDirectory, helper, idxReader, false);
+
 			distanceBuilder.build();
 			distanceBuilder.close();
 
 			s_log.debug("literal distance index trees finished!");
 
-			FacetIndexBuilderHelper.close();
+			FacetIndexHelper.close();
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

@@ -49,8 +49,11 @@ public class Individual extends AbstractObject implements IIndividual {
 	 * @see edu.unika.aifb.facetedSearch.api.objects.IIndividual#getObjects()
 	 */
 	public Map<String, IAbstractObject> getObjects() {
-		return getSession() == null ? null : getSession().getStore()
-				.getObjects(this);
+//		return getSession() == null ? null : getSession().getStore()
+//				.getObjects(this);
+//		TODO
+		
+		return null;
 	}
 
 	/*

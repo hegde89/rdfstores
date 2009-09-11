@@ -18,7 +18,7 @@
 package edu.unika.aifb.facetedSearch.api.model.impl;
 
 import edu.unika.aifb.facetedSearch.api.model.IBrowsingObject;
-import edu.unika.aifb.facetedSearch.facets.model.impl.StaticFacetValueClusterLeave;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**

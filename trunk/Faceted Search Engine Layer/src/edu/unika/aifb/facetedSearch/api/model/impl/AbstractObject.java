@@ -28,7 +28,8 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author andi
  * 
  */
-public abstract class AbstractObject implements IAbstractObject, Serializable {
+public abstract class AbstractObject implements IAbstractObject, Serializable,
+		Comparable<AbstractObject> {
 
 	/**
 	 * 
@@ -49,10 +50,17 @@ public abstract class AbstractObject implements IAbstractObject, Serializable {
 		m_extension = extension;
 	}
 
+	public int compareTo(AbstractObject object) {
+
+		// TODO
+
+		return 0;
+	}
+
 	@Override
 	public boolean equals(Object object) {
 
-		if (object instanceof IAbstractObject && object != null) {
+		if ((object instanceof IAbstractObject) && (object != null)) {
 			return ((IAbstractObject) object).getValue().equals(getValue());
 		} else {
 			return false;

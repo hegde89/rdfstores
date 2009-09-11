@@ -15,20 +15,45 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.api.model;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
 
 /**
  * @author andi
  * 
  */
-public interface IBrowsingObject {
+public class DistanceMetricPool {
 
-	public StaticFacetValueClusterLeave getLeave();
+	public static IDistanceMetric getMetric(DataType type) {
 
-	public String getSourceExtension();
+		IDistanceMetric metric = null;
 
-	public void setSourceExtension(String extension);
+		switch (type) {
 
+		case NUMERICAL: {
+			metric = NumericalDistanceMetric.getInstance();
+			break;
+		}
+		case STRING: {
+			metric = StringDistanceMetric.getInstance();
+			break;
+		}
+		case TIME: {
+			metric = TimeDistanceMetric.getInstance();
+			break;
+		}
+		case DATE: {
+			metric = DateDistanceMetric.getInstance();
+			break;
+		}
+		case DATE_TIME: {
+			metric = DateTimeDistanceMetric.getInstance();
+			break;
+		}
+		}
+
+		return metric;
+	}
 }

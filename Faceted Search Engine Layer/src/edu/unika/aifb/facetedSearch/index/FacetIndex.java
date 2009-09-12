@@ -61,7 +61,8 @@ public class FacetIndex extends Index {
 	private Database m_treeDB;
 	private Database m_leaveDB;
 	private Database m_literalDB;
-	private Database m_propEndPointDB;
+
+	// private Database m_propEndPointDB;
 
 	/**
 	 * @param idxDirectory
@@ -124,21 +125,21 @@ public class FacetIndex extends Index {
 		System.gc();
 	}
 
-	/**
-	 * @return the endpointDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
-	 */
-	public Database getEndPointDB() throws EnvironmentLockedException,
-			DatabaseException, IOException {
-
-		if (m_propEndPointDB == null) {
-			initDBs();
-		}
-
-		return m_propEndPointDB;
-	}
+	// /**
+	// * @return the endpointDB
+	// * @throws IOException
+	// * @throws DatabaseException
+	// * @throws EnvironmentLockedException
+	// */
+	// public Database getEndPointDB() throws EnvironmentLockedException,
+	// DatabaseException, IOException {
+	//
+	// if (m_propEndPointDB == null) {
+	// initDBs();
+	// }
+	//
+	// return m_propEndPointDB;
+	// }
 
 	public FacetTree getFacetTree(String extension) throws DatabaseException,
 			IOException {
@@ -266,8 +267,8 @@ public class FacetIndex extends Index {
 		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
 				config);
 
-		m_propEndPointDB = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.ENDPOINT, config);
+		// m_propEndPointDB = m_env.openDatabase(null,
+		// FacetDbUtils.DatabaseNames.ENDPOINT, config);
 
 		m_literalDB = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.LITERAL, config);

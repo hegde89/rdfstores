@@ -19,6 +19,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -44,6 +45,7 @@ public class Node implements INode {
 	 */
 	private static final long serialVersionUID = -1484769190480836362L;
 
+	private String m_facet;
 	private double weight;
 	private String m_value;
 	private HashSet<NodeType> m_types;
@@ -52,8 +54,17 @@ public class Node implements INode {
 	private List<String> m_SourceExtensions;
 	private String m_domain;
 	private int m_pathHashValue = Integer.MIN_VALUE;
+	private String m_path = null;
 
 	private double m_id;
+
+	public Node() {
+
+		m_types = new HashSet<NodeType>();
+		m_id = (new Random()).nextGaussian();
+		m_RangeExtensions = new ArrayList<String>();
+		m_SourceExtensions = new ArrayList<String>();
+	}
 
 	public Node(String value, HashSet<NodeType> types) {
 
@@ -124,6 +135,10 @@ public class Node implements INode {
 		m_types.add(type);
 	}
 
+	public void addTypes(Collection<NodeType> collection) {
+		m_types.addAll(collection);
+	}
+
 	@Override
 	public boolean equals(Object object) {
 
@@ -162,9 +177,28 @@ public class Node implements INode {
 		return m_domain;
 	}
 
+	/**
+	 * @return the facet
+	 */
+	public String getFacet() {
+		return m_facet;
+	}
+
 	public double getID() {
 		return this.m_id;
 	}
+
+	/**
+	 * @return the path
+	 */
+	public String getPath() {
+		return m_path;
+	}
+
+	// public boolean hasChildren() {
+	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
+	// .size() > 0;
+	// }
 
 	/**
 	 * @return the pathHashValue
@@ -176,11 +210,6 @@ public class Node implements INode {
 	public List<String> getRangeExtensions() {
 		return this.m_RangeExtensions;
 	}
-
-	// public boolean hasChildren() {
-	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
-	// .size() > 0;
-	// }
 
 	/**
 	 * @return the sourceExtensions
@@ -207,6 +236,10 @@ public class Node implements INode {
 		return weight;
 	}
 
+	public boolean hasPath() {
+		return m_path != null;
+	}
+
 	public boolean hasPathHashValue() {
 		return m_pathHashValue != Integer.MIN_VALUE;
 	}
@@ -231,6 +264,10 @@ public class Node implements INode {
 		return m_types.contains(NodeType.ROOT);
 	}
 
+	public void removeType(NodeType type) {
+		m_types.remove(type);
+	}
+
 	/**
 	 * @param m_content
 	 *            the m_content to set
@@ -247,8 +284,24 @@ public class Node implements INode {
 		m_domain = domain;
 	}
 
+	/**
+	 * @param facet
+	 *            the facet to set
+	 */
+	public void setFacet(String facet) {
+		m_facet = facet;
+	}
+
 	public void setID(double id) {
 		this.m_id = id;
+	}
+
+	/**
+	 * @param path
+	 *            the path to set
+	 */
+	public void setPath(String path) {
+		m_path = path;
 	}
 
 	/**

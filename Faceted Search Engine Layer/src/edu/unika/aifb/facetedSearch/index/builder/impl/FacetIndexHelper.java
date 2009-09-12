@@ -20,7 +20,6 @@ package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -67,7 +66,7 @@ public class FacetIndexHelper {
 	private static ArrayList<String> s_dataProperties;
 	private static Database s_literalDB;
 	private static Database s_leaveDB;
-	private static Database s_propEndPointDB;
+	// private static Database s_propEndPointDB;
 
 	private static DirectedMultigraph<NodeElement, EdgeElement> s_indexGraph;
 
@@ -96,9 +95,9 @@ public class FacetIndexHelper {
 				idxReader, idxDirectory) : s_instance;
 	}
 
-	private FacetIndexHelper(IndexReader idxReader,
-			IndexDirectory idxDirectory) throws EnvironmentLockedException,
-			DatabaseException, IOException, StorageException {
+	private FacetIndexHelper(IndexReader idxReader, IndexDirectory idxDirectory)
+			throws EnvironmentLockedException, DatabaseException, IOException,
+			StorageException {
 
 		s_idxDirectory = idxDirectory;
 		s_idxReader = idxReader;
@@ -202,25 +201,25 @@ public class FacetIndexHelper {
 		return Integer.parseInt(posString);
 	}
 
-	/**
-	 * @return the propEndPointDB
-	 */
-	public Database getPropEndPointDB() {
-		return s_propEndPointDB;
-	}
+	// /**
+	// * @return the propEndPointDB
+	// */
+	// public Database getPropEndPointDB() {
+	// return s_propEndPointDB;
+	// }
 
-	/**
-	 * @return the propEndPointDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 */
-	@SuppressWarnings("unchecked")
-	public HashMap<Node, HashSet<String>> getPropEndPoints(String extension)
-			throws DatabaseException, IOException {
-
-		return (HashMap<Node, HashSet<String>>) FacetDbUtils.get(
-				s_propEndPointDB, extension);
-	}
+	// /**
+	// * @return the propEndPointDB
+	// * @throws IOException
+	// * @throws DatabaseException
+	// */
+	// @SuppressWarnings("unchecked")
+	// public HashMap<Node, HashSet<String>> getPropEndPoints(String extension)
+	// throws DatabaseException, IOException {
+	//
+	// return (HashMap<Node, HashSet<String>>) FacetDbUtils.get(
+	// s_propEndPointDB, extension);
+	// }
 
 	public Node getRange(Node property) throws DatabaseException, IOException {
 
@@ -289,8 +288,15 @@ public class FacetIndexHelper {
 			}
 		}
 
-		return superClass == null ? null : new Node(superClass,
-				NodeType.INNER_NODE, NodeContent.CLASS);
+		if (superClass == null) {
+			return null;
+		} else {
+
+			Node superClassNode = new Node(superClass, NodeType.INNER_NODE,
+					NodeContent.CLASS);
+			
+			return superClassNode;
+		}
 	}
 
 	public Node getSuperProperty(String property) throws IOException,
@@ -325,9 +331,17 @@ public class FacetIndexHelper {
 			}
 		}
 
-		return superProperty == null ? null : new Node(superProperty, this
-				.isDataProperty(property) ? NodeContent.DATA_PROPERTY
-				: NodeContent.OBJECT_PROPERTY);
+		if (superProperty == null) {
+			return null;
+		} else {
+
+			Node superPropertyNode = new Node(superProperty, this
+					.isDataProperty(property) ? NodeContent.DATA_PROPERTY
+					: NodeContent.OBJECT_PROPERTY);
+			superPropertyNode.setFacet(superProperty);
+
+			return superPropertyNode;
+		}
 	}
 
 	public boolean hasRangeClass(Node property) throws DatabaseException,
@@ -515,9 +529,9 @@ public class FacetIndexHelper {
 		s_literalDB = db;
 	}
 
-	public void setPropertyEndPointDB(Database db) {
-		s_propEndPointDB = db;
-	}
+	// public void setPropertyEndPointDB(Database db) {
+	// s_propEndPointDB = db;
+	// }
 
 	public void setVPosIndex(LuceneIndexStorage vPosIndex) {
 		s_vPosIndex = vPosIndex;

@@ -24,7 +24,6 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetDistanceBuilder;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexHelper;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeIndexBuilder;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetVPosIndexBuilder;
@@ -83,21 +82,21 @@ public class FacetIndexCreator {
 			treeBuilder.close();
 
 			helper.setLeaveDB(facetIndex.getLeaveDB());
-			helper.setPropertyEndPointDB(facetIndex.getEndPointDB());
+			// helper.setPropertyEndPointDB(facetIndex.getEndPointDB());
 			helper.setLiteralDB(facetIndex.getLiteralDB());
 
 			s_log.debug("facet trees finished!");
 
-			s_log.debug("start building literal distance index ... ");
-
-			// Distance Index
-			FacetDistanceBuilder distanceBuilder = new FacetDistanceBuilder(
-					this.m_idxDirectory, helper, idxReader, false);
-
-			distanceBuilder.build();
-			distanceBuilder.close();
-
-			s_log.debug("literal distance index trees finished!");
+			// s_log.debug("start building literal distance index ... ");
+			//
+			// // Distance Index
+			// FacetDistanceBuilder distanceBuilder = new FacetDistanceBuilder(
+			// this.m_idxDirectory, helper, idxReader, false);
+			//
+			// distanceBuilder.build();
+			// distanceBuilder.close();
+			//
+			// s_log.debug("literal distance index trees finished!");
 
 			FacetIndexHelper.close();
 

@@ -78,12 +78,13 @@ public class FacetEnvironment {
 		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator
 	}
 
-	/*
-	 * node types
-	 */
-	public enum NodeType {
-		NODE, ROOT, BLANK_NODE, FACET_VALUE, STATIC_FACET_VALUE_CLUSTER, STATIC_FACET_VALUE_CLUSTER_LEAVE, DYNAMIC_FACET_VALUE_CLUSTER
-	}
+	// /*
+	// * node types
+	// */
+	// public enum NodeType {
+	// NODE, ROOT, BLANK_NODE, FACET_VALUE, STATIC_FACET_VALUE_CLUSTER,
+	// STATIC_FACET_VALUE_CLUSTER_LEAVE, DYNAMIC_FACET_VALUE_CLUSTER
+	// }
 
 	/*
 	 * abstract-object types

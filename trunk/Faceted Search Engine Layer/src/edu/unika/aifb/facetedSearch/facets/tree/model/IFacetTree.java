@@ -19,7 +19,11 @@ package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.util.Set;
 
+import org.jgrapht.GraphPath;
+
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
 /**
  * @author andi
@@ -27,11 +31,19 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
  */
 public interface IFacetTree {
 
-	public Set<Node> getInnerNodes();
-
-	public Set<Node> getLeaves();
+	// public Set<Node> getInnerNodes();
+	//
+	// public Set<Node> getLeaves();
 
 	public Node getNodeById(double id);
+
+	// public Node getRoot();
+
+	public Set<Node> getNodesByType(NodeType type);
+
+	public GraphPath<Node, Edge> getPath(Node fromNode, Node toNode);
+
+	public GraphPath<Node, Edge> getPath2Root(Node fromNode);
 
 	public Node getRoot();
 

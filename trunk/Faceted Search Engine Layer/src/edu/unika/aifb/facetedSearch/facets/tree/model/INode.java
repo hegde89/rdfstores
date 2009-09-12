@@ -19,6 +19,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
@@ -37,13 +38,17 @@ public interface INode extends Serializable {
 
 	public void addType(NodeType type);
 
+	public void addTypes(Collection<NodeType> collection);
+
 	public NodeContent getContent();
 
 	public String getDomain();
 
-	// public boolean hasChildren();
+	public String getFacet();
 
 	public double getID();
+
+	public String getPath();
 
 	public int getPathHashValue();
 
@@ -51,11 +56,15 @@ public interface INode extends Serializable {
 
 	public List<String> getSourceExtensions();
 
+	// public boolean hasChildren();
+
 	public HashSet<NodeType> getTypes();
 
 	public String getValue();
 
 	public double getWeight();
+
+	public boolean hasPath();
 
 	// public Set<INode> getChildren();
 	public boolean hasPathHashValue();
@@ -70,11 +79,17 @@ public interface INode extends Serializable {
 
 	public boolean isRoot();
 
+	public void removeType(NodeType type);
+
 	public void setContent(NodeContent content);
 
 	public void setDomain(String domain);
 
+	public void setFacet(String facet);
+
 	public void setID(double id);
+
+	public void setPath(String path);
 
 	public void setPathHashValue(int pathHashValue);
 

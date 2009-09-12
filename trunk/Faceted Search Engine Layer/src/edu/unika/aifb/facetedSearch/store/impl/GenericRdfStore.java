@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import com.sleepycat.je.DatabaseException;

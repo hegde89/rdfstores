@@ -69,9 +69,9 @@ public class PrunedQueryPart extends StructuredQuery {
 		if (startNode == null) {
 			int maxDegree = 0;
 			for (QNode node : m_queryGraph.vertexSet()) {
-				if (m_queryGraph.inDegreeOf(node) + m_queryGraph.outDegreeOf(node) > maxDegree) {
+				if (m_prunedQuery.getQueryGraph().degreeOf(node) > maxDegree) {
 					startNode = node;
-					maxDegree = m_queryGraph.inDegreeOf(node) + m_queryGraph.outDegreeOf(node);
+					maxDegree = m_prunedQuery.getQueryGraph().degreeOf(node);
 				}
 			}
 		}

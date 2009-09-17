@@ -36,6 +36,7 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.PrunedQueryPart;
+import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.searcher.structured.sig.AbstractIndexGraphMatcher;
@@ -51,7 +52,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 	
 	private static final Logger log = Logger.getLogger(PrunedPartMatcher.class);
 
-	protected PrunedPartMatcher(IndexReader idxReader) throws IOException, StorageException {
+	public PrunedPartMatcher(IndexReader idxReader) throws IOException, StorageException {
 		super(idxReader);
 
 	}
@@ -71,10 +72,39 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 	public Set<String> getValidExtensions() {
 		return m_validExtensions;
 	}
-	
+
+	private Table<String> compact(Table<String> table, List<String> columns) {
+		Table<String> result = new Table<String>(columns);
+		
+		int[] cols = new int [columns.size()];
+		for (int i = 0; i < columns.size(); i++)
+			cols[i] = table.getColumn(columns.get(i));
+		
+		Set<String> sigs = new HashSet<String>();
+		for (String[] row : table) {
+			String[] selectRow = new String [cols.length];
+			StringBuilder sb = new StringBuilder();
+			
+			for (int i = 0; i < cols.length; i++) {
+				selectRow[i] = row[cols[i]];
+				sb.append(row[cols[i]]).append("__");
+			}
+			
+			String sig = sb.toString();
+			if (sigs.add(sig))
+				result.addRow(selectRow);
+		}
+		
+		log.debug(" compact: " + table.rowCount() + " => " + result.rowCount());
+		
+		return result;
+	}
+
 	public void match() throws StorageException {
 		final QueryGraph queryGraph = m_part.getQueryGraph();
-		final Map<String,Integer> proximities = m_qe.getProximities();
+		final Map<String,Integer> proximities = new HashMap<String,Integer>();
+		for (QNode node : m_part.getQueryGraph().vertexSet())
+			proximities.put(node.getLabel(), 1);
 		
 		Queue<QueryEdge> toVisit = new PriorityQueue<QueryEdge>(queryGraph.edgeCount(), new Comparator<QueryEdge>() {
 			public int compare(QueryEdge e1, QueryEdge e2) {
@@ -111,7 +141,7 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 		
 		List<Table<String>> resultTables = new ArrayList<Table<String>>();
 		resultTables.add(m_startNodeTable);
-		
+		Set<String> prevIncompleteNodes = new HashSet<String>();
 		while (toVisit.size() > 0) {
 			String property, srcLabel, trgLabel;
 			QueryEdge currentEdge;
@@ -126,6 +156,9 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 			}
 			while ((!visited.contains(srcLabel) && !visited.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel)));
 
+			skipped.remove(currentEdge);
+			toVisit.addAll(skipped);
+			
 			visited.add(srcLabel);
 			visited.add(trgLabel);
 			
@@ -202,6 +235,22 @@ public class PrunedPartMatcher extends AbstractIndexGraphMatcher {
 				resultTables.clear();
 				break;
 			}
+			
+			Set<String> incomplete = new HashSet<String>();
+			incomplete.add(m_startNode);
+			for (QueryEdge edge : toVisit) {
+				incomplete.add(edge.getSource().getLabel());
+				incomplete.add(edge.getTarget().getLabel());
+			}
+			log.debug(" incomplete: " + incomplete);
+			if (!incomplete.equals(prevIncompleteNodes)) {
+				List<String> fixed = new ArrayList<String>();
+				for (String node : incomplete)
+					if (result.hasColumn(node))
+						fixed.add(node);
+				result = compact(result, fixed);
+			}
+			prevIncompleteNodes = incomplete;
 			
 			resultTables.add(result);
 		}

@@ -56,10 +56,10 @@ public class IndexReader {
 		m_idxConfig = new IndexConfiguration();
 		m_idxConfig.load(m_idxDirectory);
 		
-		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
-			log.info("sp index: " + idx);
-		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
-			log.info("di index: " + idx);
+//		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
+//			log.info("sp index: " + idx);
+//		for (IndexDescription idx: m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES))
+//			log.info("di index: " + idx);
 		
 		m_collector = new StatisticsCollector();
 	}

@@ -61,9 +61,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 	}
 	
 	public Table(DataField... cols) {
-		String[] colNames = new String[cols.length];
-		for (int i = 0; i < cols.length; i++)
-			colNames[i] = cols[i].toString();
+		this(toColumnNames(cols));
  	}
 	
 	public Table(String... colNames) {
@@ -85,6 +83,13 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 			setSortedColumn(table.getSortedColumn());
 		if (rows)
 			m_rows = table.getRows();
+	}
+	
+	private static String[] toColumnNames(DataField[] cols) {
+		String[] colNames = new String[cols.length];
+		for (int i = 0; i < cols.length; i++)
+			colNames[i] = cols[i].toString();
+		return colNames;
 	}
 	
 	public void setRows(List<T[]> rows) {

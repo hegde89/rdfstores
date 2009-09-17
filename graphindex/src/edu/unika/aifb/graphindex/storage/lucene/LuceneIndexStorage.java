@@ -96,7 +96,8 @@ public class LuceneIndexStorage implements IndexStorage {
 		try {
 			if (!m_readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
-				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 10);
+				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 20);
+				m_writer.setMergeFactor(30);
 				log.debug("IndexWriter ram buffer size set to " + m_writer.getRAMBufferSizeMB() + "MB");
 			}
 			
@@ -554,7 +555,8 @@ public class LuceneIndexStorage implements IndexStorage {
 
 			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf(File.separator)) + File.separator + index.getIndexFieldName() + "_merged");
 			log.debug("writing to " + newDir);
-			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), true, new WhitespaceAnalyzer(), true);
+			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), false, new WhitespaceAnalyzer(), true);
+			writer.setMergeFactor(20);
 			
 			te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
 			do {
@@ -586,7 +588,7 @@ public class LuceneIndexStorage implements IndexStorage {
 				
 				termsProcessed++;
 
-				if (termsProcessed % 200000 == 0) {
+				if (termsProcessed % 500000 == 0) {
 					System.gc();
 					log.debug("terms: " + termsProcessed + "/" + numTerms + ", docs merged: " + docsMerged + ", max values: " + maxValues + ", " + Util.memory());
 				}

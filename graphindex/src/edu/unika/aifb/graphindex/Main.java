@@ -8,6 +8,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.importer.Importer;
+import edu.unika.aifb.graphindex.importer.N3Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.index.IndexCreator;
@@ -57,6 +58,8 @@ public class Main {
 		Importer importer;
 		if (files.get(0).contains(".nt"))
 			importer = new NxImporter();
+		else if (files.get(0).contains(".n3"))
+			importer = new N3Importer();
 		else if (files.get(0).endsWith(".rdf") || files.get(0).endsWith(".xml"))
 			importer = new RDFImporter();
 		else  {

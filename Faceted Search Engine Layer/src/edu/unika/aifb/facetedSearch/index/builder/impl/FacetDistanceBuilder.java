@@ -19,11 +19,6 @@
 package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -31,25 +26,12 @@ import org.jgrapht.graph.DirectedMultigraph;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
-import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.DistanceMetricPool;
-import edu.unika.aifb.facetedSearch.api.model.ILiteral;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.index.builder.IFacetIndexBuilder;
-import edu.unika.aifb.facetedSearch.index.model.impl.LiteralComparator;
-import edu.unika.aifb.facetedSearch.index.model.impl.LiteralList;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.NodeElement;
-import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 
@@ -87,19 +69,19 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 
 	public void build() throws IOException, DatabaseException, StorageException {
 
-		if (m_computeDistances) {
-
-			m_distanceIndex = new LuceneIndexStorage(m_idxDirectory
-					.getDirectory(IndexDirectory.FACET_DISTANCES_DIR, true),
-					m_idxReader.getCollector());
-
-			m_distanceIndex.initialize(true, false);
-
-			m_idxGraph = this.m_indexHelper.getIndexGraph();
-
-			initDB();
-			buildDistanceIndex();
-		}
+		// if (m_computeDistances) {
+		//
+		// m_distanceIndex = new LuceneIndexStorage(m_idxDirectory
+		// .getDirectory(IndexDirectory.FACET_DISTANCES_DIR, true),
+		// m_idxReader.getCollector());
+		//
+		// m_distanceIndex.initialize(true, false);
+		//
+		// m_idxGraph = this.m_indexHelper.getIndexGraph();
+		//
+		// initDB();
+		// buildDistanceIndex();
+		// }
 
 		// sort lists
 		// sortLiteralLists();
@@ -274,33 +256,34 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 
 	public void close() throws StorageException, DatabaseException {
 
-		// close db
-		if (m_cache != null) {
-			m_cache.close();
-		}
-
-		// delete cache and close environment
-		if (m_env != null) {
-			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FDB_CACHE);
-			m_env.close();
-		}
-
-		// close lucene
-		if (m_distanceIndex != null) {
-			m_distanceIndex.optimize();
-			m_distanceIndex.close();
-		}
+		// // close db
+		// if (m_cache != null) {
+		// m_cache.close();
+		// }
+		//
+		// // delete cache and close environment
+		// if (m_env != null) {
+		// m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FDB_CACHE);
+		// m_env.close();
+		// }
+		//
+		// // close lucene
+		// if (m_distanceIndex != null) {
+		// m_distanceIndex.optimize();
+		// m_distanceIndex.close();
+		// }
 	}
 
-	private void initDB() throws EnvironmentLockedException, DatabaseException,
-			IOException {
-
-		m_env = EnvironmentFactory.make(this.m_idxDirectory.getDirectory(
-				IndexDirectory.FACET_DISTANCES_DIR, true));
-
-		m_cache = this.m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FDB_CACHE, DbConfigFactory
-						.make(true));
-
-	}
+	// private void initDB() throws EnvironmentLockedException,
+	// DatabaseException,
+	// IOException {
+	//
+	// // m_env = EnvironmentFactory.make(this.m_idxDirectory.getDirectory(
+	// // IndexDirectory.FACET_DISTANCES_DIR, true));
+	// //
+	// // m_cache = this.m_env.openDatabase(null,
+	// // FacetDbUtils.DatabaseNames.FDB_CACHE, DbConfigFactory
+	// // .make(true));
+	//
+	// }
 }

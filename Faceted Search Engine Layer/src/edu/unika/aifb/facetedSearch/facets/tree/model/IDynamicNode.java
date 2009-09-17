@@ -21,10 +21,14 @@ package edu.unika.aifb.facetedSearch.facets.tree.model;
  * @author andi
  *
  */
-public interface IStaticFacetValueCluster extends IFacetValueCluster {
+public interface IDynamicNode extends IStaticNode {
 
-	public String getLuceneIdxTerm();
+	public INode getLeftBorder();
 	
-	public void setLuceneIdxTerm(String term);
+	public INode getRightBorder();
+	
+	public void setLeftBorder(INode leftValue);
+	
+	public void setRightBorder(INode rightValue);
 	
 }

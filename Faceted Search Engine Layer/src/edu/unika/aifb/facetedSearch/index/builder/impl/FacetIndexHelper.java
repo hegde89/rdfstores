@@ -26,18 +26,21 @@ import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
+import com.sleepycat.bind.serial.SerialBinding;
+import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
+import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
-import edu.unika.aifb.facetedSearch.index.model.impl.LiteralList;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -49,12 +52,10 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
-import edu.unika.aifb.graphindex.util.StatisticsCollector;
 
 public class FacetIndexHelper {
 
-	private static LuceneIndexStorage s_vPosIndex;
+	// private static LuceneIndexStorage s_vPosIndex;
 	private static StructureIndex s_structureIndex;
 	private static IndexDirectory s_idxDirectory;
 	private static IndexReader s_idxReader;
@@ -64,20 +65,31 @@ public class FacetIndexHelper {
 	private static FacetIndexHelper s_instance;
 	private static ArrayList<String> s_objectProperties;
 	private static ArrayList<String> s_dataProperties;
-	private static Database s_literalDB;
+	// private static Database s_literalDB;
+
+	/*
+	 * Indices
+	 */
 	private static Database s_leaveDB;
-	// private static Database s_propEndPointDB;
+	// private static Database s_endpointDB;
+
+	/*
+	 * Bindings
+	 */
+	private static SerialBinding<String> s_stringBinding;
+	private static SerialBinding<Node> s_nodeBinding;
 
 	private static DirectedMultigraph<NodeElement, EdgeElement> s_indexGraph;
 
-	public static void close() throws DatabaseException, StorageException {
+	public static void close() throws DatabaseException, StorageException,
+			IOException {
 
-		s_vPosIndex.close();
+		// s_vPosIndex.close();
 		s_structureIndex.close();
 		s_cacheDB.close();
 
 		s_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FH_CACHE);
-		s_env.close();
+		s_idxDirectory.getDirectory(IndexDirectory.FACET_TEMP_DIR).delete();
 
 		s_classes = null;
 		s_objectProperties = null;
@@ -106,9 +118,9 @@ public class FacetIndexHelper {
 		s_objectProperties = new ArrayList<String>();
 		s_dataProperties = new ArrayList<String>();
 
-		this.initGraphIndex(idxReader);
-		this.initClasses(idxReader);
-		this.initCache(idxDirectory);
+		initGraphIndex(idxReader);
+		initClasses(idxReader);
+		initCache(idxDirectory);
 
 	}
 
@@ -117,8 +129,8 @@ public class FacetIndexHelper {
 
 		String clazz = null;
 
-		if ((clazz = (String) FacetDbUtils
-				.get(s_cacheDB, "class_" + individual)) == null) {
+		if ((clazz = FacetDbUtils.get(s_cacheDB, "class_" + individual,
+				s_stringBinding)) == null) {
 
 			try {
 
@@ -139,24 +151,33 @@ public class FacetIndexHelper {
 			}
 
 			if (clazz != null) {
-				FacetDbUtils.store(s_cacheDB, "class_" + individual, clazz);
+				FacetDbUtils.store(s_cacheDB, "class_" + individual, clazz,
+						s_stringBinding);
 			}
 		}
 
 		return clazz;
 	}
 
+	// public HashMap<Node, HashSet<String>> getEndPoints(String extension)
+	// throws StorageException, IOException, DatabaseException {
+	//
+	// return FacetDbUtils.get(s_endpointDB, extension);
+	// }
+
 	public String getExtension(String object) throws StorageException,
 			IOException, DatabaseException {
 
 		String extension = null;
 
-		if ((extension = (String) FacetDbUtils.get(s_cacheDB, "ex_" + object)) == null) {
+		if ((extension = FacetDbUtils.get(s_cacheDB, "ex_" + object,
+				s_stringBinding)) == null) {
 
 			extension = s_structureIndex.getExtension(object);
 
 			if (extension != null) {
-				FacetDbUtils.store(s_cacheDB, "ex_" + object, extension);
+				FacetDbUtils.store(s_cacheDB, "ex_" + object, extension,
+						s_stringBinding);
 			}
 		}
 
@@ -167,39 +188,38 @@ public class FacetIndexHelper {
 		return s_indexGraph;
 	}
 
-	@SuppressWarnings("unchecked")
 	public HashSet<Node> getLeaves(String extension, String object)
 			throws DatabaseException, IOException {
 
-		return (HashSet<Node>) FacetDbUtils.get(s_leaveDB, FacetDbUtils
-				.getKey(new String[] { extension, object }));
+		return FacetDbUtils.getAllAsSet(s_leaveDB, FacetDbUtils
+				.getKey(new String[] { extension, object }), s_nodeBinding);
 	}
 
-	public LiteralList getLiterals(String extension, String property)
-			throws DatabaseException, IOException {
+	// public LiteralList getLiterals(String extension, String property)
+	// throws DatabaseException, IOException {
+	//
+	// return (LiteralList) FacetDbUtils.get(s_literalDB, FacetDbUtils
+	// .getKey(new String[] { extension, property }));
+	// }
 
-		return (LiteralList) FacetDbUtils.get(s_literalDB, FacetDbUtils
-				.getKey(new String[] { extension, property }));
-	}
-
-	public int getPosition(String extension, String subject)
-			throws IOException, StorageException {
-
-		if (s_vPosIndex == null) {
-
-			s_vPosIndex = new LuceneIndexStorage(s_idxDirectory.getDirectory(
-					IndexDirectory.FACET_VPOS_DIR, false),
-					new StatisticsCollector());
-
-			s_vPosIndex.initialize(true, true);
-
-		}
-
-		String posString = s_vPosIndex.getDataItem(IndexDescription.ESV,
-				DataField.VECTOR_POS, new String[] { extension, subject });
-
-		return Integer.parseInt(posString);
-	}
+	// public int getPosition(String extension, String subject)
+	// throws IOException, StorageException {
+	//
+	// if (s_vPosIndex == null) {
+	//
+	// s_vPosIndex = new LuceneIndexStorage(s_idxDirectory.getDirectory(
+	// IndexDirectory.FACET_VPOS_DIR, false),
+	// new StatisticsCollector());
+	//
+	// s_vPosIndex.initialize(true, true);
+	//
+	// }
+	//
+	// String posString = s_vPosIndex.getDataItem(IndexDescription.ESV,
+	// DataField.VECTOR_POS, new String[] { extension, subject });
+	//
+	// return Integer.parseInt(posString);
+	// }
 
 	// /**
 	// * @return the propEndPointDB
@@ -225,8 +245,8 @@ public class FacetIndexHelper {
 
 		String rangeClassLabel = null;
 
-		if ((rangeClassLabel = (String) FacetDbUtils.get(s_cacheDB, "range_"
-				+ property.getValue())) == null) {
+		if ((rangeClassLabel = FacetDbUtils.get(s_cacheDB, "range_"
+				+ property.getValue(), s_stringBinding)) == null) {
 
 			try {
 
@@ -248,7 +268,7 @@ public class FacetIndexHelper {
 
 			if (rangeClassLabel != null) {
 				FacetDbUtils.store(s_cacheDB, "range_" + property.getValue(),
-						rangeClassLabel);
+						rangeClassLabel, s_stringBinding);
 			}
 		}
 
@@ -261,8 +281,8 @@ public class FacetIndexHelper {
 
 		String superClass = null;
 
-		if ((superClass = (String) FacetDbUtils.get(s_cacheDB, "superClass_"
-				+ clazz)) == null) {
+		if ((superClass = FacetDbUtils.get(s_cacheDB, "superClass_" + clazz,
+				s_stringBinding)) == null) {
 
 			try {
 
@@ -283,8 +303,8 @@ public class FacetIndexHelper {
 			}
 
 			if (superClass != null) {
-				FacetDbUtils
-						.store(s_cacheDB, "superClass_" + clazz, superClass);
+				FacetDbUtils.store(s_cacheDB, "superClass_" + clazz,
+						superClass, s_stringBinding);
 			}
 		}
 
@@ -294,7 +314,7 @@ public class FacetIndexHelper {
 
 			Node superClassNode = new Node(superClass, NodeType.INNER_NODE,
 					NodeContent.CLASS);
-			
+
 			return superClassNode;
 		}
 	}
@@ -303,9 +323,11 @@ public class FacetIndexHelper {
 			DatabaseException {
 
 		String superProperty = null;
+		FacetType ftype = isDataProperty(property) ? FacetType.DATAPROPERTY_BASED
+				: FacetType.OBJECT_PROPERTY_BASED;
 
-		if ((superProperty = (String) FacetDbUtils.get(s_cacheDB,
-				"superProperty_" + property)) == null) {
+		if ((superProperty = FacetDbUtils.get(s_cacheDB, "superProperty_"
+				+ property, s_stringBinding)) == null) {
 
 			try {
 
@@ -327,7 +349,7 @@ public class FacetIndexHelper {
 
 			if (superProperty != null) {
 				FacetDbUtils.store(s_cacheDB, "superProperty_" + property,
-						superProperty);
+						superProperty, s_stringBinding);
 			}
 		}
 
@@ -338,7 +360,9 @@ public class FacetIndexHelper {
 			Node superPropertyNode = new Node(superProperty, this
 					.isDataProperty(property) ? NodeContent.DATA_PROPERTY
 					: NodeContent.OBJECT_PROPERTY);
-			superPropertyNode.setFacet(superProperty);
+
+			superPropertyNode.setFacet(superPropertyNode.makeFacet(
+					superProperty, ftype, null));
 
 			return superPropertyNode;
 		}
@@ -347,7 +371,7 @@ public class FacetIndexHelper {
 	public boolean hasRangeClass(Node property) throws DatabaseException,
 			IOException {
 
-		return this.getRange(property) == null ? false : true;
+		return getRange(property) == null ? false : true;
 	}
 
 	private void initCache(IndexDirectory idxDirectory)
@@ -358,7 +382,7 @@ public class FacetIndexHelper {
 		envConfig.setAllowCreate(true);
 
 		s_env = new Environment(idxDirectory.getDirectory(
-				IndexDirectory.FACET_TREE_DIR, true), envConfig);
+				IndexDirectory.FACET_TEMP_DIR, true), envConfig);
 
 		DatabaseConfig config = new DatabaseConfig();
 		config.setTransactional(false);
@@ -368,6 +392,18 @@ public class FacetIndexHelper {
 
 		s_cacheDB = s_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.FH_CACHE, config);
+
+		PreloadConfig pc = new PreloadConfig();
+		pc.setMaxMillisecs(2000);
+		s_cacheDB.preload(pc);
+
+		// Create the bindings
+		Database classDb = s_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.CLASS, config);
+		StoredClassCatalog cata = new StoredClassCatalog(classDb);
+
+		s_stringBinding = new SerialBinding<String>(cata, String.class);
+		s_nodeBinding = new SerialBinding<Node>(cata, Node.class);
 
 	}
 
@@ -488,8 +524,8 @@ public class FacetIndexHelper {
 
 		String isSubClass = null;
 
-		if ((isSubClass = (String) FacetDbUtils.get(s_cacheDB, "subClassOf_"
-				+ class1 + "_" + class2)) == null) {
+		if ((isSubClass = FacetDbUtils.get(s_cacheDB, "subClassOf_" + class1
+				+ "_" + class2, s_stringBinding)) == null) {
 
 			isSubClass = "0";
 
@@ -514,33 +550,37 @@ public class FacetIndexHelper {
 
 			if (isSubClass != null) {
 				FacetDbUtils.store(s_cacheDB, "subClassOf_" + class1 + "_"
-						+ class2, isSubClass);
+						+ class2, isSubClass, s_stringBinding);
 			}
 		}
 
 		return !isSubClass.equals("0");
 	}
 
+	// public void setEndPointDB(Database db) {
+	// s_endpointDB = db;
+	// }
+
 	public void setLeaveDB(Database db) {
 		s_leaveDB = db;
 	}
 
-	public void setLiteralDB(Database db) {
-		s_literalDB = db;
-	}
+	// public void setLiteralDB(Database db) {
+	// s_literalDB = db;
+	// }
 
 	// public void setPropertyEndPointDB(Database db) {
 	// s_propEndPointDB = db;
 	// }
 
-	public void setVPosIndex(LuceneIndexStorage vPosIndex) {
-		s_vPosIndex = vPosIndex;
-	}
+	// public void setVPosIndex(LuceneIndexStorage vPosIndex) {
+	// s_vPosIndex = vPosIndex;
+	// }
 
-	public void updateLiterals(LiteralList list, String extension,
-			String property) throws DatabaseException, IOException {
-
-		FacetDbUtils.store(s_literalDB, FacetDbUtils.getKey(new String[] {
-				extension, property }), list);
-	}
+	// public void updateLiterals(LiteralList list, String extension,
+	// String property) throws DatabaseException, IOException {
+	//
+	// FacetDbUtils.store(s_literalDB, FacetDbUtils.getKey(new String[] {
+	// extension, property }), list);
+	// }
 }

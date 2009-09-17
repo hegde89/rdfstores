@@ -19,10 +19,12 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.Facet;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
@@ -36,15 +38,27 @@ public interface INode extends Serializable {
 
 	public void addRangeExtensions(List<String> extensions);
 
-	public void addType(NodeType type);
+	public void addRangeExtensions(String extensions);
 
-	public void addTypes(Collection<NodeType> collection);
+	public void addSourceExtension(String extension);
+
+	public void addSourceExtensions(HashSet<String> extensions);
+
+	public void addSourceExtensions(String extensions);
 
 	public NodeContent getContent();
 
+	// public void addSourceIndivdiual(String ind);
+
+	// public SearchSessionCache getCache();
+
 	public String getDomain();
 
-	public String getFacet();
+	public Facet getFacet();
+
+	// public void addType(NodeType type);
+	//
+	// public void addTypes(Collection<NodeType> collection);
 
 	public double getID();
 
@@ -52,15 +66,18 @@ public interface INode extends Serializable {
 
 	public int getPathHashValue();
 
-	public List<String> getRangeExtensions();
+	public HashSet<String> getRangeExtensions();
 
-	public List<String> getSourceExtensions();
+	public HashSet<String> getSourceExtensions();
 
-	// public boolean hasChildren();
+	public NodeType getType();
 
-	public HashSet<NodeType> getTypes();
+	// public HashSet<String> getSourceIndivdiuals() throws DatabaseException,
+	// IOException;
 
 	public String getValue();
+
+	// public boolean hasChildren();
 
 	public double getWeight();
 
@@ -69,23 +86,27 @@ public interface INode extends Serializable {
 	// public Set<INode> getChildren();
 	public boolean hasPathHashValue();
 
-	public boolean isEndPoint();
-
 	public boolean isInnerNode();
 
 	public boolean isLeave();
+
+	// public boolean isEndPoint();
 
 	public boolean isRangeRoot();
 
 	public boolean isRoot();
 
-	public void removeType(NodeType type);
+	public Facet makeFacet(String uri, FacetType ftype, DataType dtype);
+
+	// public void setCache(SearchSessionCache cache);
+
+	// public void removeType(NodeType type);
 
 	public void setContent(NodeContent content);
 
 	public void setDomain(String domain);
 
-	public void setFacet(String facet);
+	public void setFacet(Facet facet);
 
 	public void setID(double id);
 
@@ -93,11 +114,11 @@ public interface INode extends Serializable {
 
 	public void setPathHashValue(int pathHashValue);
 
-	public void setRangeExtensions(List<String> extensions);
+	public void setRangeExtensions(HashSet<String> extensions);
 
-	public void setSourceExtensions(List<String> sourceExtensions);
+	public void setSourceExtensions(HashSet<String> sourceExtensions);
 
-	public void setTypes(HashSet<NodeType> types);
+	public void setType(NodeType type);
 
 	public void setValue(String label);
 

@@ -26,8 +26,6 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexHelper;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeIndexBuilder;
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetVPosIndexBuilder;
-import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -39,14 +37,14 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class FacetIndexCreator {
 
 	private IndexDirectory m_idxDirectory;
-	private IndexConfiguration m_idxConfig;
+	// private IndexConfiguration m_idxConfig;
 
 	private final static Logger s_log = Logger
 			.getLogger(FacetIndexCreator.class);
 
 	public FacetIndexCreator(IndexDirectory indexDirectory) throws IOException {
 		m_idxDirectory = indexDirectory;
-		m_idxConfig = new IndexConfiguration();
+		// m_idxConfig = new IndexConfiguration();
 	}
 
 	public void create() {
@@ -55,22 +53,24 @@ public class FacetIndexCreator {
 
 		try {
 
-			FacetIndex facetIndex = new FacetIndex(m_idxDirectory, m_idxConfig);
+			// FacetIndex facetIndex = new FacetIndex(m_idxDirectory,
+			// m_idxConfig);
 			IndexReader idxReader = new IndexReader(m_idxDirectory);
 			FacetIndexHelper helper = FacetIndexHelper.getInstance(idxReader,
 					m_idxDirectory);
 
-			s_log.debug("start building facet index vPos ... ");
+			// s_log.debug("start building facet index vPos ... ");
+			//
+			// // Vector Position Index
+			// FacetVPosIndexBuilder vPosIndexBuilder = new
+			// FacetVPosIndexBuilder(
+			// this.m_idxDirectory, idxReader, helper);
+			// vPosIndexBuilder.build();
+			// vPosIndexBuilder.close();
+			//
+			// s_log.debug("facet index vPos finished!");
 
-			// Vector Position Index
-			FacetVPosIndexBuilder vPosIndexBuilder = new FacetVPosIndexBuilder(
-					this.m_idxDirectory, idxReader, helper);
-			vPosIndexBuilder.build();
-			vPosIndexBuilder.close();
-
-			s_log.debug("facet index vPos finished!");
-
-			helper.setVPosIndex(facetIndex.getVPosIndex());
+			// helper.setVPosIndex(facetIndex.getVPosIndex());
 
 			// Facet Tree Index
 
@@ -81,11 +81,24 @@ public class FacetIndexCreator {
 			treeBuilder.build();
 			treeBuilder.close();
 
-			helper.setLeaveDB(facetIndex.getLeaveDB());
+			// helper.setLeaveDB(facetIndex.getDbIndex(FacetIndexName.LEAVE));
+			// helper.setEndPointDB(facetIndex
+			// .getDbIndex(FacetIndexName.ENDPOINTS));
 			// helper.setPropertyEndPointDB(facetIndex.getEndPointDB());
-			helper.setLiteralDB(facetIndex.getLiteralDB());
+			// helper.setLiteralDB(facetIndex.getLiteralDB());
 
 			s_log.debug("facet trees finished!");
+
+			// s_log.debug("start object index ... ");
+			//
+			// FacetObjectIndexBuilder objectBuilder = new
+			// FacetObjectIndexBuilder(
+			// this.m_idxDirectory, idxReader, helper);
+			//			
+			// objectBuilder.build();
+			// objectBuilder.close();
+			//			
+			// s_log.debug("object index finished!");
 
 			// s_log.debug("start building literal distance index ... ");
 			//

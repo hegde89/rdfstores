@@ -20,30 +20,28 @@ package edu.unika.aifb.facetedSearch.index;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import cern.colt.bitvector.BitVector;
-
+import com.sleepycat.bind.EntryBinding;
+import com.sleepycat.bind.serial.SerialBinding;
+import com.sleepycat.bind.serial.StoredClassCatalog;
+import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
+import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils.DbConfigFactory;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils.EnvironmentFactory;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
-import edu.unika.aifb.graphindex.storage.DataField;
-import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
-import edu.unika.aifb.graphindex.util.StatisticsCollector;
 
 /**
  * @author andi
@@ -51,39 +49,44 @@ import edu.unika.aifb.graphindex.util.StatisticsCollector;
  */
 public class FacetIndex extends Index {
 
+	public enum FacetIndexName {
+		TREE, LEAVE, OBJECT
+		// SORTED_LITERALS,ENDPOINTS
+	}
+
 	private final static Logger s_log = Logger.getLogger(FacetIndex.class);
 
 	private IndexDirectory m_idxDirectory;
 
-	private LuceneIndexStorage m_vPosIndex;
+	/*
+	 * Indices
+	 */
 
 	private Environment m_env;
+	private Environment m_env2;
+
 	private Database m_treeDB;
 	private Database m_leaveDB;
-	private Database m_literalDB;
+	private Database m_objectDB;
+	private Database m_classDB;
 
-	// private Database m_propEndPointDB;
-
-	/**
-	 * @param idxDirectory
-	 * @param idxConfig
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
+	/*
+	 * Bindings
 	 */
+	private SerialBinding<FacetTree> m_treeBinding;
+	private EntryBinding<Double> m_leaveBinding;
+	private EntryBinding<String> m_objBinding;
+
 	public FacetIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig)
 			throws EnvironmentLockedException, DatabaseException, IOException {
 
 		super(idxDirectory, idxConfig);
+		m_idxDirectory = idxDirectory;
 
-		this.m_idxDirectory = idxDirectory;
+		init();
+
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see edu.unika.aifb.graphindex.index.Index#close()
-	 */
 	@Override
 	public void close() throws StorageException {
 
@@ -105,13 +108,37 @@ public class FacetIndex extends Index {
 			}
 		}
 
-		if (m_vPosIndex != null) {
-			m_vPosIndex.close();
+		if (m_objectDB != null) {
+
+			try {
+				m_objectDB.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
+		}
+
+		if (m_classDB != null) {
+
+			try {
+				m_classDB.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
 		}
 
 		if (m_env != null) {
+
 			try {
-				this.m_env.close();
+				m_env.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
+		}
+
+		if (m_env2 != null) {
+
+			try {
+				m_env2.close();
 			} catch (DatabaseException e) {
 				e.printStackTrace();
 			}
@@ -119,172 +146,190 @@ public class FacetIndex extends Index {
 
 		m_leaveDB = null;
 		m_treeDB = null;
+		m_objectDB = null;
 		m_env = null;
-		m_vPosIndex = null;
+		m_env2 = null;
 
 		System.gc();
 	}
 
-	// /**
-	// * @return the endpointDB
-	// * @throws IOException
-	// * @throws DatabaseException
-	// * @throws EnvironmentLockedException
-	// */
-	// public Database getEndPointDB() throws EnvironmentLockedException,
-	// DatabaseException, IOException {
-	//
-	// if (m_propEndPointDB == null) {
-	// initDBs();
-	// }
-	//
-	// return m_propEndPointDB;
-	// }
+	public HashSet<String> getExtensions(double leaveId, String sourceInd)
+			throws EnvironmentLockedException, DatabaseException, IOException {
 
-	public FacetTree getFacetTree(String extension) throws DatabaseException,
-			IOException {
-
-		if (m_treeDB == null) {
-			initDBs();
+		if (m_objectDB == null) {
+			init();
 		}
 
-		return FacetDbUtils.get(m_treeDB, FacetDbUtils
-				.getKey(new String[] { extension }));
+		return FacetDbUtils.getAllAsSet(m_objectDB, FacetDbUtils
+				.getKey(new String[] { sourceInd, String.valueOf(leaveId),
+						"ext" }), m_objBinding);
 	}
 
-	public HashSet<Node> getLeaves(String extension, String sourceIndividual)
+	public Database getIndex(FacetIndexName idxName)
+			throws EnvironmentLockedException, DatabaseException, IOException {
+
+		switch (idxName) {
+
+		case TREE: {
+
+			if (m_treeDB == null) {
+				init();
+			}
+
+			return m_treeDB;
+		}
+		case LEAVE: {
+
+			if (m_leaveDB == null) {
+				init();
+			}
+
+			return m_leaveDB;
+		}
+		case OBJECT: {
+
+			if (m_objectDB == null) {
+				init();
+			}
+
+			return m_objectDB;
+		}
+		default:
+			return null;
+		}
+	}
+
+	public HashSet<Double> getLeaves(String extension, String sourceIndividual)
 			throws DatabaseException, IOException {
 
 		if (m_leaveDB == null) {
-			initDBs();
+			init();
 		}
 
-		return FacetDbUtils.get(m_leaveDB, FacetDbUtils.getKey(new String[] {
-				extension, sourceIndividual }));
+		return FacetDbUtils.getAllAsSet(m_leaveDB, FacetDbUtils
+				.getKey(new String[] { extension, sourceIndividual }),
+				m_leaveBinding);
 	}
 
-	/**
-	 * @return the leaveDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
-	 */
-	public Database getLeaveDB() throws EnvironmentLockedException,
-			DatabaseException, IOException {
+	// public LuceneIndexStorage getLuceneIndex(FacetIndexName idxName)
+	// throws EnvironmentLockedException, DatabaseException, IOException {
+	//
+	// switch (idxName) {
+	//
+	// case OBJECT: {
+	//
+	// if (m_objectIndex == null) {
+	// initIndices();
+	// }
+	//
+	// return m_objectIndex;
+	// }
+	// case SORTED_LITERALS: {
+	//
+	// if (m_sortedLitIndex == null) {
+	// initIndices();
+	// }
+	//
+	// return m_sortedLitIndex;
+	// }
+	// default:
+	// return null;
+	// }
+	// }
 
-		if (m_leaveDB == null) {
-			initDBs();
+	public List<String> getObjects(double leaveId, String sourceInd)
+			throws EnvironmentLockedException, DatabaseException, IOException {
+
+		if (m_objectDB == null) {
+			init();
 		}
 
-		return m_leaveDB;
+		return FacetDbUtils.getAllAsList(m_objectDB, FacetDbUtils
+				.getKey(new String[] { sourceInd, String.valueOf(leaveId),
+						"obj" }), m_objBinding);
 	}
 
-	/**
-	 * @return the literalDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
-	 */
-	public Database getLiteralDB() throws EnvironmentLockedException,
-			DatabaseException, IOException {
-
-		if (m_literalDB == null) {
-			initDBs();
-		}
-
-		return m_literalDB;
-	}
-
-	/**
-	 * 
-	 * @param extension
-	 * @param subject
-	 * @return Position of subject in binary vector for this extension. Returns
-	 *         '-1' if no record is found for this given key.
-	 * @throws IOException
-	 * @throws StorageException
-	 */
-
-	public int getPosition(String extension, String subject)
-			throws IOException, StorageException {
-
-		if (m_vPosIndex == null) {
-			initIndices();
-		}
-
-		String posString = m_vPosIndex.getDataItem(IndexDescription.ESV,
-				DataField.VECTOR_POS, new String[] { extension, subject });
-
-		return posString == null ? -1 : Integer.parseInt(posString);
-	}
-
-	public BitVector getSourceVectorForNode(double nodeId) {
-
-		// TODO
-
-		return null;
-	}
-
-	/**
-	 * @return the treeDB
-	 * @throws IOException
-	 * @throws DatabaseException
-	 * @throws EnvironmentLockedException
-	 */
-	public Database getTreeDB() throws EnvironmentLockedException,
-			DatabaseException, IOException {
+	public FacetTree getTree(String extension) throws DatabaseException,
+			IOException {
 
 		if (m_treeDB == null) {
-			initDBs();
+			init();
 		}
 
-		return m_treeDB;
+		return FacetDbUtils.get(m_treeDB, extension, m_treeBinding);
 	}
 
-	/**
-	 * @return the VPosIndex
-	 * @throws IOException
-	 */
-	public LuceneIndexStorage getVPosIndex() throws IOException {
-
-		if (m_vPosIndex == null) {
-			initIndices();
-		}
-
-		return m_vPosIndex;
-	}
-
-	private void initDBs() throws EnvironmentLockedException,
-			DatabaseException, IOException {
+	private void init() throws EnvironmentLockedException, DatabaseException,
+			IOException {
 
 		s_log.debug("get db connection ...");
 
-		m_env = EnvironmentFactory.make(m_idxDirectory.getDirectory(
-				IndexDirectory.FACET_TREE_DIR, true));
+		EnvironmentConfig envConfig = new EnvironmentConfig();
+		envConfig.setTransactional(false);
+		envConfig.setAllowCreate(false);
 
-		DatabaseConfig config = DbConfigFactory.make(false);
+		m_env = new Environment(m_idxDirectory
+				.getDirectory(IndexDirectory.FACET_TREE_DIR), envConfig);
 
+		m_env2 = new Environment(m_idxDirectory
+				.getDirectory(IndexDirectory.FACET_OBJECTS_DIR), envConfig);
+
+		// Databases without duplicates
+		DatabaseConfig dbConfig = new DatabaseConfig();
+		dbConfig.setTransactional(false);
+		dbConfig.setAllowCreate(false);
+		dbConfig.setSortedDuplicates(false);
+		dbConfig.setDeferredWrite(true);
+
+		// Databases with duplicates
+		DatabaseConfig dbConfig2 = new DatabaseConfig();
+		dbConfig2.setTransactional(false);
+		dbConfig2.setAllowCreate(false);
+		dbConfig2.setSortedDuplicates(true);
+		dbConfig2.setDeferredWrite(true);
+
+		// Databases without duplicates
 		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
-				config);
+				dbConfig);
 
-		// m_propEndPointDB = m_env.openDatabase(null,
-		// FacetDbUtils.DatabaseNames.ENDPOINT, config);
-
-		m_literalDB = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.LITERAL, config);
-
+		// Databases with duplicates
 		m_leaveDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.LEAVE,
-				DbConfigFactory.make(true));
+				dbConfig2);
+
+		m_objectDB = m_env2.openDatabase(null,
+				FacetDbUtils.DatabaseNames.OBJECT, dbConfig2);
+
+		PreloadConfig pc = new PreloadConfig();
+		pc.setMaxMillisecs(2000);
+
+		m_treeDB.preload(pc);
+		m_leaveDB.preload(pc);
+		m_objectDB.preload(pc);
+
+		m_classDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
+				dbConfig);
+
+		// Create the bindings
+		m_treeBinding = new SerialBinding<FacetTree>(new StoredClassCatalog(
+				m_classDB), FacetTree.class);
+		m_leaveBinding = TupleBinding.getPrimitiveBinding(Double.class);
+		m_objBinding = TupleBinding.getPrimitiveBinding(String.class);
 
 		s_log.debug("got db connection!");
 	}
 
-	private void initIndices() throws IOException {
-
-		m_vPosIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
-				IndexDirectory.FACET_VPOS_DIR, false),
-				new StatisticsCollector());
-
-		m_vPosIndex.initialize(true, true);
-	}
+	// private void initIndices() throws IOException {
+	//
+	// m_objectIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
+	// IndexDirectory.FACET_OBJECTS_DIR, false), m_idxReader
+	// .getCollector());
+	//
+	// m_objectIndex.initialize(true, true);
+	//
+	// m_sortedLitIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
+	// IndexDirectory.FACET_LITERALS_DIR, false), m_idxReader
+	// .getCollector());
+	//
+	// m_sortedLitIndex.initialize(true, true);
+	// }
 }

@@ -59,18 +59,21 @@ public class GenericRdfStore implements IStore {
 
 	// IndexReader & IndexDir
 	private IndexReader m_idxReader;
+
 	private IndexDirectory m_idxDir;
+
 	// Indices
 	private FacetIndex m_facetIndex;
 	private StructureIndex m_structureIndex;
+	private GenericQueryEvaluator m_eval;
 
 	public GenericRdfStore(Properties props, String action) throws IOException,
 			StorageException, InterruptedException {
 
 		if (action.equals(FacetEnvironment.CREATE_STORE)) {
-			this.createStore(props);
+			createStore(props);
 		} else {
-			this.loadStore(props.getProperty(FacetEnvironment.INDEX_DIRECTORY));
+			loadStore(props.getProperty(FacetEnvironment.INDEX_DIRECTORY));
 		}
 	}
 
@@ -155,18 +158,18 @@ public class GenericRdfStore implements IStore {
 		ic.create();
 
 		// create facet indices
-		if (Boolean.getBoolean(props
-				.getProperty(FacetEnvironment.FACETS_ENABLED))) {
+		if (new Boolean(props.getProperty(FacetEnvironment.FACETS_ENABLED))) {
 
 			FacetIndexCreator fic = new FacetIndexCreator(m_idxDir);
 			fic.create();
 		}
 
-		this.m_idxReader = new IndexReader(this.m_idxDir);
+		m_idxReader = new IndexReader(m_idxDir);
 	}
 
 	public GenericQueryEvaluator getEvaluator() {
-		return new GenericQueryEvaluator(m_session, m_idxReader);
+		return m_eval == null ? m_eval = new GenericQueryEvaluator(m_session,
+				m_idxReader) : m_eval;
 	}
 
 	/**
@@ -201,7 +204,7 @@ public class GenericRdfStore implements IStore {
 			if (m_structureIndex == null) {
 				m_structureIndex = new StructureIndex(m_idxReader);
 			}
-			return m_facetIndex;
+			return m_structureIndex;
 		}
 
 		default: {
@@ -209,6 +212,14 @@ public class GenericRdfStore implements IStore {
 		}
 		}
 
+	}
+
+	public SearchSession getSession() {
+		return m_session;
+	}
+
+	private void loadStore(String dir) throws IOException {
+		m_idxReader = new IndexReader(m_idxDir = new IndexDirectory(dir));
 	}
 
 	// public Map<String, String> getObjects(String subject) {
@@ -228,9 +239,8 @@ public class GenericRdfStore implements IStore {
 	// return null;
 	// }
 
-	private void loadStore(String dir) throws IOException {
-		this.m_idxReader = new IndexReader(this.m_idxDir = new IndexDirectory(
-				dir));
+	public void setSession(SearchSession session) {
+		m_session = session;
 	}
 
 	// public void setSession(SearchSession session) {

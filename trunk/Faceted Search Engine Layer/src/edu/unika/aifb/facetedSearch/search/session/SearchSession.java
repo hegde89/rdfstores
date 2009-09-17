@@ -60,22 +60,27 @@ public class SearchSession {
 	protected SearchSession(GenericRdfStore store, int id, Properties props) {
 
 		// init fields
-		this.m_props = props;
-		this.m_store = store;
-		// this.m_store.setSession(this);
-		this.m_currentLevels = new HashMap<String, Integer>();
-		this.m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
-		this.m_rankingDelegator = RankingDelegator.getInstance(this);
-		this.m_constructionDelegator = ConstructionDelegator.getInstance(this);
+		m_props = props;
+		m_store = store;
+		m_store.setSession(this);
+		m_currentLevels = new HashMap<String, Integer>();
+		m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
+		m_rankingDelegator = RankingDelegator.getInstance(this);
+		m_constructionDelegator = ConstructionDelegator.getInstance(this);
 		// this.m_litFactory = new LiteralFactory(this);
 		// this.m_indFactory = new IndividualFactorty(this);
-		this.m_id = id;
+		m_id = id;
+
+		initCache();
+	}
+
+	private void initCache() {
 
 		// init cache
 		try {
 
-			this.m_cache = new SearchSessionCache(store.getIdxDir()
-					.getDirectory(IndexDirectory.FACET_VPOS_DIR));
+			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
+					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true));
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();
@@ -125,11 +130,32 @@ public class SearchSession {
 
 		System.gc();
 	}
+	
+	public void close() {
+
+		try {
+			m_cache.close();
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+
+		m_facetTreeDelegator = null;
+		m_rankingDelegator = null;
+		m_constructionDelegator = null;
+
+		System.gc();
+	}
+	
 
 	/**
 	 * @return the cache
 	 */
 	public SearchSessionCache getCache() {
+
+		if (m_cache == null) {
+			initCache();
+		}
+
 		return m_cache;
 	}
 

@@ -72,7 +72,7 @@ public class GenericQueryEvaluator {
 			}
 
 			// create facets for this result set
-			if (Boolean.getBoolean(m_session.getProps().getProperty(
+			if (new Boolean(m_session.getProps().getProperty(
 					FacetEnvironment.FACETS_ENABLED))) {
 				resPage.setFacets(((ConstructionDelegator) m_session
 						.getDelegator(Delegators.CONSTRUCTION))

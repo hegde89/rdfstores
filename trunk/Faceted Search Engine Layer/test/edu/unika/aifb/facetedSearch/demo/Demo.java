@@ -27,6 +27,7 @@ import joptsimple.OptionSet;
 import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionFactory;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
  * @author andi
@@ -70,11 +71,26 @@ public class Demo {
 
 		try {
 
-			SearchSession session = searchSessionFactory.getSession(searchSessionFactory
-					.acquire());
+			SearchSession session = searchSessionFactory
+					.getSession(searchSessionFactory.acquire());
 
-			@SuppressWarnings("unused")
 			GenericQueryEvaluator eval = session.getStore().getEvaluator();
+
+			// create a structured query
+			StructuredQuery q = new StructuredQuery("q1");
+			q
+					.addEdge("?x",
+							"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
+			q
+					.addEdge(
+							"?x",
+							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom",
+							"?y");
+			
+			q.setAsSelect("?x");
+
+			eval.evaluate(q);
 
 			// TODO
 

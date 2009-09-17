@@ -18,13 +18,16 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
@@ -32,26 +35,89 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
  */
 public class Node implements INode {
 
+	public class Facet implements Serializable {
+
+		private static final long serialVersionUID = 2633163812359121872L;
+
+		private String m_uri;
+		private FacetType m_facetType;
+		private DataType m_dataType;
+
+		private Facet(String uri, FacetType ftype, DataType dtype) {
+			m_uri = uri;
+			m_facetType = ftype;
+			m_dataType = dtype;
+		}
+
+		public DataType getDataType() {
+			return m_dataType;
+		}
+
+		public FacetType getType() {
+			return m_facetType;
+		}
+
+		public String getUri() {
+			return m_uri;
+		}
+
+		public boolean isDataPropertyBased() {
+			return m_facetType == FacetType.DATAPROPERTY_BASED;
+		}
+
+		public boolean isObjectPropertyBased() {
+			return m_facetType == FacetType.OBJECT_PROPERTY_BASED;
+		}
+
+		public void setDataType(DataType dataType) {
+			m_dataType = dataType;
+		}
+
+		public void setType(FacetType type) {
+			m_facetType = type;
+		}
+
+		public void setUri(String uri) {
+			m_uri = uri;
+		}
+
+	}
+
+	// public static class FacetFactory {
+	//
+	// public static Facet make(String uri, FacetType ftype, DataType dtype) {
+	// return new Facet(uri, ftype, dtype);
+	// }
+	//
+	// }
+
+	public enum FacetType {
+		DATAPROPERTY_BASED, OBJECT_PROPERTY_BASED, RDF_PROPERTY_BASED
+	}
+
 	public enum NodeContent {
 		TYPE_PROPERTY, DATA_PROPERTY, OBJECT_PROPERTY, CLASS
 	}
 
 	public enum NodeType {
-		ROOT, RANGE_ROOT, INNER_NODE, LEAVE, ENDPOINT
+		ROOT, RANGE_ROOT, INNER_NODE, LEAVE
+		// , ENDPOINT
 	}
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1484769190480836362L;
+	@SuppressWarnings("unused")
+	private static Logger s_log = Logger.getLogger(Node.class);
 
-	private String m_facet;
+	private Facet m_facet;
 	private double weight;
 	private String m_value;
-	private HashSet<NodeType> m_types;
+	private NodeType m_type;
 	private NodeContent m_content;
-	private List<String> m_RangeExtensions;
-	private List<String> m_SourceExtensions;
+	private HashSet<String> m_RangeExtensions;
+	private HashSet<String> m_SourceExtensions;
 	private String m_domain;
 	private int m_pathHashValue = Integer.MIN_VALUE;
 	private String m_path = null;
@@ -60,62 +126,82 @@ public class Node implements INode {
 
 	public Node() {
 
-		m_types = new HashSet<NodeType>();
 		m_id = (new Random()).nextGaussian();
-		m_RangeExtensions = new ArrayList<String>();
-		m_SourceExtensions = new ArrayList<String>();
+		m_RangeExtensions = new HashSet<String>();
+		m_SourceExtensions = new HashSet<String>();
 	}
 
-	public Node(String value, HashSet<NodeType> types) {
-
-		m_value = value;
-		m_types = new HashSet<NodeType>();
-		m_types.addAll(types);
-		m_id = (new Random()).nextGaussian();
-		m_RangeExtensions = new ArrayList<String>();
-		m_SourceExtensions = new ArrayList<String>();
-		// setPathHashValue(pathHashValue);
-	}
+	// public Node(String value, NodeType type) {
+	//
+	// m_value = value;
+	// m_type = type;
+	// m_id = (new Random()).nextGaussian();
+	// m_RangeExtensions = new ArrayList<String>();
+	// m_SourceExtensions = new ArrayList<String>();
+	// // setPathHashValue(pathHashValue);
+	// }
 
 	public Node(String value, NodeContent content) {
 
 		m_value = value;
 		m_content = content;
 		m_id = (new Random()).nextGaussian();
-		m_RangeExtensions = new ArrayList<String>();
-		m_SourceExtensions = new ArrayList<String>();
+		m_RangeExtensions = new HashSet<String>();
+		m_SourceExtensions = new HashSet<String>();
 		// setPathHashValue(pathHashValue);
 	}
 
 	public Node(String value, NodeType type) {
 
-		m_types = new HashSet<NodeType>();
-		m_types.add(type);
+		// m_types = new HashSet<NodeType>();
+		m_type = type;
 		m_value = value;
 		m_id = (new Random()).nextGaussian();
-		m_RangeExtensions = new ArrayList<String>();
-		m_SourceExtensions = new ArrayList<String>();
+		m_RangeExtensions = new HashSet<String>();
+		m_SourceExtensions = new HashSet<String>();
 		// setPathHashValue(pathHashValue);
 	}
 
 	public Node(String value, NodeType type, NodeContent content) {
 
-		m_types = new HashSet<NodeType>();
-		m_types.add(type);
+		m_type = type;
 		m_value = value;
 		m_content = content;
 		m_id = (new Random()).nextGaussian();
-		m_RangeExtensions = new ArrayList<String>();
-		m_SourceExtensions = new ArrayList<String>();
+		m_RangeExtensions = new HashSet<String>();
+		m_SourceExtensions = new HashSet<String>();
 		// setPathHashValue(pathHashValue);
 	}
 
 	public void addRangeExtension(String extension) {
-		this.m_RangeExtensions.add(extension);
+		m_RangeExtensions.add(extension);
 	}
 
 	public void addRangeExtensions(List<String> extensions) {
-		this.m_RangeExtensions.addAll(extensions);
+		m_RangeExtensions.addAll(extensions);
+	}
+
+	public void addRangeExtensions(String extensions) {
+		m_RangeExtensions.addAll(FacetUtils.string2List(extensions));
+	}
+
+	public void addSourceExtension(String extension) {
+		m_SourceExtensions.add(extension);
+	}
+
+	public void addSourceExtensions(HashSet<String> extensions) {
+		m_SourceExtensions.addAll(extensions);
+	}
+
+	public void addSourceExtensions(String extensions) {
+		m_SourceExtensions.addAll(FacetUtils.string2List(extensions));
+	}
+
+	@Override
+	public boolean equals(Object object) {
+
+		return object instanceof INode ? ((INode) object).getValue().equals(
+				this.getValue()) : false;
 	}
 
 	// public Node() {
@@ -131,20 +217,20 @@ public class Node implements INode {
 	// this.m_extensions = new ArrayList<String>();
 	// }
 
-	public void addType(NodeType type) {
-		m_types.add(type);
-	}
+	// public void addType(NodeType type) {
+	// m_types.add(type);
+	// }
+	//
+	// public void addTypes(Collection<NodeType> collection) {
+	// m_types.addAll(collection);
+	// }
 
-	public void addTypes(Collection<NodeType> collection) {
-		m_types.addAll(collection);
-	}
-
-	@Override
-	public boolean equals(Object object) {
-
-		return object instanceof INode ? ((INode) object).getValue().equals(
-				this.getValue()) : false;
-	}
+	// /**
+	// * @return the cache
+	// */
+	// public SearchSessionCache getCache() {
+	// return m_cache;
+	// }
 
 	/**
 	 * @return the m_content
@@ -170,17 +256,11 @@ public class Node implements INode {
 	// }
 	// }
 
-	/**
-	 * @return the domain
-	 */
 	public String getDomain() {
 		return m_domain;
 	}
 
-	/**
-	 * @return the facet
-	 */
-	public String getFacet() {
+	public Facet getFacet() {
 		return m_facet;
 	}
 
@@ -195,11 +275,6 @@ public class Node implements INode {
 		return m_path;
 	}
 
-	// public boolean hasChildren() {
-	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
-	// .size() > 0;
-	// }
-
 	/**
 	 * @return the pathHashValue
 	 */
@@ -207,19 +282,24 @@ public class Node implements INode {
 		return m_pathHashValue;
 	}
 
-	public List<String> getRangeExtensions() {
-		return this.m_RangeExtensions;
+	// public boolean hasChildren() {
+	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
+	// .size() > 0;
+	// }
+
+	public HashSet<String> getRangeExtensions() {
+		return m_RangeExtensions;
 	}
 
 	/**
 	 * @return the sourceExtensions
 	 */
-	public List<String> getSourceExtensions() {
+	public HashSet<String> getSourceExtensions() {
 		return m_SourceExtensions;
 	}
 
-	public HashSet<NodeType> getTypes() {
-		return m_types;
+	public NodeType getType() {
+		return m_type;
 	}
 
 	/**
@@ -244,29 +324,41 @@ public class Node implements INode {
 		return m_pathHashValue != Integer.MIN_VALUE;
 	}
 
-	public boolean isEndPoint() {
-		return m_types.contains(NodeType.ENDPOINT);
-	}
+	// public boolean isEndPoint() {
+	// return m_types.contains(NodeType.ENDPOINT);
+	// }
 
 	public boolean isInnerNode() {
-		return m_types.contains(NodeType.INNER_NODE);
+		return m_type == NodeType.INNER_NODE;
 	}
 
 	public boolean isLeave() {
-		return m_types.contains(NodeType.LEAVE);
+		return m_type == NodeType.LEAVE;
 	}
 
 	public boolean isRangeRoot() {
-		return m_types.contains(NodeType.RANGE_ROOT);
+		return m_type == NodeType.RANGE_ROOT;
 	}
 
 	public boolean isRoot() {
-		return m_types.contains(NodeType.ROOT);
+		return m_type == NodeType.ROOT;
 	}
 
-	public void removeType(NodeType type) {
-		m_types.remove(type);
+	// public void removeType(NodeType type) {
+	// m_types.remove(type);
+	// }
+
+	public Facet makeFacet(String uri, FacetType ftype, DataType dtype) {
+		return new Facet(uri, ftype, dtype);
 	}
+
+	// /**
+	// * @param cache
+	// * the cache to set
+	// */
+	// public void setCache(SearchSessionCache cache) {
+	// m_cache = cache;
+	// }
 
 	/**
 	 * @param m_content
@@ -288,7 +380,7 @@ public class Node implements INode {
 	 * @param facet
 	 *            the facet to set
 	 */
-	public void setFacet(String facet) {
+	public void setFacet(Facet facet) {
 		m_facet = facet;
 	}
 
@@ -312,7 +404,7 @@ public class Node implements INode {
 		m_pathHashValue = pathHashValue;
 	}
 
-	public void setRangeExtensions(List<String> extensions) {
+	public void setRangeExtensions(HashSet<String> extensions) {
 		this.m_RangeExtensions = extensions;
 	}
 
@@ -320,12 +412,12 @@ public class Node implements INode {
 	 * @param sourceExtensions
 	 *            the sourceExtensions to set
 	 */
-	public void setSourceExtensions(List<String> sourceExtensions) {
+	public void setSourceExtensions(HashSet<String> sourceExtensions) {
 		m_SourceExtensions = sourceExtensions;
 	}
 
-	public void setTypes(HashSet<NodeType> types) {
-		this.m_types = types;
+	public void setType(NodeType type) {
+		m_type = type;
 	}
 
 	/**
@@ -347,7 +439,7 @@ public class Node implements INode {
 	@Override
 	public String toString() {
 		return "Node" + this.m_id + " :[Label:" + this.m_value + ", Type:"
-				+ this.m_types + ", Content:" + this.m_content
+				+ this.m_type + ", Content:" + this.m_content
 				+ ", Extensions: " + this.m_RangeExtensions + "]";
 	}
 }

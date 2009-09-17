@@ -15,40 +15,19 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.facets.tree.model;
+package edu.unika.aifb.facetedSearch.api.model.impl;
 
-import java.util.Map;
-
-import edu.unika.aifb.facetedSearch.api.model.IIndividual;
+import java.io.Serializable;
 
 /**
  * @author andi
  * 
  */
-public interface IFacetValueCluster extends INode{
-	
-	public Map<IIndividual, Integer> getSources();
-	
-	public int getSize();
-		
-	public int getHeight();
-	
-	public void setHeight(int height);
-	
-	public void setSize(int size);
-		
-	
-	public String getName();
-	
-	public int getCountFV();
-	
-	public int getCountS();
-	
-	
-	public void setName(String name);	
-	
-	public void setCountFV(int countFV);
-	
-	public void setCountS(int countS);
+public class IndividualList implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1030868618579282530L;
 
 }

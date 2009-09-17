@@ -17,8 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.api.model.impl;
 
-import edu.unika.aifb.facetedSearch.api.model.IBrowsingObject;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+import edu.unika.aifb.facetedSearch.api.model.IBrowsingObject; //import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticLeave;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
@@ -42,17 +41,18 @@ public class BrowsingObject extends AbstractObject implements IBrowsingObject {
 		super(value, extension);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see edu.unika.aifb.facetedSearch.api.model.IBrowsingObject#getLeave()
-	 */
-	public StaticFacetValueClusterLeave getLeave() {
-		// return
-		// super.getSession().getFacetTreeDelegator().getFacetTree(super.getExtension()).;
-		// TODO
-		return null;
-	}
+	// /*
+	// * (non-Javadoc)
+	// *
+	// * @see edu.unika.aifb.facetedSearch.api.model.IBrowsingObject#getLeave()
+	// */
+	// public StaticLeave getLeave() {
+	// // return
+	// //
+	// super.getSession().getFacetTreeDelegator().getFacetTree(super.getExtension()).;
+	// // TODO
+	// return null;
+	// }
 
 	/*
 	 * (non-Javadoc)

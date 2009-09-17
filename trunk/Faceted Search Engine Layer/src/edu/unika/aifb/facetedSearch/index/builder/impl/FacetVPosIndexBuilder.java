@@ -19,19 +19,10 @@
 package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-
-import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.facetedSearch.index.builder.IFacetIndexBuilder;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
-import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
-import edu.unika.aifb.graphindex.searcher.hybrid.exploration.NodeElement;
-import edu.unika.aifb.graphindex.storage.DataField;
-import edu.unika.aifb.graphindex.storage.IndexDescription;
-import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 
@@ -41,49 +32,49 @@ import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
  */
 public class FacetVPosIndexBuilder implements IFacetIndexBuilder {
 
-	private IndexReader m_idxReader;
-	private IndexDirectory m_idxDirectory;
-	private FacetIndexHelper m_helper;
+	// private IndexReader m_idxReader;
+	// private IndexDirectory m_idxDirectory;
+	// private FacetIndexHelper m_helper;
 	private LuceneIndexStorage m_vPosIndex;
 
 	public FacetVPosIndexBuilder(IndexDirectory idxDirectory,
 			IndexReader idxReader, FacetIndexHelper helper) {
 
-		this.m_idxReader = idxReader;
-		this.m_idxDirectory = idxDirectory;
-		this.m_helper = helper;
+		// this.m_idxReader = idxReader;
+		// this.m_idxDirectory = idxDirectory;
+		// this.m_helper = helper;
 
 	}
 
 	public void build() throws IOException, StorageException {
 
-		IndexStorage spIdx = this.m_idxReader.getStructureIndex()
-				.getSPIndexStorage();
-
-		this.m_vPosIndex = new LuceneIndexStorage(this.m_idxDirectory
-				.getDirectory(IndexDirectory.FACET_VPOS_DIR, true), m_idxReader
-				.getCollector());
-
-		this.m_vPosIndex.initialize(true, false);
-
-		DirectedMultigraph<NodeElement, EdgeElement> idxGraph = this.m_helper
-				.getIndexGraph();
-
-		Set<NodeElement> extensions = idxGraph.vertexSet();
-
-		for (NodeElement extension : extensions) {
-
-			List<String> subjects = spIdx.getDataList(IndexDescription.EXTENT,
-					DataField.ENT, extension.getLabel());
-
-			int count = 0;
-
-			for (String subject : subjects) {
-				this.m_vPosIndex.addData(IndexDescription.ESV, new String[] {
-						extension.getLabel(), subject }, Integer
-						.toString(count++));
-			}
-		}
+		// IndexStorage spIdx = this.m_idxReader.getStructureIndex()
+		// .getSPIndexStorage();
+		//
+		// this.m_vPosIndex = new LuceneIndexStorage(this.m_idxDirectory
+		// .getDirectory(IndexDirectory.FACET_VPOS_DIR, true), m_idxReader
+		// .getCollector());
+		//
+		// this.m_vPosIndex.initialize(true, false);
+		//
+		// DirectedMultigraph<NodeElement, EdgeElement> idxGraph = this.m_helper
+		// .getIndexGraph();
+		//
+		// Set<NodeElement> extensions = idxGraph.vertexSet();
+		//
+		// for (NodeElement extension : extensions) {
+		//
+		// List<String> subjects = spIdx.getDataList(IndexDescription.EXTENT,
+		// DataField.ENT, extension.getLabel());
+		//
+		// int count = 0;
+		//
+		// for (String subject : subjects) {
+		// this.m_vPosIndex.addData(IndexDescription.ESV, new String[] {
+		// extension.getLabel(), subject }, Integer
+		// .toString(count++));
+		// }
+		// }
 
 	}
 

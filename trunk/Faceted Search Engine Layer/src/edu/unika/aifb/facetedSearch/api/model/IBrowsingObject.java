@@ -17,7 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.api.model;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClusterLeave;
+//import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticLeave;
 
 /**
  * @author andi
@@ -25,7 +25,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticFacetValueClust
  */
 public interface IBrowsingObject {
 
-	public StaticFacetValueClusterLeave getLeave();
+	// public StaticLeave getLeave();
 
 	public String getSourceExtension();
 

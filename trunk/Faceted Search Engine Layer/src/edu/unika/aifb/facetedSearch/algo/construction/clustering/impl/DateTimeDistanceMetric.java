@@ -27,7 +27,7 @@ import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
 import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
-import edu.unika.aifb.facetedSearch.util.FacetUtil;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
@@ -57,10 +57,10 @@ public class DateTimeDistanceMetric implements IDistanceMetric {
 
 		try {
 
-			XMLGregorianCalendar cal1 = XMLDatatypeUtil.parseCalendar(FacetUtil
+			XMLGregorianCalendar cal1 = XMLDatatypeUtil.parseCalendar(FacetUtils
 					.getLiteralValue(lit1.getValue()));
 
-			XMLGregorianCalendar cal2 = XMLDatatypeUtil.parseCalendar(FacetUtil
+			XMLGregorianCalendar cal2 = XMLDatatypeUtil.parseCalendar(FacetUtils
 					.getLiteralValue(lit1.getValue()));
 
 			distance = 0;

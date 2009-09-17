@@ -48,6 +48,8 @@
 
 package edu.unika.aifb.facetedSearch.util;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
@@ -59,9 +61,10 @@ import org.openrdf.model.vocabulary.XMLSchema;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 
-public class FacetUtil {
+public class FacetUtils {
 
-	private static Logger s_log = Logger.getLogger(FacetUtil.class);
+	private static Logger s_log = Logger.getLogger(FacetUtils.class);
+	private static final String LIST_DELIM = "//";
 
 	public static DataType getLiteralDataType(String literalString) {
 
@@ -143,5 +146,26 @@ public class FacetUtil {
 				FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : null;
+	}
+
+	public static String list2String(List<String> list) {
+
+		String out = "";
+
+		for (int i = 0; i < list.size(); i++) {
+
+			out += list.get(i);
+
+			if (i != list.size() - 1) {
+				out += LIST_DELIM;
+			}
+		}
+
+		return out;
+	}
+
+	public static List<String> string2List(String str) {
+
+		return Arrays.asList(str.split(LIST_DELIM));
 	}
 }

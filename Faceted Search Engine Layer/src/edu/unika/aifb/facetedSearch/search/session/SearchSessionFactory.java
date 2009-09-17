@@ -52,10 +52,9 @@ public class SearchSessionFactory {
 
 	private SearchSessionFactory(Properties props) {
 
-		this.m_con = RdfStoreConnectionProvider.getInstance(props)
-				.getConnection();
+		m_con = RdfStoreConnectionProvider.getInstance(props).getConnection();
 		try {
-			this.m_store = this.m_con.loadOrCreateStore();
+			m_store = m_con.loadOrCreateStore();
 		} catch (InvalidParameterException e1) {
 			e1.printStackTrace();
 		} catch (MissingParameterException e1) {
@@ -71,7 +70,7 @@ public class SearchSessionFactory {
 		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
 			s_locks[i] = new ReentrantLock();
 			try {
-				s_pool[i] = new SearchSession(this.m_store, i, props);
+				s_pool[i] = new SearchSession(m_store, i, props);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -90,12 +89,13 @@ public class SearchSessionFactory {
 	}
 
 	public void close() {
-		this.m_con.close();
+		m_con.close();
 	}
 
 	public void closeSession(SearchSession session) {
 		session.clean();
-		this.release(session.getId());
+		// session.close();
+		release(session.getId());
 	}
 
 	public SearchSession getSession(int id) {

@@ -32,11 +32,11 @@ import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetTreeBuilder
 import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession; //import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -44,7 +44,7 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class ConstructionDelegator extends Delegator {
 
-	private SearchSessionCache m_sessionCache;
+	// private SearchSessionCache m_sessionCache;
 	private SearchSession m_session;
 
 	private static ConstructionDelegator s_instance;
@@ -69,7 +69,7 @@ public class ConstructionDelegator extends Delegator {
 
 		s_log.debug("start facet construction for new result set");
 
-		m_sessionCache = m_session.getCache();
+		// m_sessionCache = m_session.getCache();
 
 		FacetTreeDelegator treeDelegator = (FacetTreeDelegator) m_session
 				.getDelegator(Delegators.TREE);
@@ -77,15 +77,24 @@ public class ConstructionDelegator extends Delegator {
 
 		for (String colName : results.getColumnNames()) {
 
-			s_log.debug("start building facet tree for column '" + colName
-					+ "'");
+			if (Util.isVariable(colName)) {
 
-			IFacetTreeBuilder builder = new FacetTreeBuilder(m_session);
-			FacetTree tree = builder.contruct(results, results
-					.getColumn(colName));
-			treeDelegator.addTree4Domain(colName, tree);
+				s_log.debug("start building facet tree for column '" + colName
+						+ "'");
 
-			s_log.debug("finished facet tree for column '" + colName + "'!");
+				IFacetTreeBuilder builder = new FacetTreeBuilder(m_session);
+				FacetTree tree = builder.contruct(results, results
+						.getColumn(colName));
+				treeDelegator.addTree4Domain(colName, tree);
+
+				s_log
+						.debug("finished facet tree for column '" + colName
+								+ "'!");
+
+			} else {
+				s_log.debug("skipped column '" + colName
+						+ "' since it's no variable!");
+			}
 		}
 
 		// TODO

@@ -18,22 +18,30 @@
 package edu.unika.aifb.facetedSearch.algo.construction.tree.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Queue;
 import java.util.Stack;
+
+import org.apache.log4j.Logger;
 
 import cern.colt.map.HashFunctions;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.LiteralComparator;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IFacetTreeBuilder;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree.EndPointType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.FacetType;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
@@ -48,133 +56,233 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class FacetTreeBuilder implements IFacetTreeBuilder {
 
+	private static Logger s_log = Logger.getLogger(FacetTreeBuilder.class);
+
 	private SearchSession m_session;
-	@SuppressWarnings("unused")
 	private SearchSessionCache m_cache;
 
 	// indices
 	private FacetIndex m_facetIndex;
 	private StructureIndex m_structureIndex;
 
-	private HashSet<String> m_SourceExtension;
 	private HashMap<String, FacetTree> m_indexedTrees;
-	private HashMap<Integer, Node> m_paths;
-	private HashSet<Node> m_endPoints;
+	private HashMap<Integer, StaticNode> m_paths;
+	private LiteralComparator m_comparator;
 
 	public FacetTreeBuilder(SearchSession session) throws IOException,
 			EnvironmentLockedException, DatabaseException, StorageException {
 
 		m_session = session;
-		m_cache = m_session.getCache();
+		m_cache = session.getCache();
+
 		m_facetIndex = (FacetIndex) m_session.getStore().getIndex(
 				IndexName.FACET_INDEX);
 		m_structureIndex = (StructureIndex) m_session.getStore().getIndex(
 				IndexName.STRUCTURE_INDEX);
 
-		m_SourceExtension = new HashSet<String>();
 		m_indexedTrees = new HashMap<String, FacetTree>();
-		m_paths = new HashMap<Integer, Node>();
-		m_endPoints = new HashSet<Node>();
+		m_paths = new HashMap<Integer, StaticNode>();
+		m_comparator = new LiteralComparator();
 
 	}
 
 	public FacetTree contruct(Table<String> results, int column)
 			throws StorageException, IOException, DatabaseException {
 
-		String domain = results.getColumnName(column);
-		FacetTree tree = new FacetTree();
+		FacetTree newTree = new FacetTree();
+		newTree.setDomain(results.getColumnName(column));
+
 		Iterator<String[]> iter = results.iterator();
 
 		while (iter.hasNext()) {
 
-			FacetTree currentStoredTree;
+			FacetTree currentIndexedTree;
 
 			String resItem = iter.next()[column];
-			// TODO: performance for this lookup?
-			String extension = m_structureIndex.getExtension(resItem);
+			String sourceExtension = m_structureIndex.getExtension(resItem);
 
-			if (!m_SourceExtension.contains(extension)) {
+			if (!m_indexedTrees.containsKey(sourceExtension)) {
 
-				// add extenison and load tree into RAM
-				m_SourceExtension.add(extension);
+				FacetTree indexedTree = m_facetIndex.getTree(sourceExtension);
+				m_indexedTrees.put(sourceExtension, indexedTree);
 
-				FacetTree storedTree = m_facetIndex.getFacetTree(extension);
-				m_indexedTrees.put(extension, storedTree);
-
-				currentStoredTree = storedTree;
+				currentIndexedTree = indexedTree;
 
 			} else {
-				currentStoredTree = m_indexedTrees.get(extension);
+
+				currentIndexedTree = m_indexedTrees.get(sourceExtension);
+
 			}
 
-			HashSet<Node> leaves = m_facetIndex.getLeaves(extension, resItem);
+			HashSet<Double> leaves = m_facetIndex.getLeaves(sourceExtension,
+					resItem);
 
-			for (Node leave : leaves) {
+			StaticNode newLeave;
 
-				Node pos4insertion = tree.getRoot();
-				Stack<Edge> edges2insert = new Stack<Edge>();
+			for (double leave : leaves) {
 
-				// TODO: get from cache
-				List<Edge> edges2root = currentStoredTree.getPath2Root(leave)
-						.getEdgeList();
-
-				Stack<Edge> path2root = new Stack<Edge>();
-				path2root.addAll(edges2root);
-
-				while (!path2root.isEmpty()) {
-
-					Edge currentEdge = path2root.pop();
-					int currentPathHash = currentStoredTree.getEdgeTarget(
-							currentEdge).getPathHashValue();
-
-					if (!m_paths.containsKey(currentPathHash)) {
-						edges2insert.add(currentEdge);
-					} else {
-						pos4insertion = m_paths.get(currentPathHash);
-					}
-				}
-
-				if (!edges2insert.isEmpty()) {
-
-					String pathPrefix = pos4insertion.getPath();
-					String pathDelta = "";
-
-					while (!edges2insert.isEmpty()) {
-
-						Edge edge2insert = edges2insert.pop();
-						Node node2copy = currentStoredTree
-								.getEdgeTarget(edge2insert);
-
-						Node newNode = new Node();
-						newNode.setContent(node2copy.getContent());
-						newNode.setValue(node2copy.getValue());
-						newNode.addTypes(node2copy.getTypes());
-						newNode.setFacet(node2copy.getFacet());
-						newNode.removeType(NodeType.ENDPOINT);
-						newNode.setDomain(domain);
-						newNode.setPath(pathPrefix + pathDelta);
-						newNode.setPathHashValue(HashFunctions.hash(pathPrefix
-								+ pathDelta));
-
-						tree.addVertex(newNode);
-
-						Edge edge = tree.addEdge(pos4insertion, newNode);
-						edge.setType(edge2insert.getType());
-
-						m_paths.put(HashFunctions.hash(pathPrefix + pathDelta),
-								newNode);
-
-						pathDelta = pathDelta + newNode.getValue();
-						pos4insertion = newNode;
-					}
-
-					pos4insertion.addType(NodeType.ENDPOINT);
-					m_endPoints.add(pos4insertion);
-				}
+				newLeave = insertPath(newTree, currentIndexedTree, leave);
+				updateNodes(newTree, resItem, sourceExtension, newLeave);
 
 			}
 		}
 
-		return tree;
+		sortLiteralLists(newTree);
+
+		return newTree;
+	}
+
+	private EndPointType getEndPointType(Node endpoint) {
+
+		EndPointType epType;
+
+		if (endpoint.getFacet().getType() == FacetType.DATAPROPERTY_BASED) {
+			epType = EndPointType.DATA_PROPERTY;
+		} else if (endpoint.getFacet().getType() == FacetType.OBJECT_PROPERTY_BASED) {
+			epType = EndPointType.OBJECT_PROPERTY;
+		} else {
+			epType = EndPointType.RDF_PROPERTY;
+		}
+
+		return epType;
+	}
+
+	private StaticNode insertPath(FacetTree newTree, FacetTree indexedTree,
+			double leaveId) throws DatabaseException, IOException {
+
+		Node pos4insertion = newTree.getRoot();
+		Stack<Edge> edges2insert = new Stack<Edge>();
+
+		Queue<Edge> path2root = indexedTree.getAncestorPath2Root(leaveId);
+
+		while (!path2root.isEmpty()) {
+
+			Edge currentEdge = path2root.poll();
+			int currentPathHash = indexedTree.getEdgeSource(currentEdge)
+					.getPathHashValue();
+
+			if (!m_paths.containsKey(currentPathHash)) {
+				edges2insert.add(currentEdge);
+			} else {
+				pos4insertion = m_paths.get(currentPathHash);
+			}
+		}
+
+		if (!edges2insert.isEmpty()) {
+
+			String pathPrefix = pos4insertion.getPath();
+			String pathDelta = "";
+
+			while (!edges2insert.isEmpty()) {
+
+				Edge edge2insert = edges2insert.pop();
+				Node node2copy = indexedTree.getEdgeTarget(edge2insert);
+
+				StaticNode newNode = new StaticNode();
+				newNode.setContent(node2copy.getContent());
+				newNode.setFacet(node2copy.getFacet());
+				newNode.setValue(node2copy.getValue());
+				newNode.setType(node2copy.getType());
+				newNode.setDomain(newTree.getDomain());
+				newNode.setPath(pathPrefix + pathDelta);
+				newNode.setPathHashValue(HashFunctions.hash(pathPrefix
+						+ pathDelta));
+				newNode.setCache(m_cache);
+				newNode.setID(node2copy.getID());
+				newNode.setFacet(node2copy.getFacet());
+
+				newTree.addVertex(newNode);
+
+				Edge edge = newTree.addEdge(pos4insertion, newNode);
+				edge.setType(edge2insert.getType());
+
+				m_paths
+						.put(HashFunctions.hash(pathPrefix + pathDelta),
+								newNode);
+
+				pathDelta = pathDelta + newNode.getValue();
+				pos4insertion = newNode;
+			}
+
+			newTree.addEndPoint(getEndPointType(pos4insertion), pos4insertion);
+		}
+
+		return (StaticNode) pos4insertion;
+	}
+
+	private void sortLiteralLists(FacetTree tree) {
+
+		Iterator<Node> iter = tree.getEndPoints(EndPointType.DATA_PROPERTY)
+				.iterator();
+
+		while (iter.hasNext()) {
+
+			Collections.sort(((StaticNode) iter.next()).getSortedLiterals(),
+					m_comparator);
+
+		}
+	}
+
+	private void updateNodes(FacetTree newTree, String resItem,
+			String sourceExt, StaticNode leave) throws DatabaseException,
+			IOException, StorageException {
+
+		Queue<Edge> path2RangeRoot = newTree.getAncestorPath2RangeRoot(leave
+				.getID());
+
+		List<String> objects = new ArrayList<String>();
+		objects.addAll(m_facetIndex.getObjects(leave.getID(), resItem));
+
+		List<String> rangeExt = new ArrayList<String>();
+		rangeExt.addAll(m_facetIndex.getExtensions(leave.getID(), resItem));
+
+		if (!path2RangeRoot.isEmpty()) {
+
+			StaticNode node;
+			int height = 0;
+
+			while (!path2RangeRoot.isEmpty()) {
+
+				node = (StaticNode) newTree
+						.getEdgeSource(path2RangeRoot.poll());
+				node.addSourceIndivdiual(resItem);
+
+				// object property or rdf property based
+				if (leave.getFacet().getType() != FacetType.DATAPROPERTY_BASED) {
+					node.addUnsortedObjects(objects);
+				} else {
+					s_log.debug("should not be here ... node:" + node);
+				}
+
+				node.addSourceExtension(sourceExt);
+				node.addRangeExtensions(rangeExt);
+
+				node.incrementCountS(1);
+				node.incrementCountFV(objects.size());
+
+				node.setHeight(height++);
+
+			}
+		} else {
+
+			leave.addSourceIndivdiual(resItem);
+
+			if (leave.getFacet().getType() == FacetType.DATAPROPERTY_BASED) {
+				// TODO: if not enough RAM > store in db
+				leave.addSortedObjects(objects);
+			}
+			// object property or rdf property based
+			else {
+				leave.addUnsortedObjects(objects);
+			}
+
+			leave.addSourceExtension(sourceExt);
+			leave.addRangeExtensions(rangeExt);
+
+			leave.incrementCountS(1);
+			leave.incrementCountFV(objects.size());
+
+			leave.setHeight(0);
+		}
 	}
 }

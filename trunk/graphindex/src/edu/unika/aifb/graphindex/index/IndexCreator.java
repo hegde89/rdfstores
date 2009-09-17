@@ -87,10 +87,11 @@ public class IndexCreator implements TripleSink {
 	private IndexDirectory m_idxDirectory;
 	private IndexConfiguration m_idxConfig;
 	private Importer m_importer;
-	
+	private int m_triplesImported = 0;
 	private Map<IndexDescription,IndexStorage> m_dataIndexes;
-	
 	private Set<String> m_properties;
+	
+	private final int TRIPLES_INTERVAL = 500000;
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
@@ -549,5 +550,9 @@ public class IndexCreator implements TripleSink {
 				e.printStackTrace();
 			}
 		}
+		
+		m_triplesImported++;
+		if (m_triplesImported % TRIPLES_INTERVAL == 0)
+			log.info("triples imported: " + m_triplesImported);
 	}
 }

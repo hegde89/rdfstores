@@ -17,7 +17,6 @@ public class NxImporter extends Importer {
 
 	@Override
 	public void doImport() {
-		int triples = 0;
 		try {
 			for (String file : m_files) {
 				log.debug("file: " + file);
@@ -63,10 +62,6 @@ public class NxImporter extends Importer {
 						context = file;
 
 					m_sink.triple(subject, property, object, context);
-
-					triples++;
-					if (triples % 1000000 == 0)
-						log.debug("triples imported: " + triples);
 				}
 			}
 		} catch (FileNotFoundException e) {

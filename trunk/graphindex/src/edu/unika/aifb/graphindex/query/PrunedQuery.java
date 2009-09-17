@@ -130,13 +130,15 @@ public class PrunedQuery extends StructuredQuery {
 
 		for (PrunedQueryPart oldPart : new HashSet<PrunedQueryPart>(parts.values())) {
 			List<PrunedQueryPart> newPrunedParts = oldPart.trim(m_si.getPathLength());
+			
+			for (QueryEdge edge : oldPart.getReclaimedEdges())
+				prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
+			
 			for (PrunedQueryPart part : newPrunedParts) {
 				log.debug(part.getRoot() + " " + part);
 				m_prunedParts.add(part);
 				m_roots.add(part.getRoot());
 				m_removeNodes.addAll(part.getQueryGraph().vertexSet());
-				for (QueryEdge edge : part.getReclaimedEdges())
-					prunedQueryGraph.addEdge(edge.getSource(), edge.getLabel(), edge.getTarget());
 			}
 		}
 

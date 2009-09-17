@@ -77,11 +77,11 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		
 		m_ds = idxReader.getDataIndex();
 		m_is = idxReader.getStructureIndex().getSPIndexStorage();
-		try {
-			m_bc = idxReader.getStructureIndex().getBlockCache();
-		} catch (DatabaseException e) {
-			throw new StorageException(e);
-		}
+//		try {
+//			m_bc = idxReader.getStructureIndex().getBlockCache();
+//		} catch (DatabaseException e) {
+//			throw new StorageException(e);
+//		}
 
 		m_idxPSO = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
 		m_idxPOS = idxReader.getDataIndex().getSuitableIndex(DataField.PROPERTY, DataField.OBJECT);
@@ -177,6 +177,9 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			}
 			while ((!visited.contains(srcLabel) && !visited.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel)));
 
+			skipped.remove(currentEdge);
+			toVisit.addAll(skipped);
+
 			visited.add(srcLabel);
 			visited.add(trgLabel);
 			
@@ -217,7 +220,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 			}
 			
 			
-			if (srcLabel.equals("?x4") && trgLabel.equals("?x3")) 
+//			if (srcLabel.equals("?x4") && trgLabel.equals("?x3")) 
 			if (m_doRefinement && prunedParts.containsKey(srcLabel) && !verified.contains(srcLabel)) {
 				log.debug("source refinement");
 				result = refineWithPrunedPart(prunedParts.get(srcLabel), srcLabel, result);

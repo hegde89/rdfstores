@@ -30,12 +30,10 @@ import org.openrdf.rio.RDFParser.DatatypeHandling;
 import org.openrdf.rio.rdfxml.RDFXMLParser;
 
 public class RDFImporter extends Importer {
-	@SuppressWarnings("unused")
 	private static Logger log = Logger.getLogger(RDFImporter.class);
 
 	public RDFImporter() {
 		super();
-		log = Logger.getLogger(RDFImporter.class);
 	}
 
 	@Override
@@ -66,5 +64,4 @@ public class RDFImporter extends Importer {
 			}
 		}
 	}
-
 }

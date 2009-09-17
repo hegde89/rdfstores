@@ -8,5 +8,7 @@
 	<classpathentry kind="lib" path="lib/commons-math-2.0.jar" sourcepath="lib/src/commons-math-2.0-sources.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.7.jar" sourcepath="lib/src/junit-4.7-src.jar"/>
 	<classpathentry kind="lib" path="lib/jgrapht-jdk1.6.jar" sourcepath="lib/src/jgrapht-0.8.1/src"/>
+	<classpathentry kind="lib" path="lib/tuple.jar"/>
+	<classpathentry kind="lib" path="lib/je-3.3.87.jar" sourcepath="lib/src/je-3.3.87/src"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

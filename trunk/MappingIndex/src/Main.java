@@ -23,13 +23,13 @@ public class Main {
 			// Define option for the data source used as source in the mapping
 			op.accepts("s", "source datasource").withRequiredArg();
 			// Define option for the data source used as destination in the mapping
-			op.accepts("d", "destination datasource").withRequiredArg();
+			op.accepts("t", "target datasource").withRequiredArg();
 			
 			// Parse arguments with option parser
 			OptionSet os = op.parse(args);
 			
 			// Check for output directory in option set
-			if (!os.has("o") || os.nonOptionArguments().size() == 0) {
+			if (!os.has("o") || !os.has("s") || !os.has("t")|| os.nonOptionArguments().size() == 0) {
 				op.printHelpOn(System.out);
 				return;
 			}
@@ -39,7 +39,7 @@ public class Main {
 			// Get source
 			String source = (String)os.valueOf("s");
 			// Get destination
-			String destination = (String)os.valueOf("d");
+			String destination = (String)os.valueOf("t");
 			
 			// Get filename
 			List<String> files = os.nonOptionArguments();

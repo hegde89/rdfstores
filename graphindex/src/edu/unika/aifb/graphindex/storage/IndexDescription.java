@@ -104,6 +104,10 @@ public class IndexDescription {
 		DataField.PROPERTY, DataField.OBJECT, DataField.CONTEXT, DataField.SUBJECT);
 	public static final IndexDescription SOPC = new IndexDescription("sop", "c",
 		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY, DataField.CONTEXT);
+	
+	// MappingIndex
+	public static final IndexDescription DSEEDS = new IndexDescription("dseeds", "p",
+			DataField.DS_SOURCE, DataField.E_SOURCE, DataField.E_TARGET, DataField.DS_TARGET, DataField.CONTEXT);
 
 
 	// Facet indices

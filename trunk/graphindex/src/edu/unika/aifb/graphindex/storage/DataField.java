@@ -49,6 +49,12 @@ public class DataField {
 	public static final DataField ELL = new DataField(FIELD_ELL);
 	public static final DataField DIS = new DataField(FIELD_DIS);
 	
+	// Fields for MappingIndex
+	public static final DataField DS_SOURCE = new DataField("ds1");
+	public static final DataField E_SOURCE = new DataField("e1");
+	public static final DataField E_TARGET = new DataField("e2");
+	public static final DataField DS_TARGET = new DataField("ds2");
+	
 	private String m_type;
 	
 	private DataField(String type) {

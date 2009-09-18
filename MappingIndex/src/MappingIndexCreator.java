@@ -15,6 +15,7 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
 
 
@@ -55,7 +56,7 @@ public class MappingIndexCreator implements TripleSink{
 		
 		m_dataIndexes = new HashMap<IndexDescription,IndexStorage>();
 		
-		IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + IndexDescription.DSEEDS.getIndexFieldName()));
+		IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + IndexDescription.DSEEDS.getIndexFieldName()), new StatisticsCollector());
 		is.initialize(true, false);
 		m_dataIndexes.put(IndexDescription.DSEEDS, is);
 		
@@ -73,8 +74,6 @@ public class MappingIndexCreator implements TripleSink{
 		addDataIndex(IndexDescription.DSEEDS);
 		
 		importData();
-		
-		m_idxConfig.store(m_idxDirectory);
 	}
 	
 	private String selectByField(DataField df, String s, String p, String o, String c) {

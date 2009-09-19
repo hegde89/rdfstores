@@ -84,8 +84,8 @@ import edu.unika.aifb.graphindex.util.Util;
  */
 public class IndexCreator implements TripleSink {
 
-	private IndexDirectory m_idxDirectory;
-	private IndexConfiguration m_idxConfig;
+	protected IndexDirectory m_idxDirectory;
+	protected IndexConfiguration m_idxConfig;
 	private Importer m_importer;
 	private int m_triplesImported = 0;
 	private Map<IndexDescription,IndexStorage> m_dataIndexes;
@@ -198,6 +198,8 @@ public class IndexCreator implements TripleSink {
 		addSPIndex(IndexDescription.SES);
 		addSPIndex(IndexDescription.POES);
 		addSPIndex(IndexDescription.EXTENT);
+		
+		m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);
 		
 		importData();
 		
@@ -419,14 +421,14 @@ public class IndexCreator implements TripleSink {
 		bc.close();
 	}
 	
-	private void createKWIndex() throws IOException, StorageException {
+	protected void createKWIndex() throws IOException, StorageException {
 		prepareKeywordIndex();
 		
 		KeywordIndexBuilder kb = new KeywordIndexBuilder(m_idxDirectory, m_idxConfig); 
 		kb.indexKeywords();
 	}
 	
-	private void prepareKeywordIndex() throws IOException, StorageException {
+	protected void prepareKeywordIndex() throws IOException, StorageException {
 		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
 
 		TreeSet<String> conSet = new TreeSet<String>();

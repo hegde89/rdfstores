@@ -40,6 +40,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.HitCollector;
@@ -48,6 +49,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 
 import edu.unika.aifb.graphindex.data.Table;
@@ -95,13 +97,13 @@ public class LuceneIndexStorage implements IndexStorage {
 		
 		try {
 			if (!m_readonly) {
-				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), new WhitespaceAnalyzer(), clean, MaxFieldLength.UNLIMITED);
 				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 20);
 				m_writer.setMergeFactor(30);
 				log.debug("IndexWriter ram buffer size set to " + m_writer.getRAMBufferSizeMB() + "MB");
 			}
 			
-			m_reader = IndexReader.open(m_directory);
+			m_reader = IndexReader.open(FSDirectory.getDirectory(m_directory), true);
 			m_searcher = new IndexSearcher(m_reader);
 			
 			m_docCache = new LRUCache<Integer,Document>(5000);
@@ -132,13 +134,20 @@ public class LuceneIndexStorage implements IndexStorage {
 			m_searcher.close();
 			m_reader.close();
 	
-			m_writer.flush();
+			m_writer.commit();
 	
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
+	}
+	
+	private Field getIndexedField(IndexDescription index, String value) {
+		Field f = new Field(index.getIndexFieldName(), value, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+		f.setOmitNorms(true);
+		f.setOmitTf(true);
+		return f;
 	}
 	
 	public String toIndexKey(String[] indexKeys) {
@@ -156,7 +165,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			sb.append(s).append('\n');
 		
 		Document doc = new Document();
-		doc.add(new Field(index.getIndexFieldName(), indexKey, Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(getIndexedField(index, indexKey));
 		doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
 		
 		try {
@@ -178,7 +187,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		String indexKey = toIndexKey(indexKeys);
 		
 		Document doc = new Document();
-		doc.add(new Field(index.getIndexFieldName(), indexKey, Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+		doc.add(getIndexedField(index, indexKey));
 		doc.add(new Field(index.getValueFieldName(), value, Field.Store.YES, Field.Index.NO));
 		
 		try {
@@ -519,8 +528,8 @@ public class LuceneIndexStorage implements IndexStorage {
 			q = new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexFields)));
 		
 		try {
-			Hits hits = m_searcher.search(q);
-			return hits.length() > 0;
+			TopDocs hits = m_searcher.search(q, 1);
+			return hits.scoreDocs.length > 0;
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -555,7 +564,7 @@ public class LuceneIndexStorage implements IndexStorage {
 
 			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf(File.separator)) + File.separator + index.getIndexFieldName() + "_merged");
 			log.debug("writing to " + newDir);
-			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), false, new WhitespaceAnalyzer(), true);
+			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), new WhitespaceAnalyzer(), true, MaxFieldLength.UNLIMITED);
 			writer.setMergeFactor(20);
 			
 			te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
@@ -582,7 +591,7 @@ public class LuceneIndexStorage implements IndexStorage {
 					sb.append(s).append('\n');
 				
 				Document doc = new Document();
-				doc.add(new Field(index.getIndexFieldName(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				doc.add(getIndexedField(index, t.text()));
 				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
 				writer.addDocument(doc);
 				
@@ -600,6 +609,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			m_reader.close();
 
 			log.debug("optimizing new index");
+			writer.commit();
 			writer.optimize();
 			writer.close();
 			
@@ -640,7 +650,7 @@ public class LuceneIndexStorage implements IndexStorage {
 					sb.append(s).append('\n');
 				
 				Document doc = new Document();
-				doc.add(new Field(index.getIndexFieldName(), t.text(), Field.Store.NO, Field.Index.UN_TOKENIZED, Field.TermVector.NO));
+				doc.add(getIndexedField(index, t.text()));
 				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
 				m_writer.addDocument(doc);
 			}

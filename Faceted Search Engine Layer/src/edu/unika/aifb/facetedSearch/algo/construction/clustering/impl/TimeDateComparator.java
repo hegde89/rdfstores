@@ -17,35 +17,45 @@
  */
 package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
 
-import org.apache.log4j.Logger;
+import java.util.Comparator;
+
+import javax.xml.datatype.XMLGregorianCalendar;
+
 import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
-import edu.unika.aifb.facetedSearch.api.model.ILiteral;
-import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
  * 
  */
-public class NumericalDistanceMetric implements IDistanceMetric {
+public class TimeDateComparator implements Comparator<String> {
 
-	@SuppressWarnings("unused")
-	private static Logger s_log = Logger.getLogger(StringDistanceMetric.class);
-	private static NumericalDistanceMetric s_instance;
+	private SearchSessionCache m_cache;
 
-	public static NumericalDistanceMetric getInstance() {
-		return s_instance == null ? s_instance = new NumericalDistanceMetric()
-				: s_instance;
+	public TimeDateComparator(SearchSessionCache cache) {
+		m_cache = cache;
 	}
 
-	private NumericalDistanceMetric() {
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+	 */
+	public int compare(String o1, String o2) {
+
+		XMLGregorianCalendar cal1 = lit2Cal(o1);
+		XMLGregorianCalendar cal2 = lit2Cal(o2);
+
+		m_cache.addParsedLiteral(o1, cal1);
+		m_cache.addParsedLiteral(o2, cal2);
+
+		return cal1.toGregorianCalendar().compareTo(cal2.toGregorianCalendar());
 	}
 
-	public double getDistance(ILiteral lit1, ILiteral lit2) {
-
-		double double1 = XMLDatatypeUtil.parseDouble(lit1.getValue());
-		double double2 = XMLDatatypeUtil.parseDouble(lit2.getValue());
-
-		return Math.abs(double1 - double2);
+	public XMLGregorianCalendar lit2Cal(String lit) {
+		return XMLDatatypeUtil.parseCalendar(FacetUtils.getValueOfLiteral(lit));
 	}
+
 }

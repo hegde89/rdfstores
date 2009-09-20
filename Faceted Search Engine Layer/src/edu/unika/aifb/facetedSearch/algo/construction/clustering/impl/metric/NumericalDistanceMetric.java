@@ -15,16 +15,33 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.metric;
 
 import java.math.BigDecimal;
+
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
 
 /**
  * @author andi
  * 
  */
-public interface IDistanceMetric<T> {
+public class NumericalDistanceMetric implements IDistanceMetric<Double> {
 
-	public BigDecimal getDistance(T lit1, T lit2);
+	@SuppressWarnings("unused")
+	private static Logger s_log = Logger.getLogger(StringDistanceMetric.class);
+	private static NumericalDistanceMetric s_instance;
 
+	public static NumericalDistanceMetric getInstance() {
+		return s_instance == null ? s_instance = new NumericalDistanceMetric()
+				: s_instance;
+	}
+
+	private NumericalDistanceMetric() {
+	}
+
+	public BigDecimal getDistance(Double lit1, Double lit2) {
+		return new BigDecimal(Math.abs(lit1 - lit2));
+	}
 }

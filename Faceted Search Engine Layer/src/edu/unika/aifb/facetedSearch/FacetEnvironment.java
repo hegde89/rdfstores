@@ -30,35 +30,14 @@ import org.openrdf.model.vocabulary.XMLSchema;
 public class FacetEnvironment {
 
 	/*
-	 * keys for properties
+	 * data types
 	 */
-	public static final String INDEX_DIRECTORY = "idx.dir";
-	public static final String RANKING_ENABLED = "ranking.enabled";
-	public static final String FACETS_ENABLED = "facets.enabled";
-	public static final String ACTION = "action";
-	public static final String FILES = "files";
-	public static final String CREATE_DATA_INDEX = "createDataIndex";
-	public static final String IGNORE_DATATYPES = "ignoreDataTypes";
-	public static final String CREATE_STRUCTURE_INDEX = "createStructureIndex";
-	public static final String CREATE_KEYWORD_INDEX = "createKeywordIndex";
-	public static final String NEIGHBORHOOD_SIZE = "neighborhood.size";
-	public static final String STRUCTURE_INDEX_PATH_LENGTH = "structureIndex.pathLength";
-	public static final String STRUCTURE_BASED_DATA_PARTIONING = "structureBased.dataPartitioning";
-	public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
-	public static final String ONTO_LANGUAGE = "onto.language";
+	public enum DataType {
+		STRING, TIME, NUMERICAL, DATE, DATE_TIME, UNKNOWN
+	}
 
-	/*
-	 * options for property 'action'
-	 */
-	public static final String CREATE_STORE = "create";
-	public static final String LOAD_STORE = "load";
-
-	/*
-	 * Default Values
-	 */
-	
 	public static class DefaultValue {
-		
+
 		public static String INDEX_DIRECTORY = "D:/Data/DA/idx";
 		public static double WEIGHT = -1.0;
 		public static boolean RANKING_ENABLED = false;
@@ -66,10 +45,18 @@ public class FacetEnvironment {
 		public static String LITERAL_DELIM = Character.toString((char) 94);
 		public static int MAX_SESSIONS = 1;
 		public static int MAXLENGTH_STRING = 15;
-		public static int NUMBER_OF_RESULTS_PER_PAGE = 20;
-	}
-	
+		public static int NUM_OF_RESITEMS_PER_PAGE = 20;
+		public static long PRELOAD_TIME = 4000;
+		public static int NUM_OF_CHILDREN_PER_NODE = 6;
 
+	}
+
+	public class Dir {
+
+		public static final String TREES = "trees";
+		public static final String DISTANCES = "distances";
+		public static final String VPOS = "vpos";
+	}
 
 	/*
 	 * evaluator types
@@ -78,19 +65,56 @@ public class FacetEnvironment {
 		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator
 	}
 
-	// /*
-	// * node types
-	// */
-	// public enum NodeType {
-	// NODE, ROOT, BLANK_NODE, FACET_VALUE, STATIC_FACET_VALUE_CLUSTER,
-	// STATIC_FACET_VALUE_CLUSTER_LEAVE, DYNAMIC_FACET_VALUE_CLUSTER
-	// }
-
 	/*
 	 * abstract-object types
 	 */
 	public enum ObjectType {
 		LITERAL, INDIVIDUAL
+	}
+
+	public static class OntologyLanguage {
+
+		public static final String N_3 = "nt";
+		public static final String RDF = "rdf";
+	}
+
+	public class RDF {
+
+		public static final String NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+		public static final String PROPERTY = "Property";
+		public static final String TYPE = "type";
+
+		// ------------------- Properties for ignore list -------------------
+
+		public static final String VALUE = "value";
+		public static final String SUBJECT = "subject";
+		public static final String PREDICATE = "predicate";
+		public static final String OBJECT = "object";
+
+	}
+
+	public class RDFS {
+
+		public static final String NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
+
+		public static final String CLASS = "Class";
+
+		public static final String SUBCLASS_OF = "subClassOf";
+		public static final String SUBPROPERTY_OF = "subPropertyOf";
+
+		public static final String HAS_DOMAIN = "domain";
+		public static final String HAS_RANGE = "range";
+
+		// ------------------- Properties for ignore list -------------------
+
+		public static final String LABEL = "label";
+		public static final String COMMENT = "comment";
+		public static final String MEMBER = "member";
+		public static final String FIRST = "first";
+		public static final String REST = "rest";
+		public static final String SEE_ALSO = "seeAlso";
+		public static final String IS_DEFINED_BY = "isDefinedBy";
+
 	}
 
 	/*
@@ -101,13 +125,6 @@ public class FacetEnvironment {
 		public static final String LITERAL = "literal";
 		public static final String INDIVIDUAL = "individual";
 
-	}
-
-	/*
-	 * data types
-	 */
-	public enum DataType {
-		STRING, TIME, NUMERICAL, DATE, DATE_TIME, UNKNOWN
 	}
 
 	/*
@@ -160,66 +177,60 @@ public class FacetEnvironment {
 	}
 
 	/*
+	 * keys for properties
+	 */
+	public static final String INDEX_DIRECTORY = "idx.dir";
+	public static final String RANKING_ENABLED = "ranking.enabled";
+	public static final String FACETS_ENABLED = "facets.enabled";
+	public static final String ACTION = "action";
+
+	public static final String FILES = "files";
+	public static final String CREATE_DATA_INDEX = "createDataIndex";
+
+	/*
+	 * Default Values
+	 */
+
+	public static final String IGNORE_DATATYPES = "ignoreDataTypes";
+
+	public static final String CREATE_STRUCTURE_INDEX = "createStructureIndex";
+
+	// /*
+	// * node types
+	// */
+	// public enum NodeType {
+	// NODE, ROOT, BLANK_NODE, FACET_VALUE, STATIC_FACET_VALUE_CLUSTER,
+	// STATIC_FACET_VALUE_CLUSTER_LEAVE, DYNAMIC_FACET_VALUE_CLUSTER
+	// }
+
+	public static final String CREATE_KEYWORD_INDEX = "createKeywordIndex";
+
+	public static final String NEIGHBORHOOD_SIZE = "neighborhood.size";
+
+	public static final String STRUCTURE_INDEX_PATH_LENGTH = "structureIndex.pathLength";
+
+	public static final String STRUCTURE_BASED_DATA_PARTIONING = "structureBased.dataPartitioning";
+
+	/*
 	 * evaluator types
 	 */
 
-	public static class OntologyLanguage {
-
-		public static final String N_3 = "nt";
-		public static final String RDF = "rdf";
-	}
+	public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
 
 	/*
 	 * Stopwords for Util.java
 	 */
 
+	public static final String ONTO_LANGUAGE = "onto.language";
+
+	/*
+	 * options for property 'action'
+	 */
+	public static final String CREATE_STORE = "create";
+
+	public static final String LOAD_STORE = "load";
+
 	public static final String[] stopWords = {};
-
-	public class Dir {
-
-		public static final String TREES = "trees";
-		public static final String DISTANCES = "distances";
-		public static final String VPOS = "vpos";
-	}
-
-	public class RDF {
-
-		public static final String NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-		public static final String PROPERTY = "Property";
-		public static final String TYPE = "type";
-
-		// ------------------- Properties for ignore list -------------------
-
-		public static final String VALUE = "value";
-		public static final String SUBJECT = "subject";
-		public static final String PREDICATE = "predicate";
-		public static final String OBJECT = "object";
-
-	}
-
-	public class RDFS {
-
-		public static final String NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
-
-		public static final String CLASS = "Class";
-
-		public static final String SUBCLASS_OF = "subClassOf";
-		public static final String SUBPROPERTY_OF = "subPropertyOf";
-
-		public static final String HAS_DOMAIN = "domain";
-		public static final String HAS_RANGE = "range";
-
-		// ------------------- Properties for ignore list -------------------
-
-		public static final String LABEL = "label";
-		public static final String COMMENT = "comment";
-		public static final String MEMBER = "member";
-		public static final String FIRST = "first";
-		public static final String REST = "rest";
-		public static final String SEE_ALSO = "seeAlso";
-		public static final String IS_DEFINED_BY = "isDefinedBy";
-
-	}
 
 	public static final String SOURCE = "source";
 

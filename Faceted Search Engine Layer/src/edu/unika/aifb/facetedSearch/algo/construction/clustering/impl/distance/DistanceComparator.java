@@ -15,16 +15,23 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance;
 
-import java.math.BigDecimal;
+import java.util.Comparator;
 
 /**
  * @author andi
  * 
  */
-public interface IDistanceMetric<T> {
+public class DistanceComparator implements Comparator<ClusterDistance> {
 
-	public BigDecimal getDistance(T lit1, T lit2);
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+	 */
+	public int compare(ClusterDistance o1, ClusterDistance o2) {
 
+		return o1.getValue().compareTo(o2.getValue());
+	}
 }

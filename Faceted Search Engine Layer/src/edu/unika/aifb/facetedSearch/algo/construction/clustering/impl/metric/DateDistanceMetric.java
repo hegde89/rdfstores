@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.metric;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,17 +23,15 @@ import java.math.RoundingMode;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.apache.log4j.Logger;
-import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
-import edu.unika.aifb.facetedSearch.api.model.ILiteral;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
  * 
  */
-public class DateDistanceMetric implements IDistanceMetric {
+public class DateDistanceMetric implements
+		IDistanceMetric<XMLGregorianCalendar> {
 
 	private static final BigDecimal s_maxDistance = new BigDecimal(2000 * 365
 			+ 11 * 30 + 29);
@@ -50,30 +48,27 @@ public class DateDistanceMetric implements IDistanceMetric {
 
 	}
 
-	public double getDistance(ILiteral lit1, ILiteral lit2) {
+	public BigDecimal getDistance(XMLGregorianCalendar lit1,
+			XMLGregorianCalendar lit2) {
 
 		double distance = Double.NaN;
 
 		try {
 
-			XMLGregorianCalendar cal1 = XMLDatatypeUtil.parseCalendar(FacetUtils
-					.getLiteralValue(lit1.getValue()));
-
-			XMLGregorianCalendar cal2 = XMLDatatypeUtil.parseCalendar(FacetUtils
-					.getLiteralValue(lit1.getValue()));
-
 			distance = 0;
-			distance += Math.abs(cal2.getYear() - cal1.getYear()) * 365;
-			distance += Math.abs(cal2.getMonth() - cal1.getMonth()) * 30;
-			distance += Math.abs(cal2.getDay() - cal1.getDay());
+			distance += Math.abs(lit2.getYear() - lit1.getYear()) * 365;
+			distance += Math.abs(lit2.getMonth() - lit1.getMonth()) * 30;
+			distance += Math.abs(lit2.getDay() - lit1.getDay());
 
-			BigDecimal res = (new BigDecimal(distance)).divide(s_maxDistance, 100, RoundingMode.UP);
+			BigDecimal res = (new BigDecimal(distance)).divide(s_maxDistance,
+					100, RoundingMode.UP);
 
-			assert (res.max(BigDecimal.ONE).equals(BigDecimal.ONE) && (res
-					.min(BigDecimal.ZERO).equals(BigDecimal.ZERO) || res
-					.longValue() == BigDecimal.ZERO.longValue()));
+			// assert (res.max(BigDecimal.ONE).equals(BigDecimal.ONE) &&
+			// (res.min(
+			// BigDecimal.ZERO).equals(BigDecimal.ZERO) || (res
+			// .longValue() == BigDecimal.ZERO.longValue())));
 
-			return res.doubleValue();
+			return res;
 
 		} catch (NumberFormatException e) {
 
@@ -83,6 +78,6 @@ public class DateDistanceMetric implements IDistanceMetric {
 
 		}
 
-		return new BigDecimal(distance).doubleValue();
+		return new BigDecimal(distance);
 	}
 }

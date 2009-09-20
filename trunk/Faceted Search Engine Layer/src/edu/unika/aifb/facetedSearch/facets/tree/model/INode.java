@@ -19,12 +19,12 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.Facet;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.FacetType;
+import edu.unika.aifb.facetedSearch.api.model.impl.Facet;
+import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
@@ -36,13 +36,13 @@ public interface INode extends Serializable {
 
 	public void addRangeExtension(String extension);
 
-	public void addRangeExtensions(List<String> extensions);
+	public void addRangeExtensions(Collection<String> extensions);
 
 	public void addRangeExtensions(String extensions);
 
 	public void addSourceExtension(String extension);
 
-	public void addSourceExtensions(HashSet<String> extensions);
+	public void addSourceExtensions(Collection<String> extensions);
 
 	public void addSourceExtensions(String extensions);
 

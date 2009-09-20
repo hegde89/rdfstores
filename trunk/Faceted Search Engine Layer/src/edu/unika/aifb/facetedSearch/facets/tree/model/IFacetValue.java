@@ -17,6 +17,7 @@
 */
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
+
 /**
  * @author andi
  *

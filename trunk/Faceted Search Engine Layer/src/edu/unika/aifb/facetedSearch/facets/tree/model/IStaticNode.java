@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -31,25 +32,33 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
  */
 public interface IStaticNode extends INode {
 
-	// public void addUnsortedObjects(String objects);
-
-	public void addUnsortedObjects(List<String> objects);
-	
-	public void addSortedObjects(List<String> objects);
+	public void addSortedObjects(HashSet<String> objects, String source);
 
 	public void addSourceIndivdiual(String ind);
 
+	public void addUnsortedObjects(HashSet<String> objects);
+
 	public int getCountFV();
+
+	// public void addUnsortedObjects(String objects);
 
 	public int getCountS();
 
+	public int getDepth();
+
 	public int getHeight();
+
+	public HashMap<String, HashSet<Integer>> getLiteralSources();
+
+	public HashSet<Integer> getLiteralSources(String lit);
 
 	public String getName();
 
 	public HashSet<String> getObjects() throws DatabaseException, IOException;
 
 	public int getSize();
+
+	public List<String> getSortedLiterals();
 
 	public HashSet<String> getSourceIndivdiuals() throws DatabaseException,
 			IOException;
@@ -64,10 +73,16 @@ public interface IStaticNode extends INode {
 
 	public void setCountS(int countS);
 
+	public void setDepth(int depth);
+
 	public void setHeight(int height);
+
+	public void setLiteralCounts(HashMap<String, HashSet<Integer>> literalCounts);
 
 	public void setName(String name);
 
 	public void setSize(int size);
+
+	public void setSortedLiterals(List<String> sortedLiterals);
 
 }

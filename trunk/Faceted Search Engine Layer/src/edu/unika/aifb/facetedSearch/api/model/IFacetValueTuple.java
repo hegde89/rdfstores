@@ -17,20 +17,22 @@
  */
 package edu.unika.aifb.facetedSearch.api.model;
 
-import java.util.Map;
+import java.io.Serializable;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 
 /**
  * @author andi
  * 
  */
-public interface ILiteral extends IAbstractObject {
+public interface IFacetValueTuple extends Serializable {
 
-	public DataType getDataType();
+	public IEdge getFacet();
 
-	public void setDataType(DataType type);
+	public INode getValue();
 
-	public Map<String, IIndividual> getSubjects();
+	public void setFacet(IEdge edge);
 
+	public void setValue(INode node);
 }

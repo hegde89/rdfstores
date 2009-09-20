@@ -57,7 +57,11 @@ public class FacetDbUtils {
 
 		public static final String FO_CACHE = "fo_cache_db";
 
+		public static final String FOC_CACHE = "foc_cache_db";
+
 		public static final String FS_CACHE = "fs_cache_db";
+
+		// public static final String FSC_CACHE = "fsc_cache_db";
 
 		public static final String FP_CACHE = "fp_cache_db";
 
@@ -255,7 +259,8 @@ public class FacetDbUtils {
 	// }
 
 	public static <T> void store(Database db, String key, T entry,
-			EntryBinding<T> binding) throws UnsupportedEncodingException {
+			EntryBinding<T> binding) throws UnsupportedEncodingException,
+			DatabaseException {
 
 		DatabaseEntry keyEntry = new DatabaseEntry();
 		DatabaseEntry data = new DatabaseEntry();
@@ -263,18 +268,12 @@ public class FacetDbUtils {
 		binding.objectToEntry(entry, data);
 		StringBinding.stringToEntry(key, keyEntry);
 
-		try {
+		OperationStatus status = db.put(null, keyEntry, data);
 
-			OperationStatus status = db.put(null, keyEntry, data);
+		if (status != OperationStatus.SUCCESS) {
 
-			if (status != OperationStatus.SUCCESS) {
-
-				throw new DatabaseException("data for key '" + key
-						+ "' insertion got status " + status);
-			}
-
-		} catch (DatabaseException e) {
-			e.printStackTrace();
+			throw new DatabaseException("data for key '" + key
+					+ "' insertion got status " + status);
 		}
 	}
 

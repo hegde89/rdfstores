@@ -30,6 +30,7 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
@@ -104,7 +105,7 @@ public class SearchSession {
 			break;
 		}
 		case NUMBER_OF_RESULTS_PER_PAGE: {
-			FacetEnvironment.DefaultValue.NUMBER_OF_RESULTS_PER_PAGE = value;
+			FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE = value;
 			break;
 		}
 		case WEIGHT: {
@@ -119,7 +120,7 @@ public class SearchSession {
 	public void clean() {
 
 		try {
-			m_cache.clear();
+			m_cache.clear(ClearType.ALL);
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}
@@ -130,7 +131,7 @@ public class SearchSession {
 
 		System.gc();
 	}
-	
+
 	public void close() {
 
 		try {
@@ -145,7 +146,6 @@ public class SearchSession {
 
 		System.gc();
 	}
-	
 
 	/**
 	 * @return the cache

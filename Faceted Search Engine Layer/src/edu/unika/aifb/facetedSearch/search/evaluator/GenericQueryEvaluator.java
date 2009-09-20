@@ -29,6 +29,7 @@ import edu.unika.aifb.facetedSearch.search.datastructure.FacetQuery;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
@@ -64,7 +65,7 @@ public class GenericQueryEvaluator {
 
 		try {
 
-			m_session.getCache().clear();
+			m_session.getCache().clear(ClearType.ALL);
 			m_session.getCache().storeResultSet(results);
 
 			if ((res4Page = m_session.getCache().getResults4Page(m_currentPage)) != null) {

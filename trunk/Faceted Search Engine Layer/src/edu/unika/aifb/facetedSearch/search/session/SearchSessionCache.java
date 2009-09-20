@@ -20,8 +20,13 @@ package edu.unika.aifb.facetedSearch.search.session;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
+
+import org.apache.log4j.Logger;
 
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.serial.SerialBinding;
@@ -36,6 +41,10 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance.ClusterDistance;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 
@@ -45,44 +54,95 @@ import edu.unika.aifb.graphindex.data.Table;
  */
 public class SearchSessionCache {
 
+	public enum ClearType {
+		ALL, PATHS, LITERALS, DISTANCES
+	}
+
 	private class Keys {
 		public static final String RESULT_SET = "re";
 		public static final String ROOT = "ro";
 		public static final String RANGE_ROOT = "raro";
 	}
 
+	@SuppressWarnings("unused")
+	private static final Logger s_log = Logger
+			.getLogger(SearchSessionCache.class);
+
 	private File m_dir;
 
 	private Environment m_env;
+	private DatabaseConfig m_dbConfig;
+	private DatabaseConfig m_dbConfig2;
+
+	private ArrayList<Database> m_dbs;
+
+	/*
+	 * dbs ...
+	 */
+
 	private Database m_resCache;
 	private Database m_objectCache;
+	private Database m_objectCountCache;
 	private Database m_subjectCache;
-	private Database m_pathCache;
+	// private Database m_pathCache;
+	private Database m_classDb;
+
+	/*
+	 * bindings
+	 */
 
 	@SuppressWarnings("unchecked")
 	private EntryBinding<Table> m_resBinding;
+	// @SuppressWarnings( { "unchecked", "unused" })
+	// private EntryBinding<LinkedList> m_pathBinding;
 	private EntryBinding<String> m_objBinding;
 	private EntryBinding<String> m_subjBinding;
+
+	/*
+	 * other caches ...
+	 */
+
+	// private HashMap<Double, Queue<Edge>> m_paths2Root;
+	// private HashMap<Double, Queue<Edge>> m_paths2RangeRoot;
+	private HashMap<Integer, Object> m_parsedLiterals;
+	private HashMap<Double, PriorityQueue<ClusterDistance>> m_clusterDistances;
 
 	public SearchSessionCache(File dir) throws EnvironmentLockedException,
 			DatabaseException {
 
 		m_dir = dir;
-		open();
-
+		init();
 	}
 
-	public void addObjects(List<String> objects, double nodeId)
+	public void addDistanceQueue(double id,
+			PriorityQueue<ClusterDistance> distances) {
+
+		m_clusterDistances.put(id, distances);
+	}
+
+	public int addObjects(HashSet<String> objects, Node node)
 			throws UnsupportedEncodingException {
 
-		String key = FacetDbUtils
-				.getKey(new String[] { String.valueOf(nodeId) });
+		int dups = 0;
 
 		for (String object : objects) {
 
-			FacetDbUtils.store(m_objectCache, key, object, m_objBinding);
+			try {
+				FacetDbUtils.store(m_objectCache, String.valueOf(node), object,
+						m_objBinding);
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
 
+			try {
+				FacetDbUtils.store(m_objectCountCache, String.valueOf(node)
+						+ object, "", m_objBinding);
+			} catch (DatabaseException e) {
+				dups++;
+			}
 		}
+
+		return objects.size() - dups;
 	}
 
 	// public void addObjects(String objectsStrg, double nodeId) {
@@ -99,48 +159,97 @@ public class SearchSessionCache {
 	// }
 	// }
 
+	public void addParsedLiteral(String lit, Object parsedLit) {
+		m_parsedLiterals.put(lit.hashCode(), parsedLit);
+	}
+
 	public void addSourceIndivdual(String ind, double nodeId)
 			throws UnsupportedEncodingException {
 
-		FacetDbUtils.store(m_subjectCache, FacetDbUtils
-				.getKey(new String[] { String.valueOf(nodeId) }), ind,
-				m_subjBinding);
-
+		try {
+			FacetDbUtils.store(m_subjectCache, FacetDbUtils
+					.getKey(new String[] { String.valueOf(nodeId) }), ind,
+					m_subjBinding);
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public void clear() throws DatabaseException {
+	public void clear(ClearType type) throws DatabaseException {
 
-		if (m_resCache != null) {
+		switch (type) {
 
-			m_resCache.close();
-			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FRES_CACHE);
+		case ALL: {
+
+			for (Database db : m_dbs) {
+
+				if (db != null) {
+
+					db.close();
+					// m_env.removeDatabase(null, db.getDatabaseName());
+				}
+			}
+
+			m_parsedLiterals.clear();
+
+			// if (m_pathCache != null) {
+			//
+			// m_pathCache.close();
+			// m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FP_CACHE);
+			// }
+
+			// m_paths2RangeRoot.clear();
+			// m_paths2Root.clear();
+
+			reOpen();
+			break;
+		}
+		case LITERALS: {
+
+			m_parsedLiterals.clear();
+			break;
+		}
+		case DISTANCES: {
+
+			m_clusterDistances.clear();
+			break;
 		}
 
-		if (m_subjectCache != null) {
-
-			m_subjectCache.close();
-			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FS_CACHE);
+			// case PATHS: {
+			//
+			// // m_paths2RangeRoot.clear();
+			// // m_paths2Root.clear();
+			//
+			// // if (m_objectCountCache != null) {
+			// //
+			// // m_objectCountCache.close();
+			// // m_env
+			// // .removeDatabase(null,
+			// // FacetDbUtils.DatabaseNames.FOC_CACHE);
+			// // }
+			// //
+			// // if (m_objectCountCache != null) {
+			// //
+			// // m_objectCountCache.close();
+			// // m_env
+			// // .removeDatabase(null,
+			// // FacetDbUtils.DatabaseNames.FOC_CACHE);
+			// // }
+			//			
+			// break;
+			// }
+		default:
+			break;
 		}
-
-		if (m_objectCache != null) {
-
-			m_objectCache.close();
-			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FO_CACHE);
-		}
-
-		if (m_pathCache != null) {
-
-			m_pathCache.close();
-			m_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FP_CACHE);
-		}
-
-		open();
 	}
 
 	public void close() throws DatabaseException {
 
-		clear();
+		clear(ClearType.ALL);
 
+		if (m_classDb != null) {
+			m_classDb.close();
+		}
 		if (m_env != null) {
 			m_env.close();
 		}
@@ -148,53 +257,60 @@ public class SearchSessionCache {
 		m_resCache = null;
 		m_objectCache = null;
 		m_subjectCache = null;
-		m_pathCache = null;
+		m_objectCountCache = null;
 
 		m_env = null;
 	}
 
-	// public List<Edge> getAncestorPath2RangeRoot(FacetTree tree, double
-	// nodeId)
-	// throws DatabaseException, IOException {
-	//
-	// // String key = FacetDbUtils.getKey(new String[] { Keys.RANGE_ROOT,
-	// // String.valueOf(tree.getId()), String.valueOf(node.getID()) });
-	// //
-	// // GraphPath<Node, Edge> path = null;
-	//
-	// // if ((path = FacetDbUtils.get(m_pathCache, key)) == null) {
-	// //
-	// // path = tree.getAncestorPath2RangeRoot(node);
-	// // FacetDbUtils.store(m_pathCache, key, path);
-	// //
-	// // }
-	//
-	// return tree.getAncestorPath2RangeRoot(nodeId).getEdgeList();
-	// }
+	// @SuppressWarnings("unchecked")
+	public LinkedList<Edge> getAncestorPath2RangeRoot(FacetTree tree,
+			double nodeId) throws DatabaseException, IOException {
 
-	// public Stack<Edge> getAncestorPath2Root(FacetTree tree, double nodeId)
-	// throws DatabaseException, IOException {
-	//
-	// // String key = FacetDbUtils.getKey(new String[] { Keys.ROOT,
-	// // String.valueOf(tree.getId()), String.valueOf(node.getID()) });
-	// //
-	// // GraphPath<Node, Edge> path = null;
-	// //
-	// // if ((path = FacetDbUtils.get(m_pathCache, key)) == null) {
-	// //
-	// // path = tree.getAncestorPath2Root(node);
-	// // FacetDbUtils.store(m_pathCache, key, path);
-	// //
-	// // }
-	//
-	// return tree.getAncestorPath2Root(nodeId).getEdgeList();
-	// }
+		LinkedList<Edge> list;
+		//
+		// if ((list = FacetDbUtils.get(m_pathCache, nodeId + "rangeroot",
+		// m_pathBinding)) == null) {
+
+		list = tree.getAncestorPath2RangeRoot(nodeId);
+		// FacetDbUtils.store(m_pathCache, nodeId + "rangeroot", list,
+		// m_pathBinding);
+		//
+		// }
+
+		return list;
+	}
+
+	// @SuppressWarnings("unchecked")
+	public LinkedList<Edge> getAncestorPath2Root(FacetTree tree, double nodeId)
+			throws DatabaseException, IOException {
+
+		LinkedList<Edge> list;
+
+		// if ((list = FacetDbUtils.get(m_pathCache, nodeId + "root",
+		// m_pathBinding)) == null) {
+
+		list = tree.getAncestorPath2Root(nodeId);
+		// FacetDbUtils.store(m_pathCache, nodeId + "root", list,
+		// m_pathBinding);
+		//
+		// }
+
+		return list;
+	}
+
+	public PriorityQueue<ClusterDistance> getDistances(double id) {
+		return m_clusterDistances.get(id);
+	}
 
 	public HashSet<String> getObjects(double nodeID) throws DatabaseException,
 			IOException {
 
 		return FacetDbUtils.getAllAsSet(m_objectCache, FacetDbUtils
 				.getKey(new String[] { String.valueOf(nodeID) }), m_objBinding);
+	}
+
+	public Object getParsedLiteral(int litHash) {
+		return m_parsedLiterals.get(litHash);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -206,7 +322,7 @@ public class SearchSessionCache {
 				m_resBinding);
 
 		if ((fromIndex = (page - 1)
-				* FacetEnvironment.DefaultValue.NUMBER_OF_RESULTS_PER_PAGE) > res
+				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > res
 				.size()) {
 
 			return null;
@@ -214,7 +330,7 @@ public class SearchSessionCache {
 		} else {
 
 			int toIndex = Math.min(page
-					* FacetEnvironment.DefaultValue.NUMBER_OF_RESULTS_PER_PAGE,
+					* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE,
 					res.size());
 
 			return res.subTable(fromIndex, toIndex);
@@ -230,14 +346,13 @@ public class SearchSessionCache {
 						m_subjBinding);
 	}
 
-	public boolean isOpen() {
-		return (m_resCache != null) && (m_pathCache != null)
-				&& (m_objectCache != null) && (m_subjectCache != null)
-				&& (m_env != null);
-	}
-
 	@SuppressWarnings("unchecked")
-	public void open() throws EnvironmentLockedException, DatabaseException {
+	private void init() throws EnvironmentLockedException, DatabaseException {
+
+		// init stuff
+		m_clusterDistances = new HashMap<Double, PriorityQueue<ClusterDistance>>();
+		m_parsedLiterals = new HashMap<Integer, Object>();
+		m_dbs = new ArrayList<Database>();
 
 		// init db
 		EnvironmentConfig envConfig = new EnvironmentConfig();
@@ -247,58 +362,109 @@ public class SearchSessionCache {
 		m_env = new Environment(m_dir, envConfig);
 
 		// Databases without duplicates
-		DatabaseConfig dbConfig = new DatabaseConfig();
-		dbConfig.setTransactional(false);
-		dbConfig.setAllowCreate(true);
-		dbConfig.setSortedDuplicates(false);
-		dbConfig.setDeferredWrite(true);
+		m_dbConfig = new DatabaseConfig();
+		m_dbConfig.setTransactional(false);
+		m_dbConfig.setAllowCreate(true);
+		m_dbConfig.setSortedDuplicates(false);
+		// m_dbConfig.setDeferredWrite(true);
+		m_dbConfig.setTemporary(true);
 
 		// Databases with duplicates
-		DatabaseConfig dbConfig2 = new DatabaseConfig();
-		dbConfig2.setTransactional(false);
-		dbConfig2.setAllowCreate(true);
-		dbConfig2.setSortedDuplicates(true);
-		dbConfig2.setDeferredWrite(true);
+		m_dbConfig2 = new DatabaseConfig();
+		m_dbConfig2.setTransactional(false);
+		m_dbConfig2.setAllowCreate(true);
+		m_dbConfig2.setSortedDuplicates(true);
+		// m_dbConfig2.setDeferredWrite(true);
+		m_dbConfig2.setTemporary(true);
 
+		// Databases without duplicates
 		m_resCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FRES_CACHE, dbConfig);
+				FacetDbUtils.DatabaseNames.FRES_CACHE, m_dbConfig);
 
-		m_pathCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FP_CACHE, dbConfig2);
+		m_objectCountCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FOC_CACHE, m_dbConfig);
 
+		// m_pathCache = m_env.openDatabase(null,
+		// FacetDbUtils.DatabaseNames.FP_CACHE, m_dbConfig);
+
+		// Databases with duplicates
 		m_objectCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FO_CACHE, dbConfig2);
+				FacetDbUtils.DatabaseNames.FO_CACHE, m_dbConfig2);
 
 		m_subjectCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FS_CACHE, dbConfig2);
+				FacetDbUtils.DatabaseNames.FS_CACHE, m_dbConfig2);
+
+		m_dbs.add(m_resCache);
+		m_dbs.add(m_objectCountCache);
+		// m_dbs.add(m_pathCache);
+		m_dbs.add(m_objectCache);
+		m_dbs.add(m_subjectCache);
 
 		// Create the bindings
-		Database classDb = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.CLASS, dbConfig);
+		m_classDb = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
+				m_dbConfig);
 
-		StoredClassCatalog cata = new StoredClassCatalog(classDb);
+		StoredClassCatalog cata = new StoredClassCatalog(m_classDb);
 
 		m_resBinding = new SerialBinding<Table>(cata, Table.class);
-
-		// m_pathBinding = new SerialBinding<Node>(new StoredClassCatalog(
-		// m_pathCache), Node.class);
-
+		// m_pathBinding = new SerialBinding<LinkedList>(cata,
+		// LinkedList.class);
 		m_objBinding = TupleBinding.getPrimitiveBinding(String.class);
 		m_subjBinding = TupleBinding.getPrimitiveBinding(String.class);
 
+		// Preload dbs...
 		PreloadConfig pc = new PreloadConfig();
-		pc.setMaxMillisecs(2000);
+		pc.setMaxMillisecs(FacetEnvironment.DefaultValue.PRELOAD_TIME);
 
 		m_resCache.preload(pc);
-		m_pathCache.preload(pc);
+		m_objectCountCache.preload(pc);
 		m_objectCache.preload(pc);
 		m_subjectCache.preload(pc);
 
 	}
 
+	public boolean isOpen() {
+
+		boolean isOpen = true;
+
+		for (Database db : m_dbs) {
+
+			if (db == null) {
+				isOpen = false;
+				break;
+			}
+		}
+
+		return isOpen;
+	}
+
+	public void reOpen() throws DatabaseException {
+
+		// Databases without duplicates
+		m_resCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FRES_CACHE, m_dbConfig);
+
+		m_objectCountCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FOC_CACHE, m_dbConfig);
+
+		// m_pathCache = m_env.openDatabase(null,
+		// FacetDbUtils.DatabaseNames.FP_CACHE, m_dbConfig);
+
+		// Databases with duplicates
+		m_objectCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FO_CACHE, m_dbConfig2);
+
+		m_subjectCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FS_CACHE, m_dbConfig2);
+	}
+
 	public void storeResultSet(Table<String> res)
 			throws UnsupportedEncodingException {
 
-		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_resBinding);
+		try {
+			FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_resBinding);
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
 	}
 }

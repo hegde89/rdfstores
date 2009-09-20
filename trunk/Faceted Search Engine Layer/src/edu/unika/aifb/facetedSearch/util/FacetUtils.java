@@ -60,6 +60,7 @@ import org.openrdf.model.vocabulary.XMLSchema;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.graphindex.util.Util;
 
 public class FacetUtils {
 
@@ -68,64 +69,70 @@ public class FacetUtils {
 
 	public static DataType getLiteralDataType(String literalString) {
 
-		StringTokenizer tokenizer = new StringTokenizer(literalString,
-				FacetEnvironment.DefaultValue.LITERAL_DELIM);
+		if (Util.isDataValue(literalString)) {
 
-		String last_token = null;
+			StringTokenizer tokenizer = new StringTokenizer(literalString,
+					FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
-		while (tokenizer.hasMoreTokens()) {
-			last_token = tokenizer.nextToken();
-		}
+			String last_token = null;
 
-		if (last_token != null) {
+			while (tokenizer.hasMoreTokens()) {
+				last_token = tokenizer.nextToken();
+			}
 
-			try {
+			if (last_token != null) {
 
-				URI datatype = new URIImpl(last_token);
+				try {
 
-				if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
+					URI datatype = new URIImpl(last_token);
 
-					if (datatype.equals(XMLSchema.DATETIME)) {
+					if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
 
-						return DataType.DATE_TIME;
+						if (datatype.equals(XMLSchema.DATETIME)) {
 
-					} else if (datatype.equals(XMLSchema.TIME)) {
+							return DataType.DATE_TIME;
 
-						return DataType.TIME;
+						} else if (datatype.equals(XMLSchema.TIME)) {
 
-					} else if (datatype.equals(XMLSchema.DATE)) {
+							return DataType.TIME;
 
-						return DataType.DATE;
+						} else if (datatype.equals(XMLSchema.DATE)) {
+
+							return DataType.DATE;
+
+						} else {
+
+							return DataType.UNKNOWN;
+
+						}
+
+					} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
+							.contains(datatype.stringValue())) {
+
+						return DataType.NUMERICAL;
+
+					} else if (FacetEnvironment.XMLS.STRING_TYPES
+							.contains(datatype.stringValue())) {
+
+						return DataType.STRING;
 
 					} else {
 
 						return DataType.UNKNOWN;
 
 					}
+				} catch (IllegalArgumentException e) {
 
-				} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
-						.contains(datatype.stringValue())) {
-
-					return DataType.NUMERICAL;
-
-				} else if (FacetEnvironment.XMLS.STRING_TYPES.contains(datatype
-						.stringValue())) {
-
-					return DataType.STRING;
-
-				} else {
-
-					return DataType.UNKNOWN;
-
+					s_log.error("datatype " + last_token + " is no valid URI!");
+					return null;
 				}
-			} catch (IllegalArgumentException e) {
+			} else {
 
-				s_log.error("datatype " + last_token + " is no valid URI!");
+				s_log.debug("found no datatype attached to literal.");
 				return null;
 			}
 		} else {
 
-			s_log.debug("found no datatype attached to literal.");
 			return null;
 		}
 	}

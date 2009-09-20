@@ -37,8 +37,8 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
@@ -394,7 +394,7 @@ public class FacetIndexHelper {
 				FacetDbUtils.DatabaseNames.FH_CACHE, config);
 
 		PreloadConfig pc = new PreloadConfig();
-		pc.setMaxMillisecs(2000);
+		pc.setMaxMillisecs(FacetEnvironment.DefaultValue.PRELOAD_TIME);
 		s_cacheDB.preload(pc);
 
 		// Create the bindings
@@ -529,7 +529,7 @@ public class FacetIndexHelper {
 
 			isSubClass = "0";
 
-			if (class1.equals(class2)) {
+			if (class1.hasSameValueAs(class2)) {
 				isSubClass = "0";
 			} else {
 
@@ -538,7 +538,7 @@ public class FacetIndexHelper {
 
 				while ((superClass = this.getSuperClass(currentClass)) != null) {
 
-					if (superClass.equals(class2)) {
+					if (superClass.hasSameValueAs(class2)) {
 
 						isSubClass = "1";
 						break;

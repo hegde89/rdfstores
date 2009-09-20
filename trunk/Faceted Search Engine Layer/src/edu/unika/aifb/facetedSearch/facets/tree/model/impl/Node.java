@@ -18,14 +18,15 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.api.model.impl.Facet;
+import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
@@ -34,66 +35,6 @@ import edu.unika.aifb.facetedSearch.util.FacetUtils;
  * 
  */
 public class Node implements INode {
-
-	public class Facet implements Serializable {
-
-		private static final long serialVersionUID = 2633163812359121872L;
-
-		private String m_uri;
-		private FacetType m_facetType;
-		private DataType m_dataType;
-
-		private Facet(String uri, FacetType ftype, DataType dtype) {
-			m_uri = uri;
-			m_facetType = ftype;
-			m_dataType = dtype;
-		}
-
-		public DataType getDataType() {
-			return m_dataType;
-		}
-
-		public FacetType getType() {
-			return m_facetType;
-		}
-
-		public String getUri() {
-			return m_uri;
-		}
-
-		public boolean isDataPropertyBased() {
-			return m_facetType == FacetType.DATAPROPERTY_BASED;
-		}
-
-		public boolean isObjectPropertyBased() {
-			return m_facetType == FacetType.OBJECT_PROPERTY_BASED;
-		}
-
-		public void setDataType(DataType dataType) {
-			m_dataType = dataType;
-		}
-
-		public void setType(FacetType type) {
-			m_facetType = type;
-		}
-
-		public void setUri(String uri) {
-			m_uri = uri;
-		}
-
-	}
-
-	// public static class FacetFactory {
-	//
-	// public static Facet make(String uri, FacetType ftype, DataType dtype) {
-	// return new Facet(uri, ftype, dtype);
-	// }
-	//
-	// }
-
-	public enum FacetType {
-		DATAPROPERTY_BASED, OBJECT_PROPERTY_BASED, RDF_PROPERTY_BASED
-	}
 
 	public enum NodeContent {
 		TYPE_PROPERTY, DATA_PROPERTY, OBJECT_PROPERTY, CLASS
@@ -112,7 +53,7 @@ public class Node implements INode {
 	private static Logger s_log = Logger.getLogger(Node.class);
 
 	private Facet m_facet;
-	private double weight;
+	private double m_weight;
 	private String m_value;
 	private NodeType m_type;
 	private NodeContent m_content;
@@ -177,7 +118,7 @@ public class Node implements INode {
 		m_RangeExtensions.add(extension);
 	}
 
-	public void addRangeExtensions(List<String> extensions) {
+	public void addRangeExtensions(Collection<String> extensions) {
 		m_RangeExtensions.addAll(extensions);
 	}
 
@@ -189,7 +130,7 @@ public class Node implements INode {
 		m_SourceExtensions.add(extension);
 	}
 
-	public void addSourceExtensions(HashSet<String> extensions) {
+	public void addSourceExtensions(Collection<String> extensions) {
 		m_SourceExtensions.addAll(extensions);
 	}
 
@@ -197,11 +138,19 @@ public class Node implements INode {
 		m_SourceExtensions.addAll(FacetUtils.string2List(extensions));
 	}
 
+	// @Override
 	@Override
 	public boolean equals(Object object) {
 
-		return object instanceof INode ? ((INode) object).getValue().equals(
-				this.getValue()) : false;
+		return object instanceof INode ? ((INode) object).getID() == this
+				.getID() : false;
+	}
+
+	/**
+	 * @return the m_content
+	 */
+	public NodeContent getContent() {
+		return m_content;
 	}
 
 	// public Node() {
@@ -232,11 +181,8 @@ public class Node implements INode {
 	// return m_cache;
 	// }
 
-	/**
-	 * @return the m_content
-	 */
-	public NodeContent getContent() {
-		return m_content;
+	public String getDomain() {
+		return m_domain;
 	}
 
 	// public Set<INode> getChildren() {
@@ -255,10 +201,6 @@ public class Node implements INode {
 	// return children;
 	// }
 	// }
-
-	public String getDomain() {
-		return m_domain;
-	}
 
 	public Facet getFacet() {
 		return m_facet;
@@ -282,14 +224,14 @@ public class Node implements INode {
 		return m_pathHashValue;
 	}
 
+	public HashSet<String> getRangeExtensions() {
+		return m_RangeExtensions;
+	}
+
 	// public boolean hasChildren() {
 	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
 	// .size() > 0;
 	// }
-
-	public HashSet<String> getRangeExtensions() {
-		return m_RangeExtensions;
-	}
 
 	/**
 	 * @return the sourceExtensions
@@ -313,7 +255,7 @@ public class Node implements INode {
 	 * @return the weight
 	 */
 	public double getWeight() {
-		return weight;
+		return m_weight;
 	}
 
 	public boolean hasPath() {
@@ -322,6 +264,12 @@ public class Node implements INode {
 
 	public boolean hasPathHashValue() {
 		return m_pathHashValue != Integer.MIN_VALUE;
+	}
+
+	public boolean hasSameValueAs(Object object) {
+
+		return object instanceof INode ? ((INode) object).getValue().equals(
+				this.getValue()) : false;
 	}
 
 	// public boolean isEndPoint() {
@@ -433,7 +381,7 @@ public class Node implements INode {
 	 *            the weight to set
 	 */
 	public void setWeight(double weight) {
-		this.weight = weight;
+		this.m_weight = weight;
 	}
 
 	@Override

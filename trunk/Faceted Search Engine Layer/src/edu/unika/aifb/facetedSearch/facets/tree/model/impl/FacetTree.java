@@ -21,9 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
@@ -37,7 +36,6 @@ import org.jgrapht.event.VertexTraversalEvent;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
-import cern.colt.map.HashFunctions;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
@@ -123,9 +121,11 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 	private static Logger s_log = Logger.getLogger(FacetTree.class);
 
 	private double m_id;
-	private Node m_root;
+	private double m_fatherNodeId;
+	private StaticNode m_root;
 	private String m_domain;
 	private HashMap<EndPointType, HashSet<Node>> m_endPoints;
+	private HashSet<Double> m_allEndPoints;
 	private HashMap<Double, Node> m_nodeMap;
 
 	public FacetTree() {
@@ -136,6 +136,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 
 	public void addEndPoint(EndPointType type, Node endpoint) {
 		m_endPoints.get(type).add(endpoint);
+		m_allEndPoints.add(endpoint.getID());
 	}
 
 	@Override
@@ -143,6 +144,51 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 
 		m_nodeMap.put(node.getID(), node);
 		return super.addVertex(node);
+	}
+
+	@Override
+	public boolean containsVertex(Node node) {
+		return m_nodeMap.containsKey(node.getID());
+	}
+
+	public LinkedList<Edge> getAncestorPath2RangeRoot(double fromNodeId) {
+
+		Node fromNode;
+		LinkedList<Edge> edges2RangeRoot = null;
+
+		if ((fromNode = m_nodeMap.get(fromNodeId)) != null) {
+
+			edges2RangeRoot = new LinkedList<Edge>();
+			boolean reachedRangeRoot = fromNode.isRangeRoot();
+			Node currentNode = fromNode;
+
+			while (!reachedRangeRoot) {
+
+				Iterator<Edge> incomingEdgesIter = incomingEdgesOf(currentNode)
+						.iterator();
+
+				if (incomingEdgesIter.hasNext()) {
+
+					Edge edge2father = incomingEdgesIter.next();
+					edges2RangeRoot.add(edge2father);
+					Node father = getEdgeSource(edge2father);
+
+					if (father.isRangeRoot()) {
+						reachedRangeRoot = true;
+					} else {
+						currentNode = father;
+					}
+				} else {
+					s_log.error("tree structure is not correct: " + this);
+					break;
+				}
+			}
+		} else {
+			s_log.error("node with id " + fromNodeId
+					+ " not contained in tree!");
+		}
+
+		return edges2RangeRoot;
 	}
 
 	// public Set<Node> getInnerNodes() {
@@ -181,65 +227,20 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 	// return leaves;
 	// }
 
-	@Override
-	public boolean containsVertex(Node node) {
-		return getNodeById(node.getID()) == null ? false : true;
-	}
-
-	public Queue<Edge> getAncestorPath2RangeRoot(double fromNodeId) {
-
-		Node fromNode;
-		Queue<Edge> edges2RangeRoot = null;
-
-		if ((fromNode = m_nodeMap.get(fromNodeId)) != null) {
-
-			edges2RangeRoot = new PriorityQueue<Edge>();
-			boolean reachedRangeRoot = fromNode.equals(m_root);
-			Node currentNode = fromNode;
-
-			while (!reachedRangeRoot) {
-
-				Iterator<Edge> incomingEdgesIter = incomingEdgesOf(currentNode)
-						.iterator();
-
-				if (incomingEdgesIter.hasNext()) {
-
-					Edge edge2father = incomingEdgesIter.next();
-					edges2RangeRoot.add(edge2father);
-					Node father = getEdgeSource(edge2father);
-
-					if (father.isRangeRoot()) {
-						reachedRangeRoot = true;
-					} else {
-						currentNode = father;
-					}
-				} else {
-					s_log.error("tree structure is not correct: " + this);
-					break;
-				}
-			}
-		} else {
-			s_log.error("node with id " + fromNodeId
-					+ " not contained in tree!");
-		}
-
-		return edges2RangeRoot;
-	}
-
 	/**
 	 * @return path to root
 	 */
-	public Queue<Edge> getAncestorPath2Root(double fromNodeId) {
+	public LinkedList<Edge> getAncestorPath2Root(double fromNodeId) {
 
 		Node fromNode;
-		Queue<Edge> edges2root = null;
+		LinkedList<Edge> edges2root = null;
 
 		if ((fromNode = getNodeById(fromNodeId)) != null) {
 
-			edges2root = new PriorityQueue<Edge>();
+			edges2root = new LinkedList<Edge>();
 
 			new ArrayList<Edge>();
-			boolean reachedRoot = fromNode.equals(m_root);
+			boolean reachedRoot = fromNode.isRoot();
 			Node currentNode = fromNode;
 
 			while (!reachedRoot) {
@@ -275,10 +276,6 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		return m_domain;
 	}
 
-	// public Node getRoot() {
-	// return this.m_root;
-	// }
-
 	public HashSet<Node> getEndPoints(EndPointType type) {
 		return m_endPoints.get(type);
 	}
@@ -286,6 +283,10 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 	public double getId() {
 		return m_id;
 	}
+
+	// public Node getRoot() {
+	// return this.m_root;
+	// }
 
 	public Node getNodeById(double key) {
 
@@ -333,7 +334,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 			// }
 		case INNER_NODE: {
 
-			Iterator<Node> nodesIter = this.vertexSet().iterator();
+			Iterator<Node> nodesIter = vertexSet().iterator();
 
 			while (nodesIter.hasNext()) {
 
@@ -350,13 +351,13 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		}
 		case LEAVE: {
 
-			Iterator<Node> nodesIter = this.vertexSet().iterator();
+			Iterator<Node> nodesIter = vertexSet().iterator();
 
 			while (nodesIter.hasNext()) {
 
 				Node node = nodesIter.next();
 
-				if (this.outDegreeOf(node) == 0) {
+				if (outDegreeOf(node) == 0) {
 					nodes.add(node);
 				}
 			}
@@ -365,7 +366,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		}
 		case RANGE_ROOT: {
 
-			Iterator<Node> iter = this.vertexSet().iterator();
+			Iterator<Node> iter = vertexSet().iterator();
 			Node node = null;
 
 			while (iter.hasNext()) {
@@ -391,7 +392,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		return paths.size() > 0 ? paths.get(0) : null;
 	}
 
-	public Node getRoot() {
+	public StaticNode getRoot() {
 		return m_root;
 	}
 
@@ -399,10 +400,13 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 
 		m_nodeMap = new HashMap<Double, Node>();
 		m_endPoints = new HashMap<EndPointType, HashSet<Node>>();
+		m_allEndPoints = new HashSet<Double>();
 
-		m_root = new Node("root", NodeType.ROOT);
-		m_root.setPathHashValue(HashFunctions.hash("root"));
+		m_root = new StaticNode("root", NodeType.ROOT);
+		m_root.setPathHashValue("root".hashCode());
 		m_root.setPath("root");
+		m_root.setDepth(0);
+
 		addVertex(m_root);
 
 		m_id = (new Random()).nextGaussian();
@@ -417,10 +421,22 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		return this.vertexSet().size() > 1 ? false : true;
 	}
 
-	/**
-	 * @param domain
-	 *            the domain to set
-	 */
+	public boolean isEndPoint(Node node) {
+		return m_allEndPoints.contains(node.getID());
+	}
+
+	public void removeEndPoint(EndPointType type, Node endpoint) {
+		m_endPoints.get(type).remove(endpoint);
+		m_allEndPoints.remove(endpoint);
+	}
+
+	@Override
+	public boolean removeVertex(Node node) {
+
+		m_nodeMap.remove(node.getID());
+		return super.removeVertex(node);
+	}
+
 	public void setDomain(String domain) {
 		m_domain = domain;
 	}
@@ -455,5 +471,13 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		// out += FacetHelper.NEW_LINE;
 
 		return null;
+	}
+
+	public void setFatherNodeId(double fatherNodeId) {
+		m_fatherNodeId = fatherNodeId;
+	}
+
+	public double getFatherNodeId() {
+		return m_fatherNodeId;
 	}
 }

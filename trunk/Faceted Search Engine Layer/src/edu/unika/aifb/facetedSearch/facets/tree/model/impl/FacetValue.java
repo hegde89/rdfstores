@@ -23,56 +23,24 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValue;
  * @author andi
  * 
  */
-public class FacetValue extends Node implements IFacetValue {
+public class FacetValue extends StaticNode implements IFacetValue {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 4611143426289856264L;
 
-	private int m_countFV;
-	private int m_countS;
-	private String m_name;
-
 	public FacetValue(String value) {
 		super(value, NodeType.LEAVE);
 	}
 
-	public FacetValue(String value, NodeContent content) {
-		super(value, NodeType.LEAVE, content);
-	}
-
+	@Override
 	public int getCountFV() {
-		return m_countFV;
+		return 1;
 	}
 
-	public int getCountS() {
-		return m_countS;
-	}
-
-	public String getName() {
-		return m_name;
-	}
-
+	@Override
 	public void setCountFV(int countFV) {
-		m_countFV = countFV;
 	}
 
-	public void setCountS(int countS) {
-		m_countS = countS;
-	}
-
-	public void setName(String name) {
-		m_name = name;
-	}
-
-	// @Override
-	// public List<IFacetValueTuple> getChildren() {
-	// return null;
-	// }
-	//	
-	// @Override
-	// public List<IFacetValueTuple> getChildren(boolean rankingEnabled) {
-	// return null;
-	// }
 }

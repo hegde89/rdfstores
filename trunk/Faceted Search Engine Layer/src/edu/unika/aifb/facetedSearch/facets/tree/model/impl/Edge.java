@@ -18,6 +18,8 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
+import java.io.Serializable;
+
 import org.jgrapht.graph.DefaultEdge;
 
 import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
@@ -26,20 +28,21 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
  * @author andi
  * 
  */
-public class Edge extends DefaultEdge implements IEdge {
+public class Edge extends DefaultEdge implements IEdge, Serializable {
 
 	public class EdgeType {
 
 		public static final String SUBPROPERTY_OF = "subPropertyOf";
 		public static final String SUBCLASS_OF = "subClassOf";
 		public static final String HAS_RANGE = "hasRange";
-
+		public static final String CONTAINS = "contains";
+		
 	}
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4884789998330360567L;
+	private static final long serialVersionUID = -1972985962703565730L;
 
 	private String m_type;
 
@@ -60,8 +63,8 @@ public class Edge extends DefaultEdge implements IEdge {
 		this.m_type = type;
 	}
 
-//	@Override
-//	public String toString() {
-//		return "Edge: [Type: " + this.m_type + "]";
-//	}
+	// @Override
+	// public String toString() {
+	// return "Edge: [Type: " + this.m_type + "]";
+	// }
 }

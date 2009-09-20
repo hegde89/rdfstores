@@ -17,43 +17,59 @@
  */
 package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
 
+import java.util.Comparator;
+
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
  * @author andi
  * 
  */
-public class DistanceMetricPool {
+public class ComparatorPool {
 
-	public static IDistanceMetric getMetric(DataType type) {
+	private static ComparatorPool s_instance;
 
-		IDistanceMetric metric = null;
+	public static ComparatorPool getInstance(SearchSessionCache cache) {
+		return s_instance == null ? s_instance = new ComparatorPool(cache)
+				: s_instance;
+	}
 
-		switch (type) {
+	private StringComparator m_strgComp;
+	private NumericalComparator m_numComp;
+	private TimeDateComparator m_timeDateComp;
 
-		case NUMERICAL: {
-			metric = NumericalDistanceMetric.getInstance();
-			break;
-		}
-		case STRING: {
-			metric = StringDistanceMetric.getInstance();
-			break;
-		}
-		case TIME: {
-			metric = TimeDistanceMetric.getInstance();
-			break;
-		}
+	private ComparatorPool(SearchSessionCache cache) {
+
+		m_strgComp = new StringComparator(cache);
+		m_numComp = new NumericalComparator(cache);
+		m_timeDateComp = new TimeDateComparator(cache);
+
+	}
+
+	public Comparator<String> getComparator(DataType dataType) {
+
+		switch (dataType) {
 		case DATE: {
-			metric = DateDistanceMetric.getInstance();
-			break;
+			return m_timeDateComp;
 		}
 		case DATE_TIME: {
-			metric = DateTimeDistanceMetric.getInstance();
-			break;
+			return m_timeDateComp;
 		}
+		case TIME: {
+			return m_timeDateComp;
 		}
-
-		return metric;
+		case NUMERICAL: {
+			return m_numComp;
+		}
+		case STRING: {
+			return m_strgComp;
+		}
+		case UNKNOWN: {
+			return null;
+		}
+		default:
+			return null;
+		}
 	}
 }

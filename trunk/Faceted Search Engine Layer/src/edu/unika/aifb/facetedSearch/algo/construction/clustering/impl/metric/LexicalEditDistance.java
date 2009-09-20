@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
+package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.metric;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,7 +34,7 @@ public class LexicalEditDistance {
 	 *         |string2| and deletion if |string2| < |string1| is allowed.
 	 */
 
-	public static double getDistance(String string1, String string2) {
+	public static BigDecimal getDistance(String string1, String string2) {
 
 		BigDecimal distance = new BigDecimal(0.0);
 
@@ -94,10 +94,10 @@ public class LexicalEditDistance {
 		// .min(BigDecimal.ZERO).equals(BigDecimal.ZERO) || distance
 		// .longValue() == BigDecimal.ZERO.longValue()));
 
-		return distance.doubleValue();
+		return distance;
 	}
 
-	public static double getDistance2Root(String string) {
+	public static BigDecimal getDistance2Root(String string) {
 		return getDistance("", string);
 	}
 

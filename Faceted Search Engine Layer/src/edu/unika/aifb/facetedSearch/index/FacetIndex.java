@@ -20,7 +20,6 @@ package edu.unika.aifb.facetedSearch.index;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -36,7 +35,9 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
@@ -153,16 +154,15 @@ public class FacetIndex extends Index {
 		System.gc();
 	}
 
-	public HashSet<String> getExtensions(double leaveId, String sourceInd)
+	public HashSet<String> getExtensions(Node node, String sourceInd)
 			throws EnvironmentLockedException, DatabaseException, IOException {
 
 		if (m_objectDB == null) {
 			init();
 		}
 
-		return FacetDbUtils.getAllAsSet(m_objectDB, FacetDbUtils
-				.getKey(new String[] { sourceInd, String.valueOf(leaveId),
-						"ext" }), m_objBinding);
+		return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
+				+ node.getPathHashValue() + "ext", m_objBinding);
 	}
 
 	public Database getIndex(FacetIndexName idxName)
@@ -237,16 +237,15 @@ public class FacetIndex extends Index {
 	// }
 	// }
 
-	public List<String> getObjects(double leaveId, String sourceInd)
+	public HashSet<String> getObjects(Node leave, String sourceInd)
 			throws EnvironmentLockedException, DatabaseException, IOException {
 
 		if (m_objectDB == null) {
 			init();
 		}
 
-		return FacetDbUtils.getAllAsList(m_objectDB, FacetDbUtils
-				.getKey(new String[] { sourceInd, String.valueOf(leaveId),
-						"obj" }), m_objBinding);
+		return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
+				+ leave.getPathHashValue() + "obj", m_objBinding);
 	}
 
 	public FacetTree getTree(String extension) throws DatabaseException,
@@ -280,6 +279,7 @@ public class FacetIndex extends Index {
 		dbConfig.setAllowCreate(false);
 		dbConfig.setSortedDuplicates(false);
 		dbConfig.setDeferredWrite(true);
+		dbConfig.setReadOnly(true);
 
 		// Databases with duplicates
 		DatabaseConfig dbConfig2 = new DatabaseConfig();
@@ -287,6 +287,7 @@ public class FacetIndex extends Index {
 		dbConfig2.setAllowCreate(false);
 		dbConfig2.setSortedDuplicates(true);
 		dbConfig2.setDeferredWrite(true);
+		dbConfig2.setReadOnly(true);
 
 		// Databases without duplicates
 		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
@@ -300,7 +301,7 @@ public class FacetIndex extends Index {
 				FacetDbUtils.DatabaseNames.OBJECT, dbConfig2);
 
 		PreloadConfig pc = new PreloadConfig();
-		pc.setMaxMillisecs(2000);
+		pc.setMaxMillisecs(FacetEnvironment.DefaultValue.PRELOAD_TIME);
 
 		m_treeDB.preload(pc);
 		m_leaveDB.preload(pc);

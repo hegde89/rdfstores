@@ -18,7 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.util.HashSet;
-import java.util.Queue;
+import java.util.LinkedList;
 import java.util.Set;
 
 import org.jgrapht.GraphPath;
@@ -34,21 +34,23 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
  */
 public interface IFacetTree {
 
+	public void addEndPoint(EndPointType type, Node endpoint);
+
+	public LinkedList<Edge> getAncestorPath2RangeRoot(double fromNodeId);
+
 	// public Set<Node> getInnerNodes();
 	//
 	// public Set<Node> getLeaves();
 
-	public void addEndPoint(EndPointType type, Node endpoint);
-
-	public Queue<Edge> getAncestorPath2RangeRoot(double fromNodeId);
-
-	// public Node getRoot();
-
-	public Queue<Edge> getAncestorPath2Root(double fromNodeId);
+	public LinkedList<Edge> getAncestorPath2Root(double fromNodeId);
 
 	public String getDomain();
 
 	public HashSet<Node> getEndPoints(EndPointType type);
+
+	// public Node getRoot();
+
+	public double getFatherNodeId();
 
 	public double getId();
 
@@ -62,7 +64,13 @@ public interface IFacetTree {
 
 	public boolean isEmpty();
 
+	public boolean isEndPoint(Node node);
+
+	public void removeEndPoint(EndPointType type, Node endpoint);
+
 	public void setDomain(String domain);
+
+	public void setFatherNodeId(double fatherNodeId);
 
 	// public void setEndPoints(HashSet<Node> endPoints);
 

@@ -27,10 +27,10 @@ import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
-import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueTuple;
+import edu.unika.aifb.facetedSearch.api.model.IFacetValueTuple;
+import edu.unika.aifb.facetedSearch.api.model.impl.FacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;

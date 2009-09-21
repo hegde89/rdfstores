@@ -133,20 +133,20 @@ public class V2Test {
 //			qe.evaluate(q);
 			
 			q = new StructuredQuery("q");
-			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#AssistantProfessor");
-			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
-			q.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "Course35");
-			q.setAsSelect("?x");
-			q.setAsSelect("?y");
+//			q.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#AssistantProfessor");
+//			q.addEdge("?x", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teacherOf", "?y");
+//			q.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "Course35");
+//			q.setAsSelect("?x");
+//			q.setAsSelect("?y");
 //			eval.evaluate(q);
 
-			KeywordQuery kq = new KeywordQuery("q1", "GraduateStudent36 teachingAssistantOf");
+			KeywordQuery kq = new KeywordQuery("q1", "hiv cell");
 //			KeywordQuery kq = new KeywordQuery("q", "UndergraduateStudent141@Department8.University0.edu takesCourse Course17 memberOf Department8");
 			
-			HybridQuery hq = new HybridQuery("h1", q, kq);
+			HybridQuery hq = new HybridQuery("h1", null, kq);
 			
 			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
-			hy.evaluate(hq);
+			hy.evaluate(hq, 4, 4);
 			
 //			StructuredQuery q2 = new StructuredQuery("asd");
 //			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teachingAssistantOf", "?x2");

@@ -25,5 +25,7 @@
 	<classpathentry kind="lib" path="libs/openrdf-rio-n3-2.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/openrdf-rio-turtle-2.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/lucene-core-2.4.1.jar"/>
+	<classpathentry kind="lib" path="libs/google-collect-1.0-rc2.jar"/>
+	<classpathentry kind="lib" path="libs/google-guava.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

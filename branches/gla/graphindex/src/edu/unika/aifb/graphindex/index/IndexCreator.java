@@ -90,6 +90,7 @@ public class IndexCreator implements TripleSink {
 	private int m_triplesImported = 0;
 	private Map<IndexDescription,IndexStorage> m_dataIndexes;
 	private Set<String> m_properties;
+//	private TermIndex m_termIndex;
 	
 	private final int TRIPLES_INTERVAL = 500000;
 	
@@ -200,6 +201,7 @@ public class IndexCreator implements TripleSink {
 		addSPIndex(IndexDescription.EXTENT);
 		
 		m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);
+		m_idxDirectory.getDirectory(IndexDirectory.TERMS_DIR, true);
 		
 		importData();
 		

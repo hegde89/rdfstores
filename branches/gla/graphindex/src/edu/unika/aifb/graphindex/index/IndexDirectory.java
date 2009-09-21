@@ -55,6 +55,7 @@ public class IndexDirectory {
 	public static final int BDB_DIR = addDirectory("bdb");
 	public static final int TEMP_DIR = addDirectory("temp");
 	public static final int NEIGHBORHOOD_DIR = addDirectory("neighborhood");
+	public static final int TERMS_DIR = addDirectory("terms"); 
 	
 	public static final int FACET_TREE_DIR = addDirectory("facets"+ "/"+"trees");
 	public static final int FACET_DISTANCES_DIR = addDirectory("facets"+ "/"+"distances");

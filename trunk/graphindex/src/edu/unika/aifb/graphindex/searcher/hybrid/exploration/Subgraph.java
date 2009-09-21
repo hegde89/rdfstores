@@ -97,6 +97,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 				addVertex(((EdgeElement)e).getTarget());
 				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
 			}
+			
+			if (c.getParent() == null) {
+				addVertex((NodeElement)c.getGraphElement());
+			}
 		}
 
 		NodeElement start = null;

@@ -180,6 +180,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
 		}
 		
+		if (k == 1)
+			k = 3;
 		matcher.setKeywords(segment2elements);
 		matcher.setK(Math.min(k, MAX_INTERPRETATIONS));
 		matcher.match();

@@ -34,6 +34,7 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
@@ -59,7 +60,7 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
 		try {
 			if (!readonly)
-				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), true, new WhitespaceAnalyzer(), clean);
+				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), new WhitespaceAnalyzer(), clean, MaxFieldLength.UNLIMITED);
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (CorruptIndexException e) {
@@ -106,7 +107,7 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 				return null;
 			
 			Document doc = getDocument(docIds.get(0));
-			byte[] bytes = doc.getField(Constant.NEIGHBORHOOD_FIELD).binaryValue();
+			byte[] bytes = doc.getField(Constant.NEIGHBORHOOD_FIELD).getBinaryValue();
 			
 			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
 			ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
@@ -146,7 +147,7 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 			m_searcher.close();
 			m_reader.close();
 	
-			m_writer.flush();
+			m_writer.commit();
 	
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
@@ -159,6 +160,8 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 		try {
 			m_searcher.close();
 			m_reader.close();
+			if (m_writer != null)
+				m_writer.close();
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}

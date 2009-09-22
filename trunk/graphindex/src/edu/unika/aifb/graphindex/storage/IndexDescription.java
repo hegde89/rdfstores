@@ -46,8 +46,7 @@ public class IndexDescription {
 	 */
 	private String m_indexFieldName;
 	/**
-	 * The name of the value field. Used by the storage layer, needs to be unique for a single storage
-	 * location.
+	 * The name of the value field. Used by the storage layer.
 	 */
 	private String m_valueFieldName;
 	/**
@@ -73,8 +72,8 @@ public class IndexDescription {
 	public static final IndexDescription PSES = new IndexDescription("pses", "es",
 		DataField.PROPERTY, DataField.SUBJECT, DataField.EXT_SUBJECT);
 	
-	public static final IndexDescription OES = new IndexDescription("oes", "es",
-		DataField.OBJECT, DataField.EXT_SUBJECT);
+	public static final IndexDescription OEO = new IndexDescription("oeo", "eo",
+		DataField.OBJECT, DataField.EXT_OBJECT);
 	public static final IndexDescription SES = new IndexDescription("ses", "es",
 		DataField.SUBJECT, DataField.EXT_SUBJECT);
 	

@@ -395,6 +395,8 @@ public class IndexCreator implements TripleSink {
 					if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {
 						is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
 						is.addData(IndexDescription.EXTENT, new String[] { objExt }, o);
+						
+						is.addData(IndexDescription.OEO, new String[] { o }, objExt);
 					}
 				}
 				

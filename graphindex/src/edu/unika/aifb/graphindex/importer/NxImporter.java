@@ -53,6 +53,12 @@ public class NxImporter extends Importer {
 					} else
 						log.error("object is not a resource, bnode or literal");
 
+					if (object == null || object.equals("")) {
+						log.warn("object empty, ignoring statement");
+						continue;
+					}
+						
+					
 					if (nodes.length > 3) {
 						if (nodes[3] instanceof Resource) {
 							context = ((Resource) nodes[3]).toString();

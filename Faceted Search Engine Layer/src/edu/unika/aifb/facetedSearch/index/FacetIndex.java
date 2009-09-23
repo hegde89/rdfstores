@@ -154,16 +154,16 @@ public class FacetIndex extends Index {
 		System.gc();
 	}
 
-	public HashSet<String> getExtensions(Node node, String sourceInd)
-			throws EnvironmentLockedException, DatabaseException, IOException {
-
-		if (m_objectDB == null) {
-			init();
-		}
-
-		return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
-				+ node.getPathHashValue() + "ext", m_objBinding);
-	}
+	// public HashSet<String> getExtensions(Node node, String sourceInd)
+	// throws EnvironmentLockedException, DatabaseException, IOException {
+	//
+	// if (m_objectDB == null) {
+	// init();
+	// }
+	//
+	// return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
+	// + node.getPathHashValue() + "ext", m_objBinding);
+	// }
 
 	public Database getIndex(FacetIndexName idxName)
 			throws EnvironmentLockedException, DatabaseException, IOException {
@@ -245,7 +245,7 @@ public class FacetIndex extends Index {
 		}
 
 		return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
-				+ leave.getPathHashValue() + "obj", m_objBinding);
+				+ leave.getPathHashValue(), m_objBinding);
 	}
 
 	public FacetTree getTree(String extension) throws DatabaseException,

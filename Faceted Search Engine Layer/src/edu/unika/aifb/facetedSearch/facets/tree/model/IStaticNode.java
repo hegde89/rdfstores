@@ -18,7 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
@@ -36,21 +36,25 @@ public interface IStaticNode extends INode {
 
 	public void addSourceIndivdiual(String ind);
 
-	public void addUnsortedObjects(HashSet<String> objects);
+	public void addUnsortedObjects(HashSet<String> objects, String source);
 
 	public int getCountFV();
 
+	public int getCountS();
+
+	public int getCountS4Object(String source);
+
 	// public void addUnsortedObjects(String objects);
 
-	public int getCountS();
+	public int getCountS4Objects(Collection<String> sources);
 
 	public int getDepth();
 
 	public int getHeight();
 
-	public HashMap<String, HashSet<Integer>> getLiteralSources();
-
-	public HashSet<Integer> getLiteralSources(String lit);
+	// public HashMap<String, HashSet<Integer>> getLiteralSources();
+	//
+	// public HashSet<Integer> getLiteralSources(String lit);
 
 	public String getName();
 
@@ -77,7 +81,8 @@ public interface IStaticNode extends INode {
 
 	public void setHeight(int height);
 
-	public void setLiteralCounts(HashMap<String, HashSet<Integer>> literalCounts);
+	// public void setLiteralCounts(HashMap<String, HashSet<Integer>>
+	// literalCounts);
 
 	public void setName(String name);
 

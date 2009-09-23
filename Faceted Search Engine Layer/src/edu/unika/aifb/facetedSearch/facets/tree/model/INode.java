@@ -19,12 +19,11 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.HashSet;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
@@ -34,33 +33,33 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
  */
 public interface INode extends Serializable {
 
-	public void addRangeExtension(String extension);
-
-	public void addRangeExtensions(Collection<String> extensions);
-
-	public void addRangeExtensions(String extensions);
-
-	public void addSourceExtension(String extension);
-
-	public void addSourceExtensions(Collection<String> extensions);
-
-	public void addSourceExtensions(String extensions);
+	// public void addRangeExtension(String extension);
+	//
+	// public void addRangeExtensions(Collection<String> extensions);
+	//
+	// public void addRangeExtensions(String extensions);
+	//
+	// public void addSourceExtension(String extension);
+	//
+	// public void addSourceExtensions(Collection<String> extensions);
+	//
+	// public void addSourceExtensions(String extensions);
 
 	public NodeContent getContent();
+
+	public String getDomain();
 
 	// public void addSourceIndivdiual(String ind);
 
 	// public SearchSessionCache getCache();
 
-	public String getDomain();
-
 	public Facet getFacet();
+
+	public double getID();
 
 	// public void addType(NodeType type);
 	//
 	// public void addTypes(Collection<NodeType> collection);
-
-	public double getID();
 
 	public String getPath();
 
@@ -72,19 +71,21 @@ public interface INode extends Serializable {
 
 	public NodeType getType();
 
+	public String getValue();
+
 	// public HashSet<String> getSourceIndivdiuals() throws DatabaseException,
 	// IOException;
 
-	public String getValue();
+	public double getWeight();
 
 	// public boolean hasChildren();
-
-	public double getWeight();
 
 	public boolean hasPath();
 
 	// public Set<INode> getChildren();
 	public boolean hasPathHashValue();
+
+	public boolean hasSameValueAs(Object object);
 
 	public boolean isInnerNode();
 

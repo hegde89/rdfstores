@@ -21,7 +21,7 @@ package edu.unika.aifb.facetedSearch.algo.ranking;
 import java.util.List;
 
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.api.model.IFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.model.IFacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;

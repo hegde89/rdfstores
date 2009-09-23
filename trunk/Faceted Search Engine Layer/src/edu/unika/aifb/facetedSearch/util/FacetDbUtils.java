@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.tuple.StringBinding;
 import com.sleepycat.je.Cursor;
@@ -57,9 +59,17 @@ public class FacetDbUtils {
 
 		public static final String FO_CACHE = "fo_cache_db";
 
-		public static final String FOC_CACHE = "foc_cache_db";
+		public static final String FD_CACHE = "fd_cache_db";
+
+		// public static final String FOC_CACHE = "foc_cache_db";
+
+		public static final String FO2S_CACHE = "fo2s_cache_db";
+
+		public static final String FSC_CACHE = "fsc_cache_db";
 
 		public static final String FS_CACHE = "fs_cache_db";
+
+		public static final String FE_CACHE = "fe_cache_db";
 
 		// public static final String FSC_CACHE = "fsc_cache_db";
 
@@ -71,6 +81,9 @@ public class FacetDbUtils {
 
 		public static final String OBJECT = "object_db";
 	}
+
+	@SuppressWarnings("unused")
+	private static Logger s_log = Logger.getLogger(FacetDbUtils.class);
 
 	// public static final String UTF8 = "UTF-8";
 
@@ -258,7 +271,7 @@ public class FacetDbUtils {
 	// return byteStream.toByteArray();
 	// }
 
-	public static <T> void store(Database db, String key, T entry,
+	public static <T> boolean store(Database db, String key, T entry,
 			EntryBinding<T> binding) throws UnsupportedEncodingException,
 			DatabaseException {
 
@@ -270,7 +283,45 @@ public class FacetDbUtils {
 
 		OperationStatus status = db.put(null, keyEntry, data);
 
-		if (status != OperationStatus.SUCCESS) {
+		if (status == OperationStatus.SUCCESS) {
+
+			return true;
+
+		} else if (status == OperationStatus.KEYEXIST) {
+
+			// s_log.debug("already contained data for key '" + key
+			// + "' ... data was overwritten!");
+
+			return false;
+
+		} else {
+
+			throw new DatabaseException("data for key '" + key
+					+ "' insertion got status " + status);
+		}
+	}
+
+	public static <T> boolean storeNoOverwrite(Database db, String key,
+			T entry, EntryBinding<T> binding)
+			throws UnsupportedEncodingException, DatabaseException {
+
+		DatabaseEntry keyEntry = new DatabaseEntry();
+		DatabaseEntry data = new DatabaseEntry();
+
+		binding.objectToEntry(entry, data);
+		StringBinding.stringToEntry(key, keyEntry);
+
+		OperationStatus status = db.putNoOverwrite(null, keyEntry, data);
+
+		if (status == OperationStatus.SUCCESS) {
+
+			return true;
+
+		} else if (status == OperationStatus.KEYEXIST) {
+
+			return false;
+
+		} else {
 
 			throw new DatabaseException("data for key '" + key
 					+ "' insertion got status " + status);

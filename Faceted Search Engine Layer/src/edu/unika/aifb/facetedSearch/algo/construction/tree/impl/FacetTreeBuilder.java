@@ -42,9 +42,12 @@ import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.ComparatorPool;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance.DistanceComparator;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance.PositionComparator;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.metric.DistanceMetricPool;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IFacetTreeBuilder;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValue;
@@ -55,6 +58,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree.EndPointTyp
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.data.Table;
@@ -81,12 +85,15 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 	 * Indices
 	 */
 	private FacetIndex m_facetIndex;
+	private FacetTreeDelegator m_treeDelegator;
 	private StructureIndex m_structureIndex;
 
 	public FacetTreeBuilder(SearchSession session) throws IOException,
 			EnvironmentLockedException, DatabaseException, StorageException {
 
 		m_session = session;
+		m_treeDelegator = (FacetTreeDelegator) session
+				.getDelegator(Delegators.TREE);
 		m_cache = session.getCache();
 
 		m_facetIndex = (FacetIndex) m_session.getStore().getIndex(
@@ -116,7 +123,7 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 	}
 
 	public FacetTree constructSubTree(Collection<String> results, int column,
-			StaticNode node, int depth) throws StorageException, IOException,
+			StaticNode node) throws StorageException, IOException,
 			DatabaseException {
 
 		clear();
@@ -169,10 +176,9 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 			// prune ranges
 			subTree = pruneRanges4Leaves(subTree, newLeaves);
 
-			doClustering(subTree, depth, subTree
+			doClustering(subTree, subTree
 					.getEndPoints(EndPointType.DATA_PROPERTY));
-			doConstructSubtrees(subTree, depth, subTree
-					.getEndPoints(EndPointType.OBJECT_PROPERTY));
+
 			doAttachRDFTypes(subTree, subTree
 					.getEndPoints(EndPointType.RDF_PROPERTY));
 
@@ -244,12 +250,11 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 		// prune ranges
 		newTree = pruneRanges4Leaves(newTree, newLeaves);
 
-		doClustering(newTree, FacetEnvironment.DefaultValue.DEPTH_K, newTree
-				.getEndPoints(EndPointType.DATA_PROPERTY));
+		doClustering(newTree, newTree.getEndPoints(EndPointType.DATA_PROPERTY));
+		doConstructSubtrees(newTree, newTree
+				.getEndPoints(EndPointType.OBJECT_PROPERTY));
 		doAttachRDFTypes(newTree, newTree
 				.getEndPoints(EndPointType.RDF_PROPERTY));
-		doConstructSubtrees(newTree, FacetEnvironment.DefaultValue.DEPTH_K,
-				newTree.getEndPoints(EndPointType.OBJECT_PROPERTY));
 
 		long time2 = System.currentTimeMillis();
 
@@ -260,27 +265,30 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 		return newTree;
 	}
 
-	private void doAttachRDFTypes(FacetTree tree, Set<Node> rdfprop_eps) {
-		// TODO
+	private void doAttachRDFTypes(FacetTree tree, Set<StaticNode> rdfprop_eps)
+			throws DatabaseException, IOException {
+
+		for (StaticNode node : rdfprop_eps) {
+			insertFacetValues(tree, node, node.getObjects());
+		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private void doClustering(FacetTree tree, int depth_k,
-			Set<Node> dataprop_eps) throws DatabaseException {
+	private void doClustering(FacetTree tree, Set<StaticNode> dataprop_eps)
+			throws DatabaseException, IOException, StorageException {
 
-		DistanceComparator disComp = new DistanceComparator();
-		Iterator<Node> epIter = dataprop_eps.iterator();
+		Iterator<StaticNode> epIter = dataprop_eps.iterator();
 
 		while (epIter.hasNext()) {
 
+			StaticNode epNode = epIter.next();
 			m_cache.clear(ClearType.LITERALS);
 
-			StaticNode ep = (StaticNode) epIter.next();
-			DataType datatype = ep.getFacet().getDataType() == null ? FacetEnvironment.DataType.STRING
-					: ep.getFacet().getDataType();
+			DataType datatype = epNode.getFacet().getDataType() == null ? FacetEnvironment.DataType.STRING
+					: epNode.getFacet().getDataType();
 
 			IDistanceMetric metric = DistanceMetricPool.getMetric(datatype);
-			List<String> lits = ep.getSortedLiterals();
+			List<String> lits = epNode.getSortedLiterals();
 
 			/*
 			 * merge sort: O(nlogn)
@@ -289,67 +297,171 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 
 			if (lits.size() > FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE) {
 
+				// construct and sort distances for node
+
 				/*
 				 * each insert has O(logn)
 				 */
 				PriorityQueue<ClusterDistance> distanceQueue = new PriorityQueue<ClusterDistance>(
-						ep.getSortedLiterals().size() - 1, disComp);
-				Iterator<String> litIter = ep.getSortedLiterals().iterator();
+						FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1,
+						new DistanceComparator());
 
-				HashSet<Integer> current_leftSources = new HashSet<Integer>();
+				Iterator<String> litIter = lits.iterator();
+
 				int current_leftCountS = 0;
 				int current_leftCountFV = 0;
 
 				ArrayList<ClusterDistance> current_leftDistances = new ArrayList<ClusterDistance>();
+				HashSet<String> current_leftSources = new HashSet<String>();
 
 				while (litIter.hasNext()) {
 
 					String current_left = litIter.next();
-					current_leftSources.addAll(ep
-							.getLiteralSources(current_left));
-
-					current_leftCountS = current_leftSources.size();
-					current_leftCountFV += 1;
+					String ext = m_structureIndex.getExtension(current_left);
 
 					if (litIter.hasNext()) {
 
 						String current_right = litIter.next();
+						ClusterDistance clusterDistance;
 
-						BigDecimal distanceValue = metric.getDistance(m_cache
-								.getParsedLiteral(current_left.hashCode()),
-								m_cache.getParsedLiteral(current_right
-										.hashCode()));
+						if ((clusterDistance = m_cache.getDistance(
+								current_left, current_right, ext)) == null) {
 
-						ClusterDistance clusterDistance = new ClusterDistance(
-								current_left, current_right);
+							current_leftSources.addAll(m_cache
+									.getSources4Object(current_left));
+							current_leftCountS = current_leftSources.size();
+							current_leftCountFV += 1;
 
-						clusterDistance.setLeftDistances(current_leftDistances);
-						clusterDistance.setValue(distanceValue);
-						clusterDistance.setLeftCountFV(current_leftCountFV);
-						clusterDistance.setLeftCountS(current_leftCountS);
+							BigDecimal distanceValue = metric.getDistance(
+									m_cache.getParsedLiteral(current_left
+											.hashCode()), m_cache
+											.getParsedLiteral(current_right
+													.hashCode()));
+
+							clusterDistance = new ClusterDistance(current_left,
+									current_right);
+
+							clusterDistance
+									.setLeftDistances(current_leftDistances);
+							clusterDistance.setValue(distanceValue);
+							clusterDistance.setLeftCountFV(current_leftCountFV);
+							clusterDistance.setLeftCountS(current_leftCountS);
+
+							m_cache.addDistance(current_left, current_right,
+									ext, clusterDistance);
+
+						}
 
 						boolean success = distanceQueue.offer(clusterDistance);
 
 						if (!success) {
 
 							s_log.error("could not insert distance '"
-									+ clusterDistance + "' ");
+									+ clusterDistance + "'!");
+
+						}
+
+						current_leftDistances.add(clusterDistance);
+					}
+				}
+
+				/*
+				 * O(klogk)
+				 */
+
+				PriorityQueue<ClusterDistance> posQueue = new PriorityQueue<ClusterDistance>(
+						FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1,
+						new PositionComparator());
+
+				for (int i = 0; i < FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1; i++) {
+
+					ClusterDistance clusterDistance = distanceQueue.poll();
+					posQueue.offer(clusterDistance);
+
+				}
+
+				Edge edge;
+				DynamicNode dynNode;
+				ClusterDistance firstDis;
+				ClusterDistance secondDis;
+
+				if (!posQueue.isEmpty()) {
+
+					// first distance
+					firstDis = posQueue.poll();
+
+					dynNode = new DynamicNode();
+					dynNode.setDomain(epNode.getDomain());
+					dynNode.setCache(m_cache);
+					dynNode.setCountS(firstDis.getLeftCountS());
+					dynNode.setCountFV(firstDis.getLeftCountFV());
+					dynNode.setLeftBorder(lits.get(0));
+					dynNode.setRightBorder(firstDis.getLeftBorder());
+					dynNode.setLits(lits.subList(0, lits.indexOf(firstDis
+							.getLeftBorder())));
+
+					tree.addVertex(dynNode);
+					edge = tree.addEdge(epNode, dynNode);
+					edge.setType(EdgeType.CONTAINS);
+
+					while (!posQueue.isEmpty()) {
+
+						secondDis = posQueue.poll();
+
+						dynNode = new DynamicNode();
+						dynNode.setDomain(epNode.getDomain());
+						dynNode.setCache(m_cache);
+						dynNode.setCountS(secondDis.getLeftCountS()
+								- firstDis.getLeftCountS());
+						dynNode.setCountFV(secondDis.getLeftCountFV()
+								- firstDis.getLeftCountFV());
+						dynNode.setLeftBorder(firstDis.getRightBorder());
+						dynNode.setRightBorder(secondDis.getLeftBorder());
+						dynNode.setLits(lits.subList(lits.indexOf(firstDis
+								.getRightBorder()), lits.indexOf(secondDis
+								.getLeftBorder())));
+
+						tree.addVertex(dynNode);
+						edge = tree.addEdge(epNode, dynNode);
+						edge.setType(EdgeType.CONTAINS);
+
+						if (posQueue.isEmpty()) {
+
+							dynNode = new DynamicNode();
+							dynNode.setDomain(epNode.getDomain());
+							dynNode.setCache(m_cache);
+							dynNode.setCountS(epNode.getCountS()
+									- secondDis.getLeftCountS());
+							dynNode.setCountFV(epNode.getCountFV()
+									- secondDis.getLeftCountFV());
+							dynNode.setLeftBorder(secondDis.getLeftBorder());
+							dynNode.setRightBorder(lits.get(lits.size() - 1));
+							dynNode.setLits(lits.subList(lits.indexOf(secondDis
+									.getRightBorder()), lits.size() - 1));
+
+							tree.addVertex(dynNode);
+							edge = tree.addEdge(epNode, dynNode);
+							edge.setType(EdgeType.CONTAINS);
 
 						} else {
-
-							current_leftDistances.add(clusterDistance);
-
+							firstDis = secondDis;
 						}
 					}
 				}
+
 			} else {
 
+				insertFacetValues(tree, epNode, lits);
 			}
 		}
 	}
 
-	private void doConstructSubtrees(FacetTree tree, int depth_k,
-			Set<Node> objectprop_eps) {
+	private void doConstructSubtrees(FacetTree tree,
+			Set<StaticNode> objectprop_eps) {
+
+		for (StaticNode node : objectprop_eps) {
+
+		}
 
 	}
 
@@ -366,6 +478,22 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 		}
 
 		return epType;
+	}
+
+	private void insertFacetValues(FacetTree tree, StaticNode node,
+			Collection<String> values) {
+
+		Iterator<String> valueIter = values.iterator();
+
+		while (valueIter.hasNext()) {
+
+			String valueStrg = valueIter.next();
+			FacetValue fv = new FacetValue(valueStrg);
+			fv.setDomain(node.getDomain());
+			fv.setCache(m_cache);
+			fv.setDepth(node.getDepth() + 1);
+
+		}
 	}
 
 	private StaticNode insertPathAtNode(FacetTree newTree,
@@ -448,18 +576,6 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 
 		return insertPathAtNode(newTree, indexedTree, leaveId, newTree
 				.getRoot());
-	}
-
-	private void insertFacetValues(FacetTree tree, StaticNode node, Collection<String> values) {
-
-		Iterator<String> valueIter = values.iterator();
-
-		while (valueIter.hasNext()) {
-
-			String valueStrg = valueIter.next();
-			FacetValue valueNode = new FacetValue(valueStrg);
-			
-		}
 	}
 
 	private FacetTree pruneRanges4Leaves(FacetTree tree, Set<StaticNode> leaves)
@@ -606,7 +722,6 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 				leave.getID());
 
 		HashSet<String> objects = m_facetIndex.getObjects(leave, resItem);
-		HashSet<String> rangeExt = m_facetIndex.getExtensions(leave, resItem);
 
 		if (objects.size() == 0) {
 			s_log.error("no objects found for leave '" + leave + "' and ind '"
@@ -619,7 +734,7 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 
 				StaticNode last_node = null;
 				StaticNode current_node = null;
-				int height = 0;
+				// int height = 0;
 
 				while (!path2RangeRoot.isEmpty()) {
 
@@ -627,28 +742,28 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 
 					current_node = (StaticNode) newTree.getEdgeTarget(edge);
 					current_node.addSourceIndivdiual(resItem);
-					current_node.addUnsortedObjects(objects);
-					current_node.addSourceExtension(sourceExt);
-					current_node.addRangeExtensions(rangeExt);
+					current_node.addUnsortedObjects(objects, resItem);
+					// current_node.addSourceExtension(sourceExt);
+					// current_node.addRangeExtensions(rangeExt);
 					current_node.incrementCountS(1);
 
-					if (current_node.getHeight() < height) {
-						current_node.setHeight(height);
-					}
+					// if (current_node.getHeight() < height) {
+					// current_node.setHeight(height);
+					// }
 
 					last_node = (StaticNode) newTree.getEdgeSource(edge);
-					height++;
+					// height++;
 				}
 
 				last_node.addSourceIndivdiual(resItem);
-				last_node.addUnsortedObjects(objects);
-				last_node.addSourceExtension(sourceExt);
-				last_node.addRangeExtensions(rangeExt);
+				last_node.addUnsortedObjects(objects, resItem);
+				// last_node.addSourceExtension(sourceExt);
+				// last_node.addRangeExtensions(rangeExt);
 				last_node.incrementCountS(1);
 
-				if (last_node.getHeight() < height) {
-					last_node.setHeight(height);
-				}
+				// if (last_node.getHeight() < height) {
+				// last_node.setHeight(height);
+				// }
 			} else {
 				s_log.error("should not be here ... leave '" + leave + "'");
 			}
@@ -661,13 +776,13 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 			}
 			// object property or rdf property based
 			else {
-				leave.addUnsortedObjects(objects);
+				leave.addUnsortedObjects(objects, resItem);
 			}
 
-			leave.addSourceExtension(sourceExt);
-			leave.addRangeExtensions(rangeExt);
+			// leave.addSourceExtension(sourceExt);
+			// leave.addRangeExtensions(rangeExt);
 			leave.incrementCountS(1);
-			leave.setHeight(0);
+			// leave.setHeight(0);
 		}
 	}
 }

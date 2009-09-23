@@ -125,7 +125,7 @@ public class SearchSession {
 			e.printStackTrace();
 		}
 
-		m_facetTreeDelegator.clean();
+		m_facetTreeDelegator.clear();
 		m_rankingDelegator.clean();
 		m_constructionDelegator.clean();
 

@@ -17,6 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 
@@ -26,7 +27,12 @@ import edu.unika.aifb.facetedSearch.algo.construction.clustering.IFacetClusterDi
  * @author andi
  * 
  */
-public class ClusterDistance implements IFacetClusterDistance {
+public class ClusterDistance implements IFacetClusterDistance, Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1051678213418421275L;
 
 	private BigDecimal m_value;
 

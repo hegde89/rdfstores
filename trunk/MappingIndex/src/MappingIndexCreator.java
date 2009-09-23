@@ -1,20 +1,35 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+import org.apache.lucene.index.CorruptIndexException;
+
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.EnvironmentLockedException;
+
+import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
+import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
+import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
+import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneWarmer;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -24,12 +39,16 @@ public class MappingIndexCreator implements TripleSink{
 	private IndexDirectory m_idxDirectory;
 	private IndexConfiguration m_idxConfig;
 	private Importer m_importer;
+	private int m_triplesImported = 0;
+	private final int TRIPLES_INTERVAL = 500000;
 	
-	private Map<IndexDescription,IndexStorage> m_dataIndexes;
+	private Map<IndexDescription,IndexStorage> m_mappingIndexes;
 	
 	private Set<String> m_properties;
 	private String m_ds_source;
 	private String m_ds_destination;
+	
+	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
 	public MappingIndexCreator(IndexDirectory indexDirectory, String s, String d) throws IOException {
 		m_idxDirectory = indexDirectory;
@@ -47,71 +66,54 @@ public class MappingIndexCreator implements TripleSink{
 		m_idxConfig.set(IndexConfiguration.HAS_DI, createDI);
 	}
 	
-	private void addDataIndex(IndexDescription idx) {
+	private void addMappingIndex(IndexDescription idx) {
 		m_idxConfig.addIndex(IndexConfiguration.DI_INDEXES, idx);
 	}
+	
 	
 	private void importData() throws IOException, StorageException {
 		m_importer.setTripleSink(this);
 		
-		m_dataIndexes = new HashMap<IndexDescription,IndexStorage>();
-		
-		IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + IndexDescription.DSEEDS.getIndexFieldName()), new StatisticsCollector());
-		is.initialize(true, false);
-		m_dataIndexes.put(IndexDescription.DSEEDS, is);
+		m_mappingIndexes = new HashMap<IndexDescription,IndexStorage>();
+		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
+			IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
+			is.initialize(true, false);
+			m_mappingIndexes.put(idx, is);
+		}
 		
 		m_importer.doImport();
 		
-		Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE, true), m_properties);
+		//Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE, true), m_properties);
 
-		m_dataIndexes.get(IndexDescription.DSEEDS).mergeSingleIndex(IndexDescription.DSEEDS);
-		m_dataIndexes.get(IndexDescription.DSEEDS).close();
+		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
+			log.debug("merging " + idx.toString());
+			m_mappingIndexes.get(idx).mergeSingleIndex(idx);
+			m_mappingIndexes.get(idx).close();
+			
+			//Util.writeEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName() + "_warmup", 
+			//	LuceneWarmer.getWarmupTerms(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName(), 10));
+		}
 	}
 	
 	public void create() throws FileNotFoundException, IOException, StorageException, InterruptedException {
 		m_idxDirectory.create();
 
-		addDataIndex(IndexDescription.DSEEDS);
-		
+		addMappingIndex(IndexDescription.DSDTESET);
+		addMappingIndex(IndexDescription.DSDTETES);
 		importData();
 	}
 	
-	private String selectByField(DataField df, String s, String p, String o, String c) {
-		if (df == DataField.SUBJECT)
-			return s;
-		else if (df == DataField.PROPERTY)
-			return p;
-		else if (df == DataField.OBJECT)
-			return o;
-		else if (df == DataField.CONTEXT)
-			return c;
-		else
-			return null;
-	}
 	
-	public void triple(String s, String p, String o, String c) {
-		m_properties.add(p);
+	public void triple(String s, String p, String o, String c) {		
+			try {
+				m_mappingIndexes.get(IndexDescription.DSDTESET).addData(IndexDescription.DSDTESET, new String[] { m_ds_source, m_ds_destination, s}, o);
+				m_mappingIndexes.get(IndexDescription.DSDTETES).addData(IndexDescription.DSDTETES, new String[] { m_ds_source, m_ds_destination, o}, s);
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
 		
-		if (c == null) c = "";
-		
-		IndexDescription idx = IndexDescription.DSEEDS;
-		String[] indexFields = new String [4];
-		
-		indexFields[0] = m_ds_source;
-		indexFields[1] = s;
-		indexFields[2] = o;
-		indexFields[3] = m_ds_destination;
-		
-		String value = selectByField(idx.getValueField(), s, p, o, c);
-		
-		if (value == null) {
-			throw new UnsupportedOperationException("data indexes can only consist of S, P and O data fields");
-		}
-		
-		try {
-			m_dataIndexes.get(idx).addData(idx, indexFields, value);
-		} catch (StorageException e) {
-			e.printStackTrace();
-		}
+		m_triplesImported++;
+		if (m_triplesImported % TRIPLES_INTERVAL == 0)
+			log.info("triples imported: " + m_triplesImported);
 	}
 }

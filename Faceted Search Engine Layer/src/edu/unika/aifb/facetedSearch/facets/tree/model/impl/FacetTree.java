@@ -124,7 +124,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 	private double m_fatherNodeId;
 	private StaticNode m_root;
 	private String m_domain;
-	private HashMap<EndPointType, HashSet<Node>> m_endPoints;
+	private HashMap<EndPointType, HashSet<StaticNode>> m_endPoints;
 	private HashSet<Double> m_allEndPoints;
 	private HashMap<Double, Node> m_nodeMap;
 
@@ -134,7 +134,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		init();
 	}
 
-	public void addEndPoint(EndPointType type, Node endpoint) {
+	public void addEndPoint(EndPointType type, StaticNode endpoint) {
 		m_endPoints.get(type).add(endpoint);
 		m_allEndPoints.add(endpoint.getID());
 	}
@@ -276,17 +276,21 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		return m_domain;
 	}
 
-	public HashSet<Node> getEndPoints(EndPointType type) {
+	public HashSet<StaticNode> getEndPoints(EndPointType type) {
 		return m_endPoints.get(type);
 	}
 
-	public double getId() {
-		return m_id;
+	public double getFatherNodeId() {
+		return m_fatherNodeId;
 	}
 
 	// public Node getRoot() {
 	// return this.m_root;
 	// }
+
+	public double getId() {
+		return m_id;
+	}
 
 	public Node getNodeById(double key) {
 
@@ -399,7 +403,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 	private void init() {
 
 		m_nodeMap = new HashMap<Double, Node>();
-		m_endPoints = new HashMap<EndPointType, HashSet<Node>>();
+		m_endPoints = new HashMap<EndPointType, HashSet<StaticNode>>();
 		m_allEndPoints = new HashSet<Double>();
 
 		m_root = new StaticNode("root", NodeType.ROOT);
@@ -411,9 +415,10 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 
 		m_id = (new Random()).nextGaussian();
 
-		m_endPoints.put(EndPointType.DATA_PROPERTY, new HashSet<Node>());
-		m_endPoints.put(EndPointType.OBJECT_PROPERTY, new HashSet<Node>());
-		m_endPoints.put(EndPointType.RDF_PROPERTY, new HashSet<Node>());
+		m_endPoints.put(EndPointType.DATA_PROPERTY, new HashSet<StaticNode>());
+		m_endPoints
+				.put(EndPointType.OBJECT_PROPERTY, new HashSet<StaticNode>());
+		m_endPoints.put(EndPointType.RDF_PROPERTY, new HashSet<StaticNode>());
 
 	}
 
@@ -439,6 +444,10 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 
 	public void setDomain(String domain) {
 		m_domain = domain;
+	}
+
+	public void setFatherNodeId(double fatherNodeId) {
+		m_fatherNodeId = fatherNodeId;
 	}
 
 	@Override
@@ -471,13 +480,5 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge> implements
 		// out += FacetHelper.NEW_LINE;
 
 		return null;
-	}
-
-	public void setFatherNodeId(double fatherNodeId) {
-		m_fatherNodeId = fatherNodeId;
-	}
-
-	public double getFatherNodeId() {
-		return m_fatherNodeId;
 	}
 }

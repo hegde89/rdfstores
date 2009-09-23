@@ -1,19 +1,23 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.IDynamicNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
+import java.util.List;
 
-public class DynamicNode extends StaticNode implements
-		IDynamicNode {
+import edu.unika.aifb.facetedSearch.facets.tree.model.IDynamicNode;
+
+public class DynamicNode extends StaticNode implements IDynamicNode {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -3453365940192769709L;
 
-	private INode m_leftBorder;
+	private String m_leftBorder;
+	private String m_rightBorder;
+	private List<String> m_lits;
 
-	private INode m_rightBorder;
+	public DynamicNode() {
+		super();
+	}
 
 	public DynamicNode(String value, NodeContent content) {
 		super(value, content);
@@ -27,19 +31,27 @@ public class DynamicNode extends StaticNode implements
 		super(value, type, content);
 	}
 
-	public INode getLeftBorder() {
+	public String getLeftBorder() {
 		return m_leftBorder;
 	}
 
-	public INode getRightBorder() {
+	public List<String> getLits() {
+		return m_lits;
+	}
+
+	public String getRightBorder() {
 		return m_rightBorder;
 	}
 
-	public void setLeftBorder(INode leftValue) {
+	public void setLeftBorder(String leftValue) {
 		m_leftBorder = leftValue;
 	}
 
-	public void setRightBorder(INode rightValue) {
+	public void setLits(List<String> lits) {
+		m_lits = lits;
+	}
+
+	public void setRightBorder(String rightValue) {
 		m_rightBorder = rightValue;
 	}
 }

@@ -18,17 +18,15 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
@@ -114,29 +112,29 @@ public class Node implements INode {
 		// setPathHashValue(pathHashValue);
 	}
 
-	public void addRangeExtension(String extension) {
-		m_RangeExtensions.add(extension);
-	}
-
-	public void addRangeExtensions(Collection<String> extensions) {
-		m_RangeExtensions.addAll(extensions);
-	}
-
-	public void addRangeExtensions(String extensions) {
-		m_RangeExtensions.addAll(FacetUtils.string2List(extensions));
-	}
-
-	public void addSourceExtension(String extension) {
-		m_SourceExtensions.add(extension);
-	}
-
-	public void addSourceExtensions(Collection<String> extensions) {
-		m_SourceExtensions.addAll(extensions);
-	}
-
-	public void addSourceExtensions(String extensions) {
-		m_SourceExtensions.addAll(FacetUtils.string2List(extensions));
-	}
+	// public void addRangeExtension(String extension) {
+	// m_RangeExtensions.add(extension);
+	// }
+	//
+	// public void addRangeExtensions(Collection<String> extensions) {
+	// m_RangeExtensions.addAll(extensions);
+	// }
+	//
+	// public void addRangeExtensions(String extensions) {
+	// m_RangeExtensions.addAll(FacetUtils.string2List(extensions));
+	// }
+	//
+	// public void addSourceExtension(String extension) {
+	// m_SourceExtensions.add(extension);
+	// }
+	//
+	// public void addSourceExtensions(Collection<String> extensions) {
+	// m_SourceExtensions.addAll(extensions);
+	// }
+	//
+	// public void addSourceExtensions(String extensions) {
+	// m_SourceExtensions.addAll(FacetUtils.string2List(extensions));
+	// }
 
 	// @Override
 	@Override

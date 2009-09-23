@@ -19,17 +19,19 @@ package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.sleepycat.bind.tuple.TupleBinding;
+import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
 /**
  * @author andi
@@ -44,9 +46,8 @@ public class StaticNode extends Node implements IStaticNode {
 	private static Logger s_log = Logger.getLogger(StaticNode.class);
 
 	private SearchSessionCache m_cache;
-
-	private HashMap<String, HashSet<Integer>> m_LiteralSources;
-	private List<String> m_sortedLiterals;
+	private StoredMap<String, Integer> m_countFVMap;
+	private StoredMap<String, Integer> m_countSMap;
 
 	private int m_countFV;
 	private int m_countS;
@@ -79,35 +80,35 @@ public class StaticNode extends Node implements IStaticNode {
 
 		for (String object : objects) {
 
-			if (!m_LiteralSources.containsKey(object)) {
+			if (!m_lits.contains(object)) {
 
 				m_sortedLiterals.add(object);
+				m_lits.add(object);
+				incrementCountFV(1);
 
-				HashSet<Integer> sources = new HashSet<Integer>();
-				sources.add(source.hashCode());
-				m_LiteralSources.put(object, sources);
-
-			} else {
-
-				HashSet<Integer> sources = m_LiteralSources.get(object);
-				sources.add(source.hashCode());
-
-				m_LiteralSources.put(object, sources);
 			}
 
-			incrementCountFV(1);
+			try {
+
+				m_cache.addSource4Object(object, source);
+
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
 	public void addSourceIndivdiual(String ind) {
 
-		if ((m_cache != null)) {
-
-			// && m_cache.isOpen()
+		if ((m_cache != null)) {// && m_cache.isOpen()
 
 			try {
-				m_cache.addSourceIndivdual(ind, getID());
+				m_cache.addSource4Node(ind, getID());
 			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			} catch (DatabaseException e) {
 				e.printStackTrace();
 			}
 
@@ -117,18 +118,20 @@ public class StaticNode extends Node implements IStaticNode {
 		}
 	}
 
-	public void addUnsortedObjects(HashSet<String> objects) {
+	public void addUnsortedObjects(HashSet<String> objects, String source) {
 
-		if ((m_cache != null)) {
-
-			// && m_cache.isOpen()
+		if ((m_cache != null)) {// && m_cache.isOpen()
 
 			try {
 
-				int objectsInserted = m_cache.addObjects(objects, this);
+				int objectsInserted = m_cache.addObjects(objects, this, source);
 				incrementCountFV(objectsInserted);
 
 			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
@@ -146,21 +149,38 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_countS;
 	}
 
+	public int getCountS4Object(String object) {
+
+		try {
+			return m_cache.getCountS4Object(object);
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return 0;
+	}
+
+	public int getCountS4Objects(Collection<String> objects) {
+
+		try {
+			return m_cache.getCountS4Objects(objects);
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return 0;
+	}
+
 	public int getDepth() {
 		return m_depth;
 	}
 
 	public int getHeight() {
 		return m_height;
-	}
-
-	public HashMap<String, HashSet<Integer>> getLiteralSources() {
-		return m_LiteralSources;
-	}
-
-	public HashSet<Integer> getLiteralSources(String lit) {
-		return m_LiteralSources.containsKey(lit) ? m_LiteralSources.get(lit)
-				: null;
 	}
 
 	public String getName() {
@@ -197,7 +217,7 @@ public class StaticNode extends Node implements IStaticNode {
 
 			// && m_cache.isOpen()
 
-			return m_cache.getSources(getID());
+			return m_cache.getSources4Node(getID());
 
 		} else {
 
@@ -216,9 +236,6 @@ public class StaticNode extends Node implements IStaticNode {
 
 	private void init() {
 
-		m_LiteralSources = new HashMap<String, HashSet<Integer>>();
-		m_sortedLiterals = new ArrayList<String>();
-
 		m_countFV = 0;
 		m_countS = 0;
 		m_height = 0;
@@ -226,8 +243,25 @@ public class StaticNode extends Node implements IStaticNode {
 
 	}
 
+	private void initStoredMaps() {
+
+		TupleBinding<String> strgBind = TupleBinding
+				.getPrimitiveBinding(String.class);
+		TupleBinding<Integer> intBind = TupleBinding
+				.getPrimitiveBinding(Integer.class);
+
+		m_countFVMap = new StoredMap<String, Integer>(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.FO_CACHE), strgBind, intBind,
+				true);
+		m_countSMap = new StoredMap<String, Integer>(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.FS_CACHE), strgBind, intBind,
+				true);
+
+	}
+
 	public void setCache(SearchSessionCache cache) {
 		m_cache = cache;
+		initStoredMaps();
 	}
 
 	public void setCountFV(int countFV) {
@@ -246,9 +280,10 @@ public class StaticNode extends Node implements IStaticNode {
 		m_height = height;
 	}
 
-	public void setLiteralCounts(HashMap<String, HashSet<Integer>> literalCounts) {
-		m_LiteralSources = literalCounts;
-	}
+	// public void setLiteralCounts(HashMap<String, HashSet<Integer>>
+	// literalCounts) {
+	// m_LiteralSources = literalCounts;
+	// }
 
 	public void setName(String name) {
 		m_name = name;

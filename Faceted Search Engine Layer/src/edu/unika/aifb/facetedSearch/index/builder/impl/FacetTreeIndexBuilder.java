@@ -43,7 +43,7 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.RDF;
-import edu.unika.aifb.facetedSearch.api.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
@@ -144,14 +144,14 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 						.contains(propertyLabel)) {
 
 					Stack<Node> propertyPath = new Stack<Node>();
-					NodeElement target = property.getTarget();
+					// NodeElement target = property.getTarget();
 
 					if (propertyLabel.equals(RDF.NAMESPACE + RDF.TYPE)) {
 
 						Node endpoint = new Node(propertyLabel,
 								NodeType.INNER_NODE, NodeContent.TYPE_PROPERTY);
 
-						endpoint.addRangeExtension(target.getLabel());
+						// endpoint.addRangeExtension(target.getLabel());
 						endpoint.setFacet(endpoint.makeFacet(propertyLabel,
 								FacetType.RDF_PROPERTY_BASED, null));
 						propertyPath.push(endpoint);
@@ -168,7 +168,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 								isDataProp ? NodeContent.DATA_PROPERTY
 										: NodeContent.OBJECT_PROPERTY);
 
-						endpoint.addRangeExtension(target.getLabel());
+						// endpoint.addRangeExtension(target.getLabel());
 						endpoint
 								.setFacet(endpoint
 										.makeFacet(
@@ -1361,8 +1361,8 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		// set.add(object);
 		// FacetDbUtils.store(m_objectDB, key, set);
 
-		String ext = m_facetHelper.getExtension(object) == null ? "null"
-				: m_facetHelper.getExtension(object);
+		// String ext = m_facetHelper.getExtension(object) == null ? "null"
+		// : m_facetHelper.getExtension(object);
 
 		for (Node leave : leaves) {
 
@@ -1373,8 +1373,8 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 				leave.setPathHashValue(path.hashCode());
 			}
 
-			String key4obj = ind + leave.getPathHashValue() + "obj";
-			String key4ext = ind + leave.getPathHashValue() + "ext";
+			String key4obj = ind + leave.getPathHashValue();
+			// String key4ext = ind + leave.getPathHashValue() + "ext";
 
 			// HashSet<String> objects = null;
 			// HashSet<String> extensions = null;
@@ -1401,7 +1401,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			// nodes.add(leave);
 
 			FacetDbUtils.store(m_objectDB, key4obj, object, m_objBinding);
-			FacetDbUtils.store(m_objectDB, key4ext, ext, m_objBinding);
+			// FacetDbUtils.store(m_objectDB, key4ext, ext, m_objBinding);
 		}
 
 	}

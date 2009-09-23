@@ -73,7 +73,7 @@ public class ConstructionDelegator extends Delegator {
 
 		FacetTreeDelegator treeDelegator = (FacetTreeDelegator) m_session
 				.getDelegator(Delegators.TREE);
-		treeDelegator.clean();
+		treeDelegator.clear();
 
 		for (String colName : results.getColumnNames()) {
 

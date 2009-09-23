@@ -50,7 +50,7 @@ public class Main {
 			MappingIndexCreator mic = new MappingIndexCreator(new IndexDirectory(directory), source, destination);
 			
 			mic.setImporter(importer);
-			mic.setCreateDataIndex(true);
+			//mic.setCreateDataIndex(true);
 			mic.create();
 	}
 

@@ -48,14 +48,27 @@ public class SearchSession {
 		INDEX_DIRECTORY, RANKING_ENABLED, FACETS_ENABLED, ACTION, FILES, CREATE_DATA_INDEX, IGNORE_DATATYPES, CREATE_STRUCTURE_INDEX, CREATE_KEYWORD_INDEX, NEIGHBORHOOD_SIZE, STRUCTURE_INDEX_PATH_LENGTH, STRUCTURE_BASED_DATA_PARTIONING, CREATE_DATA_EXTENSIONS, ONTO_LANGUAGE
 	}
 
+	/*
+	 * store
+	 */
 	private GenericRdfStore m_store;
+
+	/*
+	 * Delegators
+	 */
 	private FacetTreeDelegator m_facetTreeDelegator;
 	private RankingDelegator m_rankingDelegator;
 	private ConstructionDelegator m_constructionDelegator;
-	private Map<String, Integer> m_currentLevels;
-	private Properties m_props;
-	private SearchSessionCache m_cache;
 
+	private int m_currentPage;
+	private Map<String, Integer> m_currentLevels;
+
+	/*
+	 * properties
+	 */
+	private Properties m_props;
+
+	private SearchSessionCache m_cache;
 	private int m_id;
 
 	protected SearchSession(GenericRdfStore store, int id, Properties props) {
@@ -68,8 +81,6 @@ public class SearchSession {
 		m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
 		m_rankingDelegator = RankingDelegator.getInstance(this);
 		m_constructionDelegator = ConstructionDelegator.getInstance(this);
-		// this.m_litFactory = new LiteralFactory(this);
-		// this.m_indFactory = new IndividualFactorty(this);
 		m_id = id;
 
 		initCache();
@@ -96,24 +107,24 @@ public class SearchSession {
 
 		switch (name) {
 
-		case DEPTH_K: {
-			FacetEnvironment.DefaultValue.DEPTH_K = value;
-			break;
-		}
-		case MAX_SESSIONS: {
-			FacetEnvironment.DefaultValue.MAX_SESSIONS = value;
-			break;
-		}
-		case NUMBER_OF_RESULTS_PER_PAGE: {
-			FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE = value;
-			break;
-		}
-		case WEIGHT: {
-			FacetEnvironment.DefaultValue.WEIGHT = value;
-			break;
-		}
-		default:
-			break;
+			case DEPTH_K : {
+				FacetEnvironment.DefaultValue.DEPTH_K = value;
+				break;
+			}
+			case MAX_SESSIONS : {
+				FacetEnvironment.DefaultValue.MAX_SESSIONS = value;
+				break;
+			}
+			case NUMBER_OF_RESULTS_PER_PAGE : {
+				FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE = value;
+				break;
+			}
+			case WEIGHT : {
+				FacetEnvironment.DefaultValue.WEIGHT = value;
+				break;
+			}
+			default :
+				break;
 		}
 	}
 
@@ -170,8 +181,8 @@ public class SearchSession {
 	 * @return the m_currentLevel
 	 */
 	public int getCurrentLevel(String extension) {
-		return this.m_currentLevels.containsKey(extension) ? this.m_currentLevels
-				.get(extension)
+		return this.m_currentLevels.containsKey(extension)
+				? this.m_currentLevels.get(extension)
 				: -1;
 	}
 
@@ -179,17 +190,17 @@ public class SearchSession {
 
 		switch (name) {
 
-		case TREE:
-			return m_facetTreeDelegator;
+			case TREE :
+				return m_facetTreeDelegator;
 
-		case CONSTRUCTION:
-			return m_constructionDelegator;
+			case CONSTRUCTION :
+				return m_constructionDelegator;
 
-		case RANKING:
-			return m_rankingDelegator;
+			case RANKING :
+				return m_rankingDelegator;
 
-		default:
-			return Delegator.NULL;
+			default :
+				return Delegator.NULL;
 		}
 	}
 
@@ -229,52 +240,55 @@ public class SearchSession {
 
 		switch (key) {
 
-		case ACTION: {
-			return m_props.getProperty(FacetEnvironment.ACTION);
-		}
-		case CREATE_DATA_EXTENSIONS: {
-			return m_props.getProperty(FacetEnvironment.CREATE_DATA_EXTENSIONS);
-		}
-		case CREATE_DATA_INDEX: {
-			return m_props.getProperty(FacetEnvironment.CREATE_DATA_INDEX);
-		}
-		case CREATE_KEYWORD_INDEX: {
-			return m_props.getProperty(FacetEnvironment.CREATE_KEYWORD_INDEX);
-		}
-		case CREATE_STRUCTURE_INDEX: {
-			return m_props.getProperty(FacetEnvironment.CREATE_STRUCTURE_INDEX);
-		}
-		case FACETS_ENABLED: {
-			return m_props.getProperty(FacetEnvironment.FACETS_ENABLED);
-		}
-		case FILES: {
-			return m_props.getProperty(FacetEnvironment.FILES);
-		}
-		case IGNORE_DATATYPES: {
-			return m_props.getProperty(FacetEnvironment.IGNORE_DATATYPES);
-		}
-		case INDEX_DIRECTORY: {
-			return m_props.getProperty(FacetEnvironment.INDEX_DIRECTORY);
-		}
-		case NEIGHBORHOOD_SIZE: {
-			return m_props.getProperty(FacetEnvironment.NEIGHBORHOOD_SIZE);
-		}
-		case ONTO_LANGUAGE: {
-			return m_props.getProperty(FacetEnvironment.ONTO_LANGUAGE);
-		}
-		case RANKING_ENABLED: {
-			return m_props.getProperty(FacetEnvironment.RANKING_ENABLED);
-		}
-		case STRUCTURE_BASED_DATA_PARTIONING: {
-			return m_props
-					.getProperty(FacetEnvironment.STRUCTURE_BASED_DATA_PARTIONING);
-		}
-		case STRUCTURE_INDEX_PATH_LENGTH: {
-			return m_props
-					.getProperty(FacetEnvironment.STRUCTURE_INDEX_PATH_LENGTH);
-		}
-		default:
-			return null;
+			case ACTION : {
+				return m_props.getProperty(FacetEnvironment.ACTION);
+			}
+			case CREATE_DATA_EXTENSIONS : {
+				return m_props
+						.getProperty(FacetEnvironment.CREATE_DATA_EXTENSIONS);
+			}
+			case CREATE_DATA_INDEX : {
+				return m_props.getProperty(FacetEnvironment.CREATE_DATA_INDEX);
+			}
+			case CREATE_KEYWORD_INDEX : {
+				return m_props
+						.getProperty(FacetEnvironment.CREATE_KEYWORD_INDEX);
+			}
+			case CREATE_STRUCTURE_INDEX : {
+				return m_props
+						.getProperty(FacetEnvironment.CREATE_STRUCTURE_INDEX);
+			}
+			case FACETS_ENABLED : {
+				return m_props.getProperty(FacetEnvironment.FACETS_ENABLED);
+			}
+			case FILES : {
+				return m_props.getProperty(FacetEnvironment.FILES);
+			}
+			case IGNORE_DATATYPES : {
+				return m_props.getProperty(FacetEnvironment.IGNORE_DATATYPES);
+			}
+			case INDEX_DIRECTORY : {
+				return m_props.getProperty(FacetEnvironment.INDEX_DIRECTORY);
+			}
+			case NEIGHBORHOOD_SIZE : {
+				return m_props.getProperty(FacetEnvironment.NEIGHBORHOOD_SIZE);
+			}
+			case ONTO_LANGUAGE : {
+				return m_props.getProperty(FacetEnvironment.ONTO_LANGUAGE);
+			}
+			case RANKING_ENABLED : {
+				return m_props.getProperty(FacetEnvironment.RANKING_ENABLED);
+			}
+			case STRUCTURE_BASED_DATA_PARTIONING : {
+				return m_props
+						.getProperty(FacetEnvironment.STRUCTURE_BASED_DATA_PARTIONING);
+			}
+			case STRUCTURE_INDEX_PATH_LENGTH : {
+				return m_props
+						.getProperty(FacetEnvironment.STRUCTURE_INDEX_PATH_LENGTH);
+			}
+			default :
+				return null;
 		}
 	}
 
@@ -290,6 +304,20 @@ public class SearchSession {
 	 */
 	public GenericRdfStore getStore() {
 		return this.m_store;
+	}
+
+	/**
+	 * @param currentPage the currentPage to set
+	 */
+	public void setCurrentPage(int currentPage) {
+		m_currentPage = currentPage;
+	}
+
+	/**
+	 * @return the currentPage
+	 */
+	public int getCurrentPage() {
+		return m_currentPage;
 	}
 
 	// public boolean rankingEnabled() {

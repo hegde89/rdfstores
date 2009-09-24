@@ -25,7 +25,8 @@ import com.sleepycat.je.DatabaseException;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
-import edu.unika.aifb.facetedSearch.search.datastructure.FacetQuery;
+import edu.unika.aifb.facetedSearch.search.datastructure.AbstractFacetRequest;
+import edu.unika.aifb.facetedSearch.search.datastructure.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
@@ -48,8 +49,15 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class GenericQueryEvaluator {
 
+	/*
+	 * Evaluators
+	 */
+	private Searcher m_vPEvaluator;
+	private Searcher m_keywordQueryEvaluator;
+	private Searcher m_facetQueryEvaluator;
+	private Searcher m_changePageEvaluator;
+
 	private IndexReader m_idxReader;
-	private int m_currentPage;
 	private SearchSession m_session;
 
 	public GenericQueryEvaluator(SearchSession session, IndexReader idxReader) {
@@ -57,27 +65,30 @@ public class GenericQueryEvaluator {
 		m_idxReader = idxReader;
 	}
 
-	private ResultPage constructFirstResultPage(Table<String> results) {
+	private ResultPage constructInitialResultPage(Table<String> results) {
 
 		Table<String> res4Page;
 		ResultPage resPage = ResultPage.EMPTY_PAGE;
-		m_currentPage = 1;
+		m_session.setCurrentPage(1);
 
 		try {
 
 			m_session.getCache().clear(ClearType.ALL);
-			m_session.getCache().storeResultSet(results);
+			m_session.getCache().addResultSet(results);
 
-			if ((res4Page = m_session.getCache().getResults4Page(m_currentPage)) != null) {
-				resPage = new ResultPage(res4Page, m_currentPage);
+			if ((res4Page = m_session.getCache().getResults4Page(m_session.getCurrentPage())) != null) {
+				resPage = new ResultPage(res4Page, m_session.getCurrentPage());
 			}
 
 			// create facets for this result set
 			if (new Boolean(m_session.getProps().getProperty(
 					FacetEnvironment.FACETS_ENABLED))) {
-				resPage.setFacets(((ConstructionDelegator) m_session
+
+				((ConstructionDelegator) m_session
 						.getDelegator(Delegators.CONSTRUCTION))
-						.doFacetConstruction(results));
+						.doFacetConstruction(results);
+
+				// resPage.setFacets();
 			}
 
 		} catch (DatabaseException e) {
@@ -90,7 +101,6 @@ public class GenericQueryEvaluator {
 
 		return resPage;
 	}
-
 	public ResultPage evaluate(Query query) {
 
 		ResultPage resultPage = null;
@@ -104,7 +114,7 @@ public class GenericQueryEvaluator {
 
 				eval = (KeywordQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.KeywordQueryEvaluator);
 				resultTable = eval.evaluate((KeywordQuery) query);
-				resultPage = constructFirstResultPage(resultTable);
+				resultPage = constructInitialResultPage(resultTable);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -121,7 +131,7 @@ public class GenericQueryEvaluator {
 
 				eval = (VPEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
 				resultTable = eval.evaluate((StructuredQuery) query);
-				resultPage = constructFirstResultPage(resultTable);
+				resultPage = constructInitialResultPage(resultTable);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -138,7 +148,7 @@ public class GenericQueryEvaluator {
 
 				eval = (ExploringHybridQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.HybridQueryEvaluator);
 				resultTable = eval.evaluate((HybridQuery) query);
-				resultPage = constructFirstResultPage(resultTable);
+				resultPage = constructInitialResultPage(resultTable);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -146,10 +156,34 @@ public class GenericQueryEvaluator {
 				e.printStackTrace();
 			}
 
-		} else if (query instanceof FacetQuery) {
+		} else if (query instanceof AbstractFacetRequest) {
 
-			// TODO
+			FacetQueryEvaluator eval = null;
 
+			try {
+
+				eval = (FacetQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
+				resultPage = eval.evaluate((AbstractFacetRequest) query);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
+		} else if (query instanceof ChangePageRequest) {
+
+			ChangePageEvaluator eval = null;
+
+			try {
+
+				eval = (ChangePageEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.ChangePageEvaluator);
+				resultPage = eval.evaluate((ChangePageRequest) query);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
 		}
 
 		return resultPage;
@@ -158,52 +192,50 @@ public class GenericQueryEvaluator {
 	private Searcher getEvaluator(FacetEnvironment.EvaluatorType type)
 			throws IOException, StorageException, InvalidParameterException {
 
-		Searcher searcher = null;
-
 		switch (type) {
 
-		case StructuredQueryEvaluator: {
-			searcher = new VPEvaluator(this.m_idxReader);
-			break;
-		}
-			// case CombinedQueryEvaluator: {
-			// searcher = new CombinedQueryEvaluator(this.m_idxReader);
-			// break;
-			// }
-		case KeywordQueryEvaluator: {
-			searcher = new ExploringKeywordQueryEvaluator(this.m_idxReader);
-			break;
-		}
-		case FacetQueryEvaluator: {
-			searcher = new FacetQueryEvaluator(this.m_idxReader);
-			break;
-		}
-		default: {
-			throw new InvalidParameterException(ExceptionHelper.createMessage(
-					"EvaluatorType", ExceptionHelper.Cause.NOT_VALID));
-		}
-		}
+			case StructuredQueryEvaluator : {
 
-		return searcher;
-	}
+				if (m_vPEvaluator == null) {
+					m_vPEvaluator = new VPEvaluator(m_idxReader);
+				}
 
-	public ResultPage getResultPage(int page) {
-
-		Table<String> res4Page;
-		ResultPage resPage = ResultPage.EMPTY_PAGE;
-
-		try {
-
-			if ((res4Page = m_session.getCache().getResults4Page(page)) != null) {
-				resPage = new ResultPage(res4Page, page);
+				return m_vPEvaluator;
 			}
+				// case CombinedQueryEvaluator: {
+				// searcher = new CombinedQueryEvaluator(this.m_idxReader);
+				// break;
+				// }
+			case KeywordQueryEvaluator : {
 
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+				if (m_keywordQueryEvaluator == null) {
+					m_keywordQueryEvaluator = new ExploringKeywordQueryEvaluator(
+							m_idxReader);
+				}
+
+				return m_keywordQueryEvaluator;
+			}
+			case FacetQueryEvaluator : {
+
+				if (m_facetQueryEvaluator == null) {
+					m_facetQueryEvaluator = new FacetQueryEvaluator(m_idxReader, m_session);
+				}
+
+				return m_facetQueryEvaluator;
+			}
+			case ChangePageEvaluator : {
+
+				if (m_changePageEvaluator == null) {
+					m_changePageEvaluator = new ChangePageEvaluator(m_idxReader, m_session);
+				}
+
+				return m_changePageEvaluator;
+			}
+			default : {
+				throw new InvalidParameterException(ExceptionHelper
+						.createMessage("EvaluatorType",
+								ExceptionHelper.Cause.NOT_VALID));
+			}
 		}
-
-		return resPage;
 	}
 }

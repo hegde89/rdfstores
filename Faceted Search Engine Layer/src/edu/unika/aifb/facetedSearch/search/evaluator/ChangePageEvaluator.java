@@ -17,52 +17,49 @@
  */
 package edu.unika.aifb.facetedSearch.search.evaluator;
 
-import org.apache.log4j.Logger;
+import java.io.IOException;
 
-import edu.unika.aifb.facetedSearch.search.datastructure.AbstractFacetRequest;
-import edu.unika.aifb.facetedSearch.search.datastructure.ExpansionRequest;
-import edu.unika.aifb.facetedSearch.search.datastructure.RefinementRequest;
+import com.sleepycat.je.DatabaseException;
+
+import edu.unika.aifb.facetedSearch.search.datastructure.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
-import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.Searcher;
 
 /**
  * @author andi
  * 
  */
-public class FacetQueryEvaluator extends Searcher {
+public class ChangePageEvaluator extends Searcher {
 
-	private static Logger s_log = Logger.getLogger(FacetQueryEvaluator.class);
-
-	private GenericQueryEvaluator m_genericEval;
 	private SearchSession m_session;
 
-	public FacetQueryEvaluator(IndexReader idxReader, SearchSession session) {
+	public ChangePageEvaluator(IndexReader idxReader, SearchSession session) {
 
 		super(idxReader);
-
 		m_session = session;
-		m_genericEval = session.getStore().getEvaluator();
-
 	}
 
-	public ResultPage evaluate(AbstractFacetRequest facetQuery) {
+	public ResultPage evaluate(ChangePageRequest pageQuery) {
 
-		if (facetQuery instanceof ExpansionRequest) {
+		Table<String> res4Page = null;
+		ResultPage resPage = null;
 
-			StructuredQuery structuredQuery = ((ExpansionRequest) facetQuery)
-					.getQuery();
-			return m_genericEval.evaluate(structuredQuery);
+		try {
 
-		} else if (facetQuery instanceof RefinementRequest) {
+			if ((res4Page = m_session.getCache().getResults4Page(
+					pageQuery.getPage())) != null) {
+				resPage = new ResultPage(res4Page, pageQuery.getPage());
+			}
 
-			return null;
-
-		} else {
-			s_log.error("facetQuery '" + facetQuery + "'not valid!");
-			return null;
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+
+		return resPage == null ? ResultPage.EMPTY_PAGE : resPage;
 	}
 }

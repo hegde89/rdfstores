@@ -60,10 +60,14 @@ public class FacetDbUtils {
 		public static final String FO_CACHE = "fo_cache_db";
 
 		public static final String FD_CACHE = "fd_cache_db";
+		
+		public static final String FLIT_CACHE = "flit_cache_db";
+		
+		public static final String FTREE_CACHE = "ftree_cache_db";
 
 		// public static final String FOC_CACHE = "foc_cache_db";
 
-		public static final String FO2S_CACHE = "fo2s_cache_db";
+		public static final String FS4FV_CACHE = "fs4fv_cache_db";
 
 		public static final String FSC_CACHE = "fsc_cache_db";
 

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,6 +33,7 @@ import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
+import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
@@ -43,6 +43,8 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.distance.ClusterDistance;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
@@ -55,8 +57,12 @@ import edu.unika.aifb.graphindex.data.Table;
  */
 public class SearchSessionCache {
 
+	public enum BindingType {
+		LITERAL
+	}
+
 	public enum ClearType {
-		ALL, PATHS, LITERALS, DISTANCES
+		ALL, PATHS, LITERALS, DISTANCES, TREES
 	}
 
 	private class Keys {
@@ -65,7 +71,6 @@ public class SearchSessionCache {
 		public static final String RANGE_ROOT = "raro";
 	}
 
-	@SuppressWarnings("unused")
 	private static final Logger s_log = Logger
 			.getLogger(SearchSessionCache.class);
 
@@ -84,17 +89,18 @@ public class SearchSessionCache {
 	private Database m_edgeCache;
 	private Database m_countFVCache;
 	private Database m_countSCache;
-	private Database m_object2subjectsCache;
+	private Database m_sortedLitCache;
+	private Database m_subjects4facetValueCache;
 	private Database m_distanceCache;
-	private Database m_classDb;
+	private Database m_treeCache;
+	private Database m_classDB;
 
 	/*
 	 * stored maps
 	 */
-	// private StoredMap<String, Integer> m_countFVMap;
-	// private StoredMap<String, Integer> m_countSMap;
 	private StoredMap<String, ClusterDistance> m_distanceMap;
-	// private StoredMap<String, String> m_object2subjectsMap;
+	private StoredMap<String, String> m_subjects4facetValueMap;
+	private StoredSortedMap<String, Literal> m_sortedLits4nodeMap;
 
 	/*
 	 * bindings
@@ -104,36 +110,18 @@ public class SearchSessionCache {
 	private EntryBinding<Edge> m_edgeBinding;
 	private EntryBinding<ClusterDistance> m_distanceBinding;
 	private EntryBinding<String> m_strgBinding;
-	private EntryBinding<Integer> m_intBinding;
+	// private EntryBinding<Integer> m_intBinding;
+	private EntryBinding<Literal> m_litBinding;
 
 	/*
 	 * other caches ...
 	 */
-
-	private ArrayList<HashMap<? extends Object, ? extends Object>> m_maps;
-	private HashMap<Integer, Object> m_parsedLiterals;
-
+	// private ArrayList<HashMap<? extends Object, ? extends Object>> m_maps;
 	public SearchSessionCache(File dir) throws EnvironmentLockedException,
 			DatabaseException {
 
 		m_dir = dir;
 		init();
-	}
-
-	public Database getDB(String name) {
-
-		if (name.equals(FacetDbUtils.DatabaseNames.FO_CACHE)) {
-
-			return m_countFVCache;
-			
-		} else if (name.equals(FacetDbUtils.DatabaseNames.FS_CACHE)) {
-
-			return m_countSCache;
-			
-		} else {
-
-			return null;
-		}
 	}
 
 	public void addDistance(String object1, String object2, String ext,
@@ -142,124 +130,91 @@ public class SearchSessionCache {
 
 		m_distanceMap.putIfAbsent(object1 + object2 + ext, distance);
 
-		// FacetDbUtils.store(m_distanceCache, object1 + object2 + ext,
-		// distance,
-		// m_distanceBinding);
 	}
 
-	/**
-	 * @return number of objects that were not present before, i.e. number of
-	 *         non-duplicates
-	 */
-	public int addObjects(HashSet<String> objects, Node node, String source)
-			throws DatabaseException, IOException {
-
-		int dups = 0;
-
-		for (String object : objects) {
-
-			Integer countFV = m_countFVMap.get(String.valueOf(node.getID())
-					+ object);
-
-			if (countFV != null) {
-
-				dups++;
-				countFV = 0;
-			}
-
-			m_countFVMap
-					.put(String.valueOf(node.getID()) + object, countFV + 1);
-
-			addSource4Object(node, object, source);
-		}
-
-		return objects.size() - dups;
-	}
-
-	public void addParsedLiteral(String lit, Object parsedLit) {
-		m_parsedLiterals.put(lit.hashCode(), parsedLit);
-	}
-
-	public void addSource4Node(String ind, Node node)
+	public void addLiteral4Node(Node node, Literal lit)
 			throws UnsupportedEncodingException, DatabaseException {
 
-		Integer countS = m_countSMap.get(String.valueOf(node.getID()));
-
-		if (countS != null) {
-			countS = 0;
-		}
-
-		m_countSMap.put(String.valueOf(node.getID()), countS + 1);
-
+		m_sortedLits4nodeMap.put(String.valueOf(node.getID()), lit);
 	}
 
-	public void addSource4Object(Node node, String object, String source)
+	public void addResultSet(Table<String> res)
 			throws UnsupportedEncodingException, DatabaseException {
 
-		m_object2subjectsMap.put(String.valueOf(node.getID()) + object, source);
-
+		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_tableBinding);
 	}
 
-	@SuppressWarnings("unchecked")
+	public void addSource4FacetValue(FacetValue fv, String source)
+			throws UnsupportedEncodingException, DatabaseException {
+
+		m_subjects4facetValueMap.put(fv.getExt() + fv.getValue(), source);
+	}
+
 	public void clear(ClearType type) throws DatabaseException {
 
 		switch (type) {
 
-		case ALL: {
+			case ALL : {
 
-			for (Database db : m_dbs) {
+				if (m_resCache != null) {
 
-				if (db != null) {
-					db.close();
+					m_resCache.close();
+					m_resCache = null;
 				}
-			}
+				if (m_countFVCache != null) {
 
-			for (HashMap map : m_maps) {
-
-				if (map != null) {
-					map.clear();
+					m_countFVCache.close();
+					m_countFVCache = null;
 				}
+				if (m_countSCache != null) {
+
+					m_countSCache.close();
+					m_countSCache = null;
+				}
+				if (m_sortedLitCache != null) {
+
+					m_sortedLitCache.close();
+					m_sortedLitCache = null;
+				}
+				if (m_treeCache != null) {
+
+					m_treeCache.close();
+					m_treeCache = null;
+				}
+				if (m_subjects4facetValueCache != null) {
+
+					m_subjects4facetValueCache.close();
+					m_subjects4facetValueCache = null;
+				}
+				if (m_edgeCache != null) {
+
+					m_edgeCache.close();
+					m_edgeCache = null;
+				}
+
+				/*
+				 * maps
+				 */
+				m_distanceMap = null;				
+				m_sortedLits4nodeMap = null;				
+				m_subjects4facetValueMap = null;
+				
+				System.gc();
+				reOpen();				
+				break;
 			}
+			
+			case TREES: {
+				
+				if (m_treeCache != null) {
 
-			reOpen();
-			break;
-		}
-		case LITERALS: {
-
-			m_parsedLiterals.clear();
-			break;
-		}
-			// case DISTANCES: {
-			//
-			// m_clusterDistances.clear();
-			// break;
-			// }
-
-			// case PATHS: {
-			//
-			// // m_paths2RangeRoot.clear();
-			// // m_paths2Root.clear();
-			//
-			// // if (m_objectCountCache != null) {
-			// //
-			// // m_objectCountCache.close();
-			// // m_env
-			// // .removeDatabase(null,
-			// // FacetDbUtils.DatabaseNames.FOC_CACHE);
-			// // }
-			// //
-			// // if (m_objectCountCache != null) {
-			// //
-			// // m_objectCountCache.close();
-			// // m_env
-			// // .removeDatabase(null,
-			// // FacetDbUtils.DatabaseNames.FOC_CACHE);
-			// // }
-			//			
-			// break;
-			// }
-		default:
-			break;
+					m_treeCache.close();
+					m_treeCache = null;
+				}
+				
+				reOpen();				
+				break;
+			}
 		}
 	}
 
@@ -267,8 +222,8 @@ public class SearchSessionCache {
 
 		clear(ClearType.ALL);
 
-		if (m_classDb != null) {
-			m_classDb.close();
+		if (m_classDB != null) {
+			m_classDB.close();
 		}
 		if (m_env != null) {
 			m_env.close();
@@ -313,29 +268,48 @@ public class SearchSessionCache {
 		return new LinkedList<Edge>(list);
 	}
 
-	public int getCountS4Object(Node node, String object)
-			throws DatabaseException, IOException {
+	public Database getDB(String name) {
 
-		return m_object2subjectsMap.duplicates(
-				String.valueOf(node.getID()) + object).size();
+		if (name.equals(FacetDbUtils.DatabaseNames.FO_CACHE)) {
+
+			return m_countFVCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.FS_CACHE)) {
+
+			return m_countSCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.FTREE_CACHE)) {
+
+			return m_treeCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.CLASS)) {
+
+			return m_classDB;
+
+		} else {
+
+			s_log.error("db with name '" + name + "' not specified!");
+			return null;
+		}
 	}
 
-	public int getCountS4Objects(Node node, Collection<String> objects)
+	public int getCountS4Object(String ext, String object)
+			throws DatabaseException, IOException {
+
+		return m_subjects4facetValueMap.duplicates(ext + object).size();
+	}
+
+	public int getCountS4Objects(String ext, Collection<String> objects)
 			throws DatabaseException, IOException {
 
 		HashSet<String> allSources = new HashSet<String>();
 
 		for (String object : objects) {
-			allSources.addAll(m_object2subjectsMap.duplicates(String
-					.valueOf(node.getID())
-					+ object));
+			allSources
+					.addAll(m_subjects4facetValueMap.duplicates(ext + object));
 		}
 
 		return allSources.size();
-	}
-
-	public int getCountS4Node(Node node) {
-		return m_countSMap.get(String.valueOf(node.getID()));
 	}
 
 	public ClusterDistance getDistance(String object1, String object2,
@@ -344,14 +318,9 @@ public class SearchSessionCache {
 		return m_distanceMap.get(object1 + object2 + ext);
 	}
 
-	public HashSet<String> getObjects(Node node) throws DatabaseException,
-			IOException {
+	public Collection<Literal> getLiterals4Node(Node node) {
 
-		return m_countFVMap.;
-	}
-
-	public Object getParsedLiteral(int litHash) {
-		return m_parsedLiterals.get(litHash);
+		return m_sortedLits4nodeMap.duplicates(String.valueOf(node.getID()));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -378,28 +347,14 @@ public class SearchSessionCache {
 		}
 	}
 
-	public HashSet<String> getSources4Node(double nodeID)
+	public Collection<String> getSources4FacetValue(FacetValue fv)
 			throws DatabaseException, IOException {
 
-		return FacetDbUtils.getAllAsSet(m_countSCache, String.valueOf(nodeID),
-				m_strgBinding);
-	}
-
-	public HashSet<String> getSources4Object(String object)
-			throws DatabaseException, IOException {
-
-		return FacetDbUtils.getAllAsSet(m_object2subjectsCache, object,
-				m_strgBinding);
+		return m_subjects4facetValueMap.duplicates(fv.getExt() + fv.getValue());
 	}
 
 	@SuppressWarnings("unchecked")
 	private void init() throws EnvironmentLockedException, DatabaseException {
-
-		// init stuff
-		m_parsedLiterals = new HashMap<Integer, Object>();
-
-		m_maps = new ArrayList<HashMap<? extends Object, ? extends Object>>();
-		m_maps.add(m_parsedLiterals);
 
 		// init db
 		EnvironmentConfig envConfig = new EnvironmentConfig();
@@ -427,6 +382,12 @@ public class SearchSessionCache {
 		m_distanceCache = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.FD_CACHE, m_dbConfig);
 
+		m_sortedLitCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FLIT_CACHE, m_dbConfig);
+
+		m_treeCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FTREE_CACHE, m_dbConfig);
+
 		// Databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
 		m_dbConfig2.setTransactional(false);
@@ -434,8 +395,8 @@ public class SearchSessionCache {
 		m_dbConfig2.setSortedDuplicates(true);
 		m_dbConfig2.setTemporary(true);
 
-		m_object2subjectsCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FO2S_CACHE, m_dbConfig2);
+		m_subjects4facetValueCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FS4FV_CACHE, m_dbConfig2);
 
 		m_edgeCache = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.FE_CACHE, m_dbConfig2);
@@ -445,30 +406,33 @@ public class SearchSessionCache {
 		m_dbs.add(m_countFVCache);
 		m_dbs.add(m_countSCache);
 		m_dbs.add(m_edgeCache);
-		m_dbs.add(m_object2subjectsCache);
+		m_dbs.add(m_sortedLitCache);
+		m_dbs.add(m_subjects4facetValueCache);
+		m_dbs.add(m_treeCache);
 
 		/*
 		 * Create the bindings
 		 */
-		m_classDb = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
+		m_classDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
 				m_dbConfig);
 
-		StoredClassCatalog cata = new StoredClassCatalog(m_classDb);
+		StoredClassCatalog cata = new StoredClassCatalog(m_classDB);
+
 		m_tableBinding = new SerialBinding<Table>(cata, Table.class);
+		m_litBinding = new SerialBinding<Literal>(cata, Literal.class);
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
-		m_intBinding = TupleBinding.getPrimitiveBinding(Integer.class);
 
 		/*
 		 * Create maps on top of dbs ...
 		 */
-		// m_countFVMap = new StoredMap<String, Integer>(m_countFVCache,
-		// m_strgBinding, m_intBinding, true);
-		// m_countSMap = new StoredMap<String, Integer>(m_countSCache,
-		// m_strgBinding, m_intBinding, true);
-		// m_object2subjectsMap = new StoredMap<String, String>(
-		// m_object2subjectsCache, m_strgBinding, m_strgBinding, true);
 		m_distanceMap = new StoredMap<String, ClusterDistance>(m_distanceCache,
 				m_strgBinding, m_distanceBinding, true);
+
+		m_sortedLits4nodeMap = new StoredSortedMap<String, Literal>(
+				m_sortedLitCache, m_strgBinding, m_litBinding, true);
+
+		m_subjects4facetValueMap = new StoredMap<String, String>(
+				m_subjects4facetValueCache, m_strgBinding, m_strgBinding, true);
 
 	}
 
@@ -489,45 +453,55 @@ public class SearchSessionCache {
 
 	public void reOpen() throws DatabaseException {
 
-		// Databases without duplicates
-		m_resCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FRES_CACHE, m_dbConfig);
+		/*
+		 * databases
+		 */
 
-		m_countFVCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FO_CACHE, m_dbConfig);
-
-		m_countSCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FS_CACHE, m_dbConfig);
-
-		// Databases with duplicates
-		m_object2subjectsCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FO2S_CACHE, m_dbConfig2);
-
-		m_edgeCache = m_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FE_CACHE, m_dbConfig2);
+		if (m_resCache == null) {
+			m_resCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FRES_CACHE, m_dbConfig);
+		}
+		if (m_countFVCache == null) {
+			m_countFVCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FO_CACHE, m_dbConfig);
+		}
+		if (m_countSCache == null) {
+			m_countSCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FS_CACHE, m_dbConfig);
+		}
+		if (m_sortedLitCache == null) {
+			m_sortedLitCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FLIT_CACHE, m_dbConfig);
+		}
+		if (m_treeCache == null) {
+			m_treeCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FTREE_CACHE, m_dbConfig);
+		}
+		if (m_subjects4facetValueCache == null) {
+			m_subjects4facetValueCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FS4FV_CACHE, m_dbConfig2);
+		}
+		if (m_edgeCache == null) {
+			m_edgeCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FE_CACHE, m_dbConfig2);
+		}
 
 		/*
 		 * Create maps on top of dbs ...
 		 */
-		m_countFVMap = new StoredMap<String, Integer>(m_countFVCache,
-				m_strgBinding, m_intBinding, true);
-		m_countSMap = new StoredMap<String, Integer>(m_countSCache,
-				m_strgBinding, m_intBinding, true);
-		m_object2subjectsMap = new StoredMap<String, String>(
-				m_object2subjectsCache, m_strgBinding, m_strgBinding, true);
-		m_distanceMap = new StoredMap<String, ClusterDistance>(m_distanceCache,
-				m_strgBinding, m_distanceBinding, true);
 
-	}
-
-	public void storeResultSet(Table<String> res)
-			throws UnsupportedEncodingException {
-
-		try {
-			FacetDbUtils
-					.store(m_resCache, Keys.RESULT_SET, res, m_tableBinding);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
+		if (m_distanceMap == null) {
+			m_distanceMap = new StoredMap<String, ClusterDistance>(
+					m_distanceCache, m_strgBinding, m_distanceBinding, true);
+		}
+		if (m_sortedLits4nodeMap == null) {
+			m_sortedLits4nodeMap = new StoredSortedMap<String, Literal>(
+					m_sortedLitCache, m_strgBinding, m_litBinding, true);
+		}
+		if (m_subjects4facetValueMap == null) {
+			m_subjects4facetValueMap = new StoredMap<String, String>(
+					m_subjects4facetValueCache, m_strgBinding, m_strgBinding,
+					true);
 		}
 	}
 }

@@ -20,8 +20,7 @@ package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -29,7 +28,10 @@ import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
+import edu.unika.aifb.facetedSearch.index.db.FacetValueBinding;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
@@ -43,15 +45,15 @@ public class StaticNode extends Node implements IStaticNode {
 	 * 
 	 */
 	private static final long serialVersionUID = -5743733958338988213L;
+	@SuppressWarnings("unused")
 	private static Logger s_log = Logger.getLogger(StaticNode.class);
 
 	private SearchSessionCache m_cache;
-	private StoredMap<String, Integer> m_countFVMap;
+	private StoredMap<FacetValue, Integer> m_countFVMap;
 	private StoredMap<String, Integer> m_countSMap;
 
 	private int m_countFV;
 	private int m_countS;
-	private String m_name;
 	private int m_height;
 	private int m_depth;
 	private int m_size;
@@ -76,68 +78,95 @@ public class StaticNode extends Node implements IStaticNode {
 		init();
 	}
 
-	public void addSortedObjects(HashSet<String> objects, String source) {
+	public void addSortedObjects(Collection<FacetValue> facetValues,
+			String source) {
 
-		for (String object : objects) {
+		for (FacetValue fv : facetValues) {
 
-			if (!m_lits.contains(object)) {
+			/*
+			 * add literal to sorted literal list ...
+			 */
 
-				m_sortedLiterals.add(object);
-				m_lits.add(object);
-				incrementCountFV(1);
+			if (fv instanceof Literal) {
 
+				try {
+
+					m_cache.addLiteral4Node(this, (Literal) fv);
+
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				}
 			}
 
+			/*
+			 * update countFV
+			 */
+
+			Integer countFV;
+
+			if ((countFV = m_countFVMap.get(fv)) == null) {
+				countFV = 0;
+			}
+
+			countFV++;
+			m_countFVMap.put(fv, countFV);
+
+			/*
+			 * update source for facet value
+			 */
+
 			try {
-
-				m_cache.addSource4Object(object, source);
-
-			} catch (DatabaseException e) {
+				m_cache.addSource4FacetValue(fv, source);
+			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
-			} catch (IOException e) {
+			} catch (DatabaseException e) {
 				e.printStackTrace();
 			}
 		}
 	}
-
 	public void addSourceIndivdiual(String ind) {
 
-		if ((m_cache != null)) {// && m_cache.isOpen()
+		Integer countS;
 
-			try {
-				m_cache.addSource4Node(ind, getID());
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (DatabaseException e) {
-				e.printStackTrace();
-			}
-
-		} else {
-
-			s_log.debug("cache is not set or not open ... ");
+		if ((countS = m_countSMap.get(ind)) == null) {
+			countS = 0;
 		}
+
+		countS++;
+		m_countSMap.put(ind, countS);
 	}
 
-	public void addUnsortedObjects(HashSet<String> objects, String source) {
+	public void addUnsortedObjects(Collection<FacetValue> facetValues,
+			String source) {
 
-		if ((m_cache != null)) {// && m_cache.isOpen()
+		for (FacetValue fv : facetValues) {
+
+			/*
+			 * update countFV
+			 */
+
+			Integer countFV;
+
+			if ((countFV = m_countFVMap.get(fv)) == null) {
+				countFV = 0;
+			}
+
+			countFV++;
+			m_countFVMap.put(fv, countFV);
+
+			/*
+			 * update source for facet value
+			 */
 
 			try {
-
-				int objectsInserted = m_cache.addObjects(objects, this, source);
-				incrementCountFV(objectsInserted);
-
+				m_cache.addSource4FacetValue(fv, source);
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 			} catch (DatabaseException e) {
 				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
-
-		} else {
-
-			s_log.debug("cache is not set or not open ... ");
 		}
 	}
 
@@ -149,31 +178,31 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_countS;
 	}
 
-	public int getCountS4Object(String object) {
-
-		try {
-			return m_cache.getCountS4Object(object);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return 0;
-	}
-
-	public int getCountS4Objects(Collection<String> objects) {
-
-		try {
-			return m_cache.getCountS4Objects(objects);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return 0;
-	}
+	// public int getCountS4Object(String object) {
+	//
+	// try {
+	// return m_cache.getCountS4Object(object);
+	// } catch (DatabaseException e) {
+	// e.printStackTrace();
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// }
+	//
+	// return 0;
+	// }
+	//
+	// public int getCountS4Objects(Collection<String> objects) {
+	//
+	// try {
+	// return m_cache.getCountS4Objects(objects);
+	// } catch (DatabaseException e) {
+	// e.printStackTrace();
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// }
+	//
+	// return 0;
+	// }
 
 	public int getDepth() {
 		return m_depth;
@@ -183,79 +212,71 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_height;
 	}
 
-	public String getName() {
-		return m_name;
-	}
+	// public String getName() {
+	// return m_name;
+	// }
 
-	public HashSet<String> getObjects() throws DatabaseException, IOException {
+	public Set<FacetValue> getObjects() {
 
-		if ((m_cache != null)) {
-
-			// && m_cache.isOpen()
-
-			return m_cache.getObjects(getID());
-
-		} else {
-
-			s_log.debug("cache is not set or not open ... ");
-			return null;
-		}
+		return m_countFVMap.keySet();
 	}
 
 	public int getSize() {
-		return this.m_size;
+		return m_size;
 	}
 
-	public List<String> getSortedLiterals() {
-		return m_sortedLiterals;
+	public Collection<Literal> getSortedLiterals() {
+		return m_cache.getLiterals4Node(this);
 	}
 
-	public HashSet<String> getSourceIndivdiuals() throws DatabaseException,
+	public Set<String> getSourceIndivdiuals() throws DatabaseException,
 			IOException {
 
-		if ((m_cache != null)) {
-
-			// && m_cache.isOpen()
-
-			return m_cache.getSources4Node(getID());
-
-		} else {
-
-			s_log.debug("cache is not set or not open ... ");
-			return null;
-		}
+		return m_countSMap.keySet();
 	}
 
-	public void incrementCountFV(int increment) {
-		m_countFV = m_countFV + increment;
-	}
-
-	public void incrementCountS(int increment) {
-		m_countS = m_countS + increment;
-	}
+	// public void incrementCountFV(int increment) {
+	// m_countFV = m_countFV + increment;
+	// }
+	//
+	// public void incrementCountS(int increment) {
+	// m_countS = m_countS + increment;
+	// }
 
 	private void init() {
 
-		m_countFV = 0;
-		m_countS = 0;
-		m_height = 0;
-		m_size = 0;
+		m_countFV = -1;
+		m_countS = -1;
+		m_height = -1;
+		m_size = -1;
 
 	}
 
 	private void initStoredMaps() {
 
+		/*
+		 * bindings ...
+		 */
+
+		FacetValueBinding fvBind = new FacetValueBinding();
+
 		TupleBinding<String> strgBind = TupleBinding
 				.getPrimitiveBinding(String.class);
+
 		TupleBinding<Integer> intBind = TupleBinding
 				.getPrimitiveBinding(Integer.class);
 
-		m_countFVMap = new StoredMap<String, Integer>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FO_CACHE), strgBind, intBind,
-				true);
+		/*
+		 * maps ...
+		 */
+
+		m_countFVMap = new StoredMap<FacetValue, Integer>(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.FO_CACHE), fvBind,
+				intBind, true);
+
 		m_countSMap = new StoredMap<String, Integer>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FS_CACHE), strgBind, intBind,
-				true);
+				.getDB(FacetDbUtils.DatabaseNames.FS_CACHE), strgBind,
+				intBind, true);
 
 	}
 
@@ -285,15 +306,15 @@ public class StaticNode extends Node implements IStaticNode {
 	// m_LiteralSources = literalCounts;
 	// }
 
-	public void setName(String name) {
-		m_name = name;
-	}
+	// public void setName(String name) {
+	// m_name = name;
+	// }
 
 	public void setSize(int size) {
 		m_size = size;
 	}
 
-	public void setSortedLiterals(List<String> sortedLiterals) {
-		m_sortedLiterals = sortedLiterals;
-	}
+	// public void setSortedLiterals(List<String> sortedLiterals) {
+	// m_sortedLiterals = sortedLiterals;
+	// }
 }

@@ -22,8 +22,8 @@ import java.io.Serializable;
 import java.util.HashSet;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
@@ -115,9 +115,9 @@ public interface INode extends Serializable {
 
 	public void setPathHashValue(int pathHashValue);
 
-	public void setRangeExtensions(HashSet<String> extensions);
-
-	public void setSourceExtensions(HashSet<String> sourceExtensions);
+	// public void setRangeExtensions(HashSet<String> extensions);
+	//
+	// public void setSourceExtensions(HashSet<String> sourceExtensions);
 
 	public void setType(NodeType type);
 

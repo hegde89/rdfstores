@@ -17,26 +17,23 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import java.io.Serializable;
-
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.facets.model.IFacet;
 
 /**
  * @author andi
  * 
  */
-public class Facet implements Serializable, IFacet {
-
-	public enum FacetType {
-		DATAPROPERTY_BASED, OBJECT_PROPERTY_BASED, RDF_PROPERTY_BASED
-	}
-
-	private static final long serialVersionUID = 2633163812359121872L;
+public class Facet implements IFacet {
 
 	private String m_uri;
 	private FacetType m_facetType;
 	private DataType m_dataType;
+
+	public Facet(String uri) {
+		m_uri = uri;
+	}
 
 	public Facet(String uri, FacetType ftype, DataType dtype) {
 		m_uri = uri;
@@ -77,7 +74,6 @@ public class Facet implements Serializable, IFacet {
 	}
 
 	public String toString() {
-		return "[uri: '" + m_uri + "', type: '" + m_facetType
-				+ "', datatype: '" + m_dataType + "']";
+		return m_uri;
 	}
 }

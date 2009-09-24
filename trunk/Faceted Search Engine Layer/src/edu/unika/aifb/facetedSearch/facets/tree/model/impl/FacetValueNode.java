@@ -17,20 +17,20 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValue;
+import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueNode;
 
 /**
  * @author andi
  * 
  */
-public class FacetValue extends StaticNode implements IFacetValue {
+public class FacetValueNode extends StaticNode implements IFacetValueNode {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 4611143426289856264L;
 
-	public FacetValue(String value) {
+	public FacetValueNode(String value) {
 		super(value, NodeType.LEAVE);
 	}
 

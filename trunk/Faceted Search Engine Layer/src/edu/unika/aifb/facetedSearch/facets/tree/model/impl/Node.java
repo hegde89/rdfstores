@@ -24,8 +24,8 @@ import java.util.Random;
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 
 /**
@@ -290,42 +290,18 @@ public class Node implements INode {
 		return m_type == NodeType.ROOT;
 	}
 
-	// public void removeType(NodeType type) {
-	// m_types.remove(type);
-	// }
-
 	public Facet makeFacet(String uri, FacetType ftype, DataType dtype) {
 		return new Facet(uri, ftype, dtype);
 	}
 
-	// /**
-	// * @param cache
-	// * the cache to set
-	// */
-	// public void setCache(SearchSessionCache cache) {
-	// m_cache = cache;
-	// }
-
-	/**
-	 * @param m_content
-	 *            the m_content to set
-	 */
 	public void setContent(NodeContent content) {
 		m_content = content;
 	}
 
-	/**
-	 * @param domain
-	 *            the domain to set
-	 */
 	public void setDomain(String domain) {
 		m_domain = domain;
 	}
 
-	/**
-	 * @param facet
-	 *            the facet to set
-	 */
 	public void setFacet(Facet facet) {
 		m_facet = facet;
 	}
@@ -334,50 +310,22 @@ public class Node implements INode {
 		this.m_id = id;
 	}
 
-	/**
-	 * @param path
-	 *            the path to set
-	 */
 	public void setPath(String path) {
 		m_path = path;
 	}
 
-	/**
-	 * @param pathHashValue
-	 *            the pathHashValue to set
-	 */
 	public void setPathHashValue(int pathHashValue) {
 		m_pathHashValue = pathHashValue;
-	}
-
-	public void setRangeExtensions(HashSet<String> extensions) {
-		this.m_RangeExtensions = extensions;
-	}
-
-	/**
-	 * @param sourceExtensions
-	 *            the sourceExtensions to set
-	 */
-	public void setSourceExtensions(HashSet<String> sourceExtensions) {
-		m_SourceExtensions = sourceExtensions;
 	}
 
 	public void setType(NodeType type) {
 		m_type = type;
 	}
 
-	/**
-	 * @param m_value
-	 *            the m_label to set
-	 */
 	public void setValue(String value) {
 		this.m_value = value;
 	}
 
-	/**
-	 * @param weight
-	 *            the weight to set
-	 */
 	public void setWeight(double weight) {
 		this.m_weight = weight;
 	}

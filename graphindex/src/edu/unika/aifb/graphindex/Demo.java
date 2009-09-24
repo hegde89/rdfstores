@@ -36,6 +36,7 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.ExploringKeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.CombinedQueryEvaluator;
+import edu.unika.aifb.graphindex.searcher.structured.StructureIndexGraphMatcher;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -147,6 +148,10 @@ public class Demo {
 			// will automatically prune queries
 			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
 			System.out.println(cqe.evaluate(q));
+			
+			// retrieve only matches on the index graph
+			StructureIndexGraphMatcher sigm = new StructureIndexGraphMatcher(ir);
+			System.out.println(sigm.evaluate(q));
 			
 			// queries can be pruned like this
 			// pruning is dependent on the structure index and the path length used

@@ -30,7 +30,8 @@ public class Main {
 		op.accepts("nk", "neighborhood size")
 			.withRequiredArg().ofType(Integer.class).describedAs("neighborhood size, default: 0");
 		op.accepts("kw", "keyword index");
-
+		op.accepts("sd", "data extensions");
+		
 		OptionSet os = op.parse(args);
 		
 		if (!os.has("o") || os.nonOptionArguments().size() == 0) {
@@ -77,7 +78,8 @@ public class Main {
 		ic.setCreateKeywordIndex(os.has("kw"));
 		ic.setKWNeighborhoodSize(nk);
 		ic.setSIPathLength(sk);
-		ic.setStructureBasedDataPartitioning(false);
+		ic.setStructureBasedDataPartitioning(os.has("sd"));
+		ic.setSICreateDataExtensions(os.has("sd"));
 		
 		ic.create();
 	}

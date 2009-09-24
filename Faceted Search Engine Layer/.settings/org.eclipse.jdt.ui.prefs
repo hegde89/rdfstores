@@ -1,5 +1,7 @@
-#Fri Sep 04 19:20:25 CEST 2009
+#Wed Sep 23 14:16:22 CEST 2009
 eclipse.preferences.version=1
+formatter_profile=org.eclipse.jdt.ui.default_profile
+formatter_settings_version=11
 org.eclipse.jdt.ui.exception.name=e
 org.eclipse.jdt.ui.gettersetter.use.is=true
 org.eclipse.jdt.ui.javadoc=true

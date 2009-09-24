@@ -32,10 +32,10 @@ import edu.unika.aifb.facetedSearch.util.FacetUtils;
  */
 public class TimeDateComparator implements Comparator<String> {
 
-	private SearchSessionCache m_cache;
+	// private SearchSessionCache m_cache;
 
 	public TimeDateComparator(SearchSessionCache cache) {
-		m_cache = cache;
+		// m_cache = cache;
 	}
 
 	/*
@@ -48,8 +48,8 @@ public class TimeDateComparator implements Comparator<String> {
 		XMLGregorianCalendar cal1 = lit2Cal(o1);
 		XMLGregorianCalendar cal2 = lit2Cal(o2);
 
-		m_cache.addParsedLiteral(o1, cal1);
-		m_cache.addParsedLiteral(o2, cal2);
+		// m_cache.addParsedLiteral(o1, cal1);
+		// m_cache.addParsedLiteral(o2, cal2);
 
 		return cal1.toGregorianCalendar().compareTo(cal2.toGregorianCalendar());
 	}

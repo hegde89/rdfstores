@@ -42,8 +42,8 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.RDF;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;

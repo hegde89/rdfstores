@@ -37,7 +37,7 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Facet.FacetType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;

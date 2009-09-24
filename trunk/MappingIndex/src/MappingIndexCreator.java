@@ -1,37 +1,19 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.apache.lucene.index.CorruptIndexException;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.EnvironmentLockedException;
-
-import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
-import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
-import edu.unika.aifb.graphindex.index.DataIndex;
-import edu.unika.aifb.graphindex.index.IndexConfiguration;
-import edu.unika.aifb.graphindex.index.IndexCreator;
-import edu.unika.aifb.graphindex.index.IndexDirectory;
-import edu.unika.aifb.graphindex.storage.DataField;
+import edu.unika.aifb.graphindex.index.*;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneWarmer;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
-import edu.unika.aifb.graphindex.util.Util;
 
 
 public class MappingIndexCreator implements TripleSink{
@@ -44,16 +26,17 @@ public class MappingIndexCreator implements TripleSink{
 	
 	private Map<IndexDescription,IndexStorage> m_mappingIndexes;
 	
-	private Set<String> m_properties;
 	private String m_ds_source;
 	private String m_ds_destination;
+	
+	private StructureIndex o_idx;
+	private StructureIndex s_idx;
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
 	public MappingIndexCreator(IndexDirectory indexDirectory, String s, String d) throws IOException {
 		m_idxDirectory = indexDirectory;
 		m_idxConfig = new IndexConfiguration();
-		m_properties = new HashSet<String>();
 		m_ds_source = s;
 		m_ds_destination = d;
 	}
@@ -62,9 +45,9 @@ public class MappingIndexCreator implements TripleSink{
 		m_importer = importer;
 	}
 	
-	public void setCreateDataIndex(boolean createDI) {
+	/*public void setCreateDataIndex(boolean createDI) {
 		m_idxConfig.set(IndexConfiguration.HAS_DI, createDI);
-	}
+	}*/
 	
 	private void addMappingIndex(IndexDescription idx) {
 		m_idxConfig.addIndex(IndexConfiguration.DI_INDEXES, idx);
@@ -82,33 +65,66 @@ public class MappingIndexCreator implements TripleSink{
 		}
 		
 		m_importer.doImport();
-		
-		//Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE, true), m_properties);
 
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
 			m_mappingIndexes.get(idx).mergeSingleIndex(idx);
 			m_mappingIndexes.get(idx).close();
-			
-			//Util.writeEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName() + "_warmup", 
-			//	LuceneWarmer.getWarmupTerms(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName(), 10));
 		}
 	}
 	
 	public void create() throws FileNotFoundException, IOException, StorageException, InterruptedException {
+		// Create directory for indices
 		m_idxDirectory.create();
-
+		
+		// ds1,ds2,e1->e2
 		addMappingIndex(IndexDescription.DSDTESET);
+		// ds1,ds2,e2->e1
 		addMappingIndex(IndexDescription.DSDTETES);
+		// ds1,ds2,e1_ext -> e2_ext
+		addMappingIndex(IndexDescription.DSDTESXETX);
+		// ds1,ds2,e2_ext -> e1_ext
+		addMappingIndex(IndexDescription.DSDTETXESX);
+		
+		// Open index of target entity
+		IndexReader o_IndexReader = new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index"));
+		o_idx = o_IndexReader.getStructureIndex();
+		
+		// Open index of source entity
+		IndexReader s_IndexReader = new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index"));
+		s_idx = s_IndexReader.getStructureIndex();
+		
+		// Import triples from mapping file
 		importData();
+		
+		//m_idxConfig.store(m_idxDirectory);		
 	}
 	
 	
 	public void triple(String s, String p, String o, String c) {		
+
 			try {
+				// Open index of target entity
+				//IndexReader o_IndexReader = new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index"));
+				//StructureIndex o_idx = o_IndexReader.getStructureIndex();
+				String objExt = o_idx.getExtension(o);
+				
+				// Open index of source entity
+				//IndexReader s_IndexReader = new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index"));
+				//StructureIndex s_idx = s_IndexReader.getStructureIndex();
+				String subExt = s_idx.getExtension(s);
+				
+				// Entity mapping index
 				m_mappingIndexes.get(IndexDescription.DSDTESET).addData(IndexDescription.DSDTESET, new String[] { m_ds_source, m_ds_destination, s}, o);
-				m_mappingIndexes.get(IndexDescription.DSDTETES).addData(IndexDescription.DSDTETES, new String[] { m_ds_source, m_ds_destination, o}, s);
+				m_mappingIndexes.get(IndexDescription.DSDTETES).addData(IndexDescription.DSDTETES, new String[] { m_ds_source, m_ds_destination, o}, s);	
+				
+				// Extension mapping index
+				m_mappingIndexes.get(IndexDescription.DSDTESXETX).addData(IndexDescription.DSDTESXETX, new String[] { m_ds_source, m_ds_destination, subExt}, objExt);
+				m_mappingIndexes.get(IndexDescription.DSDTETXESX).addData(IndexDescription.DSDTETXESX, new String[] { m_ds_source, m_ds_destination, objExt}, subExt);
+			
 			} catch (StorageException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		

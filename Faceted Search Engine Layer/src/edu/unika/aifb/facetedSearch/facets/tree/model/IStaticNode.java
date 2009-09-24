@@ -19,11 +19,12 @@ package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Set;
 
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
@@ -32,21 +33,23 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
  */
 public interface IStaticNode extends INode {
 
-	public void addSortedObjects(HashSet<String> objects, String source);
+	public void addSortedObjects(Collection<FacetValue> facetValues,
+			String source);
 
 	public void addSourceIndivdiual(String ind);
 
-	public void addUnsortedObjects(HashSet<String> objects, String source);
+	public void addUnsortedObjects(Collection<FacetValue> facetValues,
+			String source);
 
 	public int getCountFV();
 
 	public int getCountS();
 
-	public int getCountS4Object(String source);
+	// public int getCountS4Object(String source);
 
 	// public void addUnsortedObjects(String objects);
 
-	public int getCountS4Objects(Collection<String> sources);
+	// public int getCountS4Objects(Collection<String> sources);
 
 	public int getDepth();
 
@@ -56,20 +59,20 @@ public interface IStaticNode extends INode {
 	//
 	// public HashSet<Integer> getLiteralSources(String lit);
 
-	public String getName();
+	// public String getName();
 
-	public HashSet<String> getObjects() throws DatabaseException, IOException;
+	public Set<FacetValue> getObjects() throws DatabaseException, IOException;
 
 	public int getSize();
 
-	public List<String> getSortedLiterals();
+	public Collection<Literal> getSortedLiterals();
 
-	public HashSet<String> getSourceIndivdiuals() throws DatabaseException,
+	public Set<String> getSourceIndivdiuals() throws DatabaseException,
 			IOException;
 
-	public void incrementCountFV(int increment);
-
-	public void incrementCountS(int increment);
+	// public void incrementCountFV(int increment);
+	//
+	// public void incrementCountS(int increment);
 
 	public void setCache(SearchSessionCache cache);
 
@@ -84,10 +87,10 @@ public interface IStaticNode extends INode {
 	// public void setLiteralCounts(HashMap<String, HashSet<Integer>>
 	// literalCounts);
 
-	public void setName(String name);
+	// public void setName(String name);
 
 	public void setSize(int size);
 
-	public void setSortedLiterals(List<String> sortedLiterals);
+	// public void setSortedLiterals(List<String> sortedLiterals);
 
 }

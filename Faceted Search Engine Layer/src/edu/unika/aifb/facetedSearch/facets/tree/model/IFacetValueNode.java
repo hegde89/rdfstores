@@ -17,26 +17,22 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
-import java.util.List;
-
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-
 /**
  * @author andi
  * 
  */
-public interface IDynamicNode extends IStaticNode {
+public interface IFacetValueNode extends INode {
 
-	public String getLeftBorder();
+	// public String getName();
 
-	public List<Literal> getLits();
+	// public int getCountFV();
+	//
+	// public int getCountS();
 
-	public String getRightBorder();
+	// public void setName(String name);
 
-	public void setLeftBorder(String leftValue);
-
-	public void setLits(List<Literal> lits);
-
-	public void setRightBorder(String rightValue);
+	// public void setCountFV(int countFV);
+	//
+	// public void setCountS(int countS);
 
 }

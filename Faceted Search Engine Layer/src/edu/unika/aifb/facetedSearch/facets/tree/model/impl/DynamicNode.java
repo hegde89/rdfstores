@@ -2,6 +2,7 @@ package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import java.util.List;
 
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IDynamicNode;
 
 public class DynamicNode extends StaticNode implements IDynamicNode {
@@ -13,7 +14,7 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 
 	private String m_leftBorder;
 	private String m_rightBorder;
-	private List<String> m_lits;
+	private List<Literal> m_lits;
 
 	public DynamicNode() {
 		super();
@@ -35,7 +36,7 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 		return m_leftBorder;
 	}
 
-	public List<String> getLits() {
+	public List<Literal> getLits() {
 		return m_lits;
 	}
 
@@ -47,7 +48,7 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 		m_leftBorder = leftValue;
 	}
 
-	public void setLits(List<String> lits) {
+	public void setLits(List<Literal> lits) {
 		m_lits = lits;
 	}
 

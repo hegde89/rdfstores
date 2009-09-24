@@ -25,14 +25,25 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.sleepycat.bind.EntryBinding;
+import com.sleepycat.bind.serial.SerialBinding;
+import com.sleepycat.bind.serial.StoredClassCatalog;
+import com.sleepycat.bind.tuple.TupleBinding;
+import com.sleepycat.collections.StoredMap;
+import com.sleepycat.collections.StoredSortedMap;
+import com.sleepycat.je.DatabaseException;
+
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.facets.model.IFacetValueTuple;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueList;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
+import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
 /**
  * @author andi
@@ -40,21 +51,33 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
  */
 public class FacetTreeDelegator extends Delegator {
 
+	private static FacetTreeDelegator s_instance;
 	private static Logger s_logger = Logger.getLogger(FacetTreeDelegator.class);
 
 	private SearchSession m_session;
 	private SearchSessionCache m_cache;
 
+	/*
+	 * stored maps ...
+	 */
+	private StoredMap<String, FacetTree> m_domain2treeMap;
+	private StoredMap<String, FacetTree> m_node2subTreeMap;
+
+	/*
+	 * bindings
+	 */
+	private EntryBinding<FacetTree> m_treeBinding;
+	private EntryBinding<String> m_strgBinding;
+
+	/*
+	 * other maps
+	 */
 	private ArrayList<HashMap<? extends Object, ? extends Object>> m_maps;
-
-	private HashMap<String, FacetTree> m_domain2treeMap;
-	private HashMap<Double, FacetTree> m_node2treeMap;
-	private HashMap<String, Double> m_domain2currentNode;
-
-	private static FacetTreeDelegator s_instance;
+	private HashMap<String, Double> m_domain2currentRoot;
 
 	public static FacetTreeDelegator getInstance(SearchSession session) {
-		return s_instance == null ? s_instance = new FacetTreeDelegator(session)
+		return s_instance == null
+				? s_instance = new FacetTreeDelegator(session)
 				: s_instance;
 	}
 
@@ -63,12 +86,19 @@ public class FacetTreeDelegator extends Delegator {
 		m_session = session;
 		m_cache = m_session.getCache();
 
-		init();
-		
+		try {
+
+			init();
+
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public void addSubTree4Node(Double nodeId, FacetTree tree) {
-		m_node2treeMap.put(nodeId, tree);
+	public void addSubTree4Node(Node node, FacetTree tree) {
+		m_node2subTreeMap.put(String.valueOf(node.getID()), tree);
 	}
 
 	public void addTree4Domain(String domain, FacetTree tree) {
@@ -76,9 +106,27 @@ public class FacetTreeDelegator extends Delegator {
 	}
 
 	public void clear() {
+		close();
+		reOpen();		
+	}
+	
+	public void close() {
 
 		for (HashMap<? extends Object, ? extends Object> map : m_maps) {
 			map.clear();
+		}
+
+		try {
+
+			m_cache.clear(ClearType.TREES);
+
+			m_domain2treeMap = null;
+			m_node2subTreeMap = null;
+
+			System.gc();
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -87,23 +135,9 @@ public class FacetTreeDelegator extends Delegator {
 		return m_domain2treeMap.get(domain);
 	}
 
-	public Map<String, List<IFacetValueTuple>> getFacetValueTuples() {
+	public List<IFacetFacetValueList> getFacetValueTuples(Node selection) {
 
-		Map<String, List<IFacetValueTuple>> facet_map = new HashMap<String, List<IFacetValueTuple>>();
-
-		for (String extension : this.m_SourceExtensions) {
-
-			facet_map.put(extension, this
-					.getFacetValueTuples(this.m_domain2treeMap.get(extension)
-							.getRoot()));
-		}
-
-		return facet_map;
-	}
-
-	public List<IFacetValueTuple> getFacetValueTuples(Node selection) {
-
-		List<IFacetValueTuple> facetValueList = new ArrayList<IFacetValueTuple>();
+		List<IFacetFacetValueList> facetValueList = new ArrayList<IFacetFacetValueList>();
 
 		if (this.m_domain2treeMap.containsKey(selection.getDomain())) {
 
@@ -118,12 +152,11 @@ public class FacetTreeDelegator extends Delegator {
 
 				current_value = tree.getEdgeTarget(current_facet = iter.next());
 
-				if (this.m_rankingEnabled) {
-					this.m_rankingDelegator.doRanking(current_facet,
-							current_value);
+				if (m_rankingEnabled) {
+					m_rankingDelegator.doRanking(current_facet, current_value);
 				}
 
-				facetValueList.add(new FacetValueTuple(current_facet,
+				facetValueList.add(new FacetFacetValueList(current_facet,
 						current_value));
 			}
 		} else {
@@ -132,22 +165,54 @@ public class FacetTreeDelegator extends Delegator {
 							+ selection.getDomain() + "'");
 		}
 
-		if (this.m_rankingEnabled) {
-			facetValueList = this.m_rankingDelegator.doSorting(facetValueList);
+		if (m_rankingEnabled) {
+			facetValueList = m_rankingDelegator.doSorting(facetValueList);
 		}
 
 		return facetValueList;
 	}
 
-	private void init() {
-		// init stuff
-		m_node2treeMap = new HashMap<Double, FacetTree>();
-		m_domain2treeMap = new HashMap<String, FacetTree>();
-		m_domain2currentNode = new HashMap<String, Double>();
+	private void init() throws IllegalArgumentException, DatabaseException {
 
+		StoredClassCatalog cata = new StoredClassCatalog(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.CLASS));
+
+		m_treeBinding = new SerialBinding<FacetTree>(cata, FacetTree.class);
+		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
+
+		/*
+		 * stored maps
+		 */
+		m_node2subTreeMap = new StoredSortedMap<String, FacetTree>(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.FTREE_CACHE), m_strgBinding,
+				m_treeBinding, true);
+
+		m_domain2treeMap = new StoredSortedMap<String, FacetTree>(m_cache
+				.getDB(FacetDbUtils.DatabaseNames.FTREE_CACHE), m_strgBinding,
+				m_treeBinding, true);
+
+		/*
+		 * other maps
+		 */
+		m_domain2currentRoot = new HashMap<String, Double>();
 		m_maps = new ArrayList<HashMap<? extends Object, ? extends Object>>();
-		m_maps.add(m_domain2treeMap);
-		m_maps.add(m_node2treeMap);
-		m_maps.add(m_domain2currentNode);
+		m_maps.add(m_domain2currentRoot);
+	}
+
+	private void reOpen() {
+
+		/*
+		 * stored maps
+		 */
+		if (m_node2subTreeMap == null) {
+			m_node2subTreeMap = new StoredSortedMap<String, FacetTree>(m_cache
+					.getDB(FacetDbUtils.DatabaseNames.FTREE_CACHE),
+					m_strgBinding, m_treeBinding, true);
+		}
+		if (m_domain2treeMap == null) {
+			m_domain2treeMap = new StoredSortedMap<String, FacetTree>(m_cache
+					.getDB(FacetDbUtils.DatabaseNames.FTREE_CACHE),
+					m_strgBinding, m_treeBinding, true);
+		}
 	}
 }

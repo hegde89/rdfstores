@@ -17,22 +17,11 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model;
 
-import java.io.Serializable;
-
-import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
-import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 
 /**
  * @author andi
  * 
  */
-public interface IFacetValueTuple extends Serializable {
+public interface IFacetFacetValueList {
 
-	public IEdge getFacet();
-
-	public INode getValue();
-
-	public void setFacet(IEdge edge);
-
-	public void setValue(INode node);
 }

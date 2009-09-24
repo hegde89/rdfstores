@@ -21,7 +21,7 @@ package edu.unika.aifb.facetedSearch.algo.ranking;
 import java.util.List;
 
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.facets.model.IFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueList;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
@@ -54,7 +54,7 @@ public class RankingDelegator extends Delegator {
 //		edge.setWeight(score);		
 	}
 	
-	public List<IFacetValueTuple> doSorting(List<IFacetValueTuple> input){
+	public List<IFacetFacetValueList> doSorting(List<IFacetFacetValueList> input){
 		
 //		TODO
 		

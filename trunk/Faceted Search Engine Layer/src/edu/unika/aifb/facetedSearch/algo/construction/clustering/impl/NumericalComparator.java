@@ -31,10 +31,10 @@ import edu.unika.aifb.facetedSearch.util.FacetUtils;
  */
 public class NumericalComparator implements Comparator<String> {
 
-	private SearchSessionCache m_cache;
+//	private SearchSessionCache m_cache;
 
 	public NumericalComparator(SearchSessionCache cache) {
-		m_cache = cache;
+//		m_cache = cache;
 	}
 
 	/*
@@ -47,8 +47,8 @@ public class NumericalComparator implements Comparator<String> {
 		double litValue1 = lit2Double(o1);
 		double litValue2 = lit2Double(o2);
 
-		m_cache.addParsedLiteral(o1, litValue1);
-		m_cache.addParsedLiteral(o2, litValue2);
+		// m_cache.addParsedLiteral(o1, litValue1);
+		// m_cache.addParsedLiteral(o2, litValue2);
 
 		return (new BigDecimal(litValue1)).compareTo(new BigDecimal(litValue2));
 	}

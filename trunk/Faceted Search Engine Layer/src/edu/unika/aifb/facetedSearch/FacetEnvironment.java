@@ -62,7 +62,11 @@ public class FacetEnvironment {
 	 * evaluator types
 	 */
 	public enum EvaluatorType {
-		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator
+		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator, ChangePageEvaluator
+	}
+
+	public enum FacetType {
+		DATAPROPERTY_BASED, OBJECT_PROPERTY_BASED, RDF_PROPERTY_BASED
 	}
 
 	/*
@@ -133,7 +137,7 @@ public class FacetEnvironment {
 	public static class XMLS {
 
 		public static final HashSet<String> NUMERICAL_TYPES = new HashSet<String>(
-				Arrays.asList(new String[] {
+				Arrays.asList(new String[]{
 
 				XMLSchema.DECIMAL.stringValue(),
 
@@ -157,7 +161,7 @@ public class FacetEnvironment {
 				}));
 
 		public static final HashSet<String> STRING_TYPES = new HashSet<String>(
-				Arrays.asList(new String[] {
+				Arrays.asList(new String[]{
 
 				XMLSchema.STRING.stringValue(),
 						XMLSchema.NORMALIZEDSTRING.stringValue(),
@@ -239,7 +243,7 @@ public class FacetEnvironment {
 	public static final String NEW_LINE = System.getProperty("line.separator");
 
 	public static final HashSet<String> PROPERTIES_TO_IGNORE = new HashSet<String>(
-			Arrays.asList(new String[] {
+			Arrays.asList(new String[]{
 
 					// RDFS Properties
 

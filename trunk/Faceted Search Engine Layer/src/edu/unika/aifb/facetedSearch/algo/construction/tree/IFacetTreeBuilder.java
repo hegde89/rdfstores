@@ -18,7 +18,6 @@
 package edu.unika.aifb.facetedSearch.algo.construction.tree;
 
 import java.io.IOException;
-import java.util.Collection;
 
 import com.sleepycat.je.DatabaseException;
 
@@ -33,11 +32,12 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public interface IFacetTreeBuilder {
 
-	public FacetTree constructSubTree(Collection<String> results, int column,
-			StaticNode node, int depth) throws StorageException, IOException,
-			DatabaseException;
+	public boolean constructCluster(FacetTree tree, StaticNode node);
 
-	public FacetTree constructTree(Table<String> results, int column)
+	public boolean constructSubTree(StaticNode node) throws StorageException,
+			IOException, DatabaseException;
+
+	public boolean constructTree(Table<String> results, int column)
 			throws StorageException, IOException, DatabaseException;
 
 }

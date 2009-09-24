@@ -28,10 +28,10 @@ import edu.unika.aifb.facetedSearch.util.FacetUtils;
  */
 public class StringComparator implements Comparator<String> {
 
-	private SearchSessionCache m_cache;
+	// private SearchSessionCache m_cache;
 
 	public StringComparator(SearchSessionCache cache) {
-		m_cache = cache;
+		// m_cache = cache;
 	}
 
 	/*
@@ -44,8 +44,8 @@ public class StringComparator implements Comparator<String> {
 		String litValue1 = FacetUtils.getValueOfLiteral(lit1);
 		String litValue2 = FacetUtils.getValueOfLiteral(lit2);
 
-		m_cache.addParsedLiteral(lit1, litValue1);
-		m_cache.addParsedLiteral(lit2, litValue2);
+		// m_cache.addParsedLiteral(lit1, litValue1);
+		// m_cache.addParsedLiteral(lit2, litValue2);
 
 		// return (LexicalEditDistance.getDistance2Root(litValue1))
 		// .compareTo(LexicalEditDistance.getDistance2Root(litValue2));

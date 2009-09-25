@@ -3,39 +3,46 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 import edu.unika.aifb.graphindex.data.Table;
 
 /**
- * This class represents all the results returned by the search engine for a
- * given query, independently from the page to display
- * 
- * @author tpenin
+ * @author andi
  */
 public class Result {
 
-	// The list of all the result items that were found by the search engine
-	public Table<String> m_resultItemTable;
+	private Table<String> m_resultTable;
+	private FacetPage m_facetPage;
 
-	/**
-	 * Default constructor
-	 */
 	public Result() {
-		this.m_resultItemTable = new Table<String>();
+		m_resultTable = new Table<String>();
 	}
 
 	public Result(Table<String> resultTable) {
-		this.m_resultItemTable = resultTable;
+		m_resultTable = resultTable;
 	}
 
-	/**
-	 * @return the resultItemList
-	 */
-	public Table<String> getResultItemTable() {
-		return this.m_resultItemTable;
+	public FacetPage getFacetPage() {
+		return m_facetPage;
 	}
 
-	/**
-	 * @param resultItemList
-	 *            the resultItemList to set
-	 */
-	public void setResultItemTable(Table<String> resultTable) {
-		this.m_resultItemTable = resultTable;
+	public Table<String> getResultSubTable(int fromIndex, int toIndex) {
+		return m_resultTable.subTable(fromIndex, toIndex);
+	}
+
+	public Table<String> getResultTable() {
+		return m_resultTable;
+	}
+
+	public boolean hasFacetPage() {
+		return m_facetPage != null;
+	}
+
+	public void setFacetPage(FacetPage facetPage) {
+		m_facetPage = facetPage;
+	}
+
+	public void setResultTable(Table<String> resultTable) {
+		m_resultTable = resultTable;
+	}
+
+	public int size() {
+		return m_resultTable.size();
 	}
 }

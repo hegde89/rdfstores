@@ -21,9 +21,9 @@ public class Main {
 			// Define option for output directory
 			op.accepts("o", "output directory").withRequiredArg().ofType(String.class).describedAs("directory");
 			// Define option for the data source used as source in the mapping
-			op.accepts("s", "source datasource").withRequiredArg();
+			op.accepts("s", "source datasource").withRequiredArg().ofType(String.class).describedAs("directory");
 			// Define option for the data source used as destination in the mapping
-			op.accepts("t", "target datasource").withRequiredArg();
+			op.accepts("t", "target datasource").withRequiredArg().ofType(String.class).describedAs("directory");
 			
 			// Parse arguments with option parser
 			OptionSet os = op.parse(args);
@@ -50,7 +50,6 @@ public class Main {
 			MappingIndexCreator mic = new MappingIndexCreator(new IndexDirectory(directory), source, destination);
 			
 			mic.setImporter(importer);
-			//mic.setCreateDataIndex(true);
 			mic.create();
 	}
 

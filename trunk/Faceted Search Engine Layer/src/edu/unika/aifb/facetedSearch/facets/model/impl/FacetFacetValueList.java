@@ -32,7 +32,7 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 	private Facet m_facet;
 	private List<FacetValue> m_facetValueList;
 	private List<FacetValue> m_facetValueHistory;
-	
+
 	public FacetFacetValueList() {
 
 		/*
@@ -40,46 +40,55 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 		 */
 		m_facetValueList = new ArrayList<FacetValue>();
 		m_facetValueHistory = new ArrayList<FacetValue>();
-		
+
 	}
 
-	public boolean addFacetValue2List(FacetValue fv) {
-		return m_facetValueList.add(fv);
+	public boolean addFacetFacetValueTuple(FacetFacetValueTuple tuple) {
+
+		if (tuple.getFacet().equals(m_facet)) {
+			return m_facetValueList.add(tuple.getFacetValue());
+		} else {
+			return false;
+		}
 	}
-	
+
 	public boolean addFacetValue2History(FacetValue fv) {
 		return m_facetValueHistory.add(fv);
 	}
 
-	public boolean listContains(FacetValue fv) {
-		return m_facetValueList.contains(fv);
+	public boolean addFacetValue2List(FacetValue fv) {
+		return m_facetValueList.add(fv);
 	}
 
 	public Facet getFacet() {
 		return m_facet;
 	}
 
-	public Iterator<FacetValue> getFacetValueListIterator() {
-		return m_facetValueList.iterator();
+	public List<FacetValue> getFacetValueHistory() {
+		return m_facetValueHistory;
 	}
 
 	public List<FacetValue> getFacetValueList() {
 		return m_facetValueList;
 	}
 
-	public void setFacet(Facet facet) {
-		m_facet = facet;
+	public Iterator<FacetValue> getFacetValueListIterator() {
+		return m_facetValueList.iterator();
 	}
 
-	public void setFacetValueList(List<FacetValue> facetValueList) {
-		m_facetValueList = facetValueList;
+	public boolean listContains(FacetValue fv) {
+		return m_facetValueList.contains(fv);
+	}
+
+	public void setFacet(Facet facet) {
+		m_facet = facet;
 	}
 
 	public void setFacetValueHistory(List<FacetValue> facetValueHistory) {
 		m_facetValueHistory = facetValueHistory;
 	}
 
-	public List<FacetValue> getFacetValueHistory() {
-		return m_facetValueHistory;
+	public void setFacetValueList(List<FacetValue> facetValueList) {
+		m_facetValueList = facetValueList;
 	}
 }

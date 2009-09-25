@@ -15,34 +15,12 @@
 * You should have received a copy of the GNU General Public License 
 * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
 */
-package edu.unika.aifb.facetedSearch.search.datastructure;
+package edu.unika.aifb.facetedSearch.facets.model;
 
 /**
  * @author andi
  *
  */
-public class RefinementRequest extends AbstractFacetRequest {
+public interface IFacetFacetValueTuple {
 
-	private String m_domain;
-	private double m_nodeId;
-
-	public RefinementRequest(String name) {
-		super(name);
-	}
-
-	public String getDomain() {
-		return m_domain;
-	}
-
-	public double getNodeId() {
-		return m_nodeId;
-	}
-
-	public void setDomain(String domain) {
-		m_domain = domain;
-	}
-
-	public void setNodeId(double nodeId) {
-		m_nodeId = nodeId;
-	}
 }

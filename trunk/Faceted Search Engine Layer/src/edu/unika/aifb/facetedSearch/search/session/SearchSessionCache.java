@@ -48,6 +48,8 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 
@@ -61,8 +63,8 @@ public class SearchSessionCache {
 		LITERAL
 	}
 
-	public enum ClearType {
-		ALL, PATHS, LITERALS, DISTANCES, TREES
+	public enum CleanType {
+		ALL, PATHS, LITERALS, DISTANCES, TREES, HISTORY
 	}
 
 	private class Keys {
@@ -76,15 +78,18 @@ public class SearchSessionCache {
 
 	private File m_dir;
 
+	/*
+	 * db configs/environment
+	 */
 	private Environment m_env;
 	private DatabaseConfig m_dbConfig;
 	private DatabaseConfig m_dbConfig2;
 
-	private ArrayList<Database> m_dbs;
-
 	/*
 	 * dbs ...
 	 */
+	private ArrayList<Database> m_dbs;
+
 	private Database m_resCache;
 	private Database m_edgeCache;
 	private Database m_countFVCache;
@@ -93,6 +98,8 @@ public class SearchSessionCache {
 	private Database m_subjects4facetValueCache;
 	private Database m_distanceCache;
 	private Database m_treeCache;
+	private Database m_historyCache;
+
 	private Database m_classDB;
 
 	/*
@@ -105,18 +112,12 @@ public class SearchSessionCache {
 	/*
 	 * bindings
 	 */
-	@SuppressWarnings("unchecked")
-	private EntryBinding<Table> m_tableBinding;
+	private EntryBinding<Result> m_resBinding;
 	private EntryBinding<Edge> m_edgeBinding;
 	private EntryBinding<ClusterDistance> m_distanceBinding;
 	private EntryBinding<String> m_strgBinding;
-	// private EntryBinding<Integer> m_intBinding;
 	private EntryBinding<Literal> m_litBinding;
 
-	/*
-	 * other caches ...
-	 */
-	// private ArrayList<HashMap<? extends Object, ? extends Object>> m_maps;
 	public SearchSessionCache(File dir) throws EnvironmentLockedException,
 			DatabaseException {
 
@@ -138,19 +139,13 @@ public class SearchSessionCache {
 		m_sortedLits4nodeMap.put(String.valueOf(node.getID()), lit);
 	}
 
-	public void addResultSet(Table<String> res)
-			throws UnsupportedEncodingException, DatabaseException {
-
-		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_tableBinding);
-	}
-
 	public void addSource4FacetValue(FacetValue fv, String source)
 			throws UnsupportedEncodingException, DatabaseException {
 
 		m_subjects4facetValueMap.put(fv.getExt() + fv.getValue(), source);
 	}
 
-	public void clear(ClearType type) throws DatabaseException {
+	public void clean(CleanType type) throws DatabaseException {
 
 		switch (type) {
 
@@ -181,6 +176,11 @@ public class SearchSessionCache {
 					m_treeCache.close();
 					m_treeCache = null;
 				}
+				if (m_historyCache != null) {
+
+					m_historyCache.close();
+					m_historyCache = null;
+				}
 				if (m_subjects4facetValueCache != null) {
 
 					m_subjects4facetValueCache.close();
@@ -195,24 +195,36 @@ public class SearchSessionCache {
 				/*
 				 * maps
 				 */
-				m_distanceMap = null;				
-				m_sortedLits4nodeMap = null;				
+				m_distanceMap = null;
+				m_sortedLits4nodeMap = null;
 				m_subjects4facetValueMap = null;
-				
+
 				System.gc();
-				reOpen();				
+				reOpen();
 				break;
 			}
-			
-			case TREES: {
-				
+			case TREES : {
+
 				if (m_treeCache != null) {
 
 					m_treeCache.close();
 					m_treeCache = null;
 				}
-				
-				reOpen();				
+
+				System.gc();
+				reOpen();
+				break;
+			}
+			case HISTORY : {
+
+				if (m_historyCache != null) {
+
+					m_historyCache.close();
+					m_historyCache = null;
+				}
+
+				System.gc();
+				reOpen();
 				break;
 			}
 		}
@@ -220,7 +232,7 @@ public class SearchSessionCache {
 
 	public void close() throws DatabaseException {
 
-		clear(ClearType.ALL);
+		clean(CleanType.ALL);
 
 		if (m_classDB != null) {
 			m_classDB.close();
@@ -268,31 +280,6 @@ public class SearchSessionCache {
 		return new LinkedList<Edge>(list);
 	}
 
-	public Database getDB(String name) {
-
-		if (name.equals(FacetDbUtils.DatabaseNames.FO_CACHE)) {
-
-			return m_countFVCache;
-
-		} else if (name.equals(FacetDbUtils.DatabaseNames.FS_CACHE)) {
-
-			return m_countSCache;
-
-		} else if (name.equals(FacetDbUtils.DatabaseNames.FTREE_CACHE)) {
-
-			return m_treeCache;
-
-		} else if (name.equals(FacetDbUtils.DatabaseNames.CLASS)) {
-
-			return m_classDB;
-
-		} else {
-
-			s_log.error("db with name '" + name + "' not specified!");
-			return null;
-		}
-	}
-
 	public int getCountS4Object(String ext, String object)
 			throws DatabaseException, IOException {
 
@@ -312,6 +299,35 @@ public class SearchSessionCache {
 		return allSources.size();
 	}
 
+	public Database getDB(String name) {
+
+		if (name.equals(FacetDbUtils.DatabaseNames.FO_CACHE)) {
+
+			return m_countFVCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.FS_CACHE)) {
+
+			return m_countSCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.FTREE_CACHE)) {
+
+			return m_treeCache;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.CLASS)) {
+
+			return m_classDB;
+
+		} else if (name.equals(FacetDbUtils.DatabaseNames.FHIST_CACHE)) {
+
+			return m_historyCache;
+
+		} else {
+
+			s_log.error("db with name '" + name + "' not specified!");
+			return null;
+		}
+	}
+
 	public ClusterDistance getDistance(String object1, String object2,
 			String ext) throws DatabaseException, IOException {
 
@@ -323,27 +339,36 @@ public class SearchSessionCache {
 		return m_sortedLits4nodeMap.duplicates(String.valueOf(node.getID()));
 	}
 
-	@SuppressWarnings("unchecked")
-	public Table<String> getResults4Page(int page) throws DatabaseException,
+	public ResultPage getResultPage(int pageNum) throws DatabaseException,
 			IOException {
 
 		int fromIndex;
-		Table<String> res = FacetDbUtils.get(m_resCache, Keys.RESULT_SET,
-				m_tableBinding);
+		Result res = FacetDbUtils
+				.get(m_resCache, Keys.RESULT_SET, m_resBinding);
 
-		if ((fromIndex = (page - 1)
-				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > res
+		Table<String> resTable = res.getResultTable();
+
+		if ((fromIndex = (pageNum - 1)
+				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > resTable
 				.size()) {
 
-			return null;
+			return ResultPage.EMPTY_PAGE;
 
 		} else {
 
-			int toIndex = Math.min(page
+			int toIndex = Math.min(pageNum
 					* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE,
-					res.size());
+					resTable.size());
 
-			return res.subTable(fromIndex, toIndex);
+			ResultPage resPage = new ResultPage();
+			resPage.setPageNum(pageNum);
+			resPage.setResultTable(res.getResultSubTable(fromIndex, toIndex));
+
+			if (res.hasFacetPage()) {
+				resPage.setFacetPage(res.getFacetPage());
+			}
+
+			return resPage;
 		}
 	}
 
@@ -353,7 +378,6 @@ public class SearchSessionCache {
 		return m_subjects4facetValueMap.duplicates(fv.getExt() + fv.getValue());
 	}
 
-	@SuppressWarnings("unchecked")
 	private void init() throws EnvironmentLockedException, DatabaseException {
 
 		// init db
@@ -388,6 +412,9 @@ public class SearchSessionCache {
 		m_treeCache = m_env.openDatabase(null,
 				FacetDbUtils.DatabaseNames.FTREE_CACHE, m_dbConfig);
 
+		m_historyCache = m_env.openDatabase(null,
+				FacetDbUtils.DatabaseNames.FHIST_CACHE, m_dbConfig);
+
 		// Databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
 		m_dbConfig2.setTransactional(false);
@@ -409,6 +436,7 @@ public class SearchSessionCache {
 		m_dbs.add(m_sortedLitCache);
 		m_dbs.add(m_subjects4facetValueCache);
 		m_dbs.add(m_treeCache);
+		m_dbs.add(m_historyCache);
 
 		/*
 		 * Create the bindings
@@ -418,7 +446,7 @@ public class SearchSessionCache {
 
 		StoredClassCatalog cata = new StoredClassCatalog(m_classDB);
 
-		m_tableBinding = new SerialBinding<Table>(cata, Table.class);
+		m_resBinding = new SerialBinding<Result>(cata, Result.class);
 		m_litBinding = new SerialBinding<Literal>(cata, Literal.class);
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
 
@@ -477,6 +505,10 @@ public class SearchSessionCache {
 			m_treeCache = m_env.openDatabase(null,
 					FacetDbUtils.DatabaseNames.FTREE_CACHE, m_dbConfig);
 		}
+		if (m_historyCache == null) {
+			m_historyCache = m_env.openDatabase(null,
+					FacetDbUtils.DatabaseNames.FHIST_CACHE, m_dbConfig);
+		}
 		if (m_subjects4facetValueCache == null) {
 			m_subjects4facetValueCache = m_env.openDatabase(null,
 					FacetDbUtils.DatabaseNames.FS4FV_CACHE, m_dbConfig2);
@@ -503,5 +535,11 @@ public class SearchSessionCache {
 					m_subjects4facetValueCache, m_strgBinding, m_strgBinding,
 					true);
 		}
+	}
+
+	public void storeResult(Result res) throws UnsupportedEncodingException,
+			DatabaseException {
+
+		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_resBinding);
 	}
 }

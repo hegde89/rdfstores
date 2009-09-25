@@ -21,10 +21,9 @@ import java.io.IOException;
 
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.search.datastructure.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.Searcher;
 
@@ -42,17 +41,15 @@ public class ChangePageEvaluator extends Searcher {
 		m_session = session;
 	}
 
-	public ResultPage evaluate(ChangePageRequest pageQuery) {
+	public ResultPage evaluate(ChangePageRequest pageRequest) {
 
-		Table<String> res4Page = null;
-		ResultPage resPage = null;
+		m_session.setCurrentPage(pageRequest.getPage());
+		ResultPage resPage = ResultPage.EMPTY_PAGE;
 
 		try {
 
-			if ((res4Page = m_session.getCache().getResults4Page(
-					pageQuery.getPage())) != null) {
-				resPage = new ResultPage(res4Page, pageQuery.getPage());
-			}
+			resPage = m_session.getCache().getResultPage(
+					m_session.getCurrentPage());
 
 		} catch (DatabaseException e) {
 			e.printStackTrace();
@@ -60,6 +57,6 @@ public class ChangePageEvaluator extends Searcher {
 			e.printStackTrace();
 		}
 
-		return resPage == null ? ResultPage.EMPTY_PAGE : resPage;
+		return resPage;
 	}
 }

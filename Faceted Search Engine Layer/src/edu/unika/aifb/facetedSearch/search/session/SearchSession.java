@@ -18,8 +18,6 @@
 package edu.unika.aifb.facetedSearch.search.session;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 import com.sleepycat.je.DatabaseException;
@@ -30,7 +28,9 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
+import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
@@ -60,47 +60,36 @@ public class SearchSession {
 	private RankingDelegator m_rankingDelegator;
 	private ConstructionDelegator m_constructionDelegator;
 
+	/*
+	 * 
+	 */
 	private int m_currentPage;
-	private Map<String, Integer> m_currentLevels;
+	private FacetedQuery m_currentQuery;
 
 	/*
 	 * properties
 	 */
 	private Properties m_props;
 
-	private SearchSessionCache m_cache;
+	/*
+	 * 
+	 */
 	private int m_id;
+	private SearchSessionCache m_cache;
+
+	/*
+	 * history
+	 */
+	private QueryHistoryManager m_history;
 
 	protected SearchSession(GenericRdfStore store, int id, Properties props) {
 
-		// init fields
+		m_id = id;
 		m_props = props;
 		m_store = store;
 		m_store.setSession(this);
-		m_currentLevels = new HashMap<String, Integer>();
-		m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
-		m_rankingDelegator = RankingDelegator.getInstance(this);
-		m_constructionDelegator = ConstructionDelegator.getInstance(this);
-		m_id = id;
 
-		initCache();
-	}
-
-	private void initCache() {
-
-		// init cache
-		try {
-
-			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
-					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true));
-
-		} catch (EnvironmentLockedException e) {
-			e.printStackTrace();
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		init();
 	}
 
 	public void changeDefaultValue(DefaultValues name, int value) {
@@ -131,12 +120,15 @@ public class SearchSession {
 	public void clean() {
 
 		try {
-			m_cache.clear(ClearType.ALL);
+
+			m_cache.clean(CleanType.ALL);
+			m_history.clean();
+
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}
 
-		m_facetTreeDelegator.clear();
+		m_facetTreeDelegator.clean();
 		m_rankingDelegator.clean();
 		m_constructionDelegator.clean();
 
@@ -146,7 +138,10 @@ public class SearchSession {
 	public void close() {
 
 		try {
+
 			m_cache.close();
+			m_history.clean();
+
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}
@@ -158,9 +153,6 @@ public class SearchSession {
 		System.gc();
 	}
 
-	/**
-	 * @return the cache
-	 */
 	public SearchSessionCache getCache() {
 
 		if (m_cache == null) {
@@ -170,20 +162,12 @@ public class SearchSession {
 		return m_cache;
 	}
 
-	// /**
-	// * @return the m_constructionDelegator
-	// */
-	// public ConstructionDelegator getConstructionDelegator() {
-	// return this.m_constructionDelegator;
-	// }
+	public int getCurrentPage() {
+		return m_currentPage;
+	}
 
-	/**
-	 * @return the m_currentLevel
-	 */
-	public int getCurrentLevel(String extension) {
-		return this.m_currentLevels.containsKey(extension)
-				? this.m_currentLevels.get(extension)
-				: -1;
+	public FacetedQuery getCurrentQuery() {
+		return m_currentQuery;
 	}
 
 	public Delegator getDelegator(Delegators name) {
@@ -204,33 +188,13 @@ public class SearchSession {
 		}
 	}
 
-	// /**
-	// * @return the m_facetTreeDelegator
-	// */
-	// public FacetTreeDelegator getFacetTreeDelegator() {
-	// return this.m_facetTreeDelegator;
-	// }
-
-	/**
-	 * @return the id
-	 */
-	public int getId() {
-		return this.m_id;
+	public QueryHistoryManager getHistory() {
+		return m_history;
 	}
 
-	// /**
-	// * @return the indFactory
-	// */
-	// public IndividualFactorty getIndFactory() {
-	// return this.m_indFactory;
-	// }
-	//
-	// /**
-	// * @return the litFactory
-	// */
-	// public LiteralFactory getLitFactory() {
-	// return this.m_litFactory;
-	// }
+	public int getId() {
+		return m_id;
+	}
 
 	public Properties getProps() {
 		return this.m_props;
@@ -292,69 +256,46 @@ public class SearchSession {
 		}
 	}
 
-	// /**
-	// * @return the m_rankingDelegator
-	// */
-	// public RankingDelegator getRankingDelegator() {
-	// return this.m_rankingDelegator;
-	// }
-
-	/**
-	 * @return the m_store
-	 */
 	public GenericRdfStore getStore() {
 		return this.m_store;
 	}
 
-	/**
-	 * @param currentPage the currentPage to set
-	 */
+	private void init() {
+
+		m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
+		m_rankingDelegator = RankingDelegator.getInstance(this);
+		m_constructionDelegator = ConstructionDelegator.getInstance(this);
+
+		m_history = new QueryHistoryManager(this);
+		
+		initCache();
+	}
+
+	private void initCache() {
+
+		try {
+
+			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
+					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true));
+
+		} catch (EnvironmentLockedException e) {
+			e.printStackTrace();
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public void setCurrentPage(int currentPage) {
 		m_currentPage = currentPage;
 	}
 
-	/**
-	 * @return the currentPage
-	 */
-	public int getCurrentPage() {
-		return m_currentPage;
+	public void setCurrentQuery(FacetedQuery currentQuery) {
+		m_currentQuery = currentQuery;
 	}
 
-	// public boolean rankingEnabled() {
-	// return Boolean.getBoolean(this.m_props
-	// .getProperty(FacetEnvironment.RANKING_ENABLED));
-	// }
-
-	// /**
-	// * @param level
-	// * the m_currentLevel to set
-	// */
-	// public void setCurrentLevel(int level, String extension) {
-	//
-	// this.m_currentLevels.put(extension, level);
-	// }
-	//
-	// /**
-	// * @param id
-	// * the id to set
-	// */
-	// public void setId(int id) {
-	// this.m_id = id;
-	// }
-	//
-	// /**
-	// * @param indFactory
-	// * the indFactory to set
-	// */
-	// public void setIndFactory(IndividualFactorty indFactory) {
-	// this.m_indFactory = indFactory;
-	// }
-	//
-	// /**
-	// * @param litFactory
-	// * the litFactory to set
-	// */
-	// public void setLitFactory(LiteralFactory litFactory) {
-	// this.m_litFactory = litFactory;
-	// }
+	public void setHistory(QueryHistoryManager history) {
+		m_history = history;
+	}
 }

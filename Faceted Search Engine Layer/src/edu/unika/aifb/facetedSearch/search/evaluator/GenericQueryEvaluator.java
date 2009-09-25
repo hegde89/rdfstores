@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidParameterException;
 
 import com.sleepycat.je.DatabaseException;
@@ -25,12 +26,16 @@ import com.sleepycat.je.DatabaseException;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
-import edu.unika.aifb.facetedSearch.search.datastructure.AbstractFacetRequest;
-import edu.unika.aifb.facetedSearch.search.datastructure.ChangePageRequest;
+import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
@@ -65,20 +70,14 @@ public class GenericQueryEvaluator {
 		m_idxReader = idxReader;
 	}
 
-	private ResultPage constructInitialResultPage(Table<String> results) {
+	private Result constructResult(Table<String> resultTable) {
 
-		Table<String> res4Page;
-		ResultPage resPage = ResultPage.EMPTY_PAGE;
-		m_session.setCurrentPage(1);
+		Result res = new Result();
 
 		try {
 
-			m_session.getCache().clear(ClearType.ALL);
-			m_session.getCache().addResultSet(results);
-
-			if ((res4Page = m_session.getCache().getResults4Page(m_session.getCurrentPage())) != null) {
-				resPage = new ResultPage(res4Page, m_session.getCurrentPage());
-			}
+			m_session.getCache().clean(CleanType.ALL);
+			res.setResultTable(resultTable);
 
 			// create facets for this result set
 			if (new Boolean(m_session.getProps().getProperty(
@@ -86,21 +85,28 @@ public class GenericQueryEvaluator {
 
 				((ConstructionDelegator) m_session
 						.getDelegator(Delegators.CONSTRUCTION))
-						.doFacetConstruction(results);
+						.doFacetConstruction(resultTable);
 
-				// resPage.setFacets();
+				FacetPage fpage = ((FacetTreeDelegator) m_session
+						.getDelegator(Delegators.TREE)).getCurrentFacetPage();
+				res.setFacetPage(fpage);
 			}
+
+			m_session.getCache().storeResult(res);
 
 		} catch (DatabaseException e) {
 			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
 		} catch (StorageException e) {
+			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		return resPage;
+		return res;
 	}
+
 	public ResultPage evaluate(Query query) {
 
 		ResultPage resultPage = null;
@@ -114,7 +120,13 @@ public class GenericQueryEvaluator {
 
 				eval = (KeywordQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.KeywordQueryEvaluator);
 				resultTable = eval.evaluate((KeywordQuery) query);
-				resultPage = constructInitialResultPage(resultTable);
+				Result result = constructResult(resultTable);
+				resultPage = getFirstResultPage();
+
+				FacetedQuery fquery = new FacetedQuery(query);
+				m_session.setCurrentQuery(fquery);
+				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+						result);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -131,7 +143,14 @@ public class GenericQueryEvaluator {
 
 				eval = (VPEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
 				resultTable = eval.evaluate((StructuredQuery) query);
-				resultPage = constructInitialResultPage(resultTable);
+
+				Result result = constructResult(resultTable);
+				resultPage = getFirstResultPage();
+
+				FacetedQuery fquery = new FacetedQuery(query);
+				m_session.setCurrentQuery(fquery);
+				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+						result);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -148,7 +167,14 @@ public class GenericQueryEvaluator {
 
 				eval = (ExploringHybridQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.HybridQueryEvaluator);
 				resultTable = eval.evaluate((HybridQuery) query);
-				resultPage = constructInitialResultPage(resultTable);
+
+				Result result = constructResult(resultTable);
+				resultPage = getFirstResultPage();
+
+				FacetedQuery fquery = new FacetedQuery(query);
+				m_session.setCurrentQuery(fquery);
+				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+						result);
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -158,11 +184,11 @@ public class GenericQueryEvaluator {
 
 		} else if (query instanceof AbstractFacetRequest) {
 
-			FacetQueryEvaluator eval = null;
+			FacetRequestEvaluator eval = null;
 
 			try {
 
-				eval = (FacetQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
+				eval = (FacetRequestEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
 				resultPage = eval.evaluate((AbstractFacetRequest) query);
 
 			} catch (IOException e) {
@@ -218,7 +244,8 @@ public class GenericQueryEvaluator {
 			case FacetQueryEvaluator : {
 
 				if (m_facetQueryEvaluator == null) {
-					m_facetQueryEvaluator = new FacetQueryEvaluator(m_idxReader, m_session);
+					m_facetQueryEvaluator = new FacetRequestEvaluator(
+							m_idxReader, m_session);
 				}
 
 				return m_facetQueryEvaluator;
@@ -226,7 +253,8 @@ public class GenericQueryEvaluator {
 			case ChangePageEvaluator : {
 
 				if (m_changePageEvaluator == null) {
-					m_changePageEvaluator = new ChangePageEvaluator(m_idxReader, m_session);
+					m_changePageEvaluator = new ChangePageEvaluator(
+							m_idxReader, m_session);
 				}
 
 				return m_changePageEvaluator;
@@ -237,5 +265,19 @@ public class GenericQueryEvaluator {
 								ExceptionHelper.Cause.NOT_VALID));
 			}
 		}
+	}
+	private ResultPage getFirstResultPage() {
+
+		ResultPage resPage = ResultPage.EMPTY_PAGE;
+
+		try {
+			resPage = m_session.getCache().getResultPage(1);
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return resPage;
 	}
 }

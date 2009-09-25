@@ -59,7 +59,7 @@ import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.StructureIndex;
@@ -330,7 +330,7 @@ public class FacetTreeBuilder implements IFacetTreeBuilder {
 	private void doClustering(FacetTree tree, StaticNode epNode)
 			throws DatabaseException, UnsupportedEncodingException, IOException {
 
-		m_cache.clear(ClearType.LITERALS);
+		m_cache.clean(CleanType.LITERALS);
 
 		DataType datatype = epNode.getFacet().getDataType() == null
 				? FacetEnvironment.DataType.STRING

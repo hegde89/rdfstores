@@ -19,9 +19,6 @@ package edu.unika.aifb.facetedSearch.facets;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -34,15 +31,12 @@ import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueList;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.ClearType;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
 /**
@@ -52,7 +46,14 @@ import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 public class FacetTreeDelegator extends Delegator {
 
 	private static FacetTreeDelegator s_instance;
+	@SuppressWarnings("unused")
 	private static Logger s_logger = Logger.getLogger(FacetTreeDelegator.class);
+
+	public static FacetTreeDelegator getInstance(SearchSession session) {
+		return s_instance == null
+				? s_instance = new FacetTreeDelegator(session)
+				: s_instance;
+	}
 
 	private SearchSession m_session;
 	private SearchSessionCache m_cache;
@@ -74,12 +75,6 @@ public class FacetTreeDelegator extends Delegator {
 	 */
 	private ArrayList<HashMap<? extends Object, ? extends Object>> m_maps;
 	private HashMap<String, Double> m_domain2currentRoot;
-
-	public static FacetTreeDelegator getInstance(SearchSession session) {
-		return s_instance == null
-				? s_instance = new FacetTreeDelegator(session)
-				: s_instance;
-	}
 
 	private FacetTreeDelegator(SearchSession session) {
 
@@ -105,11 +100,11 @@ public class FacetTreeDelegator extends Delegator {
 		m_domain2treeMap.put(domain, tree);
 	}
 
-	public void clear() {
+	public void clean() {
 		close();
-		reOpen();		
+		reOpen();
 	}
-	
+
 	public void close() {
 
 		for (HashMap<? extends Object, ? extends Object> map : m_maps) {
@@ -118,7 +113,7 @@ public class FacetTreeDelegator extends Delegator {
 
 		try {
 
-			m_cache.clear(ClearType.TREES);
+			m_cache.clean(CleanType.TREES);
 
 			m_domain2treeMap = null;
 			m_node2subTreeMap = null;
@@ -130,47 +125,55 @@ public class FacetTreeDelegator extends Delegator {
 		}
 	}
 
+	public FacetPage getCurrentFacetPage() {
+
+		// TODO
+
+		return null;
+	}
+
 	public FacetTree getFacetTree(String domain) {
 
 		return m_domain2treeMap.get(domain);
 	}
 
-	public List<IFacetFacetValueList> getFacetValueTuples(Node selection) {
-
-		List<IFacetFacetValueList> facetValueList = new ArrayList<IFacetFacetValueList>();
-
-		if (this.m_domain2treeMap.containsKey(selection.getDomain())) {
-
-			FacetTree tree = this.m_domain2treeMap.get(selection.getDomain());
-
-			Iterator<Edge> iter = tree.outgoingEdgesOf(selection).iterator();
-
-			Edge current_facet;
-			Node current_value;
-
-			while (iter.hasNext()) {
-
-				current_value = tree.getEdgeTarget(current_facet = iter.next());
-
-				if (m_rankingEnabled) {
-					m_rankingDelegator.doRanking(current_facet, current_value);
-				}
-
-				facetValueList.add(new FacetFacetValueList(current_facet,
-						current_value));
-			}
-		} else {
-			FacetTreeDelegator.s_logger
-					.error("m_facetTrees did not contain current tree for key '"
-							+ selection.getDomain() + "'");
-		}
-
-		if (m_rankingEnabled) {
-			facetValueList = m_rankingDelegator.doSorting(facetValueList);
-		}
-
-		return facetValueList;
-	}
+	// public List<IFacetFacetValueList> getFacetValueTuples(Node selection) {
+	//
+	// List<IFacetFacetValueList> facetValueList = new
+	// ArrayList<IFacetFacetValueList>();
+	//
+	// if (this.m_domain2treeMap.containsKey(selection.getDomain())) {
+	//
+	// FacetTree tree = this.m_domain2treeMap.get(selection.getDomain());
+	//
+	// Iterator<Edge> iter = tree.outgoingEdgesOf(selection).iterator();
+	//
+	// Edge current_facet;
+	// Node current_value;
+	//
+	// while (iter.hasNext()) {
+	//
+	// current_value = tree.getEdgeTarget(current_facet = iter.next());
+	//
+	// if (m_rankingEnabled) {
+	// m_rankingDelegator.doRanking(current_facet, current_value);
+	// }
+	//
+	// facetValueList.add(new FacetFacetValueList(current_facet,
+	// current_value));
+	// }
+	// } else {
+	// FacetTreeDelegator.s_logger
+	// .error("m_facetTrees did not contain current tree for key '"
+	// + selection.getDomain() + "'");
+	// }
+	//
+	// if (m_rankingEnabled) {
+	// facetValueList = m_rankingDelegator.doSorting(facetValueList);
+	// }
+	//
+	// return facetValueList;
+	// }
 
 	private void init() throws IllegalArgumentException, DatabaseException {
 

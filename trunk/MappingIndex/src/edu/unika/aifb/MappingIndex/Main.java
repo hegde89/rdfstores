@@ -1,3 +1,4 @@
+package edu.unika.aifb.MappingIndex;
 import java.util.List;
 
 import edu.unika.aifb.graphindex.importer.Importer;

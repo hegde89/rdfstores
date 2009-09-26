@@ -1,3 +1,4 @@
+package edu.unika.aifb.MappingIndex;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -93,20 +94,20 @@ public class MappingIndexCreator implements TripleSink{
 		// ds1,ds2,e2->e1
 		addMappingIndex(IndexDescription.DSDTETES);
 		// ds1,ds2,e1_ext -> e2_ext
-		addSPMappingIndex(IndexDescription.DSDTESXETX);
+		addMappingIndex(IndexDescription.DSDTESXETX);
 		// ds1,ds2,e2_ext -> e1_ext
-		addSPMappingIndex(IndexDescription.DSDTETXESX);
+		addMappingIndex(IndexDescription.DSDTETXESX);
 		
 		// Open index of target entity
-		IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
-		o_idx = o_IndexReader.getStructureIndex();
+		//IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
+		//o_idx = o_IndexReader.getStructureIndex();
 		
 		// Open index of source entity
-		IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
-		s_idx = s_IndexReader.getStructureIndex();
+		//IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
+		//s_idx = s_IndexReader.getStructureIndex();
 		
 		// Import triples from mapping file
-		importData();
+		//importData();
 		
 		m_idxConfig.store(m_idxDirectory);		
 	}

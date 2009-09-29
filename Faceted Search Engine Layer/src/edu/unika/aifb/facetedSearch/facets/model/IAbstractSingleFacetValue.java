@@ -21,6 +21,6 @@ package edu.unika.aifb.facetedSearch.facets.model;
  * @author andi
  *
  */
-public interface ILiteral extends IAbstractFacetValue {
+public interface IAbstractSingleFacetValue {
 
 }

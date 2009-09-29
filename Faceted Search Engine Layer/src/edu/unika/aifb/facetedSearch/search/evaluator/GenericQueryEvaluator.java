@@ -21,12 +21,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidParameterException;
 
+import org.apache.jcs.access.exception.CacheException;
+
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
-import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
@@ -81,14 +82,15 @@ public class GenericQueryEvaluator {
 
 			// create facets for this result set
 			if (new Boolean(m_session.getProps().getProperty(
-					FacetEnvironment.FACETS_ENABLED))) {
+					FacetEnvironment.Property.FACETS_ENABLED))) {
 
 				((ConstructionDelegator) m_session
 						.getDelegator(Delegators.CONSTRUCTION))
-						.doFacetConstruction(resultTable);
+						.constructTree(resultTable);
 
-				FacetPage fpage = ((FacetTreeDelegator) m_session
-						.getDelegator(Delegators.TREE)).getCurrentFacetPage();
+				FacetPage fpage = m_session.getFacetPageManager()
+						.getInitialFacetPage();
+
 				res.setFacetPage(fpage);
 			}
 
@@ -101,6 +103,8 @@ public class GenericQueryEvaluator {
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (CacheException e) {
 			e.printStackTrace();
 		}
 

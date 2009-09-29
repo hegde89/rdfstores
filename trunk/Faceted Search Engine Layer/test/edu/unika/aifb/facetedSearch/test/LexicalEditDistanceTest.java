@@ -28,7 +28,7 @@ import org.junit.Test;
 public class LexicalEditDistanceTest {
 
 	/**
-	 * Test method for {@link edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.dis.algo.distance.impl.LexicalEditDistance#getDistance(java.lang.String, java.lang.String)}.
+	 * Test method for {@link edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.metric.dis.algo.distance.impl.LexicalEditDistance#getDistance(java.lang.String, java.lang.String)}.
 	 */
 	@Test
 	public final void testGetDistance() {

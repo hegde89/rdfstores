@@ -40,7 +40,6 @@ public class Node implements INode {
 
 	public enum NodeType {
 		ROOT, RANGE_ROOT, INNER_NODE, LEAVE
-		// , ENDPOINT
 	}
 
 	/**
@@ -70,16 +69,6 @@ public class Node implements INode {
 		m_SourceExtensions = new HashSet<String>();
 	}
 
-	// public Node(String value, NodeType type) {
-	//
-	// m_value = value;
-	// m_type = type;
-	// m_id = (new Random()).nextGaussian();
-	// m_RangeExtensions = new ArrayList<String>();
-	// m_SourceExtensions = new ArrayList<String>();
-	// // setPathHashValue(pathHashValue);
-	// }
-
 	public Node(String value, NodeContent content) {
 
 		m_value = value;
@@ -87,18 +76,17 @@ public class Node implements INode {
 		m_id = (new Random()).nextGaussian();
 		m_RangeExtensions = new HashSet<String>();
 		m_SourceExtensions = new HashSet<String>();
-		// setPathHashValue(pathHashValue);
+
 	}
 
 	public Node(String value, NodeType type) {
 
-		// m_types = new HashSet<NodeType>();
 		m_type = type;
 		m_value = value;
 		m_id = (new Random()).nextGaussian();
 		m_RangeExtensions = new HashSet<String>();
 		m_SourceExtensions = new HashSet<String>();
-		// setPathHashValue(pathHashValue);
+
 	}
 
 	public Node(String value, NodeType type, NodeContent content) {
@@ -109,7 +97,7 @@ public class Node implements INode {
 		m_id = (new Random()).nextGaussian();
 		m_RangeExtensions = new HashSet<String>();
 		m_SourceExtensions = new HashSet<String>();
-		// setPathHashValue(pathHashValue);
+		
 	}
 
 	// public void addRangeExtension(String extension) {
@@ -151,54 +139,9 @@ public class Node implements INode {
 		return m_content;
 	}
 
-	// public Node() {
-	//
-	// this.m_id = (new Random()).nextGaussian();
-	// this.m_extensions = new ArrayList<String>();
-	// }
-	//
-	// public Node(NodeType type) {
-	//
-	// this.m_type = type;
-	// this.m_id = (new Random()).nextGaussian();
-	// this.m_extensions = new ArrayList<String>();
-	// }
-
-	// public void addType(NodeType type) {
-	// m_types.add(type);
-	// }
-	//
-	// public void addTypes(Collection<NodeType> collection) {
-	// m_types.addAll(collection);
-	// }
-
-	// /**
-	// * @return the cache
-	// */
-	// public SearchSessionCache getCache() {
-	// return m_cache;
-	// }
-
 	public String getDomain() {
 		return m_domain;
 	}
-
-	// public Set<INode> getChildren() {
-	//
-	// Set<INode> children = new HashSet<INode>();
-	//
-	// if (this.m_tree == null) {
-	// return children;
-	// } else {
-	// Set<IEdge> out_edges = this.m_tree.outgoingEdgesOf(this);
-	//
-	// for (IEdge edge : out_edges) {
-	// children.add(this.m_tree.getEdgeTarget(edge));
-	// }
-	//
-	// return children;
-	// }
-	// }
 
 	public Facet getFacet() {
 		return m_facet;
@@ -208,16 +151,10 @@ public class Node implements INode {
 		return this.m_id;
 	}
 
-	/**
-	 * @return the path
-	 */
 	public String getPath() {
 		return m_path;
 	}
 
-	/**
-	 * @return the pathHashValue
-	 */
 	public int getPathHashValue() {
 		return m_pathHashValue;
 	}
@@ -226,14 +163,6 @@ public class Node implements INode {
 		return m_RangeExtensions;
 	}
 
-	// public boolean hasChildren() {
-	// return this.m_tree == null ? false : this.m_tree.outgoingEdgesOf(this)
-	// .size() > 0;
-	// }
-
-	/**
-	 * @return the sourceExtensions
-	 */
 	public HashSet<String> getSourceExtensions() {
 		return m_SourceExtensions;
 	}
@@ -241,17 +170,11 @@ public class Node implements INode {
 	public NodeType getType() {
 		return m_type;
 	}
-
-	/**
-	 * @return the m_value
-	 */
+	
 	public String getValue() {
 		return m_value;
 	}
 
-	/**
-	 * @return the weight
-	 */
 	public double getWeight() {
 		return m_weight;
 	}
@@ -269,10 +192,6 @@ public class Node implements INode {
 		return object instanceof INode ? ((INode) object).getValue().equals(
 				this.getValue()) : false;
 	}
-
-	// public boolean isEndPoint() {
-	// return m_types.contains(NodeType.ENDPOINT);
-	// }
 
 	public boolean isInnerNode() {
 		return m_type == NodeType.INNER_NODE;
@@ -332,8 +251,8 @@ public class Node implements INode {
 
 	@Override
 	public String toString() {
-		return "Node" + this.m_id + " :[Label:" + this.m_value + ", Type:"
-				+ this.m_type + ", Content:" + this.m_content
-				+ ", Extensions: " + this.m_RangeExtensions + "]";
+		return "Node" + m_id + " :[Label:" + m_value + ", Type:"
+				+ m_type + ", Content:" + m_content
+				+ ", Extensions: " + m_RangeExtensions + "]";
 	}
 }

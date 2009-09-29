@@ -68,7 +68,7 @@ public class LiteralBinding extends TupleBinding<Literal> {
 		Literal lit = new Literal();
 		lit.setParsedLiteral(parsedLiteral);
 		lit.setValue(value);
-		lit.setExt(ext);
+		lit.setSourceExt(ext);
 
 		return lit;
 	}
@@ -93,7 +93,7 @@ public class LiteralBinding extends TupleBinding<Literal> {
 		}
 
 		output.writeString(object.getValue());
-		output.writeString(object.getExt());
+		output.writeString(object.getSourceExt());
 
 	}
 }

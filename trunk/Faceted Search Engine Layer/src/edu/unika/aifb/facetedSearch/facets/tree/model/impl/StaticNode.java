@@ -28,12 +28,12 @@ import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
-import edu.unika.aifb.facetedSearch.index.db.FacetValueBinding;
+import edu.unika.aifb.facetedSearch.index.db.AbstractSingleFacetValueBinding;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
 /**
  * @author andi
@@ -48,9 +48,17 @@ public class StaticNode extends Node implements IStaticNode {
 	@SuppressWarnings("unused")
 	private static Logger s_log = Logger.getLogger(StaticNode.class);
 
+	/*
+	 * berkeley db ...
+	 */
+
 	private SearchSessionCache m_cache;
-	private StoredMap<FacetValue, Integer> m_countFVMap;
+	private StoredMap<AbstractSingleFacetValue, Integer> m_countFVMap;
 	private StoredMap<String, Integer> m_countSMap;
+
+	/*
+	 * 
+	 */
 
 	private int m_countFV;
 	private int m_countS;
@@ -78,10 +86,11 @@ public class StaticNode extends Node implements IStaticNode {
 		init();
 	}
 
-	public void addSortedObjects(Collection<FacetValue> facetValues,
+	public void addSortedObjects(
+			Collection<AbstractSingleFacetValue> abstractFacetValues,
 			String source) {
 
-		for (FacetValue fv : facetValues) {
+		for (AbstractSingleFacetValue fv : abstractFacetValues) {
 
 			/*
 			 * add literal to sorted literal list ...
@@ -126,6 +135,7 @@ public class StaticNode extends Node implements IStaticNode {
 			}
 		}
 	}
+	
 	public void addSourceIndivdiual(String ind) {
 
 		Integer countS;
@@ -138,10 +148,11 @@ public class StaticNode extends Node implements IStaticNode {
 		m_countSMap.put(ind, countS);
 	}
 
-	public void addUnsortedObjects(Collection<FacetValue> facetValues,
+	public void addUnsortedObjects(
+			Collection<AbstractSingleFacetValue> abstractFacetValues,
 			String source) {
 
-		for (FacetValue fv : facetValues) {
+		for (AbstractSingleFacetValue fv : abstractFacetValues) {
 
 			/*
 			 * update countFV
@@ -216,7 +227,7 @@ public class StaticNode extends Node implements IStaticNode {
 	// return m_name;
 	// }
 
-	public Set<FacetValue> getObjects() {
+	public Set<AbstractSingleFacetValue> getObjects() {
 
 		return m_countFVMap.keySet();
 	}
@@ -235,14 +246,6 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_countSMap.keySet();
 	}
 
-	// public void incrementCountFV(int increment) {
-	// m_countFV = m_countFV + increment;
-	// }
-	//
-	// public void incrementCountS(int increment) {
-	// m_countS = m_countS + increment;
-	// }
-
 	private void init() {
 
 		m_countFV = -1;
@@ -258,7 +261,7 @@ public class StaticNode extends Node implements IStaticNode {
 		 * bindings ...
 		 */
 
-		FacetValueBinding fvBind = new FacetValueBinding();
+		AbstractSingleFacetValueBinding fvBind = new AbstractSingleFacetValueBinding();
 
 		TupleBinding<String> strgBind = TupleBinding
 				.getPrimitiveBinding(String.class);
@@ -270,12 +273,12 @@ public class StaticNode extends Node implements IStaticNode {
 		 * maps ...
 		 */
 
-		m_countFVMap = new StoredMap<FacetValue, Integer>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FO_CACHE), fvBind,
+		m_countFVMap = new StoredMap<AbstractSingleFacetValue, Integer>(m_cache
+				.getDB(FacetEnvironment.DatabaseName.FCO_CACHE), fvBind,
 				intBind, true);
 
 		m_countSMap = new StoredMap<String, Integer>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FS_CACHE), strgBind,
+				.getDB(FacetEnvironment.DatabaseName.FCS_CACHE), strgBind,
 				intBind, true);
 
 	}

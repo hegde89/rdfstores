@@ -21,13 +21,15 @@ import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.bind.tuple.TupleInput;
 import com.sleepycat.bind.tuple.TupleOutput;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Resource;
 
 /**
  * @author andi
  * 
  */
-public class FacetValueBinding extends TupleBinding<FacetValue> {
+public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingleFacetValue> {
 
 	/*
 	 * (non-Javadoc)
@@ -37,16 +39,29 @@ public class FacetValueBinding extends TupleBinding<FacetValue> {
 	 * .tuple.TupleInput)
 	 */
 	@Override
-	public FacetValue entryToObject(TupleInput input) {
-		
-        String value = input.readString();
-        String ext = input.readString();
+	public AbstractSingleFacetValue entryToObject(TupleInput input) {
 
-        FacetValue fv = new FacetValue();
-        fv.setValue(value);
-        fv.setExt(ext);
+		AbstractSingleFacetValue fv;
 
-        return fv;
+		Boolean isResource = input.readBoolean();
+		String value = input.readString();
+		String sourceExt = input.readString();
+		String rangeExt = input.readString();
+		String domain = input.readString();
+
+		if (isResource) {
+			fv = new Resource();
+		} else {
+			fv = new Literal();
+		}
+
+		fv.setIsResource(isResource);
+		fv.setValue(value);
+		fv.setSourceExt(sourceExt);
+		fv.setRangeExt(rangeExt);
+		fv.setDomain(domain);
+
+		return fv;
 	}
 
 	/*
@@ -57,10 +72,14 @@ public class FacetValueBinding extends TupleBinding<FacetValue> {
 	 * com.sleepycat.bind.tuple.TupleOutput)
 	 */
 	@Override
-	public void objectToEntry(FacetValue object, TupleOutput output) {
+	public void objectToEntry(AbstractSingleFacetValue object,
+			TupleOutput output) {
 
+		output.writeBoolean(object.isResource());
 		output.writeString(object.getValue());
-		output.writeString(object.getExt());
+		output.writeString(object.getSourceExt());
+		output.writeString(object.getRangeExt());
+		output.writeString(object.getDomain());
 
 	}
 }

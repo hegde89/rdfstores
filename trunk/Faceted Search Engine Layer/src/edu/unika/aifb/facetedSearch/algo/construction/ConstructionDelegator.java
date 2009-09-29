@@ -18,16 +18,24 @@
 package edu.unika.aifb.facetedSearch.algo.construction;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.algo.construction.tree.IFacetTreeBuilder;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.BuilderHelper;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetClusterBuilder;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSubTreeBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetTreeBuilder;
-import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
@@ -41,39 +49,94 @@ import edu.unika.aifb.graphindex.util.Util;
  */
 public class ConstructionDelegator extends Delegator {
 
-	private SearchSession m_session;
-	private static ConstructionDelegator s_instance;
 	private static Logger s_log = Logger.getLogger(ResultPage.class);
 
+	/*
+	 * 
+	 */
+	private static ConstructionDelegator s_instance;
+
 	public static ConstructionDelegator getInstance(SearchSession session) {
+
 		return s_instance == null ? s_instance = new ConstructionDelegator(
 				session) : s_instance;
 	}
 
+	/*
+	 * 
+	 */
+	private SearchSession m_session;
+
+	/*
+	 * 
+	 */
+
+	private FacetTreeDelegator m_treeDelegator;
+
+	/*
+	 * delegates
+	 */
+
+	private BuilderHelper m_helper;
+	private ArrayList<IBuilder> m_builder;
+
+	private IBuilder m_treeBuilder;
+	private IBuilder m_subTreeBuilder;
+	private IBuilder m_clusterBuilder;
+
 	private ConstructionDelegator(SearchSession session) {
+
 		m_session = session;
+
+		/*
+		 * 
+		 */
+
+		m_treeDelegator = (FacetTreeDelegator) m_session
+				.getDelegator(Delegators.TREE);
+
+		/*
+		 * 
+		 */
+
+		m_helper = new BuilderHelper(m_session);
+
+		m_treeBuilder = new FacetTreeBuilder(m_session, m_helper);
+		m_subTreeBuilder = new FacetSubTreeBuilder(m_session, m_helper);
+		m_clusterBuilder = new FacetClusterBuilder(m_session, m_helper);
+
+		m_builder = new ArrayList<IBuilder>();
+		m_builder.add(m_treeBuilder);
+		m_builder.add(m_subTreeBuilder);
+		m_builder.add(m_clusterBuilder);
+
 	}
 
+	@Override
 	public void clean() {
 
+		for (IBuilder builder : m_builder) {
+			builder.clean();
+		}
 	}
 
+	@Override
 	public void close() {
 
+		for (IBuilder builder : m_builder) {
+			builder.close();
+		}
 	}
 
-	public void doFacetConstruction(Table<String> results)
+	public boolean constructTree(Table<String> results)
 			throws EnvironmentLockedException, IOException, DatabaseException,
-			StorageException {
-
-		boolean success;
+			StorageException, CacheException {
 
 		s_log.debug("start facet construction for new result set '"
 				+ results.toString() + "'");
 
-		FacetTreeDelegator treeDelegator = (FacetTreeDelegator) m_session
-				.getDelegator(Delegators.TREE);
-		treeDelegator.clear();
+		boolean success = true;
+		m_treeDelegator.clean();
 
 		for (String colName : results.getColumnNames()) {
 
@@ -82,9 +145,10 @@ public class ConstructionDelegator extends Delegator {
 				s_log.debug("start building facet tree for column '" + colName
 						+ "'");
 
-				IFacetTreeBuilder builder = new FacetTreeBuilder(m_session);
-				success = builder.constructTree(results, results
-						.getColumn(colName));
+				m_treeBuilder.clean();
+
+				success = ((FacetTreeBuilder) m_treeBuilder).build(results,
+						results.getColumn(colName));
 
 				if (!success) {
 
@@ -101,5 +165,68 @@ public class ConstructionDelegator extends Delegator {
 						+ "' since it's no variable!");
 			}
 		}
+
+		return success;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see edu.unika.aifb.facetedSearch.Delegator#isOpen()
+	 */
+	@Override
+	public boolean isOpen() {
+		return true;
+	}
+
+	public boolean refine(FacetTree tree, StaticNode node) {
+
+		if (node.getFacet().getType() != FacetType.DATAPROPERTY_BASED) {
+
+			return refineCluster(tree, node);
+
+		} else if (node.getFacet().getType() != FacetType.OBJECT_PROPERTY_BASED) {
+
+			return refineSubTree(tree, node);
+
+		} else if (node.getFacet().getType() != FacetType.RDF_PROPERTY_BASED) {
+
+			m_helper.insertFacetValues(tree, node, node.getObjects());
+			return true;
+
+		} else {
+
+			s_log.error("should not be here: node '" + node + "' and tree '"
+					+ tree + "'");
+			return false;
+		}
+	}
+
+	public boolean refineCluster(FacetTree tree, StaticNode node) {
+
+		((FacetClusterBuilder) m_clusterBuilder).clean();
+
+		return ((FacetClusterBuilder) m_clusterBuilder).build(tree, node);
+	}
+
+	public boolean refineSubTree(FacetTree tree, StaticNode node) {
+
+		((FacetSubTreeBuilder) m_subTreeBuilder).clean();
+
+		try {
+
+			return ((FacetSubTreeBuilder) m_subTreeBuilder).build(tree, node);
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (CacheException e) {
+			e.printStackTrace();
+		} catch (StorageException e) {
+			e.printStackTrace();
+		}
+
+		return false;
 	}
 }

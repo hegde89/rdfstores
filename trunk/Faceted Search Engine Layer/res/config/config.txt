@@ -11,4 +11,4 @@ neighborhood.size=2
 structureIndex.pathLength=1
 structureBased.dataPartitioning=true
 onto.language=nt
-
+cache.config="D:/UNI/workspace/DA/Faceted Search Engine Layer/res/config/cache.ccf"

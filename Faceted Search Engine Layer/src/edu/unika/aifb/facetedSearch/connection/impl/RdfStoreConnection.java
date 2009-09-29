@@ -54,7 +54,7 @@ public class RdfStoreConnection implements IConnection {
 			InvalidParameterException, IOException, StorageException,
 			InterruptedException {
 
-		return new GenericRdfStore(m_props,FacetEnvironment.CREATE_STORE);
+		return new GenericRdfStore(m_props,FacetEnvironment.StoreAction.CREATE_STORE);
 	}
 
 	public GenericRdfStore loadOrCreateStore() throws InvalidParameterException,
@@ -77,13 +77,13 @@ public class RdfStoreConnection implements IConnection {
 			InvalidParameterException, IOException, StorageException,
 			InterruptedException {
 
-		String idxDir = m_props.getProperty(FacetEnvironment.INDEX_DIRECTORY);
+		String idxDir = m_props.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY);
 
 		if (idxDir == null) {
 			throw new MissingParameterException(ExceptionHelper.createMessage(
-					FacetEnvironment.INDEX_DIRECTORY, ExceptionHelper.Cause.MISSING));
+					FacetEnvironment.Property.INDEX_DIRECTORY, ExceptionHelper.Cause.MISSING));
 		}
 
-		return new GenericRdfStore(m_props, FacetEnvironment.LOAD_STORE);
+		return new GenericRdfStore(m_props, FacetEnvironment.StoreAction.LOAD_STORE);
 	}
 }

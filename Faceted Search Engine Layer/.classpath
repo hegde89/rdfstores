@@ -10,5 +10,9 @@
 	<classpathentry kind="lib" path="lib/jgrapht-jdk1.6.jar" sourcepath="lib/src/jgrapht-0.8.1/src"/>
 	<classpathentry kind="lib" path="lib/tuple.jar"/>
 	<classpathentry kind="lib" path="lib/je-3.3.87.jar" sourcepath="lib/src/je-3.3.87/src"/>
+	<classpathentry kind="lib" path="lib/jcs-1.3.jar" sourcepath="lib/src/jcs-1.3/src"/>
+	<classpathentry kind="lib" path="lib/concurrent-1.3.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar" sourcepath="lib/src/commons-collections-3.2.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/fastutil-5.1.5.jar" sourcepath="lib/src/fastutil-5.1.5/"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

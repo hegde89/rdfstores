@@ -27,7 +27,7 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 
 	private double m_id;
 	private Facet m_facet;
-	private FacetValue m_facetValue;
+	private AbstractFacetValue m_abstractFacetValue;
 
 	public FacetFacetValueTuple() {
 	}
@@ -53,8 +53,8 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 		return m_facet;
 	}
 
-	public FacetValue getFacetValue() {
-		return m_facetValue;
+	public AbstractFacetValue getFacetValue() {
+		return m_abstractFacetValue;
 	}
 
 	public double getId() {
@@ -66,8 +66,8 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 		updateID();
 	}
 
-	public void setFacetValue(FacetValue facetValue) {
-		m_facetValue = facetValue;
+	public void setFacetValue(AbstractFacetValue abstractFacetValue) {
+		m_abstractFacetValue = abstractFacetValue;
 		updateID();
 	}
 
@@ -78,7 +78,7 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	private void updateID() {
 
 		int facetHash = m_facet != null ? m_facet.hashCode() : 0;
-		int facetValueHash = m_facetValue != null ? m_facetValue.hashCode() : 0;
+		int facetValueHash = m_abstractFacetValue != null ? m_abstractFacetValue.hashCode() : 0;
 
 		m_id = facetHash + facetValueHash;
 	}

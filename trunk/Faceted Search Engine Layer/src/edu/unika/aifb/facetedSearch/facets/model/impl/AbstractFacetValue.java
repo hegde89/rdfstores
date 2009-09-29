@@ -17,31 +17,37 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
-import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
-import edu.unika.aifb.facetedSearch.facets.model.IFacet;
+import java.io.Serializable;
+
+import edu.unika.aifb.facetedSearch.facets.model.IAbstractFacetValue;
 
 /**
  * @author andi
  * 
  */
-public class Facet implements IFacet {
+public abstract class AbstractFacetValue
+		implements
+			IAbstractFacetValue,
+			Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2343480809304503452L;
+
+	/*
+	 * 
+	 */
 	private String m_domain;
 	private double m_nodeId;
+	private String m_value;
 
-	private String m_uri;
-	private FacetType m_facetType;
-	private DataType m_dataType;
+	public AbstractFacetValue() {
 
-	public Facet(String uri) {
-		m_uri = uri;
 	}
 
-	public Facet(String uri, FacetType ftype, DataType dtype) {
-		m_uri = uri;
-		m_facetType = ftype;
-		m_dataType = dtype;
+	public AbstractFacetValue(String value) {
+		m_value = value;
 	}
 
 	/*
@@ -52,17 +58,13 @@ public class Facet implements IFacet {
 	@Override
 	public boolean equals(Object obj) {
 
-		if (obj instanceof Facet) {
+		if (obj instanceof AbstractFacetValue) {
 
-			return ((Facet) obj).getNodeId() == getNodeId();
+			return ((AbstractFacetValue) obj).getNodeId() == getNodeId();
 
 		} else {
 			return false;
 		}
-	}
-
-	public DataType getDataType() {
-		return m_dataType;
 	}
 
 	public String getDomain() {
@@ -73,25 +75,11 @@ public class Facet implements IFacet {
 		return m_nodeId;
 	}
 
-	public FacetType getType() {
-		return m_facetType;
+	public String getValue() {
+		return m_value;
 	}
 
-	public String getUri() {
-		return m_uri;
-	}
-
-	public boolean isDataPropertyBased() {
-		return m_facetType == FacetType.DATAPROPERTY_BASED;
-	}
-
-	public boolean isObjectPropertyBased() {
-		return m_facetType == FacetType.OBJECT_PROPERTY_BASED;
-	}
-
-	public void setDataType(DataType dataType) {
-		m_dataType = dataType;
-	}
+	public abstract boolean isLeave();
 
 	public void setDomain(String domain) {
 		m_domain = domain;
@@ -101,16 +89,12 @@ public class Facet implements IFacet {
 		m_nodeId = nodeId;
 	}
 
-	public void setType(FacetType type) {
-		m_facetType = type;
-	}
-
-	public void setUri(String uri) {
-		m_uri = uri;
+	public void setValue(String value) {
+		m_value = value;
 	}
 
 	@Override
 	public String toString() {
-		return m_uri;
+		return m_value;
 	}
 }

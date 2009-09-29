@@ -15,18 +15,18 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.facets.tree.model;
+package edu.unika.aifb.facetedSearch.facets.tree;
+
+import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
-
-import org.jgrapht.GraphPath;
 
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree.EndPointType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
 /**
@@ -35,44 +35,37 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
  */
 public interface IFacetTree {
 
-	public void addEndPoint(EndPointType type, StaticNode endpoint);
+	public void addEndPoint(int epType, StaticNode endpoint);
 
 	public LinkedList<Edge> getAncestorPath2RangeRoot(double fromNodeId);
 
-	// public Set<Node> getInnerNodes();
-	//
-	// public Set<Node> getLeaves();
-
 	public LinkedList<Edge> getAncestorPath2Root(double fromNodeId);
+
+	public List<Node> getChildren(Node father);
 
 	public String getDomain();
 
-	public HashSet<StaticNode> getEndPoints(EndPointType type);
+	public DoubleOpenHashSet getEndPoints();
 
-	// public Node getRoot();
+	public HashSet<StaticNode> getEndPoints(int type);
 
-	public double getFatherNodeId();
+	public Node getFather(Node child);
 
 	public double getId();
 
-	public Node getNodeById(double id);
-
-	public Set<Node> getNodesByType(NodeType type);
-
-	public GraphPath<Node, Edge> getPath(Node fromNode, Node toNode);
-
 	public Node getRoot();
+
+	public Node getVertex(double id);
+
+	public Set<Node> getVertex(NodeType type);
+
+	public boolean hasChildren(Node father);
 
 	public boolean isEmpty();
 
-	public boolean isEndPoint(Node node);
-
-	public void removeEndPoint(EndPointType type, Node endpoint);
+	public boolean isRankingEnabled();
 
 	public void setDomain(String domain);
 
-	public void setFatherNodeId(double fatherNodeId);
-
-	// public void setEndPoints(HashSet<Node> endPoints);
-
+	public void setRankingEnabled(boolean rankingEnabled);
 }

@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
@@ -33,35 +33,26 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
  */
 public interface IStaticNode extends INode {
 
-	public void addSortedObjects(Collection<FacetValue> facetValues,
+	public void addSortedObjects(
+			Collection<AbstractSingleFacetValue> abstractFacetValues,
 			String source);
 
 	public void addSourceIndivdiual(String ind);
 
-	public void addUnsortedObjects(Collection<FacetValue> facetValues,
+	public void addUnsortedObjects(
+			Collection<AbstractSingleFacetValue> abstractFacetValues,
 			String source);
 
 	public int getCountFV();
 
 	public int getCountS();
 
-	// public int getCountS4Object(String source);
-
-	// public void addUnsortedObjects(String objects);
-
-	// public int getCountS4Objects(Collection<String> sources);
-
 	public int getDepth();
 
 	public int getHeight();
 
-	// public HashMap<String, HashSet<Integer>> getLiteralSources();
-	//
-	// public HashSet<Integer> getLiteralSources(String lit);
-
-	// public String getName();
-
-	public Set<FacetValue> getObjects() throws DatabaseException, IOException;
+	public Set<AbstractSingleFacetValue> getObjects() throws DatabaseException,
+			IOException;
 
 	public int getSize();
 
@@ -69,10 +60,6 @@ public interface IStaticNode extends INode {
 
 	public Set<String> getSourceIndivdiuals() throws DatabaseException,
 			IOException;
-
-	// public void incrementCountFV(int increment);
-	//
-	// public void incrementCountS(int increment);
 
 	public void setCache(SearchSessionCache cache);
 
@@ -84,13 +71,6 @@ public interface IStaticNode extends INode {
 
 	public void setHeight(int height);
 
-	// public void setLiteralCounts(HashMap<String, HashSet<Integer>>
-	// literalCounts);
-
-	// public void setName(String name);
-
 	public void setSize(int size);
-
-	// public void setSortedLiterals(List<String> sortedLiterals);
 
 }

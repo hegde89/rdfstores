@@ -1,11 +1,12 @@
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
+import edu.unika.aifb.facetedSearch.search.datastructure.IResult;
 import edu.unika.aifb.graphindex.data.Table;
 
 /**
  * @author andi
  */
-public class Result {
+public class Result implements IResult {
 
 	private Table<String> m_resultTable;
 	private FacetPage m_facetPage;

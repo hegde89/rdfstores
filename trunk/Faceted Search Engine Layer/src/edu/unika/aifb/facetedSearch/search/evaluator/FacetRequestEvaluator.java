@@ -19,11 +19,18 @@ package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
@@ -32,6 +39,8 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.Refinement
 import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.Searcher;
 
@@ -46,6 +55,7 @@ public class FacetRequestEvaluator extends Searcher {
 	private QueryHistoryManager m_history;
 	private SearchSession m_session;
 	private SearchSessionCache m_cache;
+	private Facet2TreeModelConverter m_facet2TreeModelConverter;
 
 	public FacetRequestEvaluator(IndexReader idxReader, SearchSession session) {
 
@@ -54,6 +64,8 @@ public class FacetRequestEvaluator extends Searcher {
 		m_session = session;
 		m_history = session.getHistory();
 		m_cache = session.getCache();
+		m_facet2TreeModelConverter = (Facet2TreeModelConverter) session
+				.getConverter(Converters.FACET2TREE);
 
 	}
 
@@ -87,7 +99,8 @@ public class FacetRequestEvaluator extends Searcher {
 
 				try {
 
-					resPage = m_cache.getResultPage(m_session.getCurrentPage());
+					resPage = m_cache.getResultPage(m_session
+							.getCurrentPageNum());
 
 				} catch (DatabaseException e) {
 					e.printStackTrace();
@@ -97,18 +110,27 @@ public class FacetRequestEvaluator extends Searcher {
 			} else {
 				// TODO
 			}
-			
+
 			return resPage;
 
 		} else if (facetRequest instanceof RefinementRequest) {
 
 			RefinementRequest refReq = (RefinementRequest) facetRequest;
+			FacetFacetValueTuple newTuple = refReq.getTuple();
+
+			try {
+				refineTable(newTuple.getFacetValue());
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 
 			/*
 			 * update query
 			 */
 			FacetedQuery fquery = m_session.getCurrentQuery();
-			fquery.addFacetFacetValueTuple(refReq.getTuple());
+			fquery.addFacetFacetValueTuple(newTuple);
 
 			m_session.setCurrentQuery(fquery);
 
@@ -118,5 +140,77 @@ public class FacetRequestEvaluator extends Searcher {
 			s_log.error("facetRequest '" + facetRequest + "'not valid!");
 			return ResultPage.EMPTY_PAGE;
 		}
+	}
+
+	private Table<String> mergeJoin(Table<String> left, List<String> right,
+			String col) throws UnsupportedOperationException {
+
+		if (!left.isSorted() || !left.getSortedColumn().equals(col)) {
+			throw new UnsupportedOperationException(
+					"merge join with unsorted tables");
+		}
+
+		List<String> resultColumns = new ArrayList<String>();
+		resultColumns.add(col);
+
+		for (String strg : left.getColumnNames()) {
+			if (!strg.equals(col)) {
+				resultColumns.add(strg);
+			}
+		}
+
+		int lc = left.getColumn(col);
+
+		Table<String> result = new Table<String>(resultColumns, left.rowCount()
+				+ right.size());
+
+		int l = 0, r = 0;
+
+		while ((l < left.rowCount()) && (r < right.size())) {
+
+			String[] lrow = left.getRow(l);
+			String rrow = right.get(r);
+
+			int val = lrow[lc].compareTo(rrow);
+
+			if (val < 0) {
+				l++;
+			} else if (val > 0) {
+				r++;
+			} else {
+
+				result.addRow(lrow);
+
+				int i = l + 1;
+				while ((i < left.rowCount())
+						&& (left.getRow(i)[lc].compareTo(rrow) == 0)) {
+
+					result.addRow(left.getRow(i));
+					i++;
+				}
+
+				l++;
+				r++;
+			}
+		}
+
+		result.setSortedColumn(lc);
+		return result;
+	}
+
+	private Table<String> refineTable(AbstractFacetValue fv)
+			throws DatabaseException, IOException {
+
+		StaticNode node = (StaticNode) m_facet2TreeModelConverter
+				.facetValue2Node(fv);
+
+		Table<String> oldTable = m_session.getCache().getResultTable();
+		oldTable.sort(fv.getDomain(), true);
+
+		List<String> sourceIndividuals = new ArrayList<String>(node
+				.getSourceIndivdiuals());
+		Collections.sort(sourceIndividuals);
+
+		return mergeJoin(oldTable, sourceIndividuals, fv.getDomain());
 	}
 }

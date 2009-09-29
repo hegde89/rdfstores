@@ -2,13 +2,14 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.facetedSearch.search.datastructure.IResultPage;
 import edu.unika.aifb.graphindex.data.Table;
 
 /**
  * 
  * @author andi
  */
-public class ResultPage extends Result {
+public class ResultPage extends Result implements IResultPage {
 
 	public static final ResultPage EMPTY_PAGE = new ResultPage();
 

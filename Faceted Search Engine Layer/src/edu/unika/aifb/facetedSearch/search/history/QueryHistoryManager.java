@@ -17,6 +17,8 @@
  */
 package edu.unika.aifb.facetedSearch.search.history;
 
+import org.apache.jcs.access.exception.CacheException;
+
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
@@ -24,17 +26,24 @@ import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 
 /**
  * @author andi
  * 
  */
 public class QueryHistoryManager {
+
+	private static QueryHistoryManager s_instance;
+
+	public static QueryHistoryManager getInstance(SearchSession session) {
+		return s_instance == null ? s_instance = new QueryHistoryManager(
+				session) : s_instance;
+	}
 
 	/*
 	 * map
@@ -45,16 +54,16 @@ public class QueryHistoryManager {
 	 * bindings
 	 */
 	private EntryBinding<Result> m_resBinding;
-	private EntryBinding<Double> m_doubleBinding;
 
+	private EntryBinding<Double> m_doubleBinding;
 	/*
 	 * session stuff
 	 */
 	@SuppressWarnings("unused")
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
-	public QueryHistoryManager(SearchSession session) {
+	private SearchSessionCache m_cache;
+	private QueryHistoryManager(SearchSession session) {
 
 		m_session = session;
 		m_cache = session.getCache();
@@ -70,13 +79,13 @@ public class QueryHistoryManager {
 		}
 	}
 
-	public void clean() throws DatabaseException {
+	public void clean() throws DatabaseException, CacheException {
 
 		m_cache.clean(CleanType.HISTORY);
 		reOpen();
 	}
 
-	public void close() throws DatabaseException {
+	public void close() throws DatabaseException, CacheException {
 
 		m_cache.clean(CleanType.HISTORY);
 		m_history = null;
@@ -94,7 +103,7 @@ public class QueryHistoryManager {
 	private void init() throws IllegalArgumentException, DatabaseException {
 
 		StoredClassCatalog cata = new StoredClassCatalog(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.CLASS));
+				.getDB(FacetEnvironment.DatabaseName.CLASS));
 
 		/*
 		 * bindings
@@ -106,7 +115,7 @@ public class QueryHistoryManager {
 		 * stored map
 		 */
 		m_history = new StoredMap<Double, Result>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FHIST_CACHE),
+				.getDB(FacetEnvironment.DatabaseName.FHIST_CACHE),
 				m_doubleBinding, m_resBinding, true);
 
 	}
@@ -118,7 +127,7 @@ public class QueryHistoryManager {
 	public void reOpen() {
 
 		m_history = new StoredMap<Double, Result>(m_cache
-				.getDB(FacetDbUtils.DatabaseNames.FHIST_CACHE),
+				.getDB(FacetEnvironment.DatabaseName.FHIST_CACHE),
 				m_doubleBinding, m_resBinding, true);
 	}
 }

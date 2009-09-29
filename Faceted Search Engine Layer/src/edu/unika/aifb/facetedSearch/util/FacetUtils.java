@@ -60,12 +60,29 @@ import org.openrdf.model.vocabulary.XMLSchema;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class FacetUtils {
 
 	private static Logger s_log = Logger.getLogger(FacetUtils.class);
 	private static final String LIST_DELIM = "//";
+
+	public static int getEndPointType4Node(Node endpoint) {
+
+		int epType;
+
+		if (endpoint.getFacet().getType() == FacetType.DATAPROPERTY_BASED) {
+			epType = FacetEnvironment.EndPointType.DATA_PROPERTY;
+		} else if (endpoint.getFacet().getType() == FacetType.OBJECT_PROPERTY_BASED) {
+			epType = FacetEnvironment.EndPointType.OBJECT_PROPERTY;
+		} else {
+			epType = FacetEnvironment.EndPointType.RDF_PROPERTY;
+		}
+
+		return epType;
+	}
 
 	public static DataType getLiteralDataType(String literalString) {
 
@@ -139,7 +156,8 @@ public class FacetUtils {
 
 	public static String getLiteralValue(String lit) {
 
-		return lit.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM) == -1 ? lit
+		return lit.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM) == -1
+				? lit
 				: lit
 						.substring(
 								0,

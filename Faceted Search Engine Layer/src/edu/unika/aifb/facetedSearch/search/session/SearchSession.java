@@ -17,8 +17,12 @@
  */
 package edu.unika.aifb.facetedSearch.search.session;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
+
+import org.apache.jcs.access.exception.CacheException;
+import org.apache.jcs.engine.control.CompositeCacheManager;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
@@ -26,8 +30,12 @@ import com.sleepycat.je.EnvironmentLockedException;
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
-import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
-import edu.unika.aifb.facetedSearch.facets.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.algo.ranking.impl.RankingDelegator;
+import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
+import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
+import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
@@ -35,6 +43,10 @@ import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
 public class SearchSession {
+
+	public enum Converters {
+		FACET2TREE, TREE2FACET
+	}
 
 	public enum DefaultValues {
 		WEIGHT, DEPTH_K, NUMBER_OF_RESULTS_PER_PAGE, MAX_SESSIONS
@@ -63,7 +75,7 @@ public class SearchSession {
 	/*
 	 * 
 	 */
-	private int m_currentPage;
+	private int m_currentPageNum;
 	private FacetedQuery m_currentQuery;
 
 	/*
@@ -81,6 +93,11 @@ public class SearchSession {
 	 * history
 	 */
 	private QueryHistoryManager m_history;
+
+	/*
+	 * 
+	 */
+	private FacetPageManager m_fpageManager;
 
 	protected SearchSession(GenericRdfStore store, int id, Properties props) {
 
@@ -126,6 +143,8 @@ public class SearchSession {
 
 		} catch (DatabaseException e) {
 			e.printStackTrace();
+		} catch (CacheException e) {
+			e.printStackTrace();
 		}
 
 		m_facetTreeDelegator.clean();
@@ -143,6 +162,8 @@ public class SearchSession {
 			m_history.clean();
 
 		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (CacheException e) {
 			e.printStackTrace();
 		}
 
@@ -162,8 +183,30 @@ public class SearchSession {
 		return m_cache;
 	}
 
-	public int getCurrentPage() {
-		return m_currentPage;
+	public AbstractConverter getConverter(Converters type) {
+
+		AbstractConverter converter;
+
+		switch (type) {
+			case FACET2TREE : {
+				converter = Facet2TreeModelConverter.getInstance(this);
+				break;
+			}
+			case TREE2FACET : {
+				converter = Tree2FacetModelConverter.getInstance(this);
+				break;
+			}
+			default : {
+				converter = null;
+				break;
+			}
+		}
+
+		return converter;
+	}
+
+	public int getCurrentPageNum() {
+		return m_currentPageNum;
 	}
 
 	public FacetedQuery getCurrentQuery() {
@@ -188,6 +231,10 @@ public class SearchSession {
 		}
 	}
 
+	public FacetPageManager getFacetPageManager() {
+		return m_fpageManager;
+	}
+
 	public QueryHistoryManager getHistory() {
 		return m_history;
 	}
@@ -204,52 +251,56 @@ public class SearchSession {
 
 		switch (key) {
 
-			case ACTION : {
-				return m_props.getProperty(FacetEnvironment.ACTION);
-			}
 			case CREATE_DATA_EXTENSIONS : {
 				return m_props
-						.getProperty(FacetEnvironment.CREATE_DATA_EXTENSIONS);
+						.getProperty(FacetEnvironment.Property.CREATE_DATA_EXTENSIONS);
 			}
 			case CREATE_DATA_INDEX : {
-				return m_props.getProperty(FacetEnvironment.CREATE_DATA_INDEX);
+				return m_props
+						.getProperty(FacetEnvironment.Property.CREATE_DATA_INDEX);
 			}
 			case CREATE_KEYWORD_INDEX : {
 				return m_props
-						.getProperty(FacetEnvironment.CREATE_KEYWORD_INDEX);
+						.getProperty(FacetEnvironment.Property.CREATE_KEYWORD_INDEX);
 			}
 			case CREATE_STRUCTURE_INDEX : {
 				return m_props
-						.getProperty(FacetEnvironment.CREATE_STRUCTURE_INDEX);
+						.getProperty(FacetEnvironment.Property.CREATE_STRUCTURE_INDEX);
 			}
 			case FACETS_ENABLED : {
-				return m_props.getProperty(FacetEnvironment.FACETS_ENABLED);
+				return m_props
+						.getProperty(FacetEnvironment.Property.FACETS_ENABLED);
 			}
 			case FILES : {
-				return m_props.getProperty(FacetEnvironment.FILES);
+				return m_props.getProperty(FacetEnvironment.Property.FILES);
 			}
 			case IGNORE_DATATYPES : {
-				return m_props.getProperty(FacetEnvironment.IGNORE_DATATYPES);
+				return m_props
+						.getProperty(FacetEnvironment.Property.IGNORE_DATATYPES);
 			}
 			case INDEX_DIRECTORY : {
-				return m_props.getProperty(FacetEnvironment.INDEX_DIRECTORY);
+				return m_props
+						.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY);
 			}
 			case NEIGHBORHOOD_SIZE : {
-				return m_props.getProperty(FacetEnvironment.NEIGHBORHOOD_SIZE);
+				return m_props
+						.getProperty(FacetEnvironment.Property.NEIGHBORHOOD_SIZE);
 			}
 			case ONTO_LANGUAGE : {
-				return m_props.getProperty(FacetEnvironment.ONTO_LANGUAGE);
+				return m_props
+						.getProperty(FacetEnvironment.Property.ONTO_LANGUAGE);
 			}
 			case RANKING_ENABLED : {
-				return m_props.getProperty(FacetEnvironment.RANKING_ENABLED);
+				return m_props
+						.getProperty(FacetEnvironment.Property.RANKING_ENABLED);
 			}
 			case STRUCTURE_BASED_DATA_PARTIONING : {
 				return m_props
-						.getProperty(FacetEnvironment.STRUCTURE_BASED_DATA_PARTIONING);
+						.getProperty(FacetEnvironment.Property.STRUCTURE_BASED_DATA_PARTIONING);
 			}
 			case STRUCTURE_INDEX_PATH_LENGTH : {
 				return m_props
-						.getProperty(FacetEnvironment.STRUCTURE_INDEX_PATH_LENGTH);
+						.getProperty(FacetEnvironment.Property.STRUCTURE_INDEX_PATH_LENGTH);
 			}
 			default :
 				return null;
@@ -266,8 +317,9 @@ public class SearchSession {
 		m_rankingDelegator = RankingDelegator.getInstance(this);
 		m_constructionDelegator = ConstructionDelegator.getInstance(this);
 
-		m_history = new QueryHistoryManager(this);
-		
+		m_history = QueryHistoryManager.getInstance(this);
+		m_fpageManager = FacetPageManager.getInstance(this);
+
 		initCache();
 	}
 
@@ -275,6 +327,15 @@ public class SearchSession {
 
 		try {
 
+			Properties cacheProps = new Properties();
+			cacheProps.load(new FileReader(m_props
+					.getProperty(FacetEnvironment.Property.CACHE_DIR)));
+
+			CompositeCacheManager compositeCacheManager = CompositeCacheManager
+					.getUnconfiguredInstance();
+			compositeCacheManager.configure(cacheProps);
+
+			m_cache.setCompositeCacheManager(compositeCacheManager);
 			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
 					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true));
 
@@ -288,7 +349,7 @@ public class SearchSession {
 	}
 
 	public void setCurrentPage(int currentPage) {
-		m_currentPage = currentPage;
+		m_currentPageNum = currentPage;
 	}
 
 	public void setCurrentQuery(FacetedQuery currentQuery) {

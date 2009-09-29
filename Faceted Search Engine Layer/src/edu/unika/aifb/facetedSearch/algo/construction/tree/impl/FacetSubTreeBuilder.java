@@ -33,32 +33,32 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
-import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.index.StructureIndex;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * @author andi
  * 
  */
-public class FacetTreeBuilder implements IBuilder {
+public class FacetSubTreeBuilder implements IBuilder {
 
-	private static Logger s_log = Logger.getLogger(FacetTreeBuilder.class);
+	private static Logger s_log = Logger.getLogger(FacetSubTreeBuilder.class);
 
 	/*
 	 * 
 	 */
 	private SearchSession m_session;
-	@SuppressWarnings("unused")
-	private SearchSessionCache m_cache;
+
+	/*
+	 * 
+	 */
+	private BuilderHelper m_helper;
 
 	/*
 	 * 
@@ -67,95 +67,90 @@ public class FacetTreeBuilder implements IBuilder {
 	private Int2ObjectOpenHashMap<StaticNode> m_paths;
 
 	/*
-	 * Indices
+	 * 
 	 */
 	private FacetIndex m_facetIndex;
-	private StructureIndex m_structureIndex;
 
-	/*
-	 * 
-	 */
-	private FacetTreeDelegator m_treeDelegator;
-
-	/*
-	 * 
-	 */
-	private BuilderHelper m_helper;
-
-	public FacetTreeBuilder(SearchSession session, BuilderHelper helper) {
+	public FacetSubTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
 		m_helper = helper;
-		m_cache = session.getCache();
-
-		m_treeDelegator = (FacetTreeDelegator) session
-				.getDelegator(Delegators.TREE);
 
 		init();
 	}
 
-	public boolean build(Table<String> results, int column)
-			throws StorageException, IOException, DatabaseException,
-			CacheException {
+	public boolean build(FacetTree tree, StaticNode node)
+			throws DatabaseException, IOException, CacheException,
+			StorageException {
 
 		long time1 = System.currentTimeMillis();
 
-		FacetTree newTree = new FacetTree();
-		newTree.setDomain(results.getColumnName(column));
+		if (node.getFacet().isObjectPropertyBased()) {
 
-		Set<StaticNode> newLeaves = new HashSet<StaticNode>();
-		Iterator<String[]> iter = results.iterator();
+			Set<StaticNode> newLeaves = new HashSet<StaticNode>();
+			Iterator<AbstractSingleFacetValue> indIter = node.getObjects()
+					.iterator();
 
-		while (iter.hasNext()) {
+			if (!(node instanceof FacetValueNode) && indIter.hasNext()) {
 
-			FacetTree currentIndexedTree;
+				while (indIter.hasNext()) {
 
-			String resItem = iter.next()[column];
-			String sourceExtension = m_structureIndex.getExtension(resItem);
+					AbstractSingleFacetValue fv = indIter.next();
+					String ext = fv.getSourceExt();
 
-			if (!m_indexedTrees.containsKey(sourceExtension)) {
+					FacetTree currentIndexedTree;
 
-				FacetTree indexedTree = m_facetIndex.getTree(sourceExtension);
-				m_indexedTrees.put(sourceExtension.hashCode(), indexedTree);
+					if (!m_indexedTrees.containsKey(ext)) {
 
-				currentIndexedTree = indexedTree;
+						FacetTree indexedTree = m_facetIndex.getTree(ext);
+						m_indexedTrees.put(ext.hashCode(), indexedTree);
+
+						currentIndexedTree = indexedTree;
+
+					} else {
+
+						currentIndexedTree = m_indexedTrees.get(ext);
+
+					}
+
+					Collection<Double> oldLeaves = m_facetIndex.getLeaves(fv);
+
+					for (double leave : oldLeaves) {
+
+						StaticNode newLeave = m_helper.insertPathAtNode(tree,
+								currentIndexedTree, leave, node, m_paths);
+						newLeaves.add(newLeave);
+
+						m_helper.updateNodeCounts(tree, fv.getValue(), ext,
+								newLeave);
+
+					}
+				}
+
+				// prune ranges
+				tree = m_helper.pruneRanges(tree, newLeaves);
+
+				m_helper
+						.attachRDFTypes(
+								tree,
+								tree
+										.getEndPoints(FacetEnvironment.EndPointType.RDF_PROPERTY));
+
+				long time2 = System.currentTimeMillis();
+
+				s_log.debug("constructed subtree for node '" + node + "' in "
+						+ (time2 - time1) + " ms!");
+
+				return true;
 
 			} else {
-
-				currentIndexedTree = m_indexedTrees.get(sourceExtension);
+				return false;
 			}
-
-			Collection<Double> oldLeaves = m_facetIndex.getLeaves(
-					sourceExtension, resItem);
-
-			for (double leave : oldLeaves) {
-
-				StaticNode newLeave = m_helper.insertPathAtRoot(newTree,
-						currentIndexedTree, leave, m_paths);
-				newLeaves.add(newLeave);
-
-				m_helper.updateNodeCounts(newTree, resItem, sourceExtension,
-						newLeave);
-
-			}
+		} else {
+			s_log.error("facet " + node.getFacet() + " has invalid facetType!");
+			return false;
 		}
-
-		// prune ranges
-		newTree = m_helper.pruneRanges(newTree, newLeaves);
-
-		m_helper.attachRDFTypes(newTree, newTree
-				.getEndPoints(FacetEnvironment.EndPointType.RDF_PROPERTY));
-
-		long time2 = System.currentTimeMillis();
-
-		s_log.debug("constructed tree for domain '"
-				+ results.getColumnName(column) + "' in " + (time2 - time1)
-				+ " ms!");
-
-		m_treeDelegator.storeTree(results.getColumnName(column), newTree);
-		return true;
 	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -163,16 +158,20 @@ public class FacetTreeBuilder implements IBuilder {
 	 */
 	public void clean() {
 
-		m_indexedTrees.clear();
 		m_paths.clear();
+		m_indexedTrees.clear();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder#close()
+	 */
 	public void close() {
 
 		clean();
-		m_indexedTrees = null;
 		m_paths = null;
-
+		m_indexedTrees = null;
 	}
 
 	private void init() {
@@ -184,8 +183,6 @@ public class FacetTreeBuilder implements IBuilder {
 
 			m_facetIndex = (FacetIndex) m_session.getStore().getIndex(
 					IndexName.FACET_INDEX);
-			m_structureIndex = (StructureIndex) m_session.getStore().getIndex(
-					IndexName.STRUCTURE_INDEX);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

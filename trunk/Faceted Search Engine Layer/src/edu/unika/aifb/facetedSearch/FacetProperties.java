@@ -17,18 +17,11 @@
  */
 package edu.unika.aifb.facetedSearch;
 
+
 /**
  * @author andi
  * 
  */
-public abstract class Delegator {
-
-	public static final Delegator NULL = null;
-
-	public abstract void clean();
-
-	public abstract void close();
-
-	public abstract boolean isOpen();
+public class FacetProperties{
 
 }

@@ -15,12 +15,12 @@
 * You should have received a copy of the GNU General Public License 
 * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
 */
-package edu.unika.aifb.facetedSearch.facets.model;
+package edu.unika.aifb.facetedSearch.facets.converter;
 
 /**
  * @author andi
  *
  */
-public interface ILiteral extends IAbstractFacetValue {
+public abstract class AbstractConverter {
 
 }

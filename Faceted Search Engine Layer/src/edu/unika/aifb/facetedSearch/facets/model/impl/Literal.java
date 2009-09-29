@@ -17,8 +17,6 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import java.io.Serializable;
-
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import edu.unika.aifb.facetedSearch.facets.model.ILiteral;
@@ -27,24 +25,27 @@ import edu.unika.aifb.facetedSearch.facets.model.ILiteral;
  * @author andi
  * 
  */
-public class Literal extends FacetValue
+public class Literal extends AbstractSingleFacetValue
 		implements
 			ILiteral,
-			Comparable<Literal>,
-			Serializable {
+			Comparable<Literal> {
 
-	private static final long serialVersionUID = -5358821757244268737L;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -410835979973111667L;
 
-	private String m_value;
+	/*
+	 * 
+	 */
 	private Object m_parsedLiteral;
 
 	public Literal() {
 
 	}
-
 	public Literal(String value, Object parsedLit) {
 
-		m_value = value;
+		super(value);
 		m_parsedLiteral = parsedLit;
 
 	}
@@ -75,26 +76,12 @@ public class Literal extends FacetValue
 		return 0;
 	}
 
-	@Override
-	public boolean equals(Object obj) {
-
-		if (obj instanceof Literal) {
-			return m_value.equals(((Literal) obj).getValue());
-		} else {
-			return false;
-		}
-	}
-
 	public Object getParsedLiteral() {
 		return m_parsedLiteral;
 	}
 
+
 	public void setParsedLiteral(Object parsedLiteral) {
 		m_parsedLiteral = parsedLiteral;
-	}
-
-	@Override
-	public String toString() {
-		return m_value;
 	}
 }

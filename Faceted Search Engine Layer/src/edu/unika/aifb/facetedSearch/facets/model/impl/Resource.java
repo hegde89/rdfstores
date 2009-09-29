@@ -17,54 +17,17 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import edu.unika.aifb.facetedSearch.facets.model.IFacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.IResource;
 
 /**
  * @author andi
  * 
  */
-public class FacetValue implements IFacetValue {
+public class Resource extends AbstractSingleFacetValue implements IResource {
 
-	private String m_domain;
-	private double m_nodeId;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2595502428738428025L;
 
-	private String m_value;
-	private String m_ext;
-
-	public String getDomain() {
-		return m_domain;
-	}
-
-	public String getExt() {
-		return m_ext;
-	}
-
-	public double getNodeId() {
-		return m_nodeId;
-	}
-
-	public String getValue() {
-		return m_value;
-	}
-
-	public void setDomain(String domain) {
-		m_domain = domain;
-	}
-
-	public void setExt(String ext) {
-		m_ext = ext;
-	}
-
-	public void setNodeId(double nodeId) {
-		m_nodeId = nodeId;
-	}
-
-	public void setValue(String value) {
-		m_value = value;
-	}
-
-	@Override
-	public String toString() {
-		return m_value;
-	}
 }

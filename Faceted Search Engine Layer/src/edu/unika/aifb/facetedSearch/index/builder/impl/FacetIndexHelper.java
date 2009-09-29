@@ -88,7 +88,7 @@ public class FacetIndexHelper {
 		s_structureIndex.close();
 		s_cacheDB.close();
 
-		s_env.removeDatabase(null, FacetDbUtils.DatabaseNames.FH_CACHE);
+		s_env.removeDatabase(null, FacetEnvironment.DatabaseName.FH_CACHE);
 		s_idxDirectory.getDirectory(IndexDirectory.FACET_TEMP_DIR).delete();
 
 		s_classes = null;
@@ -391,7 +391,7 @@ public class FacetIndexHelper {
 		config.setDeferredWrite(true);
 
 		s_cacheDB = s_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.FH_CACHE, config);
+				FacetEnvironment.DatabaseName.FH_CACHE, config);
 
 		PreloadConfig pc = new PreloadConfig();
 		pc.setMaxMillisecs(FacetEnvironment.DefaultValue.PRELOAD_TIME);
@@ -399,7 +399,7 @@ public class FacetIndexHelper {
 
 		// Create the bindings
 		Database classDb = s_env.openDatabase(null,
-				FacetDbUtils.DatabaseNames.CLASS, config);
+				FacetEnvironment.DatabaseName.CLASS, config);
 		StoredClassCatalog cata = new StoredClassCatalog(classDb);
 
 		s_stringBinding = new SerialBinding<String>(cata, String.class);

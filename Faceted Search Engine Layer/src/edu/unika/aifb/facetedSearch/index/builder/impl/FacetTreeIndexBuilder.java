@@ -44,8 +44,8 @@ import com.sleepycat.je.EnvironmentLockedException;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.RDF;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge.EdgeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
@@ -618,19 +618,19 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		dbConfig2.setDeferredWrite(true);
 
 		// Databases without duplicates
-		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
+		m_treeDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.TREE,
 				dbConfig);
 
 		// Databases with duplicates
-		m_leaveDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.LEAVE,
+		m_leaveDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.LEAVE,
 				dbConfig2);
 
 		m_objectDB = m_env2.openDatabase(null,
-				FacetDbUtils.DatabaseNames.OBJECT, dbConfig2);
+				FacetEnvironment.DatabaseName.OBJECT, dbConfig2);
 
 		// Create the bindings
 
-		m_classDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
+		m_classDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.CLASS,
 				dbConfig);
 
 		m_treeBinding = new SerialBinding<FacetTree>(new StoredClassCatalog(
@@ -1026,7 +1026,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 	private FacetTree prunePropertyHierarchy(FacetTree currentTree) {
 
 		// get leaves
-		Set<Node> leaves = currentTree.getNodesByType(NodeType.LEAVE);
+		Set<Node> leaves = currentTree.getVertex(NodeType.LEAVE);
 		Iterator<Node> iter = leaves.iterator();
 
 		while (iter.hasNext()) {
@@ -1129,7 +1129,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			throws DatabaseException {
 
 		// get leaves
-		Set<Node> leaves = currentTree.getNodesByType(NodeType.LEAVE);
+		Set<Node> leaves = currentTree.getVertex(NodeType.LEAVE);
 		Iterator<Node> iter = leaves.iterator();
 
 		while (iter.hasNext()) {

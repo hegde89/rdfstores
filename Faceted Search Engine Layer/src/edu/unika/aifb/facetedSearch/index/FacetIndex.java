@@ -38,10 +38,10 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValue;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.index.db.FacetValueBinding;
+import edu.unika.aifb.facetedSearch.index.db.AbstractSingleFacetValueBinding;
 import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
@@ -79,7 +79,7 @@ public class FacetIndex extends Index {
 	/*
 	 * Maps ...
 	 */
-	private StoredMap<String, FacetValue> m_objectMap;
+	private StoredMap<String, AbstractSingleFacetValue> m_objectMap;
 	private StoredMap<String, Double> m_leaveMap;
 
 	/*
@@ -87,7 +87,7 @@ public class FacetIndex extends Index {
 	 */
 	private SerialBinding<FacetTree> m_treeBinding;
 	private EntryBinding<Double> m_doubleBinding;
-	private EntryBinding<FacetValue> m_fvBinding;
+	private EntryBinding<AbstractSingleFacetValue> m_fvBinding;
 	private EntryBinding<String> m_strgBinding;
 
 	public FacetIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig)
@@ -184,14 +184,14 @@ public class FacetIndex extends Index {
 		}
 	}
 
-	public Collection<Double> getLeaves(FacetValue fv)
+	public Collection<Double> getLeaves(AbstractSingleFacetValue fv)
 			throws DatabaseException, IOException {
 
 		if (m_leaveDB == null) {
 			init();
 		}
 
-		return m_leaveMap.duplicates(fv.getExt() + fv.getValue());
+		return m_leaveMap.duplicates(fv.getSourceExt() + fv.getValue());
 	}
 
 	public Collection<Double> getLeaves(String extension, String srcInd)
@@ -204,34 +204,9 @@ public class FacetIndex extends Index {
 		return m_leaveMap.duplicates(extension + srcInd);
 	}
 
-	// public LuceneIndexStorage getLuceneIndex(FacetIndexName idxName)
-	// throws EnvironmentLockedException, DatabaseException, IOException {
-	//
-	// switch (idxName) {
-	//
-	// case OBJECT: {
-	//
-	// if (m_objectIndex == null) {
-	// initIndices();
-	// }
-	//
-	// return m_objectIndex;
-	// }
-	// case SORTED_LITERALS: {
-	//
-	// if (m_sortedLitIndex == null) {
-	// initIndices();
-	// }
-	//
-	// return m_sortedLitIndex;
-	// }
-	// default:
-	// return null;
-	// }
-	// }
-
-	public Collection<FacetValue> getObjects(Node leave, String sourceInd)
-			throws EnvironmentLockedException, DatabaseException, IOException {
+	public Collection<AbstractSingleFacetValue> getObjects(Node leave,
+			String sourceInd) throws EnvironmentLockedException,
+			DatabaseException, IOException {
 
 		if (m_objectDB == null) {
 			init();
@@ -274,7 +249,7 @@ public class FacetIndex extends Index {
 		dbConfig.setSortedDuplicates(false);
 		dbConfig.setDeferredWrite(true);
 		dbConfig.setReadOnly(true);
-		m_treeDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.TREE,
+		m_treeDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.TREE,
 				dbConfig);
 
 		/*
@@ -287,11 +262,11 @@ public class FacetIndex extends Index {
 		dbConfig2.setDeferredWrite(true);
 		dbConfig2.setReadOnly(true);
 
-		m_leaveDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.LEAVE,
-				dbConfig2);
+		m_leaveDB = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.LEAVE, dbConfig2);
 
 		m_objectDB = m_env2.openDatabase(null,
-				FacetDbUtils.DatabaseNames.OBJECT, dbConfig2);
+				FacetEnvironment.DatabaseName.OBJECT, dbConfig2);
 
 		m_dbs = new ArrayList<Database>();
 		m_dbs.add(m_treeDB);
@@ -305,8 +280,8 @@ public class FacetIndex extends Index {
 			db.preload(pc);
 		}
 
-		m_classDB = m_env.openDatabase(null, FacetDbUtils.DatabaseNames.CLASS,
-				dbConfig);
+		m_classDB = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.CLASS, dbConfig);
 
 		/*
 		 * Create the bindings
@@ -315,32 +290,17 @@ public class FacetIndex extends Index {
 				m_classDB), FacetTree.class);
 		m_doubleBinding = TupleBinding.getPrimitiveBinding(Double.class);
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
-		m_fvBinding = new FacetValueBinding();
+		m_fvBinding = new AbstractSingleFacetValueBinding();
 
 		/*
 		 * Create maps on top of dbs ...
 		 */
-		m_objectMap = new StoredMap<String, FacetValue>(m_objectDB,
-				m_strgBinding, m_fvBinding, true);
+		m_objectMap = new StoredMap<String, AbstractSingleFacetValue>(
+				m_objectDB, m_strgBinding, m_fvBinding, true);
 
 		m_leaveMap = new StoredMap<String, Double>(m_objectDB, m_strgBinding,
 				m_doubleBinding, true);
 
 		s_log.debug("got db connection!");
 	}
-
-	// private void initIndices() throws IOException {
-	//
-	// m_objectIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
-	// IndexDirectory.FACET_OBJECTS_DIR, false), m_idxReader
-	// .getCollector());
-	//
-	// m_objectIndex.initialize(true, true);
-	//
-	// m_sortedLitIndex = new LuceneIndexStorage(m_idxDirectory.getDirectory(
-	// IndexDirectory.FACET_LITERALS_DIR, false), m_idxReader
-	// .getCollector());
-	//
-	// m_sortedLitIndex.initialize(true, true);
-	// }
 }

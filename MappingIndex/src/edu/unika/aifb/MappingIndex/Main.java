@@ -48,7 +48,7 @@ public class Main {
 			Importer importer = new NxImporter();
 			importer.addImports(files);
 
-			MappingIndexCreator mic = new MappingIndexCreator(new IndexDirectory(directory), source, destination);
+			MappingIndexCreator mic = new MappingIndexCreator(directory, source, destination);
 			
 			mic.setImporter(importer);
 			mic.create();

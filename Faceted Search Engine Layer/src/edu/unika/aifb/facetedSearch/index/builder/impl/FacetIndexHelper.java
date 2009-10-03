@@ -37,11 +37,12 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeContent;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -191,8 +192,8 @@ public class FacetIndexHelper {
 	public HashSet<Node> getLeaves(String extension, String object)
 			throws DatabaseException, IOException {
 
-		return FacetDbUtils.getAllAsSet(s_leaveDB, FacetDbUtils
-				.getKey(new String[] { extension, object }), s_nodeBinding);
+		return FacetDbUtils.getAllAsSet(s_leaveDB, extension + object,
+				s_nodeBinding);
 	}
 
 	// public LiteralList getLiterals(String extension, String property)
@@ -323,7 +324,8 @@ public class FacetIndexHelper {
 			DatabaseException {
 
 		String superProperty = null;
-		FacetType ftype = isDataProperty(property) ? FacetType.DATAPROPERTY_BASED
+		int ftype = isDataProperty(property)
+				? FacetType.DATAPROPERTY_BASED
 				: FacetType.OBJECT_PROPERTY_BASED;
 
 		if ((superProperty = FacetDbUtils.get(s_cacheDB, "superProperty_"
@@ -357,12 +359,14 @@ public class FacetIndexHelper {
 			return null;
 		} else {
 
-			Node superPropertyNode = new Node(superProperty, this
-					.isDataProperty(property) ? NodeContent.DATA_PROPERTY
+			Node superPropertyNode = new Node();
+			superPropertyNode.setValue(superProperty);
+			superPropertyNode.setContent(isDataProperty(property)
+					? NodeContent.DATA_PROPERTY
 					: NodeContent.OBJECT_PROPERTY);
 
 			superPropertyNode.setFacet(superPropertyNode.makeFacet(
-					superProperty, ftype, null));
+					superProperty, ftype, DataType.NOT_SET));
 
 			return superPropertyNode;
 		}

@@ -15,21 +15,30 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.index.db;
+package edu.unika.aifb.facetedSearch.index.db.binding;
 
+import java.io.IOException;
+
+import com.sleepycat.bind.serial.SerialInput;
+import com.sleepycat.bind.serial.SerialOutput;
+import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.bind.tuple.TupleInput;
 import com.sleepycat.bind.tuple.TupleOutput;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Resource;
 
 /**
  * @author andi
  * 
  */
-public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingleFacetValue> {
+public class LiteralBinding extends TupleBinding<Literal> {
+
+	private StoredClassCatalog m_cata;
+
+	public LiteralBinding(StoredClassCatalog cata) {
+		m_cata = cata;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -39,29 +48,29 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 	 * .tuple.TupleInput)
 	 */
 	@Override
-	public AbstractSingleFacetValue entryToObject(TupleInput input) {
+	public Literal entryToObject(TupleInput input) {
 
-		AbstractSingleFacetValue fv;
+		Object parsedLiteral = null;
 
-		Boolean isResource = input.readBoolean();
-		String value = input.readString();
-		String sourceExt = input.readString();
-		String rangeExt = input.readString();
-		String domain = input.readString();
+		try {
+			SerialInput serialInput = new SerialInput(input, m_cata);
+			parsedLiteral = serialInput.readObject();
 
-		if (isResource) {
-			fv = new Resource();
-		} else {
-			fv = new Literal();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
 		}
 
-		fv.setIsResource(isResource);
-		fv.setValue(value);
-		fv.setSourceExt(sourceExt);
-		fv.setRangeExt(rangeExt);
-		fv.setDomain(domain);
+		String value = input.readString();
+		String ext = input.readString();
 
-		return fv;
+		Literal lit = new Literal();
+		lit.setParsedLiteral(parsedLiteral);
+		lit.setValue(value);
+		lit.setSourceExt(ext);
+
+		return lit;
 	}
 
 	/*
@@ -72,14 +81,19 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 	 * com.sleepycat.bind.tuple.TupleOutput)
 	 */
 	@Override
-	public void objectToEntry(AbstractSingleFacetValue object,
-			TupleOutput output) {
+	public void objectToEntry(Literal object, TupleOutput output) {
 
-		output.writeBoolean(object.isResource());
+		try {
+
+			SerialOutput serialOut = new SerialOutput(output, m_cata);
+			serialOut.writeObject(object.getParsedLiteral());
+
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+
 		output.writeString(object.getValue());
 		output.writeString(object.getSourceExt());
-		output.writeString(object.getRangeExt());
-		output.writeString(object.getDomain());
 
 	}
 }

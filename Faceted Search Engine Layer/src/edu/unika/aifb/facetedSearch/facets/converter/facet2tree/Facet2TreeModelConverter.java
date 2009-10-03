@@ -55,10 +55,7 @@ public class Facet2TreeModelConverter extends AbstractConverter {
 	}
 
 	private Node getNode(String domain, double nodeID) {
-
-		// m_treeDelegator.get
-
-		return null;
+		return m_treeDelegator.getNode(domain, nodeID);
 	}
 
 	private void init() {

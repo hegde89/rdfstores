@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.ranking.impl;
+package edu.unika.aifb.facetedSearch.algo.ranking;
 
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;

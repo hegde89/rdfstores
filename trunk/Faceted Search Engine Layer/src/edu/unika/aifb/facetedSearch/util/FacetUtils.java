@@ -84,7 +84,7 @@ public class FacetUtils {
 		return epType;
 	}
 
-	public static DataType getLiteralDataType(String literalString) {
+	public static int getLiteralDataType(String literalString) {
 
 		if (Util.isDataValue(literalString)) {
 
@@ -141,16 +141,16 @@ public class FacetUtils {
 				} catch (IllegalArgumentException e) {
 
 					s_log.error("datatype " + last_token + " is no valid URI!");
-					return null;
+					return DataType.NOT_SET;
 				}
 			} else {
 
 				s_log.debug("found no datatype attached to literal.");
-				return null;
+				return DataType.NOT_SET;
 			}
 		} else {
 
-			return null;
+			return DataType.NOT_SET;
 		}
 	}
 

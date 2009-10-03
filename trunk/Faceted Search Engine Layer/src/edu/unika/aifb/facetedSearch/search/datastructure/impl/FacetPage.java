@@ -17,80 +17,87 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+
+import java.io.Serializable;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections.OrderedMapIterator;
 import org.apache.commons.collections.map.LinkedMap;
 
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.facetedSearch.search.datastructure.IFacetPage;
 
 /**
  * @author andi
  * 
  */
-public class FacetPage implements IFacetPage {
+public class FacetPage implements IFacetPage, Serializable {
 
-	private HashMap<String, LinkedMap> m_facetFacetValuesLists;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8092068693656342589L;
+
+	/*
+	 * 
+	 */
+	private Int2ObjectOpenHashMap<String> m_domainHash2domainStringMap;
+	private Int2ObjectOpenHashMap<LinkedMap> m_facet2FacetValuesLists;
 
 	public FacetPage() {
-		m_facetFacetValuesLists = new HashMap<String, LinkedMap>();
+
+		m_domainHash2domainStringMap = new Int2ObjectOpenHashMap<String>();
+		m_facet2FacetValuesLists = new Int2ObjectOpenHashMap<LinkedMap>();
 	}
 
 	public void addDomain(String domain) {
 
-		if (!m_facetFacetValuesLists.containsKey(domain)) {
-			m_facetFacetValuesLists.put(domain, new LinkedMap());
+		if (!m_facet2FacetValuesLists.containsKey(domain)) {
+
+			m_domainHash2domainStringMap.put(domain.hashCode(), domain);
+			m_facet2FacetValuesLists.put(domain.hashCode(), new LinkedMap());
 		}
 	}
 
-	public void addFacetFacetValueTuple(String domain,
-			FacetFacetValueTuple tuple) {
-
-		LinkedMap linkedMap;
-
-		if ((linkedMap = m_facetFacetValuesLists.get(domain)) == null) {
-			linkedMap = new LinkedMap();
-		}
-
-		FacetFacetValueList facetFacetValueList;
-
-		if ((facetFacetValueList = (FacetFacetValueList) linkedMap.get(tuple
-				.getFacet())) == null) {
-			facetFacetValueList = new FacetFacetValueList();
-		}
-
-		facetFacetValueList.addFacetFacetValueTuple(tuple);
-		linkedMap.put(tuple.getFacet(), facetFacetValueList);
-
-		m_facetFacetValuesLists.put(domain, linkedMap);
+	public ObjectIterator<Entry<Integer, LinkedMap>> getDomainEntryIterator() {
+		return m_facet2FacetValuesLists.entrySet().iterator();
 	}
 
-	public Iterator<Entry<String, LinkedMap>> getDomainEntryIterator() {
-		return m_facetFacetValuesLists.entrySet().iterator();
+	public ObjectIterator<String> getDomainIterator() {
+		return m_domainHash2domainStringMap.values().iterator();
 	}
 
-	public Set<String> getDomains() {
-		return m_facetFacetValuesLists.keySet();
+	public ObjectCollection<String> getDomains() {
+		return m_domainHash2domainStringMap.values();
 	}
 
 	public OrderedMapIterator getFacetEntryIterator(String domain) {
-		return m_facetFacetValuesLists.get(domain).orderedMapIterator();
+		return m_facet2FacetValuesLists.get(domain.hashCode())
+				.orderedMapIterator();
 	}
 
 	public FacetFacetValueList getFacetFacetValuesList(String domain,
 			String facet) {
-		return (FacetFacetValueList) m_facetFacetValuesLists.get(domain).get(
-				facet);
+
+		return (FacetFacetValueList) m_facet2FacetValuesLists.get(
+				domain.hashCode()).get(facet);
 	}
 
-	public void put(String domain, String facet, FacetFacetValueList list) {
+	public boolean hasDomain(String domain) {
+		return m_facet2FacetValuesLists.containsKey(domain.hashCode());
+	}
 
-		LinkedMap linkedMap = m_facetFacetValuesLists.get(domain);
-		linkedMap.put(facet, list);
+	public boolean put(String domain, String facet, FacetFacetValueList list) {
+
+		if (!hasDomain(domain)) {
+			addDomain(domain);
+		}
+
+		LinkedMap linkedMap = m_facet2FacetValuesLists.get(domain.hashCode());
+
+		return linkedMap.put(facet, list) == null;
 	}
 }

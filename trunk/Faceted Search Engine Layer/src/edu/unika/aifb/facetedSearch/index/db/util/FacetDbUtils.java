@@ -16,7 +16,7 @@
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package edu.unika.aifb.facetedSearch.util;
+package edu.unika.aifb.facetedSearch.index.db.util;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -43,7 +43,6 @@ public class FacetDbUtils {
 
 	@SuppressWarnings("unused")
 	private static Logger s_log = Logger.getLogger(FacetDbUtils.class);
-	public static final String KEY_DELIM = Character.toString((char) 31);
 
 	public static <T> boolean contains(Database db, String key,
 			EntryBinding<T> binding) throws DatabaseException, IOException {
@@ -132,21 +131,21 @@ public class FacetDbUtils {
 		return res;
 	}
 
-	public static String getKey(String... elems) {
-
-		String key = "";
-
-		for (int i = 0; i < elems.length; i++) {
-
-			key += elems[i];
-
-			if (i != elems.length - 1) {
-				key += FacetDbUtils.KEY_DELIM;
-			}
-		}
-
-		return key;
-	}
+	// public static String getKey(String... elems) {
+	//
+	// String key = "";
+	//
+	// for (int i = 0; i < elems.length; i++) {
+	//
+	// key += elems[i];
+	//
+	// if (i != elems.length - 1) {
+	// key += FacetDbUtils.KEY_DELIM;
+	// }
+	// }
+	//
+	// return key;
+	// }
 
 	public static <T> T getNext(Cursor cursor, String key, DatabaseEntry entry,
 			EntryBinding<T> binding) throws DatabaseException, IOException {

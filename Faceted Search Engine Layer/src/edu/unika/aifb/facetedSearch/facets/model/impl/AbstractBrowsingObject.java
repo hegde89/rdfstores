@@ -17,21 +17,39 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
-import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueTuple;
+import java.io.Serializable;
+
+import edu.unika.aifb.facetedSearch.facets.model.IAbstractBrowsingObject;
 
 /**
  * @author andi
  * 
  */
-public class FacetFacetValueTuple implements IFacetFacetValueTuple {
+public abstract class AbstractBrowsingObject
+		implements
+			IAbstractBrowsingObject,
+			Serializable {
 
-	private double m_id;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1362655078324640467L;
+
+	/*
+	 * 
+	 */
+	private int m_countS;
 	private String m_domain;
+	private double m_nodeId;
+	private String m_value;
 
-	private Facet m_facet;
-	private AbstractFacetValue m_abstractFacetValue;
+	public AbstractBrowsingObject() {
+		m_countS = 0;
+	}
 
-	public FacetFacetValueTuple() {
+	public AbstractBrowsingObject(String value) {
+		m_value = value;
+		m_countS = 0;
 	}
 
 	/*
@@ -42,58 +60,56 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	@Override
 	public boolean equals(Object obj) {
 
-		if (obj instanceof FacetFacetValueTuple) {
+		if (obj instanceof AbstractBrowsingObject) {
 
-			return m_id == ((FacetFacetValueTuple) obj).getId();
+			return ((AbstractBrowsingObject) obj).getNodeId() == getNodeId();
 
 		} else {
 			return false;
 		}
 	}
 
+	public int getCountS() {
+		return m_countS;
+	}
+
 	public String getDomain() {
 		return m_domain;
 	}
 
-	public Facet getFacet() {
-		return m_facet;
+	public double getNodeId() {
+		return m_nodeId;
 	}
 
-	public AbstractFacetValue getFacetValue() {
-		return m_abstractFacetValue;
+	public String getValue() {
+		return m_value;
 	}
 
-	public double getId() {
-		return m_id;
+	public abstract boolean isLeave();
+
+	public void setCountS(int countS) {
+		m_countS = countS;
 	}
 
 	public void setDomain(String domain) {
 		m_domain = domain;
 	}
 
-	public void setFacet(Facet facet) {
-		m_facet = facet;
-		updateID();
+	public void setNodeId(double nodeId) {
+		m_nodeId = nodeId;
 	}
 
-	public void setFacetValue(AbstractFacetValue abstractFacetValue) {
-		m_abstractFacetValue = abstractFacetValue;
-		updateID();
+	public void setValue(String value) {
+		m_value = value;
 	}
 
-	@Deprecated
-	public void setId(double id) {
-		m_id = id;
-	}
+	@Override
+	public String toString() {
 
-	private void updateID() {
-
-		int domainHash = m_domain != null ? m_domain.hashCode() : 0;
-		int facetHash = m_facet != null ? m_facet.hashCode() : 0;
-		int facetValueHash = m_abstractFacetValue != null
-				? m_abstractFacetValue.hashCode()
-				: 0;
-
-		m_id = domainHash + facetHash + facetValueHash;
+		if (m_value != null) {
+			return m_value.toLowerCase() + " (" + m_countS + ")";
+		} else {
+			return "N/A";
+		}
 	}
 }

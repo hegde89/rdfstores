@@ -27,7 +27,6 @@ import java.util.Set;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 
 /**
  * @author andi
@@ -57,7 +56,7 @@ public interface IFacetTree {
 
 	public Node getVertex(double id);
 
-	public Set<Node> getVertex(NodeType type);
+	public Set<Node> getVertex(int type);
 
 	public boolean hasChildren(Node father);
 

@@ -19,6 +19,7 @@ package edu.unika.aifb.facetedSearch.facets.model.impl;
 
 import it.unimi.dsi.fastutil.doubles.Double2ObjectOpenHashMap;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -29,17 +30,37 @@ import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueList;
  * @author andi
  * 
  */
-public class FacetFacetValueList implements IFacetFacetValueList {
+public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 
 	public enum CleanType {
-		VALUES, HISTORY, ALL
+		VALUES, HISTORY, ALL, SUBFACETS
 	}
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1255846606211212174L;
+
+	/*
+	 * 
+	 */
 	private Double2ObjectOpenHashMap<AbstractFacetValue> m_nodeID2facetValueMap;
 
+	/*
+	 * 
+	 */
 	private Facet m_facet;
+
+	/*
+	 * 
+	 */
+	private List<Facet> m_subfacets;
 	private List<AbstractFacetValue> m_facetValueList;
-	private List<AbstractFacetValue> m_facetValueHistory;
+
+	/*
+	 * 
+	 */
+	private List<AbstractBrowsingObject> m_history;
 
 	public FacetFacetValueList() {
 		init();
@@ -48,6 +69,15 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 	public FacetFacetValueList(Facet facet) {
 		init();
 		setFacet(facet);
+	}
+
+	public boolean addBrowsingObject2History(AbstractBrowsingObject obj) {
+
+		if (!m_history.contains(obj)) {
+			return m_history.add(obj);
+		} else {
+			return false;
+		}
 	}
 
 	public boolean addFacetFacetValueTuple(FacetFacetValueTuple tuple) {
@@ -69,11 +99,7 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 		}
 	}
 
-	public boolean addFacetValue2History(AbstractFacetValue fv) {
-		return m_facetValueHistory.add(fv);
-	}
-
-	public boolean addFacetValue2List(AbstractFacetValue fv) {
+	public boolean addFacetValue(AbstractFacetValue fv) {
 
 		if (!m_nodeID2facetValueMap.containsKey(fv.getNodeId())) {
 
@@ -84,23 +110,36 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 		}
 	}
 
+	public void addSubFacet(Facet facet) {
+
+		if (!m_subfacets.contains(facet)) {
+			m_subfacets.add(facet);
+		}
+	}
+
 	public void clean(CleanType type) {
 
 		switch (type) {
 			case ALL : {
 
 				m_facetValueList.clear();
-				m_facetValueHistory.clear();
+				m_subfacets.clear();
+				m_history.clear();
 				break;
 			}
 			case HISTORY : {
 
-				m_facetValueHistory.clear();
+				m_history.clear();
 				break;
 			}
 			case VALUES : {
 
 				m_facetValueList.clear();
+				break;
+			}
+			case SUBFACETS : {
+
+				m_subfacets.clear();
 				break;
 			}
 		}
@@ -111,29 +150,38 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 		return m_facet;
 	}
 
-	public AbstractFacetValue getFacetValue(double nodeID) {
-		return m_nodeID2facetValueMap.get(nodeID);
+	public Iterator<Facet> getFacetIterator() {
+		return m_subfacets.iterator();
 	}
 
-	public List<AbstractFacetValue> getFacetValueHistory() {
-		return m_facetValueHistory;
-	}
-	public Iterator<AbstractFacetValue> getFacetValueHistoryIterator() {
-		return m_facetValueHistory.iterator();
+	public AbstractFacetValue getFacetValue(double nodeID) {
+		return m_nodeID2facetValueMap.get(nodeID);
 	}
 
 	public List<AbstractFacetValue> getFacetValueList() {
 		return m_facetValueList;
 	}
-
 	public Iterator<AbstractFacetValue> getFacetValueListIterator() {
 		return m_facetValueList.iterator();
 	}
 
+	public List<AbstractBrowsingObject> getHistory() {
+		return m_history;
+	}
+
+	public Iterator<AbstractBrowsingObject> getHistoryIterator() {
+		return m_history.iterator();
+	}
+
+	public List<Facet> getSubfacets() {
+		return m_subfacets;
+	}
+
 	private void init() {
 
+		m_subfacets = new ArrayList<Facet>();
+		m_history = new ArrayList<AbstractBrowsingObject>();
 		m_facetValueList = new ArrayList<AbstractFacetValue>();
-		m_facetValueHistory = new ArrayList<AbstractFacetValue>();
 		m_nodeID2facetValueMap = new Double2ObjectOpenHashMap<AbstractFacetValue>();
 	}
 
@@ -145,18 +193,20 @@ public class FacetFacetValueList implements IFacetFacetValueList {
 		m_facet = facet;
 	}
 
-	public void setFacetValueHistory(List<AbstractFacetValue> facetValueHistory) {
-
-		clean(CleanType.HISTORY);
-		m_facetValueHistory = facetValueHistory;
-	}
-
 	public void setFacetValueList(List<AbstractFacetValue> facetValueList) {
 
 		clean(CleanType.VALUES);
 
 		for (AbstractFacetValue fv : facetValueList) {
-			addFacetValue2List(fv);
+			addFacetValue(fv);
 		}
+	}
+
+	public void setHistory(List<AbstractBrowsingObject> history) {
+		m_history = history;
+	}
+
+	public void setSubfacets(List<Facet> facet2subfacets) {
+		m_subfacets = facet2subfacets;
 	}
 }

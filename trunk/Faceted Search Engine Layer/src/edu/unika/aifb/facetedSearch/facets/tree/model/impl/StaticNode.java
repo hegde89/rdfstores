@@ -32,7 +32,7 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
-import edu.unika.aifb.facetedSearch.index.db.AbstractSingleFacetValueBinding;
+import edu.unika.aifb.facetedSearch.index.db.binding.AbstractSingleFacetValueBinding;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
@@ -70,18 +70,13 @@ public class StaticNode extends Node implements IStaticNode {
 		super();
 		init();
 	}
-
-	public StaticNode(String value, NodeContent content) {
-		super(value, content);
+	
+	public StaticNode(String value) {
+		super(value);
 		init();
 	}
 
-	public StaticNode(String value, NodeType type) {
-		super(value, type);
-		init();
-	}
-
-	public StaticNode(String value, NodeType type, NodeContent content) {
+	public StaticNode(String value, int type, int content) {
 		super(value, type, content);
 		init();
 	}

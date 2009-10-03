@@ -26,8 +26,8 @@ import java.io.Serializable;
  */
 public interface IEdge extends Serializable {
 
-	public String getType();
+	public int getType();
 
-	public void setType(String name);
+	public void setType(int name);
 
 }

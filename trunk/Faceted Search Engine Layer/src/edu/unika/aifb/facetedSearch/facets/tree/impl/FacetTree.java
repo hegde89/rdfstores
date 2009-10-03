@@ -35,12 +35,12 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.IFacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.misc.FacetTreeTraversalListener;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.misc.NodeComparator;
 
@@ -83,6 +83,37 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 		super(Edge.class);
 		init();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.jgrapht.graph.AbstractBaseGraph#addEdge(java.lang.Object,
+	 * java.lang.Object)
+	 */
+	@Override
+	public Edge addEdge(Node arg0, Node arg1) {
+
+		Edge edge = super.addEdge(arg0, arg1);
+		edge.setSource(arg0);
+		edge.setTarget(arg1);
+
+		return edge;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.jgrapht.graph.AbstractBaseGraph#addEdge(java.lang.Object,
+	 * java.lang.Object, java.lang.Object)
+	 */
+	@Override
+	public boolean addEdge(Node arg0, Node arg1, Edge arg2) {
+
+		arg2.setSource(arg0);
+		arg2.setTarget(arg1);
+
+		return super.addEdge(arg0, arg1, arg2);
 	}
 
 	public void addEndPoint(int epType, StaticNode endpoint) {
@@ -241,18 +272,18 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		return m_nodeMap.get(nodeID);
 	}
 
-	public Set<Node> getVertex(NodeType type) {
+	public Set<Node> getVertex(int type) {
 
 		HashSet<Node> nodes = new HashSet<Node>();
 
 		switch (type) {
 
-			case ROOT : {
+			case NodeType.ROOT : {
 
 				nodes.add(m_root);
 				return nodes;
 			}
-			case INNER_NODE : {
+			case NodeType.INNER_NODE : {
 
 				Iterator<Node> nodesIter = vertexSet().iterator();
 
@@ -269,7 +300,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 				return nodes;
 			}
-			case LEAVE : {
+			case NodeType.LEAVE : {
 
 				Iterator<Node> nodesIter = vertexSet().iterator();
 
@@ -284,7 +315,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 				return nodes;
 			}
-			case RANGE_ROOT : {
+			case NodeType.RANGE_ROOT : {
 
 				Iterator<Node> iter = vertexSet().iterator();
 				Node node = null;
@@ -315,7 +346,9 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		m_endPoints = new Int2ObjectOpenHashMap<HashSet<StaticNode>>();
 		m_allEndPoints = new DoubleOpenHashSet();
 
-		m_root = new StaticNode(ROOT, NodeType.ROOT);
+		m_root = new StaticNode();
+		m_root.setValue(ROOT);
+		m_root.setType(NodeType.ROOT);
 		m_root.setPathHashValue(ROOT.hashCode());
 		m_root.setPath(ROOT);
 		m_root.setDepth(0);

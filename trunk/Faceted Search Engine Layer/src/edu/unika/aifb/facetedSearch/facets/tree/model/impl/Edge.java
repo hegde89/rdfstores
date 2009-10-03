@@ -30,41 +30,52 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
  */
 public class Edge extends DefaultEdge implements IEdge, Serializable {
 
-	public class EdgeType {
-
-		public static final String SUBPROPERTY_OF = "subPropertyOf";
-		public static final String SUBCLASS_OF = "subClassOf";
-		public static final String HAS_RANGE = "hasRange";
-		public static final String CONTAINS = "contains";
-		
-	}
-
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1972985962703565730L;
 
-	private String m_type;
+	/*
+	 * 
+	 */
+	private int m_type;
+
+	/*
+	 * 
+	 */
+	private Node m_source;
+	private Node m_target;
 
 	public Edge() {
 		super();
 	}
 
-	public Edge(String type) {
+	public Edge(int type) {
 		super();
-		this.m_type = type;
+		m_type = type;
 	}
 
-	public String getType() {
-		return this.m_type;
+	public Node getSource() {
+		return m_source;
 	}
 
-	public void setType(String type) {
-		this.m_type = type;
+	public Node getTarget() {
+		return m_target;
 	}
 
-	// @Override
-	// public String toString() {
-	// return "Edge: [Type: " + this.m_type + "]";
-	// }
+	public int getType() {
+		return m_type;
+	}
+
+	public void setSource(Node source) {
+		m_source = source;
+	}
+
+	public void setTarget(Node target) {
+		m_target = target;
+	}
+
+	public void setType(int type) {
+		m_type = type;
+	}
 }

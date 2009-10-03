@@ -20,15 +20,7 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 		super();
 	}
 
-	public DynamicNode(String value, NodeContent content) {
-		super(value, content);
-	}
-
-	public DynamicNode(String value, NodeType type) {
-		super(value, type);
-	}
-
-	public DynamicNode(String value, NodeType type, NodeContent content) {
+	public DynamicNode(String value, int type, int content) {
 		super(value, type, content);
 	}
 

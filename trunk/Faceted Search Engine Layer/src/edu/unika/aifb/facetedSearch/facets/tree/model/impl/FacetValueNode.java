@@ -17,6 +17,10 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
+import java.util.HashSet;
+import java.util.Iterator;
+
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueNode;
 
 /**
@@ -31,7 +35,8 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 	private static final long serialVersionUID = 4611143426289856264L;
 
 	public FacetValueNode(String value) {
-		super(value, NodeType.LEAVE);
+		super(value);
+		super.setType(NodeType.LEAVE);
 	}
 
 	@Override
@@ -39,8 +44,58 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 		return 1;
 	}
 
-	@Override
-	public void setCountFV(int countFV) {
+	public String getRangeExtension() {
+
+		String ext = null;
+		Iterator<String> iter = getRangeExtensions().iterator();
+
+		if (iter.hasNext()) {
+			ext = iter.next();
+		}
+
+		return ext;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node#getRangeExtensions
+	 * ()
+	 */
+	@Override
+	@Deprecated
+	public HashSet<String> getRangeExtensions() {
+		return super.getRangeExtensions();
+	}
+
+	public String getSourceExtension() {
+
+		String ext = null;
+		Iterator<String> iter = getSourceExtensions().iterator();
+
+		if (iter.hasNext()) {
+			ext = iter.next();
+		}
+
+		return ext;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node#getSourceExtensions
+	 * ()
+	 */
+	@Override
+	@Deprecated
+	public HashSet<String> getSourceExtensions() {
+		return super.getSourceExtensions();
+	}
+
+	@Override
+	@Deprecated
+	public void setCountFV(int countFV) {
+	}
 }

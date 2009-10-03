@@ -17,11 +17,14 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
 import com.sleepycat.bind.EntryBinding;
@@ -42,6 +45,8 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
+import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * @author andi
@@ -114,12 +119,18 @@ public class FacetTreeDelegator extends Delegator {
 		System.gc();
 	}
 
-	public List<Node> getChildren(String domain, double nodeID) {
+	public List<Node> getChildren(String domain) {
+
+		Node root = m_domain2treeMap.get(domain).getRoot();
+		return getChildren(domain, root.getID());
+	}
+
+	public List<Node> getChildren(String domain, double fatherID) {
 
 		List<Node> children = new ArrayList<Node>();
 
 		FacetTree tree = m_domain2treeMap.get(domain);
-		StaticNode node = (StaticNode) tree.getVertex(nodeID);
+		StaticNode node = (StaticNode) tree.getVertex(fatherID);
 
 		if (!(node instanceof FacetValueNode)) {
 
@@ -132,6 +143,19 @@ public class FacetTreeDelegator extends Delegator {
 
 		return children;
 	}
+
+	public Set<String> getDomains() {
+		return m_domain2treeMap.keySet();
+	}
+
+	// public Node getRange(String domain, double nodeID) {
+	//		
+	// FacetTree tree = m_domain2treeMap.get(domain);
+	// StaticNode node = (StaticNode) tree.getVertex(nodeID);
+	//		
+	// if ()
+	//		
+	// }
 
 	public Node getFather(String domain, double nodeID) {
 
@@ -196,6 +220,29 @@ public class FacetTreeDelegator extends Delegator {
 
 			e.printStackTrace();
 		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void initTrees() {
+
+		Table<String> resultTable;
+
+		try {
+			
+			resultTable = m_session.getCache().getResultTable();
+
+			((ConstructionDelegator) m_session
+					.getDelegator(Delegators.CONSTRUCTION))
+					.constructTree(resultTable);
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (StorageException e) {
+			e.printStackTrace();
+		} catch (CacheException e) {
 			e.printStackTrace();
 		}
 	}

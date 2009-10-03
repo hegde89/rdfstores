@@ -25,7 +25,7 @@ import edu.unika.aifb.facetedSearch.facets.model.IAbstractFacetValue;
  * @author andi
  * 
  */
-public abstract class AbstractFacetValue
+public abstract class AbstractFacetValue extends AbstractBrowsingObject
 		implements
 			IAbstractFacetValue,
 			Serializable {
@@ -35,66 +35,11 @@ public abstract class AbstractFacetValue
 	 */
 	private static final long serialVersionUID = 2343480809304503452L;
 
-	/*
-	 * 
-	 */
-	private String m_domain;
-	private double m_nodeId;
-	private String m_value;
-
 	public AbstractFacetValue() {
 
 	}
 
 	public AbstractFacetValue(String value) {
-		m_value = value;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(Object obj) {
-
-		if (obj instanceof AbstractFacetValue) {
-
-			return ((AbstractFacetValue) obj).getNodeId() == getNodeId();
-
-		} else {
-			return false;
-		}
-	}
-
-	public String getDomain() {
-		return m_domain;
-	}
-
-	public double getNodeId() {
-		return m_nodeId;
-	}
-
-	public String getValue() {
-		return m_value;
-	}
-
-	public abstract boolean isLeave();
-
-	public void setDomain(String domain) {
-		m_domain = domain;
-	}
-
-	public void setNodeId(double nodeId) {
-		m_nodeId = nodeId;
-	}
-
-	public void setValue(String value) {
-		m_value = value;
-	}
-
-	@Override
-	public String toString() {
-		return m_value;
+		super(value);
 	}
 }

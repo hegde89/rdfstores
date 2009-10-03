@@ -25,92 +25,110 @@ import edu.unika.aifb.facetedSearch.facets.model.IFacet;
  * @author andi
  * 
  */
-public class Facet implements IFacet {
+public class Facet extends AbstractBrowsingObject implements IFacet {
 
-	private String m_domain;
-	private double m_nodeId;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7228202054063357449L;
 
-	private String m_uri;
-	private FacetType m_facetType;
-	private DataType m_dataType;
+	/*
+	 * 
+	 */
+	private int m_facetType;
+	private int m_dataType;
 
-	public Facet(String uri) {
-		m_uri = uri;
+	public Facet() {
+
+		super();
+		init();
 	}
 
-	public Facet(String uri, FacetType ftype, DataType dtype) {
-		m_uri = uri;
+	public Facet(String uri) {
+
+		super(uri);
+		init();
+	}
+
+	public Facet(String uri, int ftype, int dtype) {
+
+		super(uri);
 		m_facetType = ftype;
 		m_dataType = dtype;
+	}
+
+	public int getDataType() {
+		return m_dataType;
+	}
+
+	public int getType() {
+		return m_facetType;
+	}
+
+	public String getUri() {
+		return super.getValue();
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.model.impl.AbstractBrowsingObject
+	 * #getValue()
 	 */
 	@Override
-	public boolean equals(Object obj) {
-
-		if (obj instanceof Facet) {
-
-			return ((Facet) obj).getNodeId() == getNodeId();
-
-		} else {
-			return false;
-		}
+	@Deprecated
+	public String getValue() {
+		return super.getValue();
 	}
 
-	public DataType getDataType() {
-		return m_dataType;
-	}
-
-	public String getDomain() {
-		return m_domain;
-	}
-
-	public double getNodeId() {
-		return m_nodeId;
-	}
-
-	public FacetType getType() {
-		return m_facetType;
-	}
-
-	public String getUri() {
-		return m_uri;
+	private void init() {
+		m_facetType = FacetType.NOT_SET;
+		m_dataType = DataType.NOT_SET;
 	}
 
 	public boolean isDataPropertyBased() {
 		return m_facetType == FacetType.DATAPROPERTY_BASED;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.model.impl.AbstractBrowsingObject
+	 * #isLeave()
+	 */
+	@Override
+	public boolean isLeave() {
+		return false;
+	}
+
 	public boolean isObjectPropertyBased() {
 		return m_facetType == FacetType.OBJECT_PROPERTY_BASED;
 	}
 
-	public void setDataType(DataType dataType) {
+	public void setDataType(int dataType) {
 		m_dataType = dataType;
 	}
 
-	public void setDomain(String domain) {
-		m_domain = domain;
-	}
-
-	public void setNodeId(double nodeId) {
-		m_nodeId = nodeId;
-	}
-
-	public void setType(FacetType type) {
+	public void setType(int type) {
 		m_facetType = type;
 	}
 
 	public void setUri(String uri) {
-		m_uri = uri;
+		super.setValue(uri);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.model.impl.AbstractBrowsingObject
+	 * #setValue(java.lang.String)
+	 */
 	@Override
-	public String toString() {
-		return m_uri;
+	@Deprecated
+	public void setValue(String value) {
+		super.setValue(value);
 	}
 }

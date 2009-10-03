@@ -43,6 +43,7 @@ public class Literal extends AbstractSingleFacetValue
 	public Literal() {
 
 	}
+	
 	public Literal(String value, Object parsedLit) {
 
 		super(value);

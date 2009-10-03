@@ -21,12 +21,11 @@ package edu.unika.aifb.facetedSearch.index;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Queue;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.bind.EntryBinding;
-import com.sleepycat.bind.serial.SerialBinding;
-import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.Database;
@@ -39,10 +38,12 @@ import com.sleepycat.je.PreloadConfig;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
-import edu.unika.aifb.facetedSearch.index.db.AbstractSingleFacetValueBinding;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.index.db.binding.AbstractSingleFacetValueBinding;
+import edu.unika.aifb.facetedSearch.index.db.binding.NodeBinding;
+import edu.unika.aifb.facetedSearch.index.db.binding.PathBinding;
+import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -54,39 +55,45 @@ import edu.unika.aifb.graphindex.index.IndexDirectory;
 public class FacetIndex extends Index {
 
 	public enum FacetIndexName {
-		TREE, LEAVE, OBJECT
-		// SORTED_LITERALS,ENDPOINTS
+		PATH, LEAVE, OBJECT
 	}
 
 	private final static Logger s_log = Logger.getLogger(FacetIndex.class);
 
+	/*
+	 * 
+	 */
 	private IndexDirectory m_idxDirectory;
 
+	/*
+	 * 
+	 */
 	private Environment m_env;
 	private Environment m_env2;
 
+	/*
+	 * 
+	 */
 	private ArrayList<Database> m_dbs;
 
 	/*
 	 * Indices
 	 */
-
-	private Database m_treeDB;
+	private Database m_pathDB;
 	private Database m_leaveDB;
 	private Database m_objectDB;
-	private Database m_classDB;
 
 	/*
 	 * Maps ...
 	 */
 	private StoredMap<String, AbstractSingleFacetValue> m_objectMap;
-	private StoredMap<String, Double> m_leaveMap;
+	private StoredMap<String, Node> m_leaveMap;
 
 	/*
 	 * Bindings
 	 */
-	private SerialBinding<FacetTree> m_treeBinding;
-	private EntryBinding<Double> m_doubleBinding;
+	private EntryBinding<Queue<Edge>> m_pathBinding;
+	private EntryBinding<Node> m_nodeBinding;
 	private EntryBinding<AbstractSingleFacetValue> m_fvBinding;
 	private EntryBinding<String> m_strgBinding;
 
@@ -111,15 +118,6 @@ public class FacetIndex extends Index {
 			}
 		}
 
-		if (m_classDB != null) {
-
-			try {
-				m_classDB.close();
-			} catch (DatabaseException e) {
-				e.printStackTrace();
-			}
-		}
-
 		if (m_env != null) {
 
 			try {
@@ -139,29 +137,18 @@ public class FacetIndex extends Index {
 		}
 	}
 
-	// public HashSet<String> getExtensions(Node node, String sourceInd)
-	// throws EnvironmentLockedException, DatabaseException, IOException {
-	//
-	// if (m_objectDB == null) {
-	// init();
-	// }
-	//
-	// return FacetDbUtils.getAllAsSet(m_objectDB, sourceInd
-	// + node.getPathHashValue() + "ext", m_objBinding);
-	// }
-
 	public Database getIndex(FacetIndexName idxName)
 			throws EnvironmentLockedException, DatabaseException, IOException {
 
 		switch (idxName) {
 
-			case TREE : {
+			case PATH : {
 
-				if (m_treeDB == null) {
+				if (m_pathDB == null) {
 					init();
 				}
 
-				return m_treeDB;
+				return m_pathDB;
 			}
 			case LEAVE : {
 
@@ -184,7 +171,7 @@ public class FacetIndex extends Index {
 		}
 	}
 
-	public Collection<Double> getLeaves(AbstractSingleFacetValue fv)
+	public Collection<Node> getLeaves(AbstractSingleFacetValue fv)
 			throws DatabaseException, IOException {
 
 		if (m_leaveDB == null) {
@@ -194,7 +181,7 @@ public class FacetIndex extends Index {
 		return m_leaveMap.duplicates(fv.getSourceExt() + fv.getValue());
 	}
 
-	public Collection<Double> getLeaves(String extension, String srcInd)
+	public Collection<Node> getLeaves(String extension, String srcInd)
 			throws DatabaseException, IOException {
 
 		if (m_leaveDB == null) {
@@ -215,14 +202,18 @@ public class FacetIndex extends Index {
 		return m_objectMap.duplicates(sourceInd + leave.getPathHashValue());
 	}
 
-	public FacetTree getTree(String extension) throws DatabaseException,
-			IOException {
+	public Queue<Edge> getPath2RangeRoot(int pathHashValue)
+			throws DatabaseException, IOException {
 
-		if (m_treeDB == null) {
-			init();
-		}
+		return FacetDbUtils.get(m_pathDB, FacetEnvironment.Keys.RANGEROOT_PATH
+				+ pathHashValue, m_pathBinding);
+	}
 
-		return FacetDbUtils.get(m_treeDB, extension, m_treeBinding);
+	public Queue<Edge> getPath2Root(int pathHashValue)
+			throws DatabaseException, IOException {
+
+		return FacetDbUtils.get(m_pathDB, FacetEnvironment.Keys.ROOT_PATH
+				+ pathHashValue, m_pathBinding);
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException,
@@ -249,7 +240,8 @@ public class FacetIndex extends Index {
 		dbConfig.setSortedDuplicates(false);
 		dbConfig.setDeferredWrite(true);
 		dbConfig.setReadOnly(true);
-		m_treeDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.TREE,
+
+		m_pathDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.PATH,
 				dbConfig);
 
 		/*
@@ -269,7 +261,7 @@ public class FacetIndex extends Index {
 				FacetEnvironment.DatabaseName.OBJECT, dbConfig2);
 
 		m_dbs = new ArrayList<Database>();
-		m_dbs.add(m_treeDB);
+		m_dbs.add(m_pathDB);
 		m_dbs.add(m_leaveDB);
 		m_dbs.add(m_objectDB);
 
@@ -280,15 +272,11 @@ public class FacetIndex extends Index {
 			db.preload(pc);
 		}
 
-		m_classDB = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.CLASS, dbConfig);
-
 		/*
 		 * Create the bindings
 		 */
-		m_treeBinding = new SerialBinding<FacetTree>(new StoredClassCatalog(
-				m_classDB), FacetTree.class);
-		m_doubleBinding = TupleBinding.getPrimitiveBinding(Double.class);
+		m_pathBinding = new PathBinding();
+		m_nodeBinding = new NodeBinding();
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
 		m_fvBinding = new AbstractSingleFacetValueBinding();
 
@@ -296,10 +284,10 @@ public class FacetIndex extends Index {
 		 * Create maps on top of dbs ...
 		 */
 		m_objectMap = new StoredMap<String, AbstractSingleFacetValue>(
-				m_objectDB, m_strgBinding, m_fvBinding, true);
+				m_objectDB, m_strgBinding, m_fvBinding, false);
 
-		m_leaveMap = new StoredMap<String, Double>(m_objectDB, m_strgBinding,
-				m_doubleBinding, true);
+		m_leaveMap = new StoredMap<String, Node>(m_objectDB, m_strgBinding,
+				m_nodeBinding, false);
 
 		s_log.debug("got db connection!");
 	}

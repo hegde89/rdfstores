@@ -33,6 +33,7 @@ import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.DistanceComparator;
@@ -45,7 +46,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge.EdgeType;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
@@ -54,9 +54,9 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
  * @author andi
  * 
  */
-public class FacetClusterBuilder implements IBuilder {
+public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
-	private static Logger s_log = Logger.getLogger(FacetClusterBuilder.class);
+	private static Logger s_log = Logger.getLogger(FacetSingleLinkageClusterBuilder.class);
 
 	/*
 	 * 
@@ -70,7 +70,7 @@ public class FacetClusterBuilder implements IBuilder {
 	 */
 	private BuilderHelper m_helper;
 
-	public FacetClusterBuilder(SearchSession session, BuilderHelper helper) {
+	public FacetSingleLinkageClusterBuilder(SearchSession session, BuilderHelper helper) {
 		m_session = session;
 		m_helper = helper;
 	}
@@ -136,7 +136,7 @@ public class FacetClusterBuilder implements IBuilder {
 
 		m_cache.clean(CleanType.LITERALS);
 
-		DataType datatype = epNode.getFacet().getDataType() == null
+		int datatype = epNode.getFacet().getDataType() == DataType.NOT_SET
 				? FacetEnvironment.DataType.STRING
 				: epNode.getFacet().getDataType();
 

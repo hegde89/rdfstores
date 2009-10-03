@@ -31,7 +31,8 @@ public class ComparatorPool {
 	private static ComparatorPool s_instance;
 
 	public static ComparatorPool getInstance(SearchSessionCache cache) {
-		return s_instance == null ? s_instance = new ComparatorPool(cache)
+		return s_instance == null
+				? s_instance = new ComparatorPool(cache)
 				: s_instance;
 	}
 
@@ -47,29 +48,29 @@ public class ComparatorPool {
 
 	}
 
-	public Comparator<String> getComparator(DataType dataType) {
+	public Comparator<String> getComparator(int dataType) {
 
 		switch (dataType) {
-		case DATE: {
-			return m_timeDateComp;
-		}
-		case DATE_TIME: {
-			return m_timeDateComp;
-		}
-		case TIME: {
-			return m_timeDateComp;
-		}
-		case NUMERICAL: {
-			return m_numComp;
-		}
-		case STRING: {
-			return m_strgComp;
-		}
-		case UNKNOWN: {
-			return null;
-		}
-		default:
-			return null;
+			case DataType.DATE : {
+				return m_timeDateComp;
+			}
+			case DataType.DATE_TIME : {
+				return m_timeDateComp;
+			}
+			case DataType.TIME : {
+				return m_timeDateComp;
+			}
+			case DataType.NUMERICAL : {
+				return m_numComp;
+			}
+			case DataType.STRING : {
+				return m_strgComp;
+			}
+			case DataType.UNKNOWN : {
+				return null;
+			}
+			default :
+				return null;
 		}
 	}
 }

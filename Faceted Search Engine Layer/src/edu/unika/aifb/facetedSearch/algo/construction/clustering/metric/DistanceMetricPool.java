@@ -27,32 +27,32 @@ import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric
 public class DistanceMetricPool {
 
 	@SuppressWarnings("unchecked")
-	public static IDistanceMetric getMetric(DataType type) {
+	public static IDistanceMetric getMetric(int type) {
 
 		IDistanceMetric metric = null;
 
 		switch (type) {
 
-		case NUMERICAL: {
-			metric = NumericalDistanceMetric.getInstance();
-			break;
-		}
-		case STRING: {
-			metric = StringDistanceMetric.getInstance();
-			break;
-		}
-		case TIME: {
-			metric = TimeDistanceMetric.getInstance();
-			break;
-		}
-		case DATE: {
-			metric = DateDistanceMetric.getInstance();
-			break;
-		}
-		case DATE_TIME: {
-			metric = DateTimeDistanceMetric.getInstance();
-			break;
-		}
+			case DataType.NUMERICAL : {
+				metric = NumericalDistanceMetric.getInstance();
+				break;
+			}
+			case DataType.STRING : {
+				metric = StringDistanceMetric.getInstance();
+				break;
+			}
+			case DataType.TIME : {
+				metric = TimeDistanceMetric.getInstance();
+				break;
+			}
+			case DataType.DATE : {
+				metric = DateDistanceMetric.getInstance();
+				break;
+			}
+			case DataType.DATE_TIME : {
+				metric = DateTimeDistanceMetric.getInstance();
+				break;
+			}
 		}
 
 		return metric;

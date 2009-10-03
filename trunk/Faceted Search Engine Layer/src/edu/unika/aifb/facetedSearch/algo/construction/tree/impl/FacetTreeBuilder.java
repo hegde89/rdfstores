@@ -31,10 +31,10 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
@@ -63,7 +63,6 @@ public class FacetTreeBuilder implements IBuilder {
 	/*
 	 * 
 	 */
-	private Int2ObjectOpenHashMap<FacetTree> m_indexedTrees;
 	private Int2ObjectOpenHashMap<StaticNode> m_paths;
 
 	/*
@@ -108,30 +107,15 @@ public class FacetTreeBuilder implements IBuilder {
 
 		while (iter.hasNext()) {
 
-			FacetTree currentIndexedTree;
-
 			String resItem = iter.next()[column];
 			String sourceExtension = m_structureIndex.getExtension(resItem);
 
-			if (!m_indexedTrees.containsKey(sourceExtension)) {
-
-				FacetTree indexedTree = m_facetIndex.getTree(sourceExtension);
-				m_indexedTrees.put(sourceExtension.hashCode(), indexedTree);
-
-				currentIndexedTree = indexedTree;
-
-			} else {
-
-				currentIndexedTree = m_indexedTrees.get(sourceExtension);
-			}
-
-			Collection<Double> oldLeaves = m_facetIndex.getLeaves(
+			Collection<Node> oldLeaves = m_facetIndex.getLeaves(
 					sourceExtension, resItem);
 
-			for (double leave : oldLeaves) {
+			for (Node leave : oldLeaves) {
 
-				StaticNode newLeave = m_helper.insertPathAtRoot(newTree,
-						currentIndexedTree, leave, m_paths);
+				StaticNode newLeave = m_helper.insertPathAtRoot(newTree,leave, m_paths);
 				newLeaves.add(newLeave);
 
 				m_helper.updateNodeCounts(newTree, resItem, sourceExtension,
@@ -142,9 +126,6 @@ public class FacetTreeBuilder implements IBuilder {
 
 		// prune ranges
 		newTree = m_helper.pruneRanges(newTree, newLeaves);
-
-		m_helper.attachRDFTypes(newTree, newTree
-				.getEndPoints(FacetEnvironment.EndPointType.RDF_PROPERTY));
 
 		long time2 = System.currentTimeMillis();
 
@@ -162,22 +143,17 @@ public class FacetTreeBuilder implements IBuilder {
 	 * @see edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder#clean()
 	 */
 	public void clean() {
-
-		m_indexedTrees.clear();
 		m_paths.clear();
 	}
 
 	public void close() {
 
 		clean();
-		m_indexedTrees = null;
 		m_paths = null;
-
 	}
 
 	private void init() {
 
-		m_indexedTrees = new Int2ObjectOpenHashMap<FacetTree>();
 		m_paths = new Int2ObjectOpenHashMap<StaticNode>();
 
 		try {

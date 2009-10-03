@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
@@ -40,7 +41,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge.EdgeType;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
@@ -89,14 +89,6 @@ public class BuilderHelper {
 		}
 	}
 
-	public void attachRDFTypes(FacetTree tree, Set<StaticNode> rdfprop_eps)
-			throws DatabaseException, IOException {
-
-		for (StaticNode node : rdfprop_eps) {
-			insertFacetValues(tree, node, node.getObjects());
-		}
-	}
-
 	public void insertFacetValues(FacetTree tree, StaticNode node,
 			Collection<? extends AbstractFacetValue> values) {
 
@@ -113,25 +105,29 @@ public class BuilderHelper {
 		}
 	}
 
-	public StaticNode insertPathAtNode(FacetTree newTree,
-			FacetTree indexedTree, double leaveId, StaticNode node,
-			Int2ObjectOpenHashMap<StaticNode> paths) throws DatabaseException,
-			IOException, CacheException {
+	public StaticNode insertPathAtNode(FacetTree newTree, Node leave,
+			StaticNode node, Int2ObjectOpenHashMap<StaticNode> paths)
+			throws DatabaseException, IOException, CacheException {
 
-		Node leave = indexedTree.getVertex(leaveId);
+		int pathHash = leave.getPathHashValue();
 
-		if (!paths.containsKey(leave.getPathHashValue())) {
+		if (!paths.containsKey(pathHash)) {
 
 			StaticNode pos4insertion = node;
 			Stack<Edge> edges2insert = new Stack<Edge>();
 
-			Queue<Edge> path2root = m_cache.getAncestorPath2Root(indexedTree,
-					leaveId);
+			// Queue<Edge> path2root = m_cache.getAncestorPath2Root(indexedTree,
+			// leaveId);
+
+			Queue<Edge> path2root = m_facetIndex.getPath2Root(pathHash);
 
 			while (!path2root.isEmpty()) {
 
 				Edge currentEdge = path2root.poll();
-				int currentPathHash = indexedTree.getEdgeTarget(currentEdge)
+				// int currentPathHash = indexedTree.getEdgeTarget(currentEdge)
+				// .getPathHashValue();
+
+				int currentPathHash = currentEdge.getTarget()
 						.getPathHashValue();
 
 				if (!paths.containsKey(currentPathHash)) {
@@ -150,7 +146,8 @@ public class BuilderHelper {
 				while (!edges2insert.isEmpty()) {
 
 					Edge edge2insert = edges2insert.pop();
-					Node node2copy = indexedTree.getEdgeTarget(edge2insert);
+					// Node node2copy = indexedTree.getEdgeTarget(edge2insert);
+					Node node2copy = edge2insert.getTarget();
 
 					StaticNode newNode = new StaticNode();
 					newNode.setContent(node2copy.getContent());
@@ -188,13 +185,11 @@ public class BuilderHelper {
 		}
 	}
 
-	public StaticNode insertPathAtRoot(FacetTree newTree,
-			FacetTree indexedTree, double leaveId,
+	public StaticNode insertPathAtRoot(FacetTree newTree, Node leave,
 			Int2ObjectOpenHashMap<StaticNode> paths) throws DatabaseException,
 			IOException, CacheException {
 
-		return insertPathAtNode(newTree, indexedTree, leaveId, newTree
-				.getRoot(), paths);
+		return insertPathAtNode(newTree, leave, newTree.getRoot(), paths);
 	}
 
 	public FacetTree pruneRanges(FacetTree tree, Set<StaticNode> leaves)
@@ -269,8 +264,12 @@ public class BuilderHelper {
 			String sourceExt, StaticNode leave) throws CacheException,
 			EnvironmentLockedException, DatabaseException, IOException {
 
-		Queue<Edge> path2RangeRoot = m_cache.getAncestorPath2RangeRoot(newTree,
-				leave.getID());
+		// Queue<Edge> path2RangeRoot =
+		// m_cache.getAncestorPath2RangeRoot(newTree,
+		// leave.getID());
+
+		Queue<Edge> path2RangeRoot = m_facetIndex.getPath2RangeRoot(leave
+				.getPathHashValue());
 
 		Collection<AbstractSingleFacetValue> objects = m_facetIndex.getObjects(
 				leave, resItem);

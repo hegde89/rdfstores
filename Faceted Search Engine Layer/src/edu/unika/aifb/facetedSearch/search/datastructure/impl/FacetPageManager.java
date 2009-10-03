@@ -17,6 +17,10 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
+import java.util.Iterator;
+
+import org.apache.log4j.Logger;
+
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
@@ -26,11 +30,15 @@ import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
+import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList.CleanType;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
@@ -42,6 +50,16 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
  */
 public class FacetPageManager {
 
+	private static int FACETPAGE_KEY = 1;
+
+	/*
+	 * 
+	 */
+	private static Logger s_log = Logger.getLogger(FacetPageManager.class);
+
+	/*
+	 * 
+	 */
 	private static FacetPageManager s_instance;
 
 	public static FacetPageManager getInstance(SearchSession session) {
@@ -59,18 +77,23 @@ public class FacetPageManager {
 	/*
 	 * 
 	 */
-	private Tree2FacetModelConverter m_tree2facetConverter;
 	private FacetTreeDelegator m_treeDelegator;
-
-	/*
-	 * stored map
-	 */
-	private StoredMap<String, FacetPage> m_facetPageMap;
 
 	/*
 	 * 
 	 */
-	private EntryBinding<String> m_strgBinding;
+	private Tree2FacetModelConverter m_tree2facetConverter;
+	private Facet2TreeModelConverter m_facet2treeConverter;
+
+	/*
+	 * stored map
+	 */
+	private StoredMap<Integer, FacetPage> m_facetPageMap;
+
+	/*
+	 * 
+	 */
+	private EntryBinding<Integer> m_intBinding;
 	private EntryBinding<FacetPage> m_fpageBinding;
 
 	private FacetPageManager(SearchSession session) {
@@ -78,21 +101,77 @@ public class FacetPageManager {
 		m_session = session;
 		m_cache = session.getCache();
 
+		/*
+		 * 
+		 */
 		m_treeDelegator = (FacetTreeDelegator) m_session
 				.getDelegator(Delegators.TREE);
+
 		m_tree2facetConverter = (Tree2FacetModelConverter) m_session
 				.getConverter(Converters.TREE2FACET);
+		m_facet2treeConverter = (Facet2TreeModelConverter) m_session
+				.getConverter(Converters.FACET2TREE);
 
 		init();
 	}
 
 	public FacetPage getInitialFacetPage() {
 
-		FacetPage fpage;
+		FacetPage fpage = new FacetPage();
+		m_treeDelegator.initTrees();
 
-		if ((fpage = loadPreviousFacetPage()) == null) {
-			// TODO
+		Iterator<String> domainIter = m_treeDelegator.getDomains().iterator();
+
+		while (domainIter.hasNext()) {
+
+			String domain = domainIter.next();
+			Iterator<Node> facetIter = m_treeDelegator.getChildren(domain)
+					.iterator();
+
+			while (facetIter.hasNext()) {
+
+				Node facetNode = facetIter.next();
+
+				if ((facetNode.getContent() == NodeContent.DATA_PROPERTY)
+						|| (facetNode.getContent() == NodeContent.OBJECT_PROPERTY)
+						|| (facetNode.getContent() == NodeContent.TYPE_PROPERTY)) {
+
+					FacetFacetValueList fvList = new FacetFacetValueList();
+					fvList
+							.setFacet(m_tree2facetConverter
+									.node2facet(facetNode));
+
+					Iterator<Node> childrenIter = m_treeDelegator.getChildren(
+							domain, facetNode.getID()).iterator();
+
+					while (childrenIter.hasNext()) {
+
+						Node child = childrenIter.next();
+
+						if (child.getContent() == NodeContent.CLASS) {
+
+							fvList.addFacetValue(m_tree2facetConverter
+									.node2facetValue(child));
+
+						} else if ((child.getContent() == NodeContent.DATA_PROPERTY)
+								|| (child.getContent() == NodeContent.OBJECT_PROPERTY)) {
+
+							fvList.addSubFacet(m_tree2facetConverter
+									.node2facet(child));
+
+						} else {
+							s_log.error("should not be here: node '" + child
+									+ "'");
+						}
+					}
+				} else {
+					s_log.error("tree structure is not valid! tree: '"
+							+ m_treeDelegator.getTree(domain) + "'");
+				}
+			}
 		}
+
+		storeFacetPage(fpage);
 
 		return fpage;
 	}
@@ -104,19 +183,66 @@ public class FacetPageManager {
 
 		if (!selectedValue.isLeave()) {
 
+			Node selectedNode = m_facet2treeConverter
+					.facetValue2Node(selectedValue);
+
 			FacetFacetValueList fvList = fpage.getFacetFacetValuesList(domain,
 					facet.getUri());
-			fvList.addFacetValue2History(selectedValue);
-			fvList.setFacetValueList(m_tree2facetConverter
-					.nodeList2facetValueList(m_treeDelegator.getChildren(
-							domain, selectedValue.getNodeId())));
+
+			// browsing in range
+			if (selectedNode.getContent() == NodeContent.CLASS) {
+
+				fvList.clean(CleanType.VALUES);
+
+				fvList.addBrowsingObject2History(selectedValue);
+				fvList.setFacetValueList(m_tree2facetConverter
+						.nodeList2facetValueList(m_treeDelegator.getChildren(
+								domain, selectedValue.getNodeId())));
+
+			}
+			// sub-facet
+			else if ((selectedNode.getContent() == NodeContent.DATA_PROPERTY)
+					|| (selectedNode.getContent() == NodeContent.OBJECT_PROPERTY)
+					|| (selectedNode.getContent() == NodeContent.TYPE_PROPERTY)) {
+
+				fvList.clean(CleanType.VALUES);
+				fvList.clean(CleanType.SUBFACETS);
+
+				fvList.addBrowsingObject2History(facet);
+				fvList.setFacet(m_tree2facetConverter.node2facet(selectedNode));
+
+				Iterator<Node> nodesIter = m_treeDelegator.getChildren(domain,
+						selectedValue.getNodeId()).iterator();
+
+				while (nodesIter.hasNext()) {
+
+					Node node = nodesIter.next();
+
+					if (node.getContent() == NodeContent.CLASS) {
+
+						fvList.addFacetValue(m_tree2facetConverter
+								.node2facetValue(node));
+
+					} else if ((selectedNode.getContent() == NodeContent.DATA_PROPERTY)
+							|| (selectedNode.getContent() == NodeContent.OBJECT_PROPERTY)) {
+
+						fvList.addSubFacet(m_tree2facetConverter
+								.node2facet(node));
+
+					} else {
+						s_log.error("should not be here: node '" + selectedNode
+								+ "'");
+					}
+				}
+			} else {
+				s_log.error("should not be here: node '" + selectedNode + "'");
+			}
 
 			storeFacetPage(fpage);
 		}
 
 		return fpage;
 	}
-
 	private void init() {
 
 		StoredClassCatalog cata;
@@ -127,11 +253,11 @@ public class FacetPageManager {
 					.getDB(FacetEnvironment.DatabaseName.CLASS));
 
 			m_fpageBinding = new SerialBinding<FacetPage>(cata, FacetPage.class);
-			m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
+			m_intBinding = TupleBinding.getPrimitiveBinding(Integer.class);
 
-			m_facetPageMap = new StoredSortedMap<String, FacetPage>(m_cache
+			m_facetPageMap = new StoredSortedMap<Integer, FacetPage>(m_cache
 					.getDB(FacetEnvironment.DatabaseName.FPAGE_CACHE),
-					m_strgBinding, m_fpageBinding, true);
+					m_intBinding, m_fpageBinding, true);
 
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
@@ -141,16 +267,10 @@ public class FacetPageManager {
 	}
 
 	private FacetPage loadPreviousFacetPage() {
-
-		// TODO
-
-		return null;
+		return m_facetPageMap.get(FACETPAGE_KEY);
 	}
 
 	private boolean storeFacetPage(FacetPage fpage) {
-
-		// TODO
-
-		return false;
+		return m_facetPageMap.put(FACETPAGE_KEY, fpage) == null;
 	}
 }

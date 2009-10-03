@@ -26,7 +26,6 @@ import org.apache.jcs.access.exception.CacheException;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
@@ -35,7 +34,6 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -74,35 +72,25 @@ public class GenericQueryEvaluator {
 	private Result constructResult(Table<String> resultTable) {
 
 		Result res = new Result();
+		res.setResultTable(resultTable);
 
 		try {
 
 			m_session.getCache().clean(CleanType.ALL);
-			res.setResultTable(resultTable);
+			m_session.getCache().storeResult(res);			
 
 			// create facets for this result set
 			if (new Boolean(m_session.getProps().getProperty(
 					FacetEnvironment.Property.FACETS_ENABLED))) {
-
-				((ConstructionDelegator) m_session
-						.getDelegator(Delegators.CONSTRUCTION))
-						.constructTree(resultTable);
 
 				FacetPage fpage = m_session.getFacetPageManager()
 						.getInitialFacetPage();
 
 				res.setFacetPage(fpage);
 			}
-
-			m_session.getCache().storeResult(res);
-
 		} catch (DatabaseException e) {
 			e.printStackTrace();
-		} catch (StorageException e) {
-			e.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (CacheException e) {
 			e.printStackTrace();

@@ -23,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 
 import org.apache.jcs.access.CacheAccess;
 import org.apache.jcs.access.exception.CacheException;
@@ -48,12 +47,10 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
-import edu.unika.aifb.facetedSearch.util.FacetDbUtils;
 import edu.unika.aifb.graphindex.data.Table;
 
 /**
@@ -295,72 +292,43 @@ public class SearchSessionCache {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	public LinkedList<Edge> getAncestorPath2RangeRoot(FacetTree tree,
-			double nodeID) throws CacheException {
+	// @SuppressWarnings("unchecked")
+	// public LinkedList<Edge> getAncestorPath2RangeRoot(FacetTree tree,
+	// double nodeID) throws CacheException {
+	//
+	// LinkedList<Edge> path;
+	//
+	// if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
+	// .valueOf(nodeID)
+	// + Keys.RANGE_ROOT)) == null) {
+	//
+	// path = tree.getAncestorPath2RangeRoot(nodeID);
+	// m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.RANGE_ROOT,
+	// path);
+	//
+	// }
+	//
+	// return path;
+	// }
 
-		LinkedList<Edge> path;
-
-		if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
-				.valueOf(nodeID)
-				+ Keys.RANGE_ROOT)) == null) {
-
-			path = tree.getAncestorPath2RangeRoot(nodeID);
-			m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.RANGE_ROOT,
-					path);
-
-		}
-
-		return path;
-
-		// List<Edge> list;
-		//
-		// if ((list = FacetDbUtils.getAllAsList(m_edgeCache,
-		// nodeId + "rangeroot", m_edgeBinding)) == null) {
-		//
-		// list = tree.getAncestorPath2RangeRoot(nodeId);
-		//
-		// for (Edge edge : list) {
-		// FacetDbUtils.store(m_edgeCache, nodeId + "rangeroot", edge,
-		// m_edgeBinding);
-		// }
-		// }
-		//
-		// return new LinkedList<Edge>(list);
-	}
-
-	@SuppressWarnings("unchecked")
-	public LinkedList<Edge> getAncestorPath2Root(FacetTree tree, double nodeID)
-			throws CacheException {
-
-		LinkedList<Edge> path;
-
-		if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
-				.valueOf(nodeID)
-				+ Keys.ROOT)) == null) {
-
-			path = tree.getAncestorPath2RangeRoot(nodeID);
-			m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.ROOT, path);
-
-		}
-
-		return path;
-
-		// List<Edge> list;
-		//
-		// if ((list = FacetDbUtils.getAllAsList(m_edgeCache, nodeId + "root",
-		// m_edgeBinding)) == null) {
-		//
-		// list = tree.getAncestorPath2RangeRoot(nodeId);
-		//
-		// for (Edge edge : list) {
-		// FacetDbUtils.store(m_edgeCache, nodeId + "root", edge,
-		// m_edgeBinding);
-		// }
-		// }
-		//
-		// return new LinkedList<Edge>(list);
-	}
+	// @SuppressWarnings("unchecked")
+	// public LinkedList<Edge> getAncestorPath2Root(FacetTree tree, double
+	// nodeID)
+	// throws CacheException {
+	//
+	// LinkedList<Edge> path;
+	//
+	// if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
+	// .valueOf(nodeID)
+	// + Keys.ROOT)) == null) {
+	//
+	// path = tree.getAncestorPath2Root(nodeID);
+	// m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.ROOT, path);
+	//
+	// }
+	//
+	// return path;
+	// }
 
 	public int getCountS4Object(String ext, String object)
 			throws DatabaseException, IOException {
@@ -478,12 +446,6 @@ public class SearchSessionCache {
 				+ fv.getValue());
 	}
 
-	// public Collection<String> getSources4Node(double nodeID)
-	// throws DatabaseException, IOException {
-	//
-	// return m_subjects4nodeMap.duplicates(nodeID);
-	// }
-
 	private void init() throws EnvironmentLockedException, DatabaseException {
 
 		/*
@@ -567,7 +529,6 @@ public class SearchSessionCache {
 		m_resBinding = new SerialBinding<Result>(cata, Result.class);
 		m_litBinding = new SerialBinding<Literal>(cata, Literal.class);
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
-		// m_doubleBinding = TupleBinding.getPrimitiveBinding(Double.class);
 
 		/*
 		 * Create maps on top of dbs ...
@@ -578,9 +539,6 @@ public class SearchSessionCache {
 
 		m_subjects4facetValueMap = new StoredMap<String, String>(
 				m_subjectsCache, m_strgBinding, m_strgBinding, true);
-
-		// m_subjects4nodeMap = new StoredMap<Double, String>(m_subjectsCache,
-		// m_doubleBinding, m_strgBinding, true);
 
 	}
 

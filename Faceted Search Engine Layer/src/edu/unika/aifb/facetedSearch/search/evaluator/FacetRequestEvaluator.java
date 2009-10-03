@@ -28,9 +28,12 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPageManager;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
@@ -52,9 +55,21 @@ public class FacetRequestEvaluator extends Searcher {
 
 	private static Logger s_log = Logger.getLogger(FacetRequestEvaluator.class);
 
-	private QueryHistoryManager m_history;
+	/*
+	 * 
+	 */
 	private SearchSession m_session;
 	private SearchSessionCache m_cache;
+
+	/*
+	 * 
+	 */
+	private FacetPageManager m_fpageManager;
+	private QueryHistoryManager m_history;
+
+	/*
+	 * 
+	 */
 	private Facet2TreeModelConverter m_facet2TreeModelConverter;
 
 	public FacetRequestEvaluator(IndexReader idxReader, SearchSession session) {
@@ -62,8 +77,11 @@ public class FacetRequestEvaluator extends Searcher {
 		super(idxReader);
 
 		m_session = session;
-		m_history = session.getHistory();
 		m_cache = session.getCache();
+
+		m_history = session.getHistory();
+		m_fpageManager = session.getFacetPageManager();
+
 		m_facet2TreeModelConverter = (Facet2TreeModelConverter) session
 				.getConverter(Converters.FACET2TREE);
 
@@ -119,29 +137,59 @@ public class FacetRequestEvaluator extends Searcher {
 			FacetFacetValueTuple newTuple = refReq.getTuple();
 
 			try {
-				refineTable(newTuple.getFacetValue());
+
+				/*
+				 * refine table
+				 */
+				Result res = refineTable(newTuple.getFacetValue());
+
+				/*
+				 * update query
+				 */
+				FacetedQuery fquery = m_session.getCurrentQuery();
+				fquery.addFacetFacetValueTuple(newTuple);
+
+				m_session.setCurrentQuery(fquery);
+
+				/*
+				 * set refined facet page
+				 */
+				FacetPage fpage = m_fpageManager.getRefinedFacetPage(newTuple
+						.getDomain(), newTuple.getFacet(), newTuple
+						.getFacetValue());
+
+				res.setFacetPage(fpage);
+
+				
+				/*
+				 * store result & update history
+				 */
+				m_cache.storeResult(res);
+				m_history.putQueryResultTuple(fquery.getId(), res);
+
 			} catch (DatabaseException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
-			/*
-			 * update query
-			 */
-			FacetedQuery fquery = m_session.getCurrentQuery();
-			fquery.addFacetFacetValueTuple(newTuple);
+			try {
 
-			m_session.setCurrentQuery(fquery);
+				return m_cache.getResultPage(m_session.getCurrentPageNum());
 
-			return null;
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			return ResultPage.EMPTY_PAGE;
 
 		} else {
 			s_log.error("facetRequest '" + facetRequest + "'not valid!");
 			return ResultPage.EMPTY_PAGE;
 		}
 	}
-
 	private Table<String> mergeJoin(Table<String> left, List<String> right,
 			String col) throws UnsupportedOperationException {
 
@@ -198,8 +246,8 @@ public class FacetRequestEvaluator extends Searcher {
 		return result;
 	}
 
-	private Table<String> refineTable(AbstractFacetValue fv)
-			throws DatabaseException, IOException {
+	private Result refineTable(AbstractFacetValue fv) throws DatabaseException,
+			IOException {
 
 		StaticNode node = (StaticNode) m_facet2TreeModelConverter
 				.facetValue2Node(fv);
@@ -211,6 +259,10 @@ public class FacetRequestEvaluator extends Searcher {
 				.getSourceIndivdiuals());
 		Collections.sort(sourceIndividuals);
 
-		return mergeJoin(oldTable, sourceIndividuals, fv.getDomain());
+		Result res = new Result();
+		res.setResultTable(mergeJoin(oldTable, sourceIndividuals, fv
+				.getDomain()));
+
+		return res;
 	}
 }

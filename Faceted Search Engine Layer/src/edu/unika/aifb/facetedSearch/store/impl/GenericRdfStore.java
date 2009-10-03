@@ -231,28 +231,7 @@ public class GenericRdfStore implements IStore {
 		m_idxReader = new IndexReader(m_idxDir = new IndexDirectory(dir));
 	}
 
-	// public Map<String, String> getObjects(String subject) {
-	// // TODO
-	// return null;
-	// }
-	//
-	// // /**
-	// // * @return the session
-	// // */
-	// // public SearchSession getSession() {
-	// // return m_session;
-	// // }
-	//
-	// public Map<String, String> getSubjects(String object) {
-	// // TODO
-	// return null;
-	// }
-
 	public void setSession(SearchSession session) {
 		m_session = session;
 	}
-
-	// public void setSession(SearchSession session) {
-	// this.m_session = session;
-	// }
 }

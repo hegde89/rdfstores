@@ -30,7 +30,7 @@ import com.sleepycat.je.EnvironmentLockedException;
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
-import edu.unika.aifb.facetedSearch.algo.ranking.impl.RankingDelegator;
+import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;

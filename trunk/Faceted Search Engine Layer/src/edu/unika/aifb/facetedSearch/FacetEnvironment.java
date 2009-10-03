@@ -45,7 +45,8 @@ public class FacetEnvironment {
 		/*
 		 * indices
 		 */
-		public static final String TREE = "tree_db";
+		// public static final String TREE = "tree_db";
+		public static final String PATH = "path_db";
 		public static final String LEAVE = "leave_db";
 		public static final String OBJECT = "object_db";
 
@@ -71,8 +72,16 @@ public class FacetEnvironment {
 		public static final String FHIST_CACHE = "fhist_cache_db";
 	}
 
-	public enum DataType {
-		STRING, TIME, NUMERICAL, DATE, DATE_TIME, UNKNOWN
+	public static class DataType {
+
+		public static final int NOT_SET = -1;
+
+		public static final int STRING = 1;
+		public static final int TIME = 2;
+		public static final int NUMERICAL = 3;
+		public static final int DATE = 4;
+		public static final int DATE_TIME = 5;
+		public static final int UNKNOWN = 6;
 	}
 
 	public static class DefaultValue {
@@ -90,7 +99,17 @@ public class FacetEnvironment {
 
 	}
 
+	public static class EdgeType {
+
+		public static final int SUBPROPERTY_OF = 1;
+		public static final int SUBCLASS_OF = 2;
+		public static final int HAS_RANGE = 3;
+		public static final int CONTAINS = 4;
+
+	}
+
 	public static class EndPointType {
+
 		public static final int DATA_PROPERTY = 1;
 		public static final int OBJECT_PROPERTY = 2;
 		public static final int RDF_PROPERTY = 3;
@@ -100,16 +119,41 @@ public class FacetEnvironment {
 		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator, ChangePageEvaluator
 	}
 
-	public enum FacetType {
-		DATAPROPERTY_BASED, OBJECT_PROPERTY_BASED, RDF_PROPERTY_BASED
+	public static class FacetType {
+
+		public static final int NOT_SET = -1;
+
+		public static final int DATAPROPERTY_BASED = 1;
+		public static final int OBJECT_PROPERTY_BASED = 2;
+		public static final int RDF_PROPERTY_BASED = 3;
+	}
+
+	public static class Keys {
+		
+		public static final String RANGEROOT_PATH = "rr";
+		public static final String ROOT_PATH = "r";
 	}
 
 	public static class LucenceIndexName {
 
 		public static final String LEAVE = "leave";
-
 		public static final String OBJECT = "obj";
+	}
 
+	public static class NodeContent {
+
+		public static final int TYPE_PROPERTY = 1;
+		public static final int DATA_PROPERTY = 2;
+		public static final int OBJECT_PROPERTY = 3;
+		public static final int CLASS = 4;
+	}
+
+	public static class NodeType {
+
+		public static final int ROOT = 1;
+		public static final int RANGE_ROOT = 2;
+		public static final int INNER_NODE = 3;
+		public static final int LEAVE = 4;
 	}
 
 	public static class OntologyLanguage {

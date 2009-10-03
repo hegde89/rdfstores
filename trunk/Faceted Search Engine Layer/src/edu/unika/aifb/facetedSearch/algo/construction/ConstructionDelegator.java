@@ -30,7 +30,7 @@ import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.BuilderHelper;
-import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetClusterBuilder;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSingleLinkageClusterBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSubTreeBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetTreeBuilder;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
@@ -103,7 +103,7 @@ public class ConstructionDelegator extends Delegator {
 
 		m_treeBuilder = new FacetTreeBuilder(m_session, m_helper);
 		m_subTreeBuilder = new FacetSubTreeBuilder(m_session, m_helper);
-		m_clusterBuilder = new FacetClusterBuilder(m_session, m_helper);
+		m_clusterBuilder = new FacetSingleLinkageClusterBuilder(m_session, m_helper);
 
 		m_builder = new ArrayList<IBuilder>();
 		m_builder.add(m_treeBuilder);
@@ -181,18 +181,13 @@ public class ConstructionDelegator extends Delegator {
 
 	public boolean refine(FacetTree tree, StaticNode node) {
 
-		if (node.getFacet().getType() != FacetType.DATAPROPERTY_BASED) {
+		if (node.getFacet().getType() == FacetType.DATAPROPERTY_BASED) {
 
 			return refineCluster(tree, node);
 
-		} else if (node.getFacet().getType() != FacetType.OBJECT_PROPERTY_BASED) {
+		} else if (node.getFacet().getType() != FacetType.DATAPROPERTY_BASED) {
 
 			return refineSubTree(tree, node);
-
-		} else if (node.getFacet().getType() != FacetType.RDF_PROPERTY_BASED) {
-
-			m_helper.insertFacetValues(tree, node, node.getObjects());
-			return true;
 
 		} else {
 
@@ -204,14 +199,14 @@ public class ConstructionDelegator extends Delegator {
 
 	public boolean refineCluster(FacetTree tree, StaticNode node) {
 
-		((FacetClusterBuilder) m_clusterBuilder).clean();
+		m_clusterBuilder.clean();
 
-		return ((FacetClusterBuilder) m_clusterBuilder).build(tree, node);
+		return ((FacetSingleLinkageClusterBuilder) m_clusterBuilder).build(tree, node);
 	}
 
 	public boolean refineSubTree(FacetTree tree, StaticNode node) {
 
-		((FacetSubTreeBuilder) m_subTreeBuilder).clean();
+		m_subTreeBuilder.clean();
 
 		try {
 

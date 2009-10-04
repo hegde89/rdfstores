@@ -15,33 +15,25 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
+package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
-import java.util.Comparator;
-
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
+import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 
 /**
  * @author andi
  * 
  */
-public class StringComparator implements Comparator<AbstractSingleFacetValue> {
-
-	public StringComparator() {
-
-	}
+public class CountSMetric implements IRankingMetric {
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+	 * @see
+	 * edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric#computeScore
+	 * (edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode)
 	 */
-	public int compare(AbstractSingleFacetValue lit1, AbstractSingleFacetValue lit2) {
-
-		String litValue1 = FacetUtils.getValueOfLiteral(lit1.getValue());
-		String litValue2 = FacetUtils.getValueOfLiteral(lit2.getValue());
-
-		return litValue1.compareTo(litValue2);
+	public void computeScore(StaticNode node) {
+		node.setWeight(node.getCountS());
 	}
 }

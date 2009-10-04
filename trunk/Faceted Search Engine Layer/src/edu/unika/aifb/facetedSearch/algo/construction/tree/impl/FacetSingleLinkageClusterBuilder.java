@@ -21,9 +21,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 
 import org.apache.jcs.access.exception.CacheException;
@@ -38,8 +39,10 @@ import edu.unika.aifb.facetedSearch.algo.construction.clustering.IDistanceMetric
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.DistanceComparator;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.PositionComparator;
+import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.ComparatorPool;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.metric.DistanceMetricPool;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
@@ -48,7 +51,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 
 /**
  * @author andi
@@ -56,12 +58,12 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
  */
 public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
-	private static Logger s_log = Logger.getLogger(FacetSingleLinkageClusterBuilder.class);
+	private static Logger s_log = Logger
+			.getLogger(FacetSingleLinkageClusterBuilder.class);
 
 	/*
 	 * 
 	 */
-	@SuppressWarnings("unused")
 	private SearchSession m_session;
 	private SearchSessionCache m_cache;
 
@@ -70,9 +72,19 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 	 */
 	private BuilderHelper m_helper;
 
-	public FacetSingleLinkageClusterBuilder(SearchSession session, BuilderHelper helper) {
+	/*
+	 * 
+	 */
+	private ComparatorPool m_compPool;
+
+	public FacetSingleLinkageClusterBuilder(SearchSession session,
+			BuilderHelper helper) {
+
 		m_session = session;
+		m_cache = session.getCache();
+
 		m_helper = helper;
+		m_compPool = ComparatorPool.getInstance();
 	}
 
 	public boolean build(FacetTree tree, StaticNode node) {
@@ -134,21 +146,18 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 	private void doClustering(FacetTree tree, StaticNode epNode)
 			throws CacheException, DatabaseException, IOException {
 
-		m_cache.clean(CleanType.LITERALS);
-
 		int datatype = epNode.getFacet().getDataType() == DataType.NOT_SET
 				? FacetEnvironment.DataType.STRING
 				: epNode.getFacet().getDataType();
 
 		IDistanceMetric metric = DistanceMetricPool.getMetric(datatype);
+		List<AbstractSingleFacetValue> lits = new ArrayList<AbstractSingleFacetValue>();
+		lits.addAll(epNode.getObjects());
 
-		Collection<Literal> lits = epNode.getSortedLiterals();
-		ArrayList<Literal> litsList = new ArrayList<Literal>(lits);
-
-		// /*
-		// * merge sort: O(nlogn)
-		// */
-		// Collections.sort(lits, m_compPool.getComparator(datatype));
+		/*
+		 * merge sort: O(nlogn)
+		 */
+		Collections.sort(lits, m_compPool.getComparator(datatype));
 
 		if (lits.size() > FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE) {
 
@@ -161,7 +170,7 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 					FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1,
 					new DistanceComparator());
 
-			Iterator<Literal> litIter = lits.iterator();
+			Iterator<AbstractSingleFacetValue> litIter = lits.iterator();
 
 			int current_leftCountS = 0;
 			int current_leftCountFV = 0;
@@ -171,19 +180,20 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
 			while (litIter.hasNext()) {
 
-				Literal current_left = litIter.next();
+				Literal current_left = (Literal) litIter.next();
 				String ext = current_left.getSourceExt();
 
 				if (litIter.hasNext()) {
 
-					Literal current_right = litIter.next();
+					Literal current_right = (Literal) litIter.next();
 					ClusterDistance clusterDistance;
 
 					if ((clusterDistance = m_cache.getDistance(current_left
 							.getValue(), current_right.getValue(), ext)) == null) {
 
-						current_leftSources.addAll(m_cache
-								.getSources4FacetValue(current_left));
+						current_leftSources.addAll(m_cache.getSources4Object(
+								current_left.getDomain(), current_left
+										.getValue()));
 						current_leftCountS = current_leftSources.size();
 						current_leftCountFV += 1;
 
@@ -244,12 +254,12 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
 				dynNode = new DynamicNode();
 				dynNode.setDomain(epNode.getDomain());
-				dynNode.setCache(m_cache);
+				dynNode.setSession(m_session);
 				dynNode.setCountS(firstDis.getLeftCountS());
 				dynNode.setCountFV(firstDis.getLeftCountFV());
-				dynNode.setLeftBorder(litsList.get(0).getValue());
+				dynNode.setLeftBorder(lits.get(0).getValue());
 				dynNode.setRightBorder(firstDis.getLeftBorder());
-				dynNode.setLits(litsList.subList(0, litsList.indexOf(firstDis
+				dynNode.setLiterals(lits.subList(0, lits.indexOf(firstDis
 						.getLeftBorder())));
 
 				tree.addVertex(dynNode);
@@ -262,15 +272,15 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
 					dynNode = new DynamicNode();
 					dynNode.setDomain(epNode.getDomain());
-					dynNode.setCache(m_cache);
+					dynNode.setSession(m_session);
 					dynNode.setCountS(secondDis.getLeftCountS()
 							- firstDis.getLeftCountS());
 					dynNode.setCountFV(secondDis.getLeftCountFV()
 							- firstDis.getLeftCountFV());
 					dynNode.setLeftBorder(firstDis.getRightBorder());
 					dynNode.setRightBorder(secondDis.getLeftBorder());
-					dynNode.setLits(litsList.subList(litsList.indexOf(firstDis
-							.getRightBorder()), litsList.indexOf(secondDis
+					dynNode.setLiterals(lits.subList(lits.indexOf(firstDis
+							.getRightBorder()), lits.indexOf(secondDis
 							.getLeftBorder())));
 
 					tree.addVertex(dynNode);
@@ -281,17 +291,16 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 
 						dynNode = new DynamicNode();
 						dynNode.setDomain(epNode.getDomain());
-						dynNode.setCache(m_cache);
+						dynNode.setSession(m_session);
 						dynNode.setCountS(epNode.getCountS()
 								- secondDis.getLeftCountS());
 						dynNode.setCountFV(epNode.getCountFV()
 								- secondDis.getLeftCountFV());
 						dynNode.setLeftBorder(secondDis.getLeftBorder());
-						dynNode.setRightBorder(litsList.get(lits.size() - 1)
+						dynNode.setRightBorder(lits.get(lits.size() - 1)
 								.getValue());
-						dynNode.setLits(litsList.subList(litsList
-								.indexOf(secondDis.getRightBorder()), litsList
-								.size() - 1));
+						dynNode.setLiterals(lits.subList(lits.indexOf(secondDis
+								.getRightBorder()), lits.size() - 1));
 
 						tree.addVertex(dynNode);
 						edge = tree.addEdge(epNode, dynNode);

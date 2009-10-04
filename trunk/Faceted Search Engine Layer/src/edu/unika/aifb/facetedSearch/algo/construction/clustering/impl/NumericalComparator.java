@@ -22,19 +22,17 @@ import java.util.Comparator;
 
 import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
  * 
  */
-public class NumericalComparator implements Comparator<String> {
+public class NumericalComparator implements Comparator<AbstractSingleFacetValue> {
 
-//	private SearchSessionCache m_cache;
+	public NumericalComparator() {
 
-	public NumericalComparator(SearchSessionCache cache) {
-//		m_cache = cache;
 	}
 
 	/*
@@ -42,13 +40,10 @@ public class NumericalComparator implements Comparator<String> {
 	 * 
 	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
 	 */
-	public int compare(String o1, String o2) {
+	public int compare(AbstractSingleFacetValue o1, AbstractSingleFacetValue o2) {
 
-		double litValue1 = lit2Double(o1);
-		double litValue2 = lit2Double(o2);
-
-		// m_cache.addParsedLiteral(o1, litValue1);
-		// m_cache.addParsedLiteral(o2, litValue2);
+		double litValue1 = lit2Double(o1.getValue());
+		double litValue2 = lit2Double(o2.getValue());
 
 		return (new BigDecimal(litValue1)).compareTo(new BigDecimal(litValue2));
 	}

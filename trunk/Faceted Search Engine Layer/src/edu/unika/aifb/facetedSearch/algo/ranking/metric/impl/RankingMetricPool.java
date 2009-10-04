@@ -17,23 +17,61 @@
  */
 package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.RankingMetricType;
 import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 
 /**
  * @author andi
  * 
  */
-public class BrowseAbilityMetric implements IRankingMetric {
+public class RankingMetricPool {
 
 	/*
-	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric#computeScore
-	 * (edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode)
 	 */
-	public void computeScore(StaticNode node) {
-		// TODO Auto-generated method stub
+	private static RankingMetricPool s_instance;
+
+	public static RankingMetricPool getInstance() {
+		return s_instance == null
+				? s_instance = new RankingMetricPool()
+				: s_instance;
+	}
+
+	/*
+	 * 
+	 */
+	private IRankingMetric m_countS;
+	private IRankingMetric m_countFV;
+	private IRankingMetric m_browseAbility;
+
+	private RankingMetricPool() {
+		init();
+	}
+
+	public IRankingMetric getMetric(int type) {
+
+		switch (type) {
+
+			case RankingMetricType.COUNT_S : {
+				return m_countS;
+			}
+			case RankingMetricType.COUNT_FV : {
+				return m_countFV;
+			}
+			case RankingMetricType.BROWSE_ABILITY : {
+				return m_browseAbility;
+			}
+
+			default :
+				return null;
+		}
+
+	}
+
+	private void init() {
+
+		m_countS = new CountSMetric();
+		m_countFV = new CountFVMetric();
+		m_browseAbility = new BrowseAbilityMetric();
 	}
 }

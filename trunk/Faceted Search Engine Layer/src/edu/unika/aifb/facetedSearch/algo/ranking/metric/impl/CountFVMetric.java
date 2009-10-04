@@ -15,16 +15,21 @@
 * You should have received a copy of the GNU General Public License 
 * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
 */
-package edu.unika.aifb.facetedSearch.algo.ranking.metric;
+package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
+import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 
 /**
  * @author andi
  *
  */
-public interface IRankingMetric {
+public class CountFVMetric implements IRankingMetric{
 
-	public void computeScore(StaticNode node);
-	
+	/* (non-Javadoc)
+	 * @see edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric#computeScore(edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node)
+	 */
+	public void computeScore(StaticNode node) {
+		node.setWeight(node.getCountFV());
+	}
 }

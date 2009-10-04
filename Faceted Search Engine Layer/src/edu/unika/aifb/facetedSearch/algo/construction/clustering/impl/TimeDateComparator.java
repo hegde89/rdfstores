@@ -23,33 +23,24 @@ import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
  * 
  */
-public class TimeDateComparator implements Comparator<String> {
-
-	// private SearchSessionCache m_cache;
-
-	public TimeDateComparator(SearchSessionCache cache) {
-		// m_cache = cache;
-	}
+public class TimeDateComparator implements Comparator<AbstractSingleFacetValue> {
 
 	/*
 	 * (non-Javadoc)
 	 * 
 	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
 	 */
-	public int compare(String o1, String o2) {
+	public int compare(AbstractSingleFacetValue o1, AbstractSingleFacetValue o2) {
 
-		XMLGregorianCalendar cal1 = lit2Cal(o1);
-		XMLGregorianCalendar cal2 = lit2Cal(o2);
-
-		// m_cache.addParsedLiteral(o1, cal1);
-		// m_cache.addParsedLiteral(o2, cal2);
+		XMLGregorianCalendar cal1 = lit2Cal(o1.getValue());
+		XMLGregorianCalendar cal2 = lit2Cal(o2.getValue());
 
 		return cal1.toGregorianCalendar().compareTo(cal2.toGregorianCalendar());
 	}

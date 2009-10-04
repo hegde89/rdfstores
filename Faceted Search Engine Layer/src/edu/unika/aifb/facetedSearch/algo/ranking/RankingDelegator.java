@@ -17,9 +17,14 @@
  */
 package edu.unika.aifb.facetedSearch.algo.ranking;
 
+import java.util.Collection;
+
 import edu.unika.aifb.facetedSearch.Delegator;
-import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
-import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
+import edu.unika.aifb.facetedSearch.algo.ranking.metric.impl.RankingMetricPool;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
@@ -28,47 +33,82 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession;
  */
 public class RankingDelegator extends Delegator {
 
-	@SuppressWarnings("unused")
-	private SearchSession m_session;
+	/*
+	 * 
+	 */
 	private static RankingDelegator s_instance;
 
-	private RankingDelegator(SearchSession session) {
-		m_session = session;
-	}
-
 	public static RankingDelegator getInstance(SearchSession session) {
-		return s_instance == null ? s_instance = new RankingDelegator(session)
+		return s_instance == null
+				? s_instance = new RankingDelegator(session)
 				: s_instance;
 	}
 
-	public void doRanking(IEdge edge, INode node){
-		
-//		double score = 0L;
-		
-//		TODO
-//		
-//		edge.setWeight(score);		
-	}
-	
-	public void clean(){
-//		TODO
+	/*
+	 * delegate
+	 */
+	private IRankingMetric m_metric;
+
+	/*
+	 * 
+	 */
+	private RankingMetricPool m_metricPool;
+
+	/*
+	 * 
+	 */
+	@SuppressWarnings("unused")
+	private SearchSession m_session;
+
+	private RankingDelegator(SearchSession session) {
+		m_session = session;
+		m_metricPool = RankingMetricPool.getInstance();
 	}
 
-	/* (non-Javadoc)
+	@Override
+	public void clean() {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see edu.unika.aifb.facetedSearch.Delegator#close()
 	 */
 	@Override
 	public void close() {
-		// TODO Auto-generated method stub
-		
+
 	}
 
-	/* (non-Javadoc)
+	public void computeRanking(Collection<Node> nodes) {
+
+		m_metric = m_metricPool
+				.getMetric(FacetEnvironment.DefaultValue.RANKING_METRIC);
+
+		for (Node node : nodes) {
+
+			if (node instanceof StaticNode) {
+				m_metric.computeScore((StaticNode) node);
+			}
+		}
+	}
+
+	public void computeRanking(Node node) {
+
+		m_metric = m_metricPool
+				.getMetric(FacetEnvironment.DefaultValue.RANKING_METRIC);
+
+		if (node instanceof StaticNode) {
+			m_metric.computeScore((StaticNode) node);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see edu.unika.aifb.facetedSearch.Delegator#isOpen()
 	 */
 	@Override
 	public boolean isOpen() {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 }

@@ -57,7 +57,6 @@ public class FacetTreeBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
-	@SuppressWarnings("unused")
 	private SearchSessionCache m_cache;
 
 	/*
@@ -99,8 +98,10 @@ public class FacetTreeBuilder implements IBuilder {
 
 		long time1 = System.currentTimeMillis();
 
+		String domain = results.getColumnName(column);
+
 		FacetTree newTree = new FacetTree();
-		newTree.setDomain(results.getColumnName(column));
+		newTree.setDomain(domain);
 
 		Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 		Iterator<String[]> iter = results.iterator();
@@ -115,12 +116,11 @@ public class FacetTreeBuilder implements IBuilder {
 
 			for (Node leave : oldLeaves) {
 
-				StaticNode newLeave = m_helper.insertPathAtRoot(newTree,leave, m_paths);
+				StaticNode newLeave = m_helper.insertPathAtRoot(newTree, leave,
+						m_paths);
 				newLeaves.add(newLeave);
 
-				m_helper.updateNodeCounts(newTree, resItem, sourceExtension,
-						newLeave);
-
+				m_cache.updateLeaveGroups(newLeave.getID(), resItem);
 			}
 		}
 

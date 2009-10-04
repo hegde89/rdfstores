@@ -39,6 +39,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
+import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -54,6 +55,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
+	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -73,6 +75,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 	public FacetSubTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
+		m_cache = session.getCache();
 		m_helper = helper;
 
 		init();
@@ -86,28 +89,52 @@ public class FacetSubTreeBuilder implements IBuilder {
 
 		if (node.getFacet().isObjectPropertyBased()) {
 
+			String domain = tree.getDomain();
 			Set<StaticNode> newLeaves = new HashSet<StaticNode>();
-			Iterator<AbstractSingleFacetValue> indIter = node.getObjects()
-					.iterator();
 
-			if (!(node instanceof FacetValueNode) && indIter.hasNext()) {
+			if (!(node instanceof FacetValueNode)) {
 
-				while (indIter.hasNext()) {
+				Iterator<String> subjIter = node.getSubjects().iterator();
 
-					AbstractSingleFacetValue fv = indIter.next();
-					String ext = fv.getSourceExt();
+				while (subjIter.hasNext()) {
+					
+					String subject = subjIter.next();
 
-					Collection<Node> oldLeaves = m_facetIndex.getLeaves(fv);
+					Iterator<AbstractSingleFacetValue> objIter = node
+							.getObjects(subject).iterator();
 
-					for (Node leave : oldLeaves) {
+					while (objIter.hasNext()) {
 
-						StaticNode newLeave = m_helper.insertPathAtNode(tree,
-								leave, node, m_paths);
-						newLeaves.add(newLeave);
+						AbstractSingleFacetValue fv = objIter.next();
 
-						m_helper.updateNodeCounts(tree, fv.getValue(), ext,
-								newLeave);
+						Iterator<String> sourcesIter = m_cache
+								.getSources4Object(domain, subject).iterator();
 
+						if (sourcesIter.hasNext()) {
+
+							while (sourcesIter.hasNext()) {
+
+								m_cache.addObject2SourceMapping(domain, fv
+										.getValue(), sourcesIter.next());
+
+							}
+						} else {
+
+							m_cache.addObject2SourceMapping(domain, fv
+									.getValue(), subject);
+						}
+
+						Collection<Node> oldLeaves = m_facetIndex.getLeaves(fv);
+
+						for (Node leave : oldLeaves) {
+
+							StaticNode newLeave = m_helper.insertPathAtNode(
+									tree, leave, node, m_paths);
+							newLeaves.add(newLeave);
+
+							m_cache.updateLeaveGroups(newLeave.getID(), fv
+									.getValue());
+						}
 					}
 				}
 
@@ -129,7 +156,6 @@ public class FacetSubTreeBuilder implements IBuilder {
 			return false;
 		}
 	}
-
 	/*
 	 * (non-Javadoc)
 	 * 

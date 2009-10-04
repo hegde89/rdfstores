@@ -33,9 +33,9 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
-import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
@@ -43,7 +43,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -59,9 +58,7 @@ public class BuilderHelper {
 	/*
 	 * 
 	 */
-	@SuppressWarnings("unused")
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -71,7 +68,6 @@ public class BuilderHelper {
 	public BuilderHelper(SearchSession session) {
 
 		m_session = session;
-		m_cache = session.getCache();
 
 		try {
 
@@ -97,11 +93,19 @@ public class BuilderHelper {
 		while (valueIter.hasNext()) {
 
 			AbstractFacetValue fv = valueIter.next();
+
 			FacetValueNode fvNode = new FacetValueNode(fv.getValue());
+			fvNode.setContent(NodeContent.CLASS);
+			fvNode.setFacet(node.getFacet());
+			fvNode.setType(NodeType.LEAVE);
 			fvNode.setDomain(node.getDomain());
-			fvNode.setCache(m_cache);
+			fvNode.setSession(m_session);
 			fvNode.setDepth(node.getDepth() + 1);
 
+			tree.addVertex(fvNode);
+
+			Edge edge = tree.addEdge(node, fvNode);
+			edge.setType(EdgeType.CONTAINS);
 		}
 	}
 
@@ -116,16 +120,11 @@ public class BuilderHelper {
 			StaticNode pos4insertion = node;
 			Stack<Edge> edges2insert = new Stack<Edge>();
 
-			// Queue<Edge> path2root = m_cache.getAncestorPath2Root(indexedTree,
-			// leaveId);
-
 			Queue<Edge> path2root = m_facetIndex.getPath2Root(pathHash);
 
 			while (!path2root.isEmpty()) {
 
 				Edge currentEdge = path2root.poll();
-				// int currentPathHash = indexedTree.getEdgeTarget(currentEdge)
-				// .getPathHashValue();
 
 				int currentPathHash = currentEdge.getTarget()
 						.getPathHashValue();
@@ -146,7 +145,6 @@ public class BuilderHelper {
 				while (!edges2insert.isEmpty()) {
 
 					Edge edge2insert = edges2insert.pop();
-					// Node node2copy = indexedTree.getEdgeTarget(edge2insert);
 					Node node2copy = edge2insert.getTarget();
 
 					StaticNode newNode = new StaticNode();
@@ -155,7 +153,7 @@ public class BuilderHelper {
 					newNode.setValue(node2copy.getValue());
 					newNode.setType(node2copy.getType());
 					newNode.setDomain(newTree.getDomain());
-					newNode.setCache(m_cache);
+					newNode.setSession(m_session);
 					newNode.setID(node2copy.getID());
 					newNode.setDepth(pos4insertion.getDepth() + 1);
 
@@ -258,62 +256,5 @@ public class BuilderHelper {
 		}
 
 		return tree;
-	}
-
-	public void updateNodeCounts(FacetTree newTree, String resItem,
-			String sourceExt, StaticNode leave) throws CacheException,
-			EnvironmentLockedException, DatabaseException, IOException {
-
-		// Queue<Edge> path2RangeRoot =
-		// m_cache.getAncestorPath2RangeRoot(newTree,
-		// leave.getID());
-
-		Queue<Edge> path2RangeRoot = m_facetIndex.getPath2RangeRoot(leave
-				.getPathHashValue());
-
-		Collection<AbstractSingleFacetValue> objects = m_facetIndex.getObjects(
-				leave, resItem);
-
-		if (objects.size() == 0) {
-			s_log.error("no objects found for leave '" + leave + "' and ind '"
-					+ resItem + "'!");
-		}
-
-		if (!path2RangeRoot.isEmpty()) {
-
-			if (leave.getFacet().getType() != FacetType.DATAPROPERTY_BASED) {
-
-				StaticNode last_node = null;
-				StaticNode current_node = null;
-
-				while (!path2RangeRoot.isEmpty()) {
-
-					Edge edge = path2RangeRoot.poll();
-
-					current_node = (StaticNode) newTree.getEdgeTarget(edge);
-					current_node.addSourceIndivdiual(resItem);
-					current_node.addUnsortedObjects(objects, resItem);
-
-					last_node = (StaticNode) newTree.getEdgeSource(edge);
-				}
-
-				last_node.addSourceIndivdiual(resItem);
-				last_node.addUnsortedObjects(objects, resItem);
-
-			} else {
-				s_log.error("should not be here ... leave '" + leave + "'");
-			}
-		} else {
-
-			leave.addSourceIndivdiual(resItem);
-
-			if (leave.getFacet().getType() == FacetType.DATAPROPERTY_BASED) {
-				leave.addSortedObjects(objects, resItem);
-			}
-			// object property or rdf property based
-			else {
-				leave.addUnsortedObjects(objects, resItem);
-			}
-		}
 	}
 }

@@ -31,8 +31,11 @@ public class FacetEnvironment {
 
 	public static class CacheName {
 
-		public static final String EDGE = "edge";
+		public static final String SOURCES = "src";
 		public static final String DISTANCE = "dis";
+		public static final String SUBJECTS = "subj";
+		public static final String OBJECTS = "obj";
+		
 	}
 
 	public static class DatabaseName {
@@ -45,7 +48,6 @@ public class FacetEnvironment {
 		/*
 		 * indices
 		 */
-		// public static final String TREE = "tree_db";
 		public static final String PATH = "path_db";
 		public static final String LEAVE = "leave_db";
 		public static final String OBJECT = "object_db";
@@ -54,10 +56,7 @@ public class FacetEnvironment {
 		 * fsl cache
 		 */
 		public static final String FS_CACHE = "fs_cache_db";
-		public static final String FCS_CACHE = "fcs_cache_db";
-		public static final String FH_CACHE = "fh_cache_db";
 		public static final String FRES_CACHE = "fres_cache_db";
-		public static final String FCO_CACHE = "fco_cache_db";
 		public static final String FLIT_CACHE = "flit_cache_db";
 
 		/*
@@ -70,6 +69,11 @@ public class FacetEnvironment {
 		 * history manager
 		 */
 		public static final String FHIST_CACHE = "fhist_cache_db";
+
+		/*
+		 * facet index builder helper
+		 */
+		public static final String FH_CACHE = "fh_cache_db";
 	}
 
 	public static class DataType {
@@ -96,6 +100,8 @@ public class FacetEnvironment {
 		public static int NUM_OF_RESITEMS_PER_PAGE = 20;
 		public static long PRELOAD_TIME = 4000;
 		public static int NUM_OF_CHILDREN_PER_NODE = 6;
+		public static int RANKING_METRIC = RankingMetricType.COUNT_S;
+		public static int LITERAL_CLUSTERER = LiteralClustererType.SIMPLE;
 
 	}
 
@@ -129,9 +135,17 @@ public class FacetEnvironment {
 	}
 
 	public static class Keys {
-		
-		public static final String RANGEROOT_PATH = "rr";
-		public static final String ROOT_PATH = "r";
+
+		public static final String RESULT_SET = "re";
+		// public static final String RANGEROOT_PATH = "rr";
+		// public static final String ROOT_PATH = "r";
+	}
+
+	public static class LiteralClustererType {
+
+		public static final int SIMPLE = 1;
+		public static final int SINGLE_LINKAGE = 2;
+
 	}
 
 	public static class LucenceIndexName {
@@ -178,6 +192,14 @@ public class FacetEnvironment {
 		public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
 		public static final String ONTO_LANGUAGE = "onto.language";
 		public static final String CACHE_DIR = "cache.dir";
+
+	}
+
+	public static class RankingMetricType {
+
+		public static final int COUNT_S = 1;
+		public static final int COUNT_FV = 2;
+		public static final int BROWSE_ABILITY = 3;
 
 	}
 

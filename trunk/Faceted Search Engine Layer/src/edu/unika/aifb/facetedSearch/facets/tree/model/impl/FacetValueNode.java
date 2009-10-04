@@ -17,8 +17,12 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
+
+import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueNode;
@@ -44,10 +48,23 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 		return 1;
 	}
 
+	/* (non-Javadoc)
+	 * @see edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode#getCountS()
+	 */
+	@Override
+	public int getCountS() {
+		
+		if (m_countS == -1) {
+			m_countS = super.getCache().getCountS4FacetValueNode(this);
+		}
+
+		return m_countS;
+	}
+	
 	public String getRangeExtension() {
 
 		String ext = null;
-		Iterator<String> iter = getRangeExtensions().iterator();
+		Iterator<String> iter = super.getRangeExtensions().iterator();
 
 		if (iter.hasNext()) {
 			ext = iter.next();
@@ -72,7 +89,7 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 	public String getSourceExtension() {
 
 		String ext = null;
-		Iterator<String> iter = getSourceExtensions().iterator();
+		Iterator<String> iter = super.getSourceExtensions().iterator();
 
 		if (iter.hasNext()) {
 			ext = iter.next();
@@ -92,6 +109,18 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 	@Deprecated
 	public HashSet<String> getSourceExtensions() {
 		return super.getSourceExtensions();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode#getSources
+	 * ()
+	 */
+	@Override
+	public Set<String> getSources() throws DatabaseException, IOException {
+		return super.getCache().getSources4FacetValueNode(this);
 	}
 
 	@Override

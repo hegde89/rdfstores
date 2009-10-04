@@ -18,30 +18,18 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Set;
 
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
  * 
  */
 public interface IStaticNode extends INode {
-
-	public void addSortedObjects(
-			Collection<AbstractSingleFacetValue> abstractFacetValues,
-			String source);
-
-	public void addSourceIndivdiual(String ind);
-
-	public void addUnsortedObjects(
-			Collection<AbstractSingleFacetValue> abstractFacetValues,
-			String source);
 
 	public int getCountFV();
 
@@ -56,12 +44,8 @@ public interface IStaticNode extends INode {
 
 	public int getSize();
 
-	public Collection<Literal> getSortedLiterals();
-
-	public Set<String> getSourceIndivdiuals() throws DatabaseException,
+	public Set<String> getSources() throws DatabaseException,
 			IOException;
-
-	public void setCache(SearchSessionCache cache);
 
 	public void setCountFV(int countFV);
 
@@ -70,6 +54,8 @@ public interface IStaticNode extends INode {
 	public void setDepth(int depth);
 
 	public void setHeight(int height);
+
+	public void setSession(SearchSession session);
 
 	public void setSize(int size);
 

@@ -93,8 +93,6 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Literal) fv).setNodeId(fvn.getID());
 				((Literal) fv).setValue(fvn.getValue());
 				((Literal) fv).setCountS(fvn.getCountS());
-				((Literal) fv).setSourceExt(fvn.getSourceExtension());
-				((Literal) fv).setRangeExt(fvn.getRangeExtension());
 				((Literal) fv).setIsResource(false);
 
 			} else {
@@ -104,8 +102,6 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Resource) fv).setNodeId(fvn.getID());
 				((Resource) fv).setValue(fvn.getValue());
 				((Resource) fv).setCountS(fvn.getCountS());
-				((Resource) fv).setSourceExt(fvn.getSourceExtension());
-				((Resource) fv).setRangeExt(fvn.getRangeExtension());
 				((Resource) fv).setIsResource(true);
 			}
 
@@ -118,8 +114,6 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setNodeId(dyn.getID());
 			((FacetValueCluster) fv).setValue(dyn.getValue());
 			((FacetValueCluster) fv).setCountS(dyn.getCountS());
-			((FacetValueCluster) fv).setSourceExt(dyn.getSourceExtensions());
-			((FacetValueCluster) fv).setRangeExt(dyn.getRangeExtensions());
 
 		} else if (node instanceof StaticNode) {
 
@@ -130,14 +124,23 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setNodeId(stat.getID());
 			((FacetValueCluster) fv).setValue(stat.getValue());
 			((FacetValueCluster) fv).setCountS(stat.getCountS());
-			((FacetValueCluster) fv).setSourceExt(stat.getSourceExtensions());
-			((FacetValueCluster) fv).setRangeExt(stat.getRangeExtensions());
 
 		} else {
 			s_log.error("should not be here: node '" + node + "'!");
 		}
 
 		return fv;
+	}
+
+	public List<Facet> nodeList2facetList(List<Node> nodeList) {
+
+		List<Facet> facetList = new ArrayList<Facet>();
+
+		for (Node node : nodeList) {
+			facetList.add(node.getFacet());
+		}
+
+		return facetList;
 	}
 
 	public List<AbstractFacetValue> nodeList2facetValueList(List<Node> nodeList) {

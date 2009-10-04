@@ -37,6 +37,7 @@ import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
@@ -148,15 +149,6 @@ public class FacetTreeDelegator extends Delegator {
 		return m_domain2treeMap.keySet();
 	}
 
-	// public Node getRange(String domain, double nodeID) {
-	//		
-	// FacetTree tree = m_domain2treeMap.get(domain);
-	// StaticNode node = (StaticNode) tree.getVertex(nodeID);
-	//		
-	// if ()
-	//		
-	// }
-
 	public Node getFather(String domain, double nodeID) {
 
 		Node father = null;
@@ -185,6 +177,61 @@ public class FacetTreeDelegator extends Delegator {
 	public Node getNode(String domain, double nodeID) {
 
 		return m_domain2treeMap.get(domain).getVertex(nodeID);
+	}
+
+	public List<Double> getRangeLeaves(String domain, double nodeID) {
+
+		FacetTree tree = m_domain2treeMap.get(domain);
+		Node node = tree.getVertex(nodeID);
+
+		if ((node.getLeaves() == null) || node.getLeaves().isEmpty()) {
+
+			if (node.containsClass()) {
+
+				Set<Node> leaves = tree.getVertices(NodeType.LEAVE);
+
+				for (Node leave : leaves) {
+
+					if (leave.getPath().startsWith(node.getPath())) {
+						node.addLeave(leave.getID());
+					}
+				}
+			} else {
+
+				Iterator<Node> childrenIter = getChildren(domain, nodeID)
+						.iterator();
+
+				Node rangeTop = null;
+
+				while (childrenIter.hasNext()) {
+
+					Node child = childrenIter.next();
+
+					if (child.containsClass()) {
+
+						rangeTop = child;
+						break;
+					}
+				}
+
+				if (rangeTop != null) {
+
+					Set<Node> leaves = tree.getVertices(NodeType.LEAVE);
+
+					for (Node leave : leaves) {
+
+						if (leave.getPath().startsWith(node.getPath())) {
+							node.addLeave(leave.getID());
+
+						}
+					}
+				} else {
+					s_log.error("tree structure not valid for tree: " + tree);
+				}
+			}
+		}
+
+		return node.getLeaves();
 	}
 
 	public FacetTree getTree(String domain) {
@@ -229,12 +276,12 @@ public class FacetTreeDelegator extends Delegator {
 		Table<String> resultTable;
 
 		try {
-			
+
 			resultTable = m_session.getCache().getResultTable();
 
 			((ConstructionDelegator) m_session
 					.getDelegator(Delegators.CONSTRUCTION))
-					.constructTree(resultTable);
+					.constructTrees(resultTable);
 
 		} catch (DatabaseException e) {
 			e.printStackTrace();

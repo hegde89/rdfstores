@@ -36,13 +36,13 @@ import org.jgrapht.traverse.DepthFirstIterator;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
+import edu.unika.aifb.facetedSearch.algo.ranking.NodeComparator;
 import edu.unika.aifb.facetedSearch.facets.tree.IFacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.misc.FacetTreeTraversalListener;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.misc.NodeComparator;
 
 /**
  * @author andi
@@ -66,12 +66,14 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 	private StaticNode m_root;
 	private String m_domain;
 	private boolean m_rankingEnabled;
+	private boolean m_dirty;
 
 	/*
 	 * 
 	 */
 	private DoubleOpenHashSet m_allEndPoints;
 	private Double2ObjectOpenHashMap<Node> m_nodeMap;
+	private Double2ObjectOpenHashMap<Set<Node>> m_nodeTypeMap;
 	private Int2ObjectOpenHashMap<HashSet<StaticNode>> m_endPoints;
 
 	/*
@@ -94,6 +96,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 	@Override
 	public Edge addEdge(Node arg0, Node arg1) {
 
+		m_dirty = true;
+
 		Edge edge = super.addEdge(arg0, arg1);
 		edge.setSource(arg0);
 		edge.setTarget(arg1);
@@ -110,6 +114,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 	@Override
 	public boolean addEdge(Node arg0, Node arg1, Edge arg2) {
 
+		m_dirty = true;
+
 		arg2.setSource(arg0);
 		arg2.setTarget(arg1);
 
@@ -123,6 +129,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	@Override
 	public boolean addVertex(Node node) {
+
+		m_dirty = true;
 
 		m_nodeMap.put(node.getID(), node);
 		return super.addVertex(node);
@@ -272,64 +280,88 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		return m_nodeMap.get(nodeID);
 	}
 
-	public Set<Node> getVertex(int type) {
-
-		HashSet<Node> nodes = new HashSet<Node>();
+	public Set<Node> getVertices(int type) {
 
 		switch (type) {
 
 			case NodeType.ROOT : {
 
+				HashSet<Node> nodes = new HashSet<Node>();
 				nodes.add(m_root);
 				return nodes;
 			}
 			case NodeType.INNER_NODE : {
 
-				Iterator<Node> nodesIter = vertexSet().iterator();
+				if (!m_nodeTypeMap.containsKey(NodeType.INNER_NODE)
+						|| isDirty()) {
 
-				while (nodesIter.hasNext()) {
+					m_dirty = false;
+					
+					HashSet<Node> nodes = new HashSet<Node>();
+					Iterator<Node> nodesIter = vertexSet().iterator();
 
-					Node node = nodesIter.next();
+					while (nodesIter.hasNext()) {
 
-					if (this.outDegreeOf(node) != 0) {
-						nodes.add(node);
+						Node node = nodesIter.next();
+
+						if (this.outDegreeOf(node) != 0) {
+							nodes.add(node);
+						}
 					}
+
+					nodes.remove(m_root);
+					m_nodeTypeMap.put(NodeType.INNER_NODE, nodes);
 				}
 
-				nodes.remove(m_root);
-
-				return nodes;
+				return m_nodeTypeMap.get(NodeType.INNER_NODE);
 			}
 			case NodeType.LEAVE : {
 
-				Iterator<Node> nodesIter = vertexSet().iterator();
+				if (!m_nodeTypeMap.containsKey(NodeType.LEAVE) || isDirty()) {
 
-				while (nodesIter.hasNext()) {
+					m_dirty = false;
+					
+					HashSet<Node> nodes = new HashSet<Node>();
+					Iterator<Node> nodesIter = vertexSet().iterator();
 
-					Node node = nodesIter.next();
+					while (nodesIter.hasNext()) {
 
-					if (outDegreeOf(node) == 0) {
-						nodes.add(node);
+						Node node = nodesIter.next();
+
+						if (outDegreeOf(node) == 0) {
+							nodes.add(node);
+						}
 					}
+
+					m_nodeTypeMap.put(NodeType.LEAVE, nodes);
 				}
 
-				return nodes;
+				return m_nodeTypeMap.get(NodeType.LEAVE);
 			}
 			case NodeType.RANGE_ROOT : {
 
-				Iterator<Node> iter = vertexSet().iterator();
-				Node node = null;
+				if (!m_nodeTypeMap.containsKey(NodeType.RANGE_ROOT)
+						|| isDirty()) {
 
-				while (iter.hasNext()) {
+					m_dirty = false;
+					
+					HashSet<Node> nodes = new HashSet<Node>();
+					Iterator<Node> nodesIter = vertexSet().iterator();
 
-					node = iter.next();
+					while (nodesIter.hasNext()) {
 
-					if (((INode) node).getType() == NodeType.RANGE_ROOT) {
-						nodes.add(node);
+						Node node = nodesIter.next();
+
+						if (((INode) node).getType() == NodeType.RANGE_ROOT) {
+							nodes.add(node);
+						}
 					}
+
+					nodes.remove(m_root);
+					m_nodeTypeMap.put(NodeType.INNER_NODE, nodes);
 				}
 
-				return nodes;
+				return m_nodeTypeMap.get(NodeType.RANGE_ROOT);
 			}
 			default :
 				return null;
@@ -342,7 +374,10 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	private void init() {
 
+		m_dirty = false;
+
 		m_nodeMap = new Double2ObjectOpenHashMap<Node>();
+		m_nodeTypeMap = new Double2ObjectOpenHashMap<Set<Node>>();
 		m_endPoints = new Int2ObjectOpenHashMap<HashSet<StaticNode>>();
 		m_allEndPoints = new DoubleOpenHashSet();
 
@@ -367,6 +402,10 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		m_nodeComparator = new NodeComparator();
 	}
 
+	public boolean isDirty() {
+		return m_dirty;
+	}
+
 	public boolean isEmpty() {
 		return this.vertexSet().size() > 1 ? false : true;
 	}
@@ -377,6 +416,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	@Override
 	public boolean removeVertex(Node node) {
+
+		m_dirty = true;
 
 		m_nodeMap.remove(node.getID());
 		return super.removeVertex(node);

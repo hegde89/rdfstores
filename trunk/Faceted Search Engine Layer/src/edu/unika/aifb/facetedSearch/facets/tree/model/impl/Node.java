@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
@@ -101,6 +102,26 @@ public class Node implements INode {
 		} else {
 			return false;
 		}
+	}
+
+	public boolean containsClass() {
+		return m_content == NodeContent.CLASS;
+	}
+
+	public boolean containsDataProperty() {
+		return m_content == NodeContent.DATA_PROPERTY;
+	}
+
+	public boolean containsObjectProperty() {
+		return m_content == NodeContent.OBJECT_PROPERTY;
+	}
+
+	public boolean containsProperty() {
+		return m_content != NodeContent.CLASS;
+	}
+
+	public boolean containsRdfProperty() {
+		return m_content == NodeContent.TYPE_PROPERTY;
 	}
 
 	@Override

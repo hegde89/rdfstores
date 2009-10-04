@@ -18,21 +18,16 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import com.sleepycat.bind.tuple.TupleBinding;
-import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
-import edu.unika.aifb.facetedSearch.index.db.binding.AbstractSingleFacetValueBinding;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
@@ -49,19 +44,17 @@ public class StaticNode extends Node implements IStaticNode {
 	private static Logger s_log = Logger.getLogger(StaticNode.class);
 
 	/*
-	 * berkeley db ...
+	 * 
 	 */
-
+	@SuppressWarnings("unused")
+	private SearchSession m_session;
 	private SearchSessionCache m_cache;
-	private StoredMap<AbstractSingleFacetValue, Integer> m_countFVMap;
-	private StoredMap<String, Integer> m_countSMap;
 
 	/*
 	 * 
 	 */
-
-	private int m_countFV;
-	private int m_countS;
+	protected int m_countFV;
+	protected int m_countS;
 	private int m_height;
 	private int m_depth;
 	private int m_size;
@@ -70,7 +63,7 @@ public class StaticNode extends Node implements IStaticNode {
 		super();
 		init();
 	}
-	
+
 	public StaticNode(String value) {
 		super(value);
 		init();
@@ -81,134 +74,27 @@ public class StaticNode extends Node implements IStaticNode {
 		init();
 	}
 
-	public void addSortedObjects(
-			Collection<AbstractSingleFacetValue> abstractFacetValues,
-			String source) {
-
-		for (AbstractSingleFacetValue fv : abstractFacetValues) {
-
-			/*
-			 * add literal to sorted literal list ...
-			 */
-
-			if (fv instanceof Literal) {
-
-				try {
-
-					m_cache.addLiteral4Node(this, (Literal) fv);
-
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				} catch (DatabaseException e) {
-					e.printStackTrace();
-				}
-			}
-
-			/*
-			 * update countFV
-			 */
-
-			Integer countFV;
-
-			if ((countFV = m_countFVMap.get(fv)) == null) {
-				countFV = 0;
-			}
-
-			countFV++;
-			m_countFVMap.put(fv, countFV);
-
-			/*
-			 * update source for facet value
-			 */
-
-			try {
-				m_cache.addSource4FacetValue(fv, source);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (DatabaseException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	public void addSourceIndivdiual(String ind) {
-
-		Integer countS;
-
-		if ((countS = m_countSMap.get(ind)) == null) {
-			countS = 0;
-		}
-
-		countS++;
-		m_countSMap.put(ind, countS);
-	}
-
-	public void addUnsortedObjects(
-			Collection<AbstractSingleFacetValue> abstractFacetValues,
-			String source) {
-
-		for (AbstractSingleFacetValue fv : abstractFacetValues) {
-
-			/*
-			 * update countFV
-			 */
-
-			Integer countFV;
-
-			if ((countFV = m_countFVMap.get(fv)) == null) {
-				countFV = 0;
-			}
-
-			countFV++;
-			m_countFVMap.put(fv, countFV);
-
-			/*
-			 * update source for facet value
-			 */
-
-			try {
-				m_cache.addSource4FacetValue(fv, source);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (DatabaseException e) {
-				e.printStackTrace();
-			}
-		}
+	public SearchSessionCache getCache() {
+		return m_cache;
 	}
 
 	public int getCountFV() {
+
+		if (m_countFV == -1) {
+			m_countFV = getCache().getCountFV4StaticNode(this);
+		}
+
 		return m_countFV;
 	}
 
 	public int getCountS() {
+
+		if (m_countS == -1) {
+			m_countS = getCache().getCountS4StaticNode(this);
+		}
+
 		return m_countS;
 	}
-
-	// public int getCountS4Object(String object) {
-	//
-	// try {
-	// return m_cache.getCountS4Object(object);
-	// } catch (DatabaseException e) {
-	// e.printStackTrace();
-	// } catch (IOException e) {
-	// e.printStackTrace();
-	// }
-	//
-	// return 0;
-	// }
-	//
-	// public int getCountS4Objects(Collection<String> objects) {
-	//
-	// try {
-	// return m_cache.getCountS4Objects(objects);
-	// } catch (DatabaseException e) {
-	// e.printStackTrace();
-	// } catch (IOException e) {
-	// e.printStackTrace();
-	// }
-	//
-	// return 0;
-	// }
 
 	public int getDepth() {
 		return m_depth;
@@ -218,27 +104,29 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_height;
 	}
 
-	// public String getName() {
-	// return m_name;
-	// }
-
 	public Set<AbstractSingleFacetValue> getObjects() {
 
-		return m_countFVMap.keySet();
+		return getCache().getObjects4StaticNode(this);
+	}
+
+	public Set<AbstractSingleFacetValue> getObjects(String subject) {
+
+		return getCache().getObjects4StaticNode(this, subject);
 	}
 
 	public int getSize() {
 		return m_size;
 	}
 
-	public Collection<Literal> getSortedLiterals() {
-		return m_cache.getLiterals4Node(this);
+	public Set<String> getSources() throws DatabaseException, IOException {
+
+		return getCache().getSources4StaticNode(this);
 	}
 
-	public Set<String> getSourceIndivdiuals() throws DatabaseException,
+	public Collection<String> getSubjects() throws DatabaseException,
 			IOException {
 
-		return m_countSMap.keySet();
+		return getCache().getSubjects4Node(this);
 	}
 
 	private void init() {
@@ -247,40 +135,10 @@ public class StaticNode extends Node implements IStaticNode {
 		m_countS = -1;
 		m_height = -1;
 		m_size = -1;
-
-	}
-
-	private void initStoredMaps() {
-
-		/*
-		 * bindings ...
-		 */
-
-		AbstractSingleFacetValueBinding fvBind = new AbstractSingleFacetValueBinding();
-
-		TupleBinding<String> strgBind = TupleBinding
-				.getPrimitiveBinding(String.class);
-
-		TupleBinding<Integer> intBind = TupleBinding
-				.getPrimitiveBinding(Integer.class);
-
-		/*
-		 * maps ...
-		 */
-
-		m_countFVMap = new StoredMap<AbstractSingleFacetValue, Integer>(m_cache
-				.getDB(FacetEnvironment.DatabaseName.FCO_CACHE), fvBind,
-				intBind, true);
-
-		m_countSMap = new StoredMap<String, Integer>(m_cache
-				.getDB(FacetEnvironment.DatabaseName.FCS_CACHE), strgBind,
-				intBind, true);
-
 	}
 
 	public void setCache(SearchSessionCache cache) {
 		m_cache = cache;
-		initStoredMaps();
 	}
 
 	public void setCountFV(int countFV) {
@@ -299,20 +157,13 @@ public class StaticNode extends Node implements IStaticNode {
 		m_height = height;
 	}
 
-	// public void setLiteralCounts(HashMap<String, HashSet<Integer>>
-	// literalCounts) {
-	// m_LiteralSources = literalCounts;
-	// }
+	public void setSession(SearchSession session) {
 
-	// public void setName(String name) {
-	// m_name = name;
-	// }
+		m_session = session;
+		setCache(session.getCache());
+	}
 
 	public void setSize(int size) {
 		m_size = size;
 	}
-
-	// public void setSortedLiterals(List<String> sortedLiterals) {
-	// m_sortedLiterals = sortedLiterals;
-	// }
 }

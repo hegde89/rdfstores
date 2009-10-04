@@ -17,11 +17,12 @@
  */
 package edu.unika.aifb.facetedSearch;
 
-
 /**
  * @author andi
  * 
  */
-public class FacetProperties{
+public class FacetedSearchLayerConfig {
+
+	// TODO
 
 }

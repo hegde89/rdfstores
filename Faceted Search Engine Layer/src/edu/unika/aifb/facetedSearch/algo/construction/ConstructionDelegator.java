@@ -30,7 +30,7 @@ import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.BuilderHelper;
-import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSingleLinkageClusterBuilder;
+import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSimpleClusterBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetSubTreeBuilder;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.impl.FacetTreeBuilder;
 import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
@@ -103,7 +103,7 @@ public class ConstructionDelegator extends Delegator {
 
 		m_treeBuilder = new FacetTreeBuilder(m_session, m_helper);
 		m_subTreeBuilder = new FacetSubTreeBuilder(m_session, m_helper);
-		m_clusterBuilder = new FacetSingleLinkageClusterBuilder(m_session, m_helper);
+		m_clusterBuilder = new FacetSimpleClusterBuilder(m_session, m_helper);
 
 		m_builder = new ArrayList<IBuilder>();
 		m_builder.add(m_treeBuilder);
@@ -128,7 +128,7 @@ public class ConstructionDelegator extends Delegator {
 		}
 	}
 
-	public boolean constructTree(Table<String> results)
+	public boolean constructTrees(Table<String> results)
 			throws EnvironmentLockedException, IOException, DatabaseException,
 			StorageException, CacheException {
 
@@ -201,7 +201,7 @@ public class ConstructionDelegator extends Delegator {
 
 		m_clusterBuilder.clean();
 
-		return ((FacetSingleLinkageClusterBuilder) m_clusterBuilder).build(tree, node);
+		return ((FacetSimpleClusterBuilder) m_clusterBuilder).build(tree, node);
 	}
 
 	public boolean refineSubTree(FacetTree tree, StaticNode node) {

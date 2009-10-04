@@ -192,28 +192,22 @@ public class FacetIndex extends Index {
 	}
 
 	public Collection<AbstractSingleFacetValue> getObjects(Node leave,
-			String sourceInd) throws EnvironmentLockedException,
+			String subject) throws EnvironmentLockedException,
 			DatabaseException, IOException {
 
 		if (m_objectDB == null) {
 			init();
 		}
 
-		return m_objectMap.duplicates(sourceInd + leave.getPathHashValue());
+		return m_objectMap.duplicates(subject
+				+ String.valueOf(leave.getPathHashValue()));
 	}
-
-	public Queue<Edge> getPath2RangeRoot(int pathHashValue)
-			throws DatabaseException, IOException {
-
-		return FacetDbUtils.get(m_pathDB, FacetEnvironment.Keys.RANGEROOT_PATH
-				+ pathHashValue, m_pathBinding);
-	}
-
+	
 	public Queue<Edge> getPath2Root(int pathHashValue)
 			throws DatabaseException, IOException {
 
-		return FacetDbUtils.get(m_pathDB, FacetEnvironment.Keys.ROOT_PATH
-				+ pathHashValue, m_pathBinding);
+		return FacetDbUtils.get(m_pathDB, String.valueOf(pathHashValue),
+				m_pathBinding);
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException,
@@ -290,5 +284,20 @@ public class FacetIndex extends Index {
 				m_nodeBinding, false);
 
 		s_log.debug("got db connection!");
+	}
+
+	public boolean isOpen() {
+
+		boolean isOpen = true;
+
+		for (Database db : m_dbs) {
+
+			if (db == null) {
+				isOpen = false;
+				break;
+			}
+		}
+
+		return isOpen;
 	}
 }

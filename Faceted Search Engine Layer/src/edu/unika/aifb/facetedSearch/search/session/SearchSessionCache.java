@@ -23,6 +23,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.jcs.access.CacheAccess;
 import org.apache.jcs.access.exception.CacheException;
@@ -35,7 +37,6 @@ import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
-import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
@@ -44,14 +45,23 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.Keys;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
+import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.index.FacetIndex;
+import edu.unika.aifb.facetedSearch.index.db.binding.LiteralListBinding;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
+import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * @author andi
@@ -59,18 +69,8 @@ import edu.unika.aifb.graphindex.data.Table;
  */
 public class SearchSessionCache {
 
-	public enum BindingType {
-		LITERAL
-	}
-
 	public enum CleanType {
-		ALL, PATHS, LITERALS, DISTANCES, TREES, HISTORY
-	}
-
-	private class Keys {
-		public static final String RESULT_SET = "re";
-		public static final String ROOT = "ro";
-		public static final String RANGE_ROOT = "raro";
+		ALL, PATHS, DISTANCES, TREES, HISTORY, LEAVE_GROUPS
 	}
 
 	private static final Logger s_log = Logger
@@ -84,10 +84,14 @@ public class SearchSessionCache {
 	/*
 	 * Caches based on JCS
 	 */
-
-	private CompositeCache m_edgeCache;
+	private CompositeCache m_objects4NodeCache;
+	private CompositeCache m_subjects4NodeCache;
+	private CompositeCache m_sources4NodeCache;
 	private CompositeCache m_distanceCache;
-	private CacheAccess m_edgeCacheAccess;
+
+	private CacheAccess m_objects4NodeCacheAccess;
+	private CacheAccess m_subjects4NodeCacheAccess;
+	private CacheAccess m_sources4NodeCacheAccess;
 	private CacheAccess m_distanceCacheAccess;
 
 	/*
@@ -107,42 +111,63 @@ public class SearchSessionCache {
 	 * fsl cache
 	 */
 	private Database m_resCache;
-	private Database m_countFVCache;
-	private Database m_countSCache;
-	private Database m_sortedLitCache;
-	private Database m_subjectsCache;
+	private Database m_litCache;
+	private Database m_sourceCache;
 
 	/*
 	 * tree delegator
 	 */
 	private Database m_treeCache;
 	private Database m_fpageCache;
+
 	/*
 	 * history
 	 */
 	private Database m_historyCache;
 
+	/*
+	 * 
+	 */
 	private Database m_classDB;
 
 	/*
 	 * stored maps
 	 */
-	private StoredMap<String, String> m_subjects4facetValueMap;
-	// private StoredMap<Double, String> m_subjects4nodeMap;
-	private StoredSortedMap<String, Literal> m_sortedLits4nodeMap;
+	private StoredMap<Double, String> m_leave2subjectsMap;
+	private StoredMap<String, String> m_object2sourceMap;
+	private StoredMap<Double, List<AbstractSingleFacetValue>> m_dynNode2litListMap;
 
 	/*
 	 * bindings
 	 */
 	private EntryBinding<Result> m_resBinding;
 	private EntryBinding<String> m_strgBinding;
-	private EntryBinding<Literal> m_litBinding;
-	// private EntryBinding<Double> m_doubleBinding;
+	private EntryBinding<Double> m_doubleBinding;
+	private EntryBinding<List<AbstractSingleFacetValue>> m_litListBinding;
 
-	public SearchSessionCache(File dir) throws EnvironmentLockedException,
-			DatabaseException {
+	/*
+	 * 
+	 */
+	private SearchSession m_session;
 
+	/*
+	 * 
+	 */
+	private FacetTreeDelegator m_treeDelegator;
+
+	/*
+	 * 
+	 */
+	private FacetIndex m_facetIdx;
+
+	public SearchSessionCache(File dir, SearchSession session)
+			throws EnvironmentLockedException, DatabaseException {
+
+		m_session = session;
+		m_treeDelegator = (FacetTreeDelegator) session
+				.getDelegator(Delegators.TREE);
 		m_dir = dir;
+
 		init();
 	}
 
@@ -150,26 +175,12 @@ public class SearchSessionCache {
 			ClusterDistance distance) throws CacheException {
 
 		m_distanceCacheAccess.put(object1 + object2 + ext, distance);
-
 	}
 
-	public void addLiteral4Node(Node node, Literal lit)
-			throws UnsupportedEncodingException, DatabaseException {
-
-		m_sortedLits4nodeMap.put(String.valueOf(node.getID()), lit);
+	public void addObject2SourceMapping(String domain, String object,
+			String source) {
+		m_object2sourceMap.put(domain + object, source);
 	}
-
-	public void addSource4FacetValue(AbstractSingleFacetValue fv, String source)
-			throws UnsupportedEncodingException, DatabaseException {
-
-		m_subjects4facetValueMap.put(fv.getSourceExt() + fv.getValue(), source);
-	}
-
-	// public void addSource4Node(double nodeID, String source)
-	// throws UnsupportedEncodingException, DatabaseException {
-	//
-	// m_subjects4nodeMap.put(nodeID, source);
-	// }
 
 	public void clean(CleanType type) throws DatabaseException, CacheException {
 
@@ -182,20 +193,10 @@ public class SearchSessionCache {
 					m_resCache.close();
 					m_resCache = null;
 				}
-				if (m_countFVCache != null) {
+				if (m_litCache != null) {
 
-					m_countFVCache.close();
-					m_countFVCache = null;
-				}
-				if (m_countSCache != null) {
-
-					m_countSCache.close();
-					m_countSCache = null;
-				}
-				if (m_sortedLitCache != null) {
-
-					m_sortedLitCache.close();
-					m_sortedLitCache = null;
+					m_litCache.close();
+					m_litCache = null;
 				}
 				if (m_treeCache != null) {
 
@@ -207,32 +208,44 @@ public class SearchSessionCache {
 					m_historyCache.close();
 					m_historyCache = null;
 				}
-				if (m_subjectsCache != null) {
+				if (m_sourceCache != null) {
 
-					m_subjectsCache.close();
-					m_subjectsCache = null;
+					m_sourceCache.close();
+					m_sourceCache = null;
 				}
 				if (m_fpageCache != null) {
 
 					m_fpageCache.close();
 					m_fpageCache = null;
 				}
-				if (m_edgeCacheAccess != null) {
-					m_edgeCacheAccess.clear();
+				if (m_sources4NodeCacheAccess != null) {
+					m_sources4NodeCacheAccess.clear();
 				}
 				if (m_distanceCacheAccess != null) {
 					m_distanceCacheAccess.clear();
+				}
+				if (m_subjects4NodeCacheAccess != null) {
+					m_subjects4NodeCacheAccess.clear();
+				}
+				if (m_objects4NodeCacheAccess != null) {
+					m_objects4NodeCacheAccess.clear();
 				}
 
 				/*
 				 * maps
 				 */
-				m_sortedLits4nodeMap = null;
-				m_subjects4facetValueMap = null;
-				// m_subjects4nodeMap = null;
+				m_leave2subjectsMap = null;
+				m_object2sourceMap = null;
+				m_dynNode2litListMap = null;
 
 				System.gc();
 				reOpen();
+				break;
+			}
+			case LEAVE_GROUPS : {
+
+				m_leave2subjectsMap.clear();
+				m_object2sourceMap.clear();
 				break;
 			}
 			case TREES : {
@@ -261,8 +274,8 @@ public class SearchSessionCache {
 			}
 			case PATHS : {
 
-				if (m_edgeCacheAccess != null) {
-					m_edgeCacheAccess.clear();
+				if (m_sources4NodeCacheAccess != null) {
+					m_sources4NodeCacheAccess.clear();
 				}
 
 				System.gc();
@@ -292,74 +305,63 @@ public class SearchSessionCache {
 		}
 	}
 
-	// @SuppressWarnings("unchecked")
-	// public LinkedList<Edge> getAncestorPath2RangeRoot(FacetTree tree,
-	// double nodeID) throws CacheException {
-	//
-	// LinkedList<Edge> path;
-	//
-	// if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
-	// .valueOf(nodeID)
-	// + Keys.RANGE_ROOT)) == null) {
-	//
-	// path = tree.getAncestorPath2RangeRoot(nodeID);
-	// m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.RANGE_ROOT,
-	// path);
-	//
-	// }
-	//
-	// return path;
-	// }
+	public int getCountFV(StaticNode node) {
 
-	// @SuppressWarnings("unchecked")
-	// public LinkedList<Edge> getAncestorPath2Root(FacetTree tree, double
-	// nodeID)
-	// throws CacheException {
-	//
-	// LinkedList<Edge> path;
-	//
-	// if ((path = (LinkedList<Edge>) m_edgeCacheAccess.get(String
-	// .valueOf(nodeID)
-	// + Keys.ROOT)) == null) {
-	//
-	// path = tree.getAncestorPath2Root(nodeID);
-	// m_edgeCacheAccess.put(String.valueOf(nodeID) + Keys.ROOT, path);
-	//
-	// }
-	//
-	// return path;
-	// }
+		if (node instanceof DynamicNode) {
 
-	public int getCountS4Object(String ext, String object)
-			throws DatabaseException, IOException {
+			return getCountFV4DynNode((DynamicNode) node);
 
-		return m_subjects4facetValueMap.duplicates(ext + object).size();
+		} else if (node instanceof FacetValueNode) {
+
+			return 1;
+
+		} else {
+
+			return getCountFV4StaticNode(node);
+
+		}
 	}
 
-	public int getCountS4Objects(String ext, Collection<String> objects)
-			throws DatabaseException, IOException {
+	public int getCountFV4DynNode(DynamicNode dynamicNode) {
+		return -1; // TODO
+	}
 
-		HashSet<String> allSources = new HashSet<String>();
+	public int getCountFV4StaticNode(StaticNode node) {
+		return -1; // TODO
+	}
 
-		for (String object : objects) {
-			allSources
-					.addAll(m_subjects4facetValueMap.duplicates(ext + object));
+	public int getCountS(StaticNode node) {
+
+		if (node instanceof DynamicNode) {
+
+			return getCountS4DynNode((DynamicNode) node);
+
+		} else if (node instanceof FacetValueNode) {
+
+			return getCountS4FacetValueNode((FacetValueNode) node);
+
+		} else {
+
+			return getCountS4StaticNode(node);
+
 		}
+	}
 
-		return allSources.size();
+	public int getCountS4DynNode(DynamicNode dynamicNode) {
+		return getSources4DynNode(dynamicNode).size();
+	}
+
+	public int getCountS4FacetValueNode(FacetValueNode facetValueNode) {
+		return getSources4FacetValueNode(facetValueNode).size();
+	}
+
+	public int getCountS4StaticNode(StaticNode node) {
+		return getSources4StaticNode(node).size();
 	}
 
 	public Database getDB(String name) {
 
-		if (name.equals(FacetEnvironment.DatabaseName.FCO_CACHE)) {
-
-			return m_countFVCache;
-
-		} else if (name.equals(FacetEnvironment.DatabaseName.FCS_CACHE)) {
-
-			return m_countSCache;
-
-		} else if (name.equals(FacetEnvironment.DatabaseName.FTREE_CACHE)) {
+		if (name.equals(FacetEnvironment.DatabaseName.FTREE_CACHE)) {
 
 			return m_treeCache;
 
@@ -385,14 +387,107 @@ public class SearchSessionCache {
 	public ClusterDistance getDistance(String object1, String object2,
 			String ext) {
 
-		// return m_distanceMap.get(object1 + object2 + ext);
 		return (ClusterDistance) m_distanceCacheAccess.get(object1 + object2
 				+ ext);
 	}
 
-	public Collection<Literal> getLiterals4Node(Node node) {
+	public List<AbstractSingleFacetValue> getLiterals4DynNode(
+			DynamicNode dynamicNode) {
 
-		return m_sortedLits4nodeMap.duplicates(String.valueOf(node.getID()));
+		return m_dynNode2litListMap.get(dynamicNode.getID());
+	}
+
+	public List<AbstractSingleFacetValue> getLiterals4FacetValueNode(
+			FacetValueNode facetValueNode) {
+
+		return m_dynNode2litListMap.get(facetValueNode.getID());
+	}
+
+	@SuppressWarnings("unchecked")
+	public Set<AbstractSingleFacetValue> getObjects4StaticNode(StaticNode node) {
+
+		HashSet<AbstractSingleFacetValue> objects;
+
+		if ((objects = (HashSet<AbstractSingleFacetValue>) m_objects4NodeCacheAccess
+				.get(node.getID())) == null) {
+
+			objects = new HashSet<AbstractSingleFacetValue>();
+			List<Double> leaveIDs = m_treeDelegator.getRangeLeaves(node
+					.getDomain(), node.getID());
+
+			for (double leaveID : leaveIDs) {
+
+				Node leave = m_treeDelegator.getNode(node.getDomain(), leaveID);
+				Collection<String> subjects = getSubjects4Leave(leaveID);
+
+				for (String subject : subjects) {
+
+					try {
+
+						Collection<AbstractSingleFacetValue> newObjects = m_facetIdx
+								.getObjects(leave, subject);
+						objects.addAll(newObjects);
+
+					} catch (EnvironmentLockedException e) {
+						e.printStackTrace();
+					} catch (DatabaseException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+			try {
+				m_objects4NodeCacheAccess.put(node.getID(), objects);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return objects;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Set<AbstractSingleFacetValue> getObjects4StaticNode(StaticNode node,
+			String subject) {
+
+		HashSet<AbstractSingleFacetValue> objects;
+
+		if ((objects = (HashSet<AbstractSingleFacetValue>) m_objects4NodeCacheAccess
+				.get(node.getID() + subject)) == null) {
+
+			objects = new HashSet<AbstractSingleFacetValue>();
+			List<Double> leaveIDs = m_treeDelegator.getRangeLeaves(node
+					.getDomain(), node.getID());
+
+			for (double leaveID : leaveIDs) {
+
+				Node leave = m_treeDelegator.getNode(node.getDomain(), leaveID);
+
+				try {
+
+					Collection<AbstractSingleFacetValue> newObjects = m_facetIdx
+							.getObjects(leave, subject);
+					objects.addAll(newObjects);
+
+				} catch (EnvironmentLockedException e) {
+					e.printStackTrace();
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+			try {
+				m_objects4NodeCacheAccess.put(node.getID() + subject, objects);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return objects;
 	}
 
 	public Result getResult() throws DatabaseException, IOException {
@@ -439,25 +534,174 @@ public class SearchSessionCache {
 				.getResultTable();
 	}
 
-	public Collection<String> getSources4FacetValue(AbstractSingleFacetValue fv)
-			throws DatabaseException, IOException {
+	@SuppressWarnings("unchecked")
+	public Set<String> getSources4DynNode(DynamicNode dynamicNode) {
 
-		return m_subjects4facetValueMap.duplicates(fv.getSourceExt()
-				+ fv.getValue());
+		HashSet<String> sources;
+
+		if ((sources = (HashSet<String>) m_sources4NodeCacheAccess
+				.get(dynamicNode.getID())) == null) {
+
+			sources = new HashSet<String>();
+			List<AbstractSingleFacetValue> fvList = getLiterals4DynNode(dynamicNode);
+
+			for (AbstractSingleFacetValue fv : fvList) {
+
+				Collection<String> newSources = getSources4Object(dynamicNode
+						.getDomain(), fv.getValue());
+				sources.addAll(newSources);
+			}
+
+			try {
+				m_sources4NodeCacheAccess.put(dynamicNode.getID(), sources);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return sources;
+	}
+
+	public Set<String> getSources4FacetValueNode(FacetValueNode facetValueNode) {
+
+		HashSet<String> sources = new HashSet<String>();
+		sources.addAll(getSources4Object(facetValueNode.getDomain(),
+				facetValueNode.getValue()));
+
+		return sources;
+	}
+	@SuppressWarnings("unchecked")
+	public Collection<String> getSources4Leave(String domain, double leaveID) {
+
+		Collection<String> sources;
+
+		if ((sources = (Collection<String>) m_sources4NodeCacheAccess
+				.get(leaveID)) == null) {
+
+			sources = new HashSet<String>();
+			Collection<String> subjects = getSubjects4Leave(leaveID);
+
+			for (String subject : subjects) {
+
+				Collection<String> newSources;
+
+				if ((newSources = getSources4Object(domain, subject)) != null) {
+					sources.addAll(newSources);
+				} else {
+
+					try {
+						m_sources4NodeCacheAccess.put(leaveID, subjects);
+					} catch (CacheException e) {
+						e.printStackTrace();
+					}
+
+					return subjects;
+				}
+			}
+
+			try {
+				m_sources4NodeCacheAccess.put(leaveID, sources);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return sources;
+	}
+
+	public Collection<String> getSources4Object(String domain, String object) {
+		return m_object2sourceMap.duplicates(domain + object);
+	}
+
+	@SuppressWarnings("unchecked")
+	public Set<String> getSources4StaticNode(StaticNode node) {
+
+		Set<String> sources;
+
+		if ((sources = (Set<String>) m_sources4NodeCacheAccess
+				.get(node.getID())) == null) {
+
+			sources = new HashSet<String>();
+			List<Double> leaveIDs = m_treeDelegator.getRangeLeaves(node
+					.getDomain(), node.getID());
+
+			for (double leaveID : leaveIDs) {
+
+				Collection<String> newSources = getSources4Leave(node
+						.getDomain(), leaveID);
+				sources.addAll(newSources);
+			}
+
+			try {
+				m_sources4NodeCacheAccess.put(node.getID(), sources);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return sources;
+	}
+
+	public Collection<String> getSubjects4Leave(double leaveID) {
+		return m_leave2subjectsMap.duplicates(leaveID);
+	}
+
+	@SuppressWarnings("unchecked")
+	public Collection<String> getSubjects4Node(Node node) {
+
+		Set<String> subjects;
+
+		if ((subjects = (Set<String>) m_subjects4NodeCacheAccess.get(node
+				.getID())) == null) {
+
+			subjects = new HashSet<String>();
+
+			List<Double> leaveIDs = m_treeDelegator.getRangeLeaves(node
+					.getDomain(), node.getID());
+
+			for (double leaveID : leaveIDs) {
+
+				Collection<String> newSubjects = getSubjects4Leave(leaveID);
+				subjects.addAll(newSubjects);
+			}
+
+			try {
+				m_subjects4NodeCacheAccess.put(node.getID(), subjects);
+			} catch (CacheException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return subjects;
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException {
 
+		try {
+			m_facetIdx = (FacetIndex) m_session.getStore().getIndex(
+					IndexName.FACET_INDEX);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (StorageException e) {
+			e.printStackTrace();
+		}
+
 		/*
 		 * JCS caches
 		 */
-		m_edgeCache = m_compositeCacheManager
-				.getCache(FacetEnvironment.CacheName.EDGE);
+		m_sources4NodeCache = m_compositeCacheManager
+				.getCache(FacetEnvironment.CacheName.SOURCES);
 		m_distanceCache = m_compositeCacheManager
 				.getCache(FacetEnvironment.CacheName.DISTANCE);
+		m_subjects4NodeCache = m_compositeCacheManager
+				.getCache(FacetEnvironment.CacheName.SUBJECTS);
+		m_objects4NodeCache = m_compositeCacheManager
+				.getCache(FacetEnvironment.CacheName.OBJECTS);
 
-		m_edgeCacheAccess = new CacheAccess(m_edgeCache);
+		m_sources4NodeCacheAccess = new CacheAccess(m_sources4NodeCache);
 		m_distanceCacheAccess = new CacheAccess(m_distanceCache);
+		m_subjects4NodeCacheAccess = new CacheAccess(m_subjects4NodeCache);
+		m_objects4NodeCacheAccess = new CacheAccess(m_objects4NodeCache);
 
 		/*
 		 * Berkeley dbs ...
@@ -480,15 +724,6 @@ public class SearchSessionCache {
 		m_resCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
 
-		m_countFVCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FCO_CACHE, m_dbConfig);
-
-		m_countSCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FCS_CACHE, m_dbConfig);
-
-		m_sortedLitCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
-
 		m_treeCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
 
@@ -498,6 +733,9 @@ public class SearchSessionCache {
 		m_fpageCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
 
+		m_litCache = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
+
 		// Databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
 		m_dbConfig2.setTransactional(false);
@@ -505,18 +743,16 @@ public class SearchSessionCache {
 		m_dbConfig2.setSortedDuplicates(true);
 		m_dbConfig2.setTemporary(true);
 
-		m_subjectsCache = m_env.openDatabase(null,
+		m_sourceCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FS_CACHE, m_dbConfig2);
 
 		m_dbs = new ArrayList<Database>();
 		m_dbs.add(m_resCache);
-		m_dbs.add(m_countFVCache);
-		m_dbs.add(m_countSCache);
-		m_dbs.add(m_sortedLitCache);
-		m_dbs.add(m_subjectsCache);
+		m_dbs.add(m_sourceCache);
 		m_dbs.add(m_treeCache);
 		m_dbs.add(m_historyCache);
 		m_dbs.add(m_fpageCache);
+		m_dbs.add(m_litCache);
 
 		/*
 		 * Create the bindings
@@ -524,22 +760,23 @@ public class SearchSessionCache {
 		m_classDB = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.CLASS, m_dbConfig);
 
-		StoredClassCatalog cata = new StoredClassCatalog(m_classDB);
-
-		m_resBinding = new SerialBinding<Result>(cata, Result.class);
-		m_litBinding = new SerialBinding<Literal>(cata, Literal.class);
+		m_resBinding = new SerialBinding<Result>(new StoredClassCatalog(
+				m_classDB), Result.class);
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
+		m_doubleBinding = TupleBinding.getPrimitiveBinding(Double.class);
+		m_litListBinding = new LiteralListBinding();
 
 		/*
 		 * Create maps on top of dbs ...
 		 */
+		m_leave2subjectsMap = new StoredMap<Double, String>(m_sourceCache,
+				m_doubleBinding, m_strgBinding, true);
 
-		m_sortedLits4nodeMap = new StoredSortedMap<String, Literal>(
-				m_sortedLitCache, m_strgBinding, m_litBinding, true);
+		m_object2sourceMap = new StoredMap<String, String>(m_sourceCache,
+				m_strgBinding, m_strgBinding, true);
 
-		m_subjects4facetValueMap = new StoredMap<String, String>(
-				m_subjectsCache, m_strgBinding, m_strgBinding, true);
-
+		m_dynNode2litListMap = new StoredMap<Double, List<AbstractSingleFacetValue>>(
+				m_litCache, m_doubleBinding, m_litListBinding, true);
 	}
 
 	public boolean isOpen() {
@@ -567,16 +804,8 @@ public class SearchSessionCache {
 			m_resCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
 		}
-		if (m_countFVCache == null) {
-			m_countFVCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FCO_CACHE, m_dbConfig);
-		}
-		if (m_countSCache == null) {
-			m_countSCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FCS_CACHE, m_dbConfig);
-		}
-		if (m_sortedLitCache == null) {
-			m_sortedLitCache = m_env.openDatabase(null,
+		if (m_litCache == null) {
+			m_litCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
 		}
 		if (m_treeCache == null) {
@@ -591,8 +820,8 @@ public class SearchSessionCache {
 			m_fpageCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
 		}
-		if (m_subjectsCache == null) {
-			m_subjectsCache = m_env.openDatabase(null,
+		if (m_sourceCache == null) {
+			m_sourceCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FS_CACHE, m_dbConfig2);
 		}
 
@@ -600,18 +829,20 @@ public class SearchSessionCache {
 		 * Create maps on top of dbs ...
 		 */
 
-		if (m_sortedLits4nodeMap == null) {
-			m_sortedLits4nodeMap = new StoredSortedMap<String, Literal>(
-					m_sortedLitCache, m_strgBinding, m_litBinding, true);
+		if (m_leave2subjectsMap == null) {
+			m_leave2subjectsMap = new StoredMap<Double, String>(m_sourceCache,
+					m_doubleBinding, m_strgBinding, true);
 		}
-		if (m_subjects4facetValueMap == null) {
-			m_subjects4facetValueMap = new StoredMap<String, String>(
-					m_subjectsCache, m_strgBinding, m_strgBinding, true);
+
+		if (m_object2sourceMap == null) {
+			m_object2sourceMap = new StoredMap<String, String>(m_sourceCache,
+					m_strgBinding, m_strgBinding, true);
 		}
-		// if (m_subjects4nodeMap == null) {
-		// m_subjects4nodeMap = new StoredMap<Double, String>(m_subjectsCache,
-		// m_doubleBinding, m_strgBinding, true);
-		// }
+
+		if (m_dynNode2litListMap == null) {
+			m_dynNode2litListMap = new StoredMap<Double, List<AbstractSingleFacetValue>>(
+					m_sourceCache, m_doubleBinding, m_litListBinding, true);
+		}
 	}
 
 	public void setCompositeCacheManager(
@@ -619,9 +850,18 @@ public class SearchSessionCache {
 		m_compositeCacheManager = compositeCacheManager;
 	}
 
+	public void storeLiterals(DynamicNode dynamicNode,
+			List<AbstractSingleFacetValue> lits) {
+		m_dynNode2litListMap.put(dynamicNode.getID(), lits);
+	}
+
 	public void storeResult(Result res) throws UnsupportedEncodingException,
 			DatabaseException {
 
 		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_resBinding);
+	}
+
+	public void updateLeaveGroups(double leaveID, String subject) {
+		m_leave2subjectsMap.put(leaveID, subject);
 	}
 }

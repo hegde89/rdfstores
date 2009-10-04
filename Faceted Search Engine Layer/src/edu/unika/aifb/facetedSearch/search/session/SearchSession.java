@@ -337,7 +337,7 @@ public class SearchSession {
 
 			m_cache.setCompositeCacheManager(compositeCacheManager);
 			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
-					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true));
+					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

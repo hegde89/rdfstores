@@ -19,7 +19,7 @@ package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.util.List;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 
 /**
  * @author andi
@@ -29,13 +29,13 @@ public interface IDynamicNode extends IStaticNode {
 
 	public String getLeftBorder();
 
-	public List<Literal> getLits();
+	public List<AbstractSingleFacetValue> getLiterals();
 
 	public String getRightBorder();
 
 	public void setLeftBorder(String leftValue);
 
-	public void setLits(List<Literal> lits);
+	public void setLiterals(List<AbstractSingleFacetValue> lits);
 
 	public void setRightBorder(String rightValue);
 

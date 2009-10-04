@@ -56,7 +56,7 @@ public interface IFacetTree {
 
 	public Node getVertex(double id);
 
-	public Set<Node> getVertex(int type);
+	public Set<Node> getVertices(int type);
 
 	public boolean hasChildren(Node father);
 

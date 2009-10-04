@@ -17,7 +17,10 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -31,6 +34,8 @@ import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
+import edu.unika.aifb.facetedSearch.algo.ranking.NodeComparator;
+import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
@@ -50,7 +55,7 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
  */
 public class FacetPageManager {
 
-	private static int FACETPAGE_KEY = 1;
+	private static final int FACETPAGE_KEY = 1;
 
 	/*
 	 * 
@@ -78,6 +83,7 @@ public class FacetPageManager {
 	 * 
 	 */
 	private FacetTreeDelegator m_treeDelegator;
+	private RankingDelegator m_rankingDelegator;
 
 	/*
 	 * 
@@ -96,6 +102,16 @@ public class FacetPageManager {
 	private EntryBinding<Integer> m_intBinding;
 	private EntryBinding<FacetPage> m_fpageBinding;
 
+	/*
+	 * 
+	 */
+	private NodeComparator m_nodeComparator;
+
+	/*
+	 * 
+	 */
+	private boolean m_rankingEnabled;
+
 	private FacetPageManager(SearchSession session) {
 
 		m_session = session;
@@ -107,10 +123,27 @@ public class FacetPageManager {
 		m_treeDelegator = (FacetTreeDelegator) m_session
 				.getDelegator(Delegators.TREE);
 
+		m_rankingDelegator = (RankingDelegator) m_session
+				.getDelegator(Delegators.RANKING);
+
+		/*
+		 * 
+		 */
 		m_tree2facetConverter = (Tree2FacetModelConverter) m_session
 				.getConverter(Converters.TREE2FACET);
 		m_facet2treeConverter = (Facet2TreeModelConverter) m_session
 				.getConverter(Converters.FACET2TREE);
+
+		/*
+		 * 
+		 */
+		m_nodeComparator = new NodeComparator();
+
+		/*
+		 * 
+		 */
+		m_rankingEnabled = new Boolean(m_session.getProps().getProperty(
+				FacetEnvironment.Property.RANKING_ENABLED));
 
 		init();
 	}
@@ -137,33 +170,50 @@ public class FacetPageManager {
 						|| (facetNode.getContent() == NodeContent.TYPE_PROPERTY)) {
 
 					FacetFacetValueList fvList = new FacetFacetValueList();
+
 					fvList
 							.setFacet(m_tree2facetConverter
 									.node2facet(facetNode));
+
+					List<Node> subFacets = new ArrayList<Node>();
+					List<Node> rangeChildren = new ArrayList<Node>();
 
 					Iterator<Node> childrenIter = m_treeDelegator.getChildren(
 							domain, facetNode.getID()).iterator();
 
 					while (childrenIter.hasNext()) {
 
-						Node child = childrenIter.next();
+						Node node = childrenIter.next();
 
-						if (child.getContent() == NodeContent.CLASS) {
+						if (node.getContent() == NodeContent.CLASS) {
 
-							fvList.addFacetValue(m_tree2facetConverter
-									.node2facetValue(child));
+							rangeChildren.add(node);
 
-						} else if ((child.getContent() == NodeContent.DATA_PROPERTY)
-								|| (child.getContent() == NodeContent.OBJECT_PROPERTY)) {
+						} else if ((node.getContent() == NodeContent.DATA_PROPERTY)
+								|| (node.getContent() == NodeContent.OBJECT_PROPERTY)) {
 
-							fvList.addSubFacet(m_tree2facetConverter
-									.node2facet(child));
+							subFacets.add(node);
 
 						} else {
-							s_log.error("should not be here: node '" + child
+							s_log.error("should not be here: node '" + node
 									+ "'");
 						}
 					}
+
+					if (m_rankingEnabled) {
+
+						m_rankingDelegator.computeRanking(subFacets);
+						Collections.sort(subFacets, m_nodeComparator);
+
+						m_rankingDelegator.computeRanking(rangeChildren);
+						Collections.sort(rangeChildren, m_nodeComparator);
+					}
+
+					fvList.setFacetValueList(m_tree2facetConverter
+							.nodeList2facetValueList(rangeChildren));
+					fvList.setSubfacets(m_tree2facetConverter
+							.nodeList2facetList(subFacets));
+
 				} else {
 					s_log.error("tree structure is not valid! tree: '"
 							+ m_treeDelegator.getTree(domain) + "'");
@@ -195,9 +245,18 @@ public class FacetPageManager {
 				fvList.clean(CleanType.VALUES);
 
 				fvList.addBrowsingObject2History(selectedValue);
+
+				List<Node> nodes = m_treeDelegator.getChildren(domain,
+						selectedValue.getNodeId());
+
+				if (m_rankingEnabled) {
+
+					m_rankingDelegator.computeRanking(nodes);
+					Collections.sort(nodes, m_nodeComparator);
+				}
+
 				fvList.setFacetValueList(m_tree2facetConverter
-						.nodeList2facetValueList(m_treeDelegator.getChildren(
-								domain, selectedValue.getNodeId())));
+						.nodeList2facetValueList(nodes));
 
 			}
 			// sub-facet
@@ -214,26 +273,42 @@ public class FacetPageManager {
 				Iterator<Node> nodesIter = m_treeDelegator.getChildren(domain,
 						selectedValue.getNodeId()).iterator();
 
+				List<Node> subFacets = new ArrayList<Node>();
+				List<Node> rangeChildren = new ArrayList<Node>();
+
 				while (nodesIter.hasNext()) {
 
 					Node node = nodesIter.next();
 
 					if (node.getContent() == NodeContent.CLASS) {
 
-						fvList.addFacetValue(m_tree2facetConverter
-								.node2facetValue(node));
+						rangeChildren.add(node);
 
 					} else if ((selectedNode.getContent() == NodeContent.DATA_PROPERTY)
 							|| (selectedNode.getContent() == NodeContent.OBJECT_PROPERTY)) {
 
-						fvList.addSubFacet(m_tree2facetConverter
-								.node2facet(node));
+						subFacets.add(node);
 
 					} else {
 						s_log.error("should not be here: node '" + selectedNode
 								+ "'");
 					}
 				}
+
+				if (m_rankingEnabled) {
+
+					m_rankingDelegator.computeRanking(subFacets);
+					Collections.sort(subFacets, m_nodeComparator);
+
+					m_rankingDelegator.computeRanking(rangeChildren);
+					Collections.sort(rangeChildren, m_nodeComparator);
+				}
+
+				fvList.setFacetValueList(m_tree2facetConverter
+						.nodeList2facetValueList(rangeChildren));
+				fvList.setSubfacets(m_tree2facetConverter
+						.nodeList2facetList(subFacets));
+
 			} else {
 				s_log.error("should not be here: node '" + selectedNode + "'");
 			}

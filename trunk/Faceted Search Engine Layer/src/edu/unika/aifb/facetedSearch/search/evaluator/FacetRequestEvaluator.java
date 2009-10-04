@@ -256,7 +256,7 @@ public class FacetRequestEvaluator extends Searcher {
 		oldTable.sort(fv.getDomain(), true);
 
 		List<String> sourceIndividuals = new ArrayList<String>(node
-				.getSourceIndivdiuals());
+				.getSources());
 		Collections.sort(sourceIndividuals);
 
 		Result res = new Result();

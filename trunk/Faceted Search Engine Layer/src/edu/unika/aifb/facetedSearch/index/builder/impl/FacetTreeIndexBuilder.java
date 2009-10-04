@@ -531,28 +531,25 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			s_log.debug("finished facet tree for extension: "
 					+ source_extension + "!");
 
-			Set<Node> leaves = facetTree.getVertex(NodeType.LEAVE);
+			Set<Node> leaves = facetTree.getVertices(NodeType.LEAVE);
 
 			for (Node leave : leaves) {
 
 				Queue<Edge> path2root = facetTree.getAncestorPath2Root(leave
 						.getID());
-				Queue<Edge> path2rangeRoot = facetTree
-						.getAncestorPath2RangeRoot(leave.getID());
+				// Queue<Edge> path2rangeRoot = facetTree
+				// .getAncestorPath2RangeRoot(leave.getID());
 
-				if (!FacetDbUtils.contains(m_pathDB,
-						FacetEnvironment.Keys.RANGEROOT_PATH
-								+ leave.getPathHashValue(), m_pathBinding)) {
+				if (!FacetDbUtils.contains(m_pathDB, String.valueOf(leave
+						.getPathHashValue()), m_pathBinding)) {
 
-					FacetDbUtils.store(m_pathDB,
-							FacetEnvironment.Keys.RANGEROOT_PATH
-									+ leave.getPathHashValue(), path2rangeRoot,
-							m_pathBinding);
+					// FacetDbUtils.store(m_pathDB,
+					// FacetEnvironment.Keys.RANGEROOT_PATH
+					// + leave.getPathHashValue(), path2rangeRoot,
+					// m_pathBinding);
 
-					FacetDbUtils.store(m_pathDB,
-							FacetEnvironment.Keys.ROOT_PATH
-									+ leave.getPathHashValue(), path2root,
-							m_pathBinding);
+					FacetDbUtils.store(m_pathDB, String.valueOf(leave
+							.getPathHashValue()), path2root, m_pathBinding);
 				}
 			}
 		}
@@ -571,9 +568,11 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		if (m_objectDB != null) {
 			m_objectDB.close();
 		}
+
 		if (m_env != null) {
 			m_env.close();
 		}
+
 		if (m_env2 != null) {
 			m_env2.close();
 		}
@@ -746,9 +745,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 							edge.setType(EdgeType.SUBCLASS_OF);
 
 							if (classPath.isEmpty()) {
-
 								nodes2cache.add(topNode);
-
 							} else {
 
 								while (!classPath.isEmpty()) {
@@ -760,7 +757,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 									edge.setType(EdgeType.SUBCLASS_OF);
 
 									if (classPath.isEmpty()) {
-
 										nodes2cache.add(tar);
 									}
 
@@ -1012,7 +1008,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 	private FacetTree prunePropertyHierarchy(FacetTree currentTree) {
 
 		// get leaves
-		Set<Node> leaves = currentTree.getVertex(NodeType.LEAVE);
+		Set<Node> leaves = currentTree.getVertices(NodeType.LEAVE);
 		Iterator<Node> iter = leaves.iterator();
 
 		while (iter.hasNext()) {
@@ -1084,7 +1080,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			throws DatabaseException {
 
 		// get leaves
-		Set<Node> leaves = currentTree.getVertex(NodeType.LEAVE);
+		Set<Node> leaves = currentTree.getVertices(NodeType.LEAVE);
 		Iterator<Node> iter = leaves.iterator();
 
 		while (iter.hasNext()) {
@@ -1158,7 +1154,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		String key = extension + individual;
 
 		for (Node leave : leaves) {
-			// FacetDbUtils.store(m_leaveDB, key, leave, m_nodeBinding);
 			m_leaveMap.put(key, leave);
 		}
 	}
@@ -1197,9 +1192,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 				leave.setPathHashValue(path.hashCode());
 			}
 
-			String key4obj = ind + leave.getPathHashValue();
-			// FacetDbUtils.store(m_objectDB, key4obj, fv, m_fvBinding);
-			m_objectMap.put(key4obj, fv);
+			m_objectMap.put(ind + leave.getPathHashValue(), fv);
 		}
 	}
 }

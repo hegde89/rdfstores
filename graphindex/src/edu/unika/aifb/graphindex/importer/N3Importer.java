@@ -21,7 +21,7 @@ public class N3Importer extends Importer {
 	@Override
 	public void doImport() {
 		TriplesHandler handler = new TriplesHandler(m_sink,
-			ignoreDataTypesEnabled());
+			ignoreDataTypesEnabled(), getDefaultDataType());
 
 		for (String file : m_files) {
 			handler.setDefaultContext(file);

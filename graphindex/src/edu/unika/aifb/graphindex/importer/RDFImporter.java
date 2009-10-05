@@ -39,7 +39,7 @@ public class RDFImporter extends Importer {
 	@Override
 	public void doImport() {
 		TriplesHandler handler = new TriplesHandler(m_sink,
-				ignoreDataTypesEnabled());
+				ignoreDataTypesEnabled(), super.getDefaultDataType());
 
 		for (String file : m_files) {
 			handler.setDefaultContext(file);

@@ -44,12 +44,16 @@ public class NxImporter extends Importer {
 					} else if (nodes[2] instanceof BNode) {
 						object = ((BNode) nodes[2]).toString();
 					} else if (nodes[2] instanceof Literal) {
+
+						String datatype = ((Literal) nodes[2]).getDatatype() == null ? super
+								.getDefaultDataType()
+								: ((Literal) nodes[2]).getDatatype().toString();
+
 						object = super.ignoreDataTypesEnabled() ? ((Literal) nodes[2])
 								.getData()
 								: ((Literal) nodes[2]).getData()
 										+ Character.toString((char) 94)
-										+ ((Literal) nodes[2]).getDatatype()
-												.toString();
+										+ datatype;
 					} else
 						log.error("object is not a resource, bnode or literal");
 

@@ -22,8 +22,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.openrdf.model.vocabulary.XMLSchema;
+
 public abstract class Importer {
 
+	private String defaultDataType = XMLSchema.STRING.toString();
 	private boolean m_ignoreDataTypes = true;
 
 	protected TripleSink m_sink;
@@ -44,10 +47,25 @@ public abstract class Importer {
 	public abstract void doImport();
 
 	/**
+	 * @return the defaultDataType
+	 */
+	public String getDefaultDataType() {
+		return defaultDataType;
+	}
+
+	/**
 	 * @return the m_ignoreDataTypes
 	 */
 	public boolean ignoreDataTypesEnabled() {
 		return m_ignoreDataTypes;
+	}
+
+	/**
+	 * @param defaultDataType
+	 *            the defaultDataType to set
+	 */
+	public void setDefaultDataType(String defaultDataType) {
+		this.defaultDataType = defaultDataType;
 	}
 
 	/**

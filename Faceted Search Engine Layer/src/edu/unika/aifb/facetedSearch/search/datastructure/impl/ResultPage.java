@@ -11,10 +11,22 @@ import edu.unika.aifb.graphindex.data.Table;
  */
 public class ResultPage extends Result implements IResultPage {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4867269762506495652L;
+
+	/*
+	 * 
+	 */
 	public static final ResultPage EMPTY_PAGE = new ResultPage();
 
 	@SuppressWarnings("unused")
 	private static Logger s_log = Logger.getLogger(ResultPage.class);
+
+	/*
+	 * 
+	 */
 	private int m_page;
 
 	public ResultPage() {

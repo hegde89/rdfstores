@@ -44,7 +44,7 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 	private DirectedMultigraph<NodeElement, EdgeElement> m_idxGraph;
 	private IndexDirectory m_idxDirectory;
 	private IndexReader m_idxReader;
-	private FacetIndexHelper m_indexHelper;
+	private FacetIdxBuilderHelper m_indexHelper;
 	private LuceneIndexStorage m_distanceIndex;
 	private boolean m_computeDistances;
 
@@ -57,7 +57,7 @@ public class FacetDistanceBuilder implements IFacetIndexBuilder {
 	private static final String DUMMY_ENTRY = "dummy";
 
 	public FacetDistanceBuilder(IndexDirectory idxDirectory,
-			FacetIndexHelper helper, IndexReader idxReader,
+			FacetIdxBuilderHelper helper, IndexReader idxReader,
 			boolean computeDistances) {
 
 		m_computeDistances = computeDistances;

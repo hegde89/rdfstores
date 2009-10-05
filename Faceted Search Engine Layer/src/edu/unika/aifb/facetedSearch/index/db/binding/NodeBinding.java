@@ -1,20 +1,20 @@
 /** 
-* Copyright (C) 2009 Andreas Wagner (andreas.josef.wagner@googlemail.com) 
-*  
-* This file is part of the Faceted Search Layer Project. 
-* 
-* Faceted Search Layer Project is free software: you can redistribute
-* it and/or modify it under the terms of the GNU General Public License, 
-* version 2 as published by the Free Software Foundation. 
-*  
-* Faceted Search Layer Project is distributed in the hope that it will be useful, 
-* but WITHOUT ANY WARRANTY; without even the implied warranty of 
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
-* GNU General Public License for more details. 
-*  
-* You should have received a copy of the GNU General Public License 
-* along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
-*/
+ * Copyright (C) 2009 Andreas Wagner (andreas.josef.wagner@googlemail.com) 
+ *  
+ * This file is part of the Faceted Search Layer Project. 
+ * 
+ * Faceted Search Layer Project is free software: you can redistribute
+ * it and/or modify it under the terms of the GNU General Public License, 
+ * version 2 as published by the Free Software Foundation. 
+ *  
+ * Faceted Search Layer Project is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * GNU General Public License for more details. 
+ *  
+ * You should have received a copy of the GNU General Public License 
+ * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
+ */
 package edu.unika.aifb.facetedSearch.index.db.binding;
 
 import com.sleepycat.bind.tuple.TupleBinding;
@@ -26,16 +26,20 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 
 /**
  * @author andi
- *
+ * 
  */
-public class NodeBinding extends TupleBinding<Node>{
+public class NodeBinding extends TupleBinding<Node> {
 
-	/* (non-Javadoc)
-	 * @see com.sleepycat.bind.tuple.TupleBinding#entryToObject(com.sleepycat.bind.tuple.TupleInput)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.sleepycat.bind.tuple.TupleBinding#entryToObject(com.sleepycat.bind
+	 * .tuple.TupleInput)
 	 */
 	@Override
 	public Node entryToObject(TupleInput input) {
-		
+
 		Node node = new Node();
 
 		/*
@@ -46,7 +50,6 @@ public class NodeBinding extends TupleBinding<Node>{
 		node.setValue(input.readString());
 		node.setType(input.readInt());
 		node.setPath(input.readString());
-		node.setPathHashValue(input.readInt());
 
 		/*
 		 * read facet
@@ -62,12 +65,16 @@ public class NodeBinding extends TupleBinding<Node>{
 		return node;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sleepycat.bind.tuple.TupleBinding#objectToEntry(java.lang.Object, com.sleepycat.bind.tuple.TupleOutput)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.sleepycat.bind.tuple.TupleBinding#objectToEntry(java.lang.Object,
+	 * com.sleepycat.bind.tuple.TupleOutput)
 	 */
 	@Override
 	public void objectToEntry(Node object, TupleOutput output) {
-		
+
 		/*
 		 * node content
 		 */
@@ -76,7 +83,6 @@ public class NodeBinding extends TupleBinding<Node>{
 		output.writeString(object.getValue());
 		output.writeInt(object.getType());
 		output.writeString(object.getPath());
-		output.writeInt(object.getPathHashValue());
 
 		/*
 		 * write facet
@@ -86,6 +92,6 @@ public class NodeBinding extends TupleBinding<Node>{
 		output.writeDouble(facet.getNodeId());
 		output.writeInt(facet.getType());
 		output.writeInt(facet.getDataType());
-		
+
 	}
 }

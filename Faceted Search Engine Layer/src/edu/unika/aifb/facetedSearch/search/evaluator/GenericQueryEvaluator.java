@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidParameterException;
 
-import org.apache.jcs.access.exception.CacheException;
-
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
@@ -34,7 +32,6 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
@@ -61,12 +58,24 @@ public class GenericQueryEvaluator {
 	private Searcher m_facetQueryEvaluator;
 	private Searcher m_changePageEvaluator;
 
+	/*
+	 * 
+	 */
 	private IndexReader m_idxReader;
 	private SearchSession m_session;
 
+	/*
+	 * 
+	 */
+	private boolean m_facetsEnabled;
+
 	public GenericQueryEvaluator(SearchSession session, IndexReader idxReader) {
+
 		m_session = session;
 		m_idxReader = idxReader;
+
+		m_facetsEnabled = new Boolean(m_session.getProps().getProperty(
+				FacetEnvironment.Property.FACETS_ENABLED));
 	}
 
 	private Result constructResult(Table<String> resultTable) {
@@ -76,12 +85,10 @@ public class GenericQueryEvaluator {
 
 		try {
 
-			m_session.getCache().clean(CleanType.ALL);
-			m_session.getCache().storeResult(res);			
+			m_session.getCache().storeResult(res);
 
 			// create facets for this result set
-			if (new Boolean(m_session.getProps().getProperty(
-					FacetEnvironment.Property.FACETS_ENABLED))) {
+			if (m_facetsEnabled) {
 
 				FacetPage fpage = m_session.getFacetPageManager()
 						.getInitialFacetPage();
@@ -92,13 +99,10 @@ public class GenericQueryEvaluator {
 			e.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		} catch (CacheException e) {
-			e.printStackTrace();
 		}
 
 		return res;
 	}
-
 	public ResultPage evaluate(Query query) {
 
 		ResultPage resultPage = null;
@@ -109,6 +113,8 @@ public class GenericQueryEvaluator {
 			Table<String> resultTable;
 
 			try {
+
+				m_session.clean();
 
 				eval = (KeywordQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.KeywordQueryEvaluator);
 				resultTable = eval.evaluate((KeywordQuery) query);
@@ -133,6 +139,8 @@ public class GenericQueryEvaluator {
 
 			try {
 
+				m_session.clean();
+
 				eval = (VPEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
 				resultTable = eval.evaluate((StructuredQuery) query);
 
@@ -156,6 +164,8 @@ public class GenericQueryEvaluator {
 			Table<String> resultTable;
 
 			try {
+
+				m_session.clean();
 
 				eval = (ExploringHybridQueryEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.HybridQueryEvaluator);
 				resultTable = eval.evaluate((HybridQuery) query);
@@ -220,10 +230,6 @@ public class GenericQueryEvaluator {
 
 				return m_vPEvaluator;
 			}
-				// case CombinedQueryEvaluator: {
-				// searcher = new CombinedQueryEvaluator(this.m_idxReader);
-				// break;
-				// }
 			case KeywordQueryEvaluator : {
 
 				if (m_keywordQueryEvaluator == null) {
@@ -258,6 +264,7 @@ public class GenericQueryEvaluator {
 			}
 		}
 	}
+
 	private ResultPage getFirstResultPage() {
 
 		ResultPage resPage = ResultPage.EMPTY_PAGE;

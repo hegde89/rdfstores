@@ -48,7 +48,7 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.Keys;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.distance.ClusterDistance;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
@@ -160,13 +160,15 @@ public class SearchSessionCache {
 	 */
 	private FacetIndex m_facetIdx;
 
-	public SearchSessionCache(File dir, SearchSession session)
+	public SearchSessionCache(File dir, SearchSession session,
+			CompositeCacheManager compositeCacheManager)
 			throws EnvironmentLockedException, DatabaseException {
 
 		m_session = session;
 		m_treeDelegator = (FacetTreeDelegator) session
 				.getDelegator(Delegators.TREE);
 		m_dir = dir;
+		m_compositeCacheManager = compositeCacheManager;
 
 		init();
 	}
@@ -506,7 +508,7 @@ public class SearchSessionCache {
 
 		if ((fromIndex = (pageNum - 1)
 				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > resTable
-				.size()) {
+				.rowCount()) {
 
 			return ResultPage.EMPTY_PAGE;
 
@@ -514,7 +516,7 @@ public class SearchSessionCache {
 
 			int toIndex = Math.min(pageNum
 					* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE,
-					resTable.size());
+					resTable.rowCount());
 
 			ResultPage resPage = new ResultPage();
 			resPage.setPageNum(pageNum);
@@ -570,6 +572,7 @@ public class SearchSessionCache {
 
 		return sources;
 	}
+	
 	@SuppressWarnings("unchecked")
 	public Collection<String> getSources4Leave(String domain, double leaveID) {
 
@@ -843,11 +846,6 @@ public class SearchSessionCache {
 			m_dynNode2litListMap = new StoredMap<Double, List<AbstractSingleFacetValue>>(
 					m_sourceCache, m_doubleBinding, m_litListBinding, true);
 		}
-	}
-
-	public void setCompositeCacheManager(
-			CompositeCacheManager compositeCacheManager) {
-		m_compositeCacheManager = compositeCacheManager;
 	}
 
 	public void storeLiterals(DynamicNode dynamicNode,

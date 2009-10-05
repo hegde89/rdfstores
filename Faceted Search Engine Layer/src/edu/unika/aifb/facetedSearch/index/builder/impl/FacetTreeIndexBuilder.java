@@ -19,10 +19,11 @@
 package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -50,17 +51,16 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment.RDF;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Resource;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.index.builder.IFacetIndexBuilder;
-import edu.unika.aifb.facetedSearch.index.builder.cache.LRUCache;
 import edu.unika.aifb.facetedSearch.index.db.binding.AbstractSingleFacetValueBinding;
 import edu.unika.aifb.facetedSearch.index.db.binding.NodeBinding;
 import edu.unika.aifb.facetedSearch.index.db.binding.PathBinding;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
-import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.facetedSearch.util.LRUCache;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
@@ -76,6 +76,9 @@ import edu.unika.aifb.graphindex.util.Util;
  * 
  */
 public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
+
+	private final static Logger s_log = Logger
+			.getLogger(FacetTreeIndexBuilder.class);
 
 	/*
 	 * 
@@ -113,13 +116,10 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 	/*
 	 * 
 	 */
-	private FacetIndexHelper m_facetHelper;
-
-	private final static Logger s_log = Logger
-			.getLogger(FacetTreeIndexBuilder.class);
+	private FacetIdxBuilderHelper m_facetHelper;
 
 	public FacetTreeIndexBuilder(IndexDirectory idxDirectory,
-			IndexReader idxReader, FacetIndexHelper helper)
+			IndexReader idxReader, FacetIdxBuilderHelper helper)
 			throws EnvironmentLockedException, DatabaseException, IOException {
 
 		m_facetHelper = helper;
@@ -132,22 +132,39 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 	public void build() throws IOException, StorageException, DatabaseException {
 
 		LRUCache<String, Stack<Node>> cache = new LRUCache<String, Stack<Node>>(
-				5000);
+				FacetEnvironment.DefaultValue.SIMPLE_CACHE_SIZE);
+
+		/*
+		 * 
+		 */
+		IndexDescription dataIndex = m_idxReader.getDataIndex()
+				.getSuitableIndex(
+						new DataField[]{DataField.SUBJECT, DataField.PROPERTY});
+
+		IndexStorage dataIndexStorage = m_idxReader.getDataIndex()
+				.getIndexStorage(dataIndex);
 
 		IndexStorage spIdx = m_idxReader.getStructureIndex()
 				.getSPIndexStorage();
 
+		/*
+		 * 
+		 */
 		Set<NodeElement> source_extensions = m_facetHelper.getIndexGraph()
 				.vertexSet();
 
-		int count = 0;
+		HashSet<Node> leaves = new HashSet<Node>();
+
+		int count_ext = 0;
+		int count_ind = 0;
 
 		for (NodeElement source_extension : source_extensions) {
 
+			leaves.clear();
 			cache.clear();
 
 			s_log.debug("start building facet tree for extension: "
-					+ source_extension + " (" + (++count) + "/"
+					+ source_extension + " (" + (++count_ext) + "/"
 					+ source_extensions.size() + ")");
 
 			FacetTree facetTree = new FacetTree();
@@ -165,14 +182,12 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 						.contains(propertyLabel)) {
 
 					Stack<Node> propertyPath = new Stack<Node>();
-					// NodeElement target = property.getTarget();
 
 					if (propertyLabel.equals(RDF.NAMESPACE + RDF.TYPE)) {
 
 						Node endpoint = new Node(propertyLabel,
 								NodeType.INNER_NODE, NodeContent.TYPE_PROPERTY);
 
-						// endpoint.addRangeExtension(target.getLabel());
 						endpoint
 								.setFacet(endpoint.makeFacet(propertyLabel,
 										FacetType.RDF_PROPERTY_BASED,
@@ -191,7 +206,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 										? NodeContent.DATA_PROPERTY
 										: NodeContent.OBJECT_PROPERTY);
 
-						// endpoint.addRangeExtension(target.getLabel());
 						endpoint.setFacet(endpoint.makeFacet(propertyLabel,
 								isDataProp
 										? FacetType.DATAPROPERTY_BASED
@@ -222,35 +236,39 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 			if (!facetTree.isEmpty()) {
 
-				// facetTree = this.prunePropertyHierarchy(facetTree);
-
 				s_log.debug("inserted properties in facetTree!");
 				s_log.debug("start going over endpoints... ");
-
-				List<String> individuals = spIdx.getDataList(
-						IndexDescription.EXTENT, DataField.ENT,
-						source_extension.getLabel());
-
-				int extensionSize = individuals.size();
-
-				s_log.debug("extension contains " + extensionSize
-						+ " individuals.");
 
 				for (Entry<Node, HashSet<String>> endpointEntry : endPoints
 						.entrySet()) {
 
+					Iterator<String[]> individualIter = spIdx.iterator(
+							IndexDescription.EXTENT, new DataField[]{
+									DataField.EXT, DataField.ENT},
+							source_extension.getLabel());
+
+					count_ind = 0;
+
 					Node property = endpointEntry.getKey();
 
-					for (String individual : individuals) {
+					while (individualIter.hasNext()) {
+
+						count_ind++;
+
+						String individual = individualIter.next()[1];
 
 						try {
 
-							Table<String> triples = m_idxReader.getDataIndex()
-									.getTriples(individual,
-											property.getValue(), null);
-
-							Iterator<String[]> tripleIter = triples.getRows()
-									.iterator();
+							Iterator<String[]> tripleIter = dataIndexStorage
+									.iterator(dataIndex, new DataField[]{
+											DataField.SUBJECT,
+											DataField.PROPERTY,
+											DataField.OBJECT}, dataIndex
+											.createValueArray(
+													DataField.SUBJECT,
+													individual,
+													DataField.PROPERTY,
+													property.getValue()));
 
 							while (tripleIter.hasNext()) {
 
@@ -281,13 +299,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 												.getLabel()
 												+ property.getValue() + object;
 
-										// ArrayList<String> keyElements = new
-										// ArrayList<String>();
-										// keyElements.add(source_extension
-										// .getLabel());
-										// keyElements.add(property.getValue());
-										// keyElements.add(object);
-
 										String currentClass = object;
 										Node superClass;
 
@@ -306,15 +317,8 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 											currentClass = superClass
 													.getValue();
 
-											// keyElements.add(superClass
-											// .getValue());
 											key += superClass.getValue();
 										}
-
-										// String key = FacetDbUtils
-										// .getKey(keyElements
-										// .toArray(new String[keyElements
-										// .size()]));
 
 										Stack<Node> cachedNodes = null;
 
@@ -329,11 +333,13 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 										updateLeaveDB(cachedNodes,
 												source_extension.getLabel(),
-												individual);
+												individual, facetTree);
 
 										updateObjectDB(facetTree, cachedNodes,
 												individual, object,
 												source_extension.getLabel());
+
+										leaves.addAll(cachedNodes);
 
 									} else if (property.getContent() == NodeContent.OBJECT_PROPERTY) {
 
@@ -359,14 +365,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 											classPath.push(nodeEndpoint);
 
-											// ArrayList<String> keyElements =
-											// new ArrayList<String>();
-											// keyElements.add(source_extension
-											// .getLabel());
-											// keyElements
-											// .add(property.getValue());
-											// keyElements.add(classLabel);
-
 											String key = source_extension
 													.getLabel()
 													+ property.getValue()
@@ -390,16 +388,8 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 												currentClass = superClass
 														.getValue();
 
-												// keyElements.add(superClass
-												// .getValue());
-
 												key += superClass.getValue();
 											}
-
-											// String key = FacetDbUtils
-											// .getKey(keyElements
-											// .toArray(new String[keyElements
-											// .size()]));
 
 											Stack<Node> cachedNodes = null;
 
@@ -409,47 +399,27 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 												cachedNodes = insertClassPath(
 														classPath, facetTree,
 														property);
-
-												// FacetDbUtils.store(m_cacheDB,
-												// key, cachedNodes);
 												cache.put(key, cachedNodes);
 											}
 
 											updateLeaveDB(
 													cachedNodes,
 													source_extension.getLabel(),
-													individual);
+													individual, facetTree);
 
 											updateObjectDB(facetTree,
 													cachedNodes, individual,
 													object, source_extension
 															.getLabel());
 
-											// updateVectorDB(
-											// cachedNodes
-											// .get(FacetEnvironment.SOURCE),
-											// source_extension.getLabel(),
-											// extensionSize, individual);
+											leaves.addAll(cachedNodes);
 
 										} else {
-
-											// ArrayList<String> keyElements =
-											// new ArrayList<String>();
-											// keyElements.add(source_extension
-											// .getLabel());
-											// keyElements
-											// .add(property.getValue());
-											// keyElements.add(object);
 
 											String key = source_extension
 													.getLabel()
 													+ property.getValue()
 													+ object;
-
-											// String key = FacetDbUtils
-											// .getKey(keyElements
-											// .toArray(new String[keyElements
-											// .size()]));
 
 											Stack<Node> cachedNodes = null;
 
@@ -459,28 +429,20 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 												cachedNodes = insertObject(
 														facetTree, property,
 														object);
-
-												// FacetDbUtils.store(m_cacheDB,
-												// key, cachedNodes);
 												cache.put(key, cachedNodes);
 											}
 
 											updateLeaveDB(
 													cachedNodes,
 													source_extension.getLabel(),
-													individual);
+													individual, facetTree);
 
 											updateObjectDB(facetTree,
 													cachedNodes, individual,
 													object, source_extension
 															.getLabel());
 
-											// updateVectorDB(
-											// cachedNodes
-											// .get(FacetEnvironment.SOURCE),
-											// source_extension.getLabel(),
-											// extensionSize, individual);
-
+											leaves.addAll(cachedNodes);
 										}
 									}
 								}
@@ -490,11 +452,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 									String key = source_extension.getLabel()
 											+ property.getValue() + object;
 
-									// String key = FacetDbUtils
-									// .getKey(new String[]{
-									// source_extension.getLabel(),
-									// property.getValue(), object});
-
 									Stack<Node> cachedNodes = null;
 
 									if ((cachedNodes = cache.get(key)) == null) {
@@ -502,19 +459,17 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 										// insert object
 										cachedNodes = insertObject(facetTree,
 												property, object);
-
-										// FacetDbUtils.store(m_cacheDB,
-										// cacheKey,
-										// cachedNodes);
 										cache.put(key, cachedNodes);
 									}
 
 									updateLeaveDB(cachedNodes, source_extension
-											.getLabel(), individual);
+											.getLabel(), individual, facetTree);
 
 									updateObjectDB(facetTree, cachedNodes,
 											individual, object,
 											source_extension.getLabel());
+
+									leaves.addAll(cachedNodes);
 								}
 							}
 						} catch (StorageException e) {
@@ -529,27 +484,19 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			}
 
 			s_log.debug("finished facet tree for extension: "
-					+ source_extension + "!");
-
-			Set<Node> leaves = facetTree.getVertices(NodeType.LEAVE);
+					+ source_extension + ", containing " + count_ind
+					+ " individuals!");
 
 			for (Node leave : leaves) {
 
-				Queue<Edge> path2root = facetTree.getAncestorPath2Root(leave
+				Queue<Edge> path2root = getAncestorPath2Root(facetTree, leave
 						.getID());
-				// Queue<Edge> path2rangeRoot = facetTree
-				// .getAncestorPath2RangeRoot(leave.getID());
 
-				if (!FacetDbUtils.contains(m_pathDB, String.valueOf(leave
-						.getPathHashValue()), m_pathBinding)) {
+				if (!FacetDbUtils.contains(m_pathDB, leave.getPath(),
+						m_pathBinding)) {
 
-					// FacetDbUtils.store(m_pathDB,
-					// FacetEnvironment.Keys.RANGEROOT_PATH
-					// + leave.getPathHashValue(), path2rangeRoot,
-					// m_pathBinding);
-
-					FacetDbUtils.store(m_pathDB, String.valueOf(leave
-							.getPathHashValue()), path2root, m_pathBinding);
+					FacetDbUtils.store(m_pathDB, leave.getPath(), path2root,
+							m_pathBinding);
 				}
 			}
 		}
@@ -578,37 +525,56 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		}
 	}
 
-	private String getPath4Node(FacetTree tree, Node node) {
+	private LinkedList<Edge> getAncestorPath2Root(FacetTree tree,
+			double fromNodeId) {
 
-		boolean reachedRoot = node.isRoot();
+		Node fromNode;
+		LinkedList<Edge> edges2root = null;
 
-		Node currentNode = node;
-		String path = "";
+		if ((fromNode = tree.getVertex(fromNodeId)) != null) {
 
-		while (!reachedRoot) {
+			edges2root = new LinkedList<Edge>();
 
-			Iterator<Edge> incomingEdgesIter = tree
-					.incomingEdgesOf(currentNode).iterator();
+			new ArrayList<Edge>();
+			boolean reachedRoot = fromNode.isRoot();
+			Node currentNode = fromNode;
 
-			if (incomingEdgesIter.hasNext()) {
+			while (!reachedRoot) {
 
-				Node father = tree.getEdgeSource(incomingEdgesIter.next());
-				path = father.getValue() + path;
+				Iterator<Edge> incomingEdgesIter = tree.incomingEdgesOf(
+						currentNode).iterator();
 
-				if (father.isRoot()) {
-					reachedRoot = true;
+				if (incomingEdgesIter.hasNext()) {
+
+					Edge edge2father = incomingEdgesIter.next();
+
+					if (!edge2father.getTarget().hasPath()) {
+						edge2father.getTarget().updatePath(tree);
+					}
+
+					if (!edge2father.getSource().hasPath()) {
+						edge2father.getSource().updatePath(tree);
+					}
+
+					edges2root.add(edge2father);
+					Node father = tree.getEdgeSource(edge2father);
+
+					if (father.isRoot()) {
+						reachedRoot = true;
+					} else {
+						currentNode = father;
+					}
 				} else {
-					currentNode = father;
+					s_log.error("tree structure is not correct " + this);
+					break;
 				}
-			} else {
-				s_log.error("tree structure is not correct: " + this);
-				break;
 			}
+		} else {
+			s_log.error("node with id " + fromNodeId
+					+ " not contained in tree!");
 		}
 
-		path = path + node.getValue();
-
-		return path;
+		return edges2root;
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException,
@@ -691,8 +657,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 					Node rangeTop = facetTree.getEdgeTarget(thisEdge);
 
-					// nodes2cache.get(FacetEnvironment.SOURCE).add(rangeTop);
-
 					Stack<Edge> rangeEdges = new Stack<Edge>();
 					rangeEdges.addAll(facetTree.outgoingEdgesOf(rangeTop));
 
@@ -705,10 +669,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 					}
 
 					if (classPath.isEmpty()) {
-
-						// nodes2cache.get(FacetEnvironment.LEAVE).add(rangeTop);
 						nodes2cache.add(rangeTop);
-
 					} else {
 
 						Node topNode = classPath.peek();
@@ -856,8 +817,6 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 		// init
 		Stack<Node> nodes2cache = new Stack<Node>();
-		// nodes2cache.put(FacetEnvironment.SOURCE, new Stack<Node>());
-		// nodes2cache.put(FacetEnvironment.LEAVE, new Stack<Node>());
 
 		Node currentNode = endpoint;
 		boolean reachedRoot = false;
@@ -883,8 +842,8 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 			if (!foundRange) {
 
-				Node rangeTop = this.m_facetHelper.hasRangeClass(currentNode)
-						? this.m_facetHelper.getRange(currentNode)
+				Node rangeTop = m_facetHelper.hasRangeClass(currentNode)
+						? m_facetHelper.getRange(currentNode)
 						: new Node("Generic Range: "
 								+ Util.truncateUri(currentNode.getValue()),
 								NodeType.RANGE_ROOT, NodeContent.CLASS);
@@ -1149,11 +1108,17 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 	}
 
 	private void updateLeaveDB(Stack<Node> leaves, String extension,
-			String individual) throws DatabaseException, IOException {
+			String individual, FacetTree tree) throws DatabaseException,
+			IOException {
 
 		String key = extension + individual;
 
 		for (Node leave : leaves) {
+
+			if (!leave.hasPath()) {
+				leave.updatePath(tree);
+			}
+
 			m_leaveMap.put(key, leave);
 		}
 	}
@@ -1162,15 +1127,16 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			String object, String sourceExt) throws DatabaseException,
 			IOException, StorageException {
 
-		String rangeExt = m_idxReader.getStructureIndex().getExtension(object);
-
 		AbstractSingleFacetValue fv;
 
 		if (Util.isEntity(object)) {
 
+			String rangeExt = m_idxReader.getStructureIndex().getExtension(
+					object);
+
 			fv = new Resource();
 			((Resource) fv).setValue(object);
-			((Resource) fv).setRangeExt(rangeExt);
+			((Resource) fv).setRangeExt(rangeExt == null ? "null" : rangeExt);
 			((Resource) fv).setSourceExt(sourceExt);
 			((Resource) fv).setIsResource(true);
 
@@ -1178,7 +1144,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 			fv = new Literal();
 			((Literal) fv).setValue(object);
-			((Literal) fv).setRangeExt(rangeExt);
+			((Literal) fv).setRangeExt(sourceExt);
 			((Literal) fv).setSourceExt(sourceExt);
 			((Literal) fv).setIsResource(false);
 		}
@@ -1186,13 +1152,10 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		for (Node leave : leaves) {
 
 			if (!leave.hasPath()) {
-
-				String path = getPath4Node(tree, leave);
-				leave.setPath(path);
-				leave.setPathHashValue(path.hashCode());
+				leave.updatePath(tree);
 			}
 
-			m_objectMap.put(ind + leave.getPathHashValue(), fv);
+			m_objectMap.put(ind + leave.getPath(), fv);
 		}
 	}
 }

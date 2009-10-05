@@ -66,7 +66,18 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 	}
 
 	public Facet node2facet(Node node) {
-		return node.getFacet();
+		
+		Facet facet = node.getFacet();
+		facet.setDomain(node.getDomain());
+		facet.setNodeId(node.getID());
+		
+		if(node instanceof StaticNode) {
+			
+			StaticNode stat = (StaticNode)node;	
+			facet.setCountS(stat.getCountS());
+		}
+		
+		return facet;
 	}
 
 	public FacetFacetValueTuple node2facetFacetValue(Node node) {
@@ -137,7 +148,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 		List<Facet> facetList = new ArrayList<Facet>();
 
 		for (Node node : nodeList) {
-			facetList.add(node.getFacet());
+			facetList.add(node2facet(node));
 		}
 
 		return facetList;

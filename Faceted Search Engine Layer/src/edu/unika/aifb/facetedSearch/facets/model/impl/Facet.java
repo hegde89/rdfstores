@@ -27,6 +27,8 @@ import edu.unika.aifb.facetedSearch.facets.model.IFacet;
  */
 public class Facet extends AbstractBrowsingObject implements IFacet {
 
+	public static final Facet NULL = new Facet("null", -1, -1);
+
 	/**
 	 * 
 	 */

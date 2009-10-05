@@ -36,15 +36,14 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
@@ -113,21 +112,21 @@ public class BuilderHelper {
 			StaticNode node, Int2ObjectOpenHashMap<StaticNode> paths)
 			throws DatabaseException, IOException, CacheException {
 
-		int pathHash = leave.getPathHashValue();
+		int pathHash = leave.getPath().hashCode();
 
 		if (!paths.containsKey(pathHash)) {
 
 			StaticNode pos4insertion = node;
 			Stack<Edge> edges2insert = new Stack<Edge>();
 
-			Queue<Edge> path2root = m_facetIndex.getPath2Root(pathHash);
+			Queue<Edge> path2root = m_facetIndex.getPath2Root(leave.getPath());
 
 			while (!path2root.isEmpty()) {
 
 				Edge currentEdge = path2root.poll();
 
-				int currentPathHash = currentEdge.getTarget()
-						.getPathHashValue();
+				int currentPathHash = currentEdge.getTarget().getPath()
+						.hashCode();
 
 				if (!paths.containsKey(currentPathHash)) {
 					edges2insert.add(currentEdge);
@@ -159,7 +158,6 @@ public class BuilderHelper {
 
 					String path = pathPrefix + pathDelta + newNode.getValue();
 					newNode.setPath(path);
-					newNode.setPathHashValue(path.hashCode());
 					paths.put(path.hashCode(), newNode);
 					pathDelta = pathDelta + newNode.getValue();
 
@@ -170,16 +168,13 @@ public class BuilderHelper {
 
 					pos4insertion = newNode;
 				}
-
-				newTree.addEndPoint(FacetUtils
-						.getEndPointType4Node(pos4insertion), pos4insertion);
 			}
 
 			return pos4insertion;
 
 		} else {
 
-			return paths.get(leave.getPathHashValue());
+			return paths.get(leave.getPath().hashCode());
 		}
 	}
 
@@ -222,9 +217,7 @@ public class BuilderHelper {
 
 					} else {
 
-						if ((tree.outgoingEdgesOf(father).size() == 1)
-								&& (!tree.getEndPoints().contains(
-										father.getID()))) {
+						if ((tree.outgoingEdgesOf(father).size() == 1)) {
 
 							Edge edge2fathersfather = tree.incomingEdgesOf(
 									father).iterator().next();

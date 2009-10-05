@@ -102,6 +102,7 @@ public class FacetEnvironment {
 		public static int NUM_OF_CHILDREN_PER_NODE = 6;
 		public static int RANKING_METRIC = RankingMetricType.COUNT_S;
 		public static int LITERAL_CLUSTERER = LiteralClustererType.SIMPLE;
+		public static int SIMPLE_CACHE_SIZE = 5000;
 
 	}
 
@@ -191,7 +192,7 @@ public class FacetEnvironment {
 		public static final String STRUCTURE_BASED_DATA_PARTIONING = "structureBased.dataPartitioning";
 		public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
 		public static final String ONTO_LANGUAGE = "onto.language";
-		public static final String CACHE_DIR = "cache.dir";
+		public static final String CACHE_DIR = "cache.config";
 
 	}
 

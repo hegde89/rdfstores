@@ -105,7 +105,7 @@ public class LargeRCP {
 			nodeCount++;
 			if (interval < intervals.length && nodeCount > intervals[interval] * (float)nodes.size()) {
 				interval++;
-				log.debug(nodeCount);
+//				log.debug(nodeCount);
 			}
 		}
 		
@@ -169,7 +169,7 @@ public class LargeRCP {
 			nodeCount++;
 			if (nodes.size() > 10000 & interval < intervals.length && nodeCount > intervals[interval] * (float)nodes.size()) {
 				interval++;
-				log.debug(nodeCount);
+//				log.debug(nodeCount);
 			}
 		}
 		
@@ -213,8 +213,6 @@ public class LargeRCP {
 			for (String property : edges)
 				m_gs.iterateNodes(property, new NodeListener() {
 					public void node(String node) {
-						if (node.contains("Employee"))
-							log.debug(node);
 						m_bc.setBlock(node, b);
 					}
 				});
@@ -243,7 +241,7 @@ public class LargeRCP {
 		while (steps < pathLength) {
 			PrintWriter pw = new PrintWriter(new FileWriter(blockFile));
 			for (Block b : blocks) {
-				pw.println("block:" + b.getName());
+//				pw.println("block:" + b.getName());
 				Set<String> blockNodes = b.getNodes();
 				for (String node : blockNodes)
 					pw.println(node);
@@ -266,8 +264,8 @@ public class LargeRCP {
 					
 					if (input.startsWith("block:")) {
 						if (currentBlock != null) {
-							if (image.size() > 0)
-								log.debug("image size of " + currentBlock + ": " + image.size());
+//							if (image.size() > 0)
+//								log.debug("image size of " + currentBlock + ": " + image.size());
 							
 							refine(blocks, image);
 						}
@@ -282,7 +280,7 @@ public class LargeRCP {
 				in.close();
 				
 				if (image != null && image.size() > 0) {
-					log.debug("image size of " + currentBlock + ": " + image.size());
+//					log.debug("image size of " + currentBlock + ": " + image.size());
 					refine(blocks, image);
 				}
 				

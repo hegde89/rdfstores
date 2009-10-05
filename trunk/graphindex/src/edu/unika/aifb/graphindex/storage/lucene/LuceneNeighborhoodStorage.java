@@ -59,8 +59,10 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 	
 	public void initialize(boolean clean, boolean readonly) throws StorageException {
 		try {
-			if (!readonly)
+			if (!readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), new WhitespaceAnalyzer(), clean, MaxFieldLength.UNLIMITED);
+				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 40);
+			}
 			m_reader = IndexReader.open(m_directory);
 			m_searcher = new IndexSearcher(m_reader);
 		} catch (CorruptIndexException e) {
@@ -81,7 +83,7 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 
 			Document doc = new Document();
 			doc.add(new Field(Constant.NEIGHBORHOOD_FIELD, bytes, Field.Store.COMPRESS));
-			doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.NO, Field.Index.UN_TOKENIZED));
+			doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 			
 			m_writer.addDocument(doc);
 		} catch (IOException e) {
@@ -133,6 +135,7 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 	
 	public void optimize() throws StorageException {
 		try {
+			m_writer.commit();
 			m_writer.optimize();
 			reopen();
 		} catch (CorruptIndexException e) {

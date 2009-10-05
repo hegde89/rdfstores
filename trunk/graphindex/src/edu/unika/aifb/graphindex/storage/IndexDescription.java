@@ -79,6 +79,8 @@ public class IndexDescription {
 	
 	public static final IndexDescription EXTENT = new IndexDescription("ext", "ent",
 		DataField.EXT, DataField.ENT);
+	public static final IndexDescription EXTDP = new IndexDescription("extdp", "dp",
+		DataField.EXT, DataField.PROPERTY);
 	
 	public static final IndexDescription OPS = new IndexDescription("op", "s",
 		DataField.OBJECT, DataField.PROPERTY, DataField.SUBJECT);
@@ -90,6 +92,8 @@ public class IndexDescription {
 		DataField.PROPERTY, DataField.SUBJECT, DataField.OBJECT);
 	public static final IndexDescription SOP = new IndexDescription("so", "p",
 		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY);
+	public static final IndexDescription OSP = new IndexDescription("os", "p",
+		DataField.OBJECT, DataField.SUBJECT, DataField.PROPERTY);
 
 	public static final IndexDescription SCOP = new IndexDescription("sco", "p",
 		DataField.SUBJECT, DataField.CONTEXT, DataField.OBJECT, DataField.PROPERTY);

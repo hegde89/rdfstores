@@ -11,6 +11,7 @@ import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.N3Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
+import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
@@ -31,6 +32,10 @@ public class Main {
 			.withRequiredArg().ofType(Integer.class).describedAs("neighborhood size, default: 0");
 		op.accepts("kw", "keyword index");
 		op.accepts("sd", "data extensions");
+		op.accepts("resume", "resume from analyzse, structure or keyword").withRequiredArg().ofType(String.class);
+		op.accepts("triples", "triples only");
+		op.accepts("bwonly", "backward only");
+		op.accepts("dt", "do not ignore datatypes");
 		
 		OptionSet os = op.parse(args);
 		
@@ -42,6 +47,25 @@ public class Main {
 		String directory = (String)os.valueOf("o");
 		int sk = os.has("sk") ? (Integer)os.valueOf("sk") : 0;
 		int nk = os.has("nk") ? (Integer)os.valueOf("nk") : 0;
+		boolean triplesOnly = os.has("triples");
+		boolean backwardOnly = os.has("bwonly");
+		
+		int startFrom = IndexCreator.STEP_DATA;
+		if (os.has("resume")) {
+			String from = (String)os.valueOf("resume");
+			if (from.equals("a"))
+				startFrom = IndexCreator.STEP_ANALYZE;
+			if (from.equals("s"))
+				startFrom = IndexCreator.STEP_STRUCTURE;
+			if (from.equals("p"))
+				startFrom = IndexCreator.STEP_PARTITION;
+			if (from.equals("w"))
+				startFrom = IndexCreator.STEP_KEYWORD_PREPARE;
+			if (from.equals("k"))
+				startFrom = IndexCreator.STEP_KEYWORD;
+			if (from.equals("e"))
+				startFrom = IndexCreator.STEP_KEYWORD_RESUME;
+		}
 		
 		List<String> files = os.nonOptionArguments();
 		
@@ -71,7 +95,7 @@ public class Main {
 		importer.addImports(files);
 
 		IndexCreator ic = new IndexCreator(new IndexDirectory(directory));
-		
+		importer.setIgnoreDataTypes(!os.has("dt"));
 		ic.setImporter(importer);
 		ic.setCreateDataIndex(true);
 		ic.setCreateStructureIndex(sk > 0);
@@ -80,8 +104,10 @@ public class Main {
 		ic.setSIPathLength(sk);
 		ic.setStructureBasedDataPartitioning(os.has("sd"));
 		ic.setSICreateDataExtensions(os.has("sd"));
+		ic.setOption(IndexConfiguration.TRIPLES_ONLY, triplesOnly);
+		ic.setOption(IndexConfiguration.SP_BACKWARD_ONLY, backwardOnly);
 		
-		ic.create();
+		ic.create(startFrom);
 	}
 
 }

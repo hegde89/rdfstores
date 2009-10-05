@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -138,15 +139,22 @@ public class V2Test {
 			q.addEdge("?y", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#name", "Course35");
 			q.setAsSelect("?x");
 			q.setAsSelect("?y");
-//			eval.evaluate(q);
+			eval.evaluate(q);
+			int i = 0;
+			for (Iterator<String[]> ti = ir.getDataIndex().iterator("http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#telephone"); ti.hasNext(); ) {
+				String[] t = ti.next();
+//				log.debug(t[0] + " " + t[1] + " " + t[2]);
+				i++;
+			}
+			log.debug(i);
 
-			KeywordQuery kq = new KeywordQuery("q1", "GraduateStudent36 teachingAssistantOf");
+//			KeywordQuery kq = new KeywordQuery("q1", "GraduateStudent36 teachingAssistantOf");
 //			KeywordQuery kq = new KeywordQuery("q", "UndergraduateStudent141@Department8.University0.edu takesCourse Course17 memberOf Department8");
 			
-			HybridQuery hq = new HybridQuery("h1", q, kq);
+//			HybridQuery hq = new HybridQuery("h1", q, kq);
 			
-			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
-			hy.evaluate(hq);
+//			ExploringHybridQueryEvaluator hy = new ExploringHybridQueryEvaluator(ir);
+//			hy.evaluate(hq);
 			
 //			StructuredQuery q2 = new StructuredQuery("asd");
 //			q2.addEdge("?x1", "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#teachingAssistantOf", "?x2");

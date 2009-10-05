@@ -36,6 +36,7 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtendedIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
 import edu.unika.aifb.graphindex.util.Util;
@@ -80,13 +81,22 @@ public class DataIndex extends Index {
 		return null;
 	}
 	
+	public IndexStorage getSuitableIndexStorage(DataField... fields) throws StorageException {
+		IndexDescription idx = getSuitableIndex(fields);
+		if (idx != null)
+			return getIndexStorage(idx);
+		return null;
+	}
+	
 	public IndexStorage getIndexStorage(IndexDescription index) throws StorageException {
 		IndexStorage is = m_indexes.get(index);
 		if (is == null) {
 			try {
 				is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
+//				is = new LuceneExtendedIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 				is.initialize(false, true);
 				((LuceneIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
+//				((LuceneExtendedIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 				m_indexes.put(index, is);
 			} catch (IOException e) {
 				throw new StorageException(e);

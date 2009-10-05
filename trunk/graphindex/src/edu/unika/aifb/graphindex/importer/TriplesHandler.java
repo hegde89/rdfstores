@@ -25,7 +25,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
-class TriplesHandler implements RDFHandler {
+public class TriplesHandler implements RDFHandler {
 	private static Logger log = Logger.getLogger(TriplesHandler.class);
 
 	private boolean m_ignoreDataTypes;

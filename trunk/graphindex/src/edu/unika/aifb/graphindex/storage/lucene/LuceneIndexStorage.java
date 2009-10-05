@@ -99,7 +99,7 @@ public class LuceneIndexStorage implements IndexStorage {
 			if (!m_readonly) {
 				m_writer = new IndexWriter(FSDirectory.getDirectory(m_directory), new WhitespaceAnalyzer(), clean, MaxFieldLength.UNLIMITED);
 				m_writer.setRAMBufferSizeMB(Runtime.getRuntime().maxMemory() / 1000 / 1000 / 20);
-				m_writer.setMergeFactor(30);
+//				m_writer.setMergeFactor(30);
 				log.debug("IndexWriter ram buffer size set to " + m_writer.getRAMBufferSizeMB() + "MB");
 			}
 			
@@ -150,6 +150,17 @@ public class LuceneIndexStorage implements IndexStorage {
 		return f;
 	}
 	
+	private Field getStoredField(DataField df, String value) {
+		return getStoredField(df, value, false);
+	}
+
+	private Field getStoredField(DataField df, String value, boolean compressed) {
+		Field f = new Field(df.toString(), value, compressed ? Field.Store.COMPRESS : Field.Store.YES, Field.Index.NO, Field.TermVector.NO);
+		f.setOmitNorms(true);
+		f.setOmitTf(true);
+		return f;
+	}
+
 	public String toIndexKey(String[] indexKeys) {
 		StringBuilder sb = new StringBuilder();
 		for (String s : indexKeys)
@@ -389,6 +400,8 @@ public class LuceneIndexStorage implements IndexStorage {
 					for (BooleanClause bc : bq.getClauses()) {
 						String term = ((TermQuery)bc.getQuery()).getTerm().text();
 						String[] indexTerms = term.split(KEY_DELIM);
+						if (indexTerms.length < index.getIndexFields().size())
+							continue;
 						String[] row = new String[table.columnCount()];
 						for (int i = 0; i < row.length; i++)
 							row[i] = indexTerms[valueIdxs[i]];
@@ -541,6 +554,23 @@ public class LuceneIndexStorage implements IndexStorage {
 			getDocumentIds(new TermQuery(new Term(index.getIndexFieldName(), term)));
 		}
 	}
+	
+	public int numDocs(String field) throws StorageException {
+		try {
+			int docs = 0;
+			TermEnum te = m_reader.terms(new Term(field, ""));
+			do {
+				Term t = te.term();
+				if (!t.field().equals(field))
+					break;
+				docs += m_reader.docFreq(t);
+			}
+			while (te.next());
+			return docs;
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+	}
 
 	public void mergeSingleIndex(IndexDescription index) throws StorageException {
 		try {
@@ -565,7 +595,8 @@ public class LuceneIndexStorage implements IndexStorage {
 			File newDir = new File(m_directory.getAbsolutePath().substring(0, m_directory.getAbsolutePath().lastIndexOf(File.separator)) + File.separator + index.getIndexFieldName() + "_merged");
 			log.debug("writing to " + newDir);
 			IndexWriter writer = new IndexWriter(FSDirectory.getDirectory(newDir), new WhitespaceAnalyzer(), true, MaxFieldLength.UNLIMITED);
-			writer.setMergeFactor(20);
+			writer.setMergeFactor(30);
+//			writer.setTermIndexInterval(IndexWriter.DEFAULT_TERM_INDEX_INTERVAL / 2); 
 			
 			te = m_reader.terms(new Term(index.getIndexFieldName(), ""));
 			do {
@@ -592,12 +623,13 @@ public class LuceneIndexStorage implements IndexStorage {
 				
 				Document doc = new Document();
 				doc.add(getIndexedField(index, t.text()));
-				doc.add(new Field(index.getValueFieldName(), sb.toString(), Field.Store.YES, Field.Index.NO));
+				doc.add(getStoredField(index.getValueField(), sb.toString()));
 				writer.addDocument(doc);
 				
 				termsProcessed++;
 
-				if (termsProcessed % 500000 == 0) {
+				if (termsProcessed % 1000000 == 0) {
+					writer.commit();
 					System.gc();
 					log.debug("terms: " + termsProcessed + "/" + numTerms + ", docs merged: " + docsMerged + ", max values: " + maxValues + ", " + Util.memory());
 				}
@@ -655,6 +687,7 @@ public class LuceneIndexStorage implements IndexStorage {
 				m_writer.addDocument(doc);
 			}
 			while (te.next());
+			m_writer.commit();
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -663,6 +696,7 @@ public class LuceneIndexStorage implements IndexStorage {
 	public void optimize() throws StorageException {
 		if (!m_readonly) {
 			try {
+				m_writer.commit();
 				m_writer.optimize();
 				reopen();
 			} catch (IOException e) {
@@ -692,8 +726,10 @@ public class LuceneIndexStorage implements IndexStorage {
 			m_colIdx2TermIdx = new int [columnFields.length];
 			for (int i = 0; i < columnFields.length; i++) {
 				m_colIdx2TermIdx[i] = index.getIndexFieldPos(columnFields[i]);
-				if (columnFields[i] == index.getValueField())
+				if (columnFields[i] == index.getValueField()) {
 					m_usesValue = true;
+					m_colIdx2TermIdx[i] = -1;
+				}
 			}
 		}
 		
@@ -720,7 +756,12 @@ public class LuceneIndexStorage implements IndexStorage {
 					String s = "";
 					for (String idxTerm : m_indexTerms)
 						s += idxTerm + " ";
-					log.debug(q + ", " + term + ", " + s);
+					System.gc();
+					log.debug("skipping " + q + ", " + term + ", " + s + " " + Util.memory());
+					
+					q = m_queryIterator.next();
+					term = q.getTerm().text();
+					m_indexTerms = term.split(KEY_DELIM);
 				}
 			}
 			
@@ -742,7 +783,7 @@ public class LuceneIndexStorage implements IndexStorage {
 				}
 				
 				for (int i = 0; i < m_colIdx2TermIdx.length; i++) {
-					if (m_colIdx2TermIdx[i] >= m_indexTerms.length)
+					if (m_colIdx2TermIdx[i] < 0)
 						row[i] = m_valueIterator.next();
 					else
 						row[i] = m_indexTerms[m_colIdx2TermIdx[i]];
@@ -758,23 +799,174 @@ public class LuceneIndexStorage implements IndexStorage {
 		
 	}
 	
-	@Override
-	public Iterator<String[]> iterator(IndexDescription index, DataField[] columns, String... indexValues)	throws StorageException {
-		List<TermQuery> queries = new ArrayList<TermQuery>();
+	public class TermIterator implements Iterator<String[]> {
+		private IndexDescription m_index;
+		private String m_indexKey;
+		private TermEnum m_termEnum = null;
+		private List<String> m_values;
+		private Iterator<String> m_valueIterator;
+		private int[] m_colIdx2TermIdx;
+		private boolean m_usesValue = false;
+		private String[] m_indexTerms;
+		private Term m_next = null;
 		
-		if (indexValues.length < index.getIndexFields().size()) {
-			PrefixQuery q = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues)));
+		public TermIterator(IndexDescription index, String indexKey, DataField... columnFields) throws StorageException {
+			m_index = index;
+			m_indexKey = indexKey;
+			
 			try {
-				BooleanQuery bq = (BooleanQuery)q.rewrite(m_reader);
-				for (BooleanClause bc : bq.getClauses())
-					queries.add((TermQuery)bc.getQuery());
+				m_termEnum = m_reader.terms(new Term(index.getIndexFieldName(), indexKey));
+				m_next = m_termEnum.term();
 			} catch (IOException e) {
 				throw new StorageException(e);
 			}
+
+			m_colIdx2TermIdx = new int [columnFields.length];
+			for (int i = 0; i < columnFields.length; i++) {
+				m_colIdx2TermIdx[i] = index.getIndexFieldPos(columnFields[i]);
+				if (columnFields[i] == index.getValueField()) {
+					m_usesValue = true;
+					m_colIdx2TermIdx[i] = -1;
+				}
+			}
 		}
-		else
-			queries.add(new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues))));
 		
-		return new TriplesIterator(index, queries, columns);
+		private boolean isPrefix(Term t) {
+			if (t == null)
+				return false;
+			return t.text().startsWith(m_indexKey);
+		}
+		
+		private Term peekNext() throws IOException {
+			if (m_next == null) {
+				m_termEnum.next();
+				m_next = m_termEnum.term();
+			}
+			if (isPrefix(m_next))
+				return m_next;
+			else
+				return null;
+		}
+		
+		private Term getNext() throws IOException {
+			if (m_next != null) {
+				if (isPrefix(m_next)) {
+					Term t = m_next;
+					m_next = null;
+					return t;
+				}
+				else
+					return null;
+			}
+			else {
+				if (!m_termEnum.next())
+					return null;
+				Term t = m_termEnum.term();
+				if (isPrefix(t))
+					return t;
+				else
+					return null;
+			}
+		}
+		
+		public boolean hasNext() {
+			try {
+				if (!m_usesValue && peekNext() == null)
+					return false;
+
+				if (m_usesValue && peekNext() == null && m_valueIterator != null && !m_valueIterator.hasNext())
+					return false;
+			} catch (IOException e) {
+				e.printStackTrace();
+				return false;
+			}
+			
+			return true;
+		}
+
+		public String[] next() {
+			if (m_indexTerms == null || m_values == null ||!m_valueIterator.hasNext()) {
+				try {
+					Term term = getNext();
+					if (term == null)
+						return null;
+	
+					String termText = term.text();
+					m_indexTerms = termText.split(KEY_DELIM);
+					
+					if (m_indexTerms.length < m_index.getIndexFields().size()) {
+						String s = "";
+						for (String idxTerm : m_indexTerms)
+							s += idxTerm + " ";
+//						System.gc();
+//						log.debug("skipping " + term + ", " + s + " " + Util.memory());
+						
+						term = getNext();
+						if (term == null)
+							return null;
+	
+						termText = term.text();
+						m_indexTerms = termText.split(KEY_DELIM);
+					}
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+					return null;
+				}
+			}
+			
+			String[] row = new String [m_colIdx2TermIdx.length];
+
+			if (!m_usesValue) {
+				for (int i = 0; i < m_colIdx2TermIdx.length; i++)
+					row[i] = m_indexTerms[m_colIdx2TermIdx[i]];
+			}
+			else {
+				if (m_values == null || !m_valueIterator.hasNext()) {
+					try {
+						m_values = getDataList(m_index, m_index.getValueField(), m_indexTerms);
+						m_valueIterator = m_values.iterator();
+					} catch (StorageException e) {
+						e.printStackTrace();
+						return null;
+					}
+				}
+				
+				for (int i = 0; i < m_colIdx2TermIdx.length; i++) {
+					if (m_colIdx2TermIdx[i] < 0)
+						row[i] = m_valueIterator.next();
+					else
+						row[i] = m_indexTerms[m_colIdx2TermIdx[i]];
+				}
+			}
+			
+			return row;
+		}
+
+		public void remove() {
+			throw new UnsupportedOperationException("remove not supported");
+		}
+	}
+	
+	@Override
+	public Iterator<String[]> iterator(IndexDescription index, DataField[] columns, String... indexValues)	throws StorageException {
+//		List<TermQuery> queries = new ArrayList<TermQuery>();
+//		
+//		if (indexValues.length < index.getIndexFields().size()) {
+//			PrefixQuery q = new PrefixQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues)));
+//			try {
+//				BooleanQuery bq = (BooleanQuery)q.rewrite(m_reader);
+//				for (BooleanClause bc : bq.getClauses())
+//					queries.add((TermQuery)bc.getQuery());
+//			} catch (IOException e) {
+//				throw new StorageException(e);
+//			}
+//		}
+//		else
+//			queries.add(new TermQuery(new Term(index.getIndexFieldName(), getIndexKey(indexValues))));
+//		
+//		return new TriplesIterator(index, queries, columns);
+		return new TermIterator(index, getIndexKey(indexValues), columns);
 	}
 }
+

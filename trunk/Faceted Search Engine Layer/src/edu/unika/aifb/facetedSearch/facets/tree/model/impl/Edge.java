@@ -22,6 +22,7 @@ import java.io.Serializable;
 
 import org.jgrapht.graph.DefaultEdge;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IEdge;
 
 /**
@@ -77,5 +78,36 @@ public class Edge extends DefaultEdge implements IEdge, Serializable {
 
 	public void setType(int type) {
 		m_type = type;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.jgrapht.graph.DefaultEdge#toString()
+	 */
+	@Override
+	public String toString() {
+		return "[" + m_source + " -> " + m_target + " // type: "
+				+ type2String() + "]";
+	}
+
+	private String type2String() {
+
+		switch (m_type) {
+			case EdgeType.CONTAINS : {
+				return "contains";
+			}
+			case EdgeType.HAS_RANGE : {
+				return "has_range";
+			}
+			case EdgeType.SUBCLASS_OF : {
+				return "subclass_of";
+			}
+			case EdgeType.SUBPROPERTY_OF : {
+				return "subproperty_of";
+			}
+			default :
+				return "not valid!";
+		}
 	}
 }

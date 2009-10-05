@@ -20,7 +20,7 @@ package edu.unika.aifb.facetedSearch.facets.converter.facet2tree;
 import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;

@@ -32,8 +32,8 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTree;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
@@ -124,6 +124,8 @@ public class FacetTreeBuilder implements IBuilder {
 			}
 		}
 
+		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
+		
 		// prune ranges
 		newTree = m_helper.pruneRanges(newTree, newLeaves);
 

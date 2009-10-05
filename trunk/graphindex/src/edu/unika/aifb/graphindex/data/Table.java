@@ -18,6 +18,7 @@ package edu.unika.aifb.graphindex.data;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,35 +36,43 @@ import org.apache.log4j.Logger;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.util.Timings;
 
-public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable {
+public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable, Serializable {
+
+	private static final long serialVersionUID = 1722529459966563712L;
+	
 	private int m_colCount;
 	private String[] m_colNames;
 	private Map<String,Integer> m_name2col;
 	private List<T[]> m_rows;
 	private int m_sortedCol = -1;
-	
+
 	public static Timings timings;
 	private static final Logger log = Logger.getLogger(Table.class);
-	
+
+	public Table() {
+		m_rows = new ArrayList<T[]>();
+		m_name2col = new HashMap<String, Integer>();
+	}
+
 	public Table(int cols) {
 		m_colCount = cols;
 		m_rows = new ArrayList<T[]>();
 		m_name2col = new HashMap<String,Integer>();
 	}
-	
+
 	public Table(List<String> colNames) {
 		this(colNames.toArray(new String [colNames.size()]));
 	}
-	
+
 	public Table(List<String> colNames, int initialCapacity) {
 		this(colNames.toArray(new String [colNames.size()]));
 		m_rows = new ArrayList<T[]>(initialCapacity);
 	}
-	
+
 	public Table(DataField... cols) {
 		this(toColumnNames(cols));
  	}
-	
+
 	public Table(String... colNames) {
 		this(colNames.length);
 		m_colNames = new String[colNames.length];
@@ -72,7 +81,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 			m_name2col.put(colNames[i], i);
 		}
 	}
-	
+
 	public Table(Table<T> table) {
 		this(table, true);
 	}
@@ -84,7 +93,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		if (rows)
 			m_rows = table.getRows();
 	}
-	
+
 	private static String[] toColumnNames(DataField[] cols) {
 		String[] colNames = new String[cols.length];
 		for (int i = 0; i < cols.length; i++)
@@ -95,49 +104,49 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 	public void setRows(List<T[]> rows) {
 		m_rows = rows;
 	}
-	
+
 	public void setColumnName(int col, String name) {
 		m_colNames[col] = name;
 		m_name2col.clear();
 		for (int i = 0; i < m_colNames.length; i++)
 			m_name2col.put(m_colNames[i], i);
 	}
-	
+
 	public boolean hasColumn(String col) {
 		return m_name2col.containsKey(col);
 	}
-	
+
 	public String[] getColumnNames() {
 		return m_colNames;
 	}
-	
+
 	public T getValue(T[] row, String colName) {
 		return row[getColumn(colName)];
 	}
-	
+
 	public String getSortedColumn() {
 		if (m_sortedCol == -1)
 			return null;
 		
 		return m_colNames[m_sortedCol];
 	}
-	
+
 	public void setSortedColumn(int i) {
 		m_sortedCol = i;
 	}
-	
+
 	public void setSortedColumn(String colName) {
 		m_sortedCol = getColumn(colName);
 	}
-	
+
 	public void setUnsorted() {
 		m_sortedCol = -1;
 	}
-	
+
 	public boolean isSorted() {
 		return m_sortedCol >= 0;
 	}
-	
+
 	public boolean isSortedBy(String col) {
 		if (m_sortedCol < 0)
 			return false;
@@ -145,7 +154,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		// because that case is already handled above
 		return m_sortedCol == getColumn(col); 
 	}
-	
+
 	public boolean isSortedBy(int col) {
 		if (m_sortedCol < 0)
 			return false;
@@ -164,27 +173,27 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		}
 		return -1;
 	}
-	
+
 	public int columnCount() {
 		return m_colCount;
 	}
-	
+
 	public void addRow(T[] row) {
 		m_rows.add(row);
 	}
-	
+
 	public void addRows(List<T[]> rows) {
 		m_rows.addAll(rows);
 	}
-	
+
 	public T[] getRow(int row) {
 		return m_rows.get(row);
 	}
-	
+
 	public List<T[]> getRows() {
 		return m_rows;
 	}
-	
+
 	public int rowCount() {
 		return m_rows.size();
 	}
@@ -192,13 +201,13 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 	public Iterator<T[]> iterator() {
 		return m_rows.iterator();
 	}
-	
+
 	public List<String> getColumnNamesSorted() {
 		List<String> sorted = new ArrayList<String>(Arrays.asList(m_colNames));
 		Collections.sort(sorted);
 		return sorted;
 	}
-	
+
 	public void removeDuplicates(List<String> columns) {
 		List<T[]> result = new ArrayList<T[]>();
 		Set<String> sigs = new HashSet<String>();
@@ -220,7 +229,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		log.debug("purged duplicates: " + rowCount() + " => " + result.size());
 		setRows(result);
 	}
-	
+
 	public Set<T> getUniqueValueSet(String colName) {
 		Set<T> values = new HashSet<T>();
 		int col = getColumn(colName);
@@ -228,7 +237,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 			values.add(row[col]);
 		return values;
 	}
-	
+
 	public void removeDuplicates() {
 		removeDuplicates(Arrays.asList(m_colNames));
 	}
@@ -245,7 +254,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		else
 			sort(col);
 	}
-	
+
 	public void sort(int col, boolean conditional) {
 		if (conditional)
 			if (!isSortedBy(col))
@@ -257,7 +266,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 	public void sort(String col) {
 		sort(getColumn(col));
 	}
-	
+
 	public void sort(final int col) {
 		if (timings != null)
 			timings.start(Timings.TBL_SORT);
@@ -274,7 +283,7 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		if (timings != null)
 			timings.end(Timings.TBL_SORT);
 	}
-	
+
 	public void sort(final List<String> columns) {
 		Collections.sort(m_rows, new Comparator<T[]>() {
 			public int compare(T[] o1, T[] o2) {
@@ -290,20 +299,20 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		});
 		setSortedColumn(columns.get(0));
 	}
-	
+
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		return super.clone(); // shallow copy
 	}
-	
+
 	public String toDataString() {
 		return toDataString(rowCount());
 	}
-	
+
 	public String toDataString(boolean printHeader) {
 		return toDataString(rowCount(), printHeader);
 	}
-	
+
 	public String toDataString(int rows, boolean printHeader) {
 		StringBuilder sb = new StringBuilder();
 		List<String> sorted = getColumnNamesSorted();
@@ -322,11 +331,11 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 		
 		return sb.toString();
 	}
-	
+
 	public String toDataString(int rows) {
 		return toDataString(rows, true);
 	}
-	
+
 	public String toString() {
 		String s = "Table(";
 		String comma = "";
@@ -343,5 +352,16 @@ public class Table<T extends Comparable<T>> implements Iterable<T[]>, Cloneable 
 
 	public String getColumnName(int col) {
 		return m_colNames[col];
+	}
+
+	public Table<T> subTable(int fromIndex, int toIndex)
+			throws IndexOutOfBoundsException {
+
+		m_rows = m_rows.subList(fromIndex, toIndex);
+		return this;
+	}
+
+	public int size() {
+		return m_rows.size();
 	}
 }

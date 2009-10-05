@@ -20,6 +20,7 @@ package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -36,8 +37,14 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
  */
 public class Node implements INode {
 
+	/**
+	 * 
+	 */
 	private static final long serialVersionUID = -1484769190480836362L;
-	@SuppressWarnings("unused")
+	
+	/*
+	 * 
+	 */
 	private static Logger s_log = Logger.getLogger(Node.class);
 
 	/*
@@ -50,6 +57,11 @@ public class Node implements INode {
 	 */
 	private int m_type;
 	private int m_content;
+
+	/*
+	 * 
+	 */
+	private boolean m_isSubTreeRoot;
 
 	/*
 	 * 
@@ -67,7 +79,6 @@ public class Node implements INode {
 	/*
 	 * 
 	 */
-	private int m_pathHashValue;
 	private String m_path;
 
 	/*
@@ -124,6 +135,27 @@ public class Node implements INode {
 		return m_content == NodeContent.TYPE_PROPERTY;
 	}
 
+	private String content2String() {
+
+		switch (m_content) {
+			case NodeContent.CLASS : {
+				return "class";
+			}
+			case NodeContent.TYPE_PROPERTY : {
+				return "type-property";
+			}
+			case NodeContent.OBJECT_PROPERTY : {
+				return "object-property";
+			}
+			case NodeContent.DATA_PROPERTY : {
+				return "data-property";
+			}
+			default : {
+				return "not valid";
+			}
+		}
+	}
+
 	@Override
 	public boolean equals(Object object) {
 
@@ -155,10 +187,6 @@ public class Node implements INode {
 		return m_path;
 	}
 
-	public int getPathHashValue() {
-		return m_pathHashValue;
-	}
-
 	public HashSet<String> getRangeExtensions() {
 		return m_RangeExtensions;
 	}
@@ -183,10 +211,6 @@ public class Node implements INode {
 		return m_path != null;
 	}
 
-	public boolean hasPathHashValue() {
-		return m_pathHashValue != Integer.MIN_VALUE;
-	}
-
 	public boolean hasSameValueAs(Object object) {
 
 		return object instanceof INode ? ((INode) object).getValue().equals(
@@ -202,8 +226,8 @@ public class Node implements INode {
 
 		m_leaves = new ArrayList<Double>();
 
-		m_pathHashValue = Integer.MIN_VALUE;
 		m_path = null;
+		m_isSubTreeRoot = false;
 	}
 
 	public boolean isInnerNode() {
@@ -220,6 +244,10 @@ public class Node implements INode {
 
 	public boolean isRoot() {
 		return m_type == NodeType.ROOT;
+	}
+
+	public boolean isSubTreeRoot() {
+		return m_isSubTreeRoot;
 	}
 
 	public Facet makeFacet(String uri, int ftype, int dtype) {
@@ -242,16 +270,16 @@ public class Node implements INode {
 		this.m_id = id;
 	}
 
+	public void setIsSubTreeRoot(boolean isSubTreeRoot) {
+		m_isSubTreeRoot = isSubTreeRoot;
+	}
+
 	public void setLeaves(List<Double> leaves) {
 		m_leaves = leaves;
 	}
 
 	public void setPath(String path) {
 		m_path = path;
-	}
-
-	public void setPathHashValue(int pathHashValue) {
-		m_pathHashValue = pathHashValue;
 	}
 
 	public void setType(int type) {
@@ -268,8 +296,61 @@ public class Node implements INode {
 
 	@Override
 	public String toString() {
-		return "Node" + m_id + " :[Label:" + m_value + ", Type:" + m_type
-				+ ", Content:" + m_content + ", Extensions: "
-				+ m_RangeExtensions + "]";
+		return "Node" + m_id + " :[Label:" + m_value + ", Type:"
+				+ type2String() + ", Content:" + content2String() + "]";
+	}
+
+	private String type2String() {
+
+		switch (m_type) {
+			case NodeType.INNER_NODE : {
+				return "inner_node";
+			}
+			case NodeType.LEAVE : {
+				return "leave";
+			}
+			case NodeType.RANGE_ROOT : {
+				return "range_root";
+			}
+			case NodeType.ROOT : {
+				return "root";
+			}
+			default : {
+				return "not valid";
+			}
+		}
+	}
+
+	public void updatePath(FacetTree tree) {
+
+		boolean reachedRoot = isRoot();
+
+		Node currentNode = this;
+		String path = "";
+
+		while (!reachedRoot) {
+
+			Iterator<Edge> incomingEdgesIter = tree
+					.incomingEdgesOf(currentNode).iterator();
+
+			if (incomingEdgesIter.hasNext()) {
+
+				Node father = tree.getEdgeSource(incomingEdgesIter.next());
+				path = father.getValue() + path;
+
+				if (father.isRoot()) {
+					reachedRoot = true;
+				} else {
+					currentNode = father;
+				}
+			} else {
+				s_log.error("tree structure is not correct: " + tree);
+				break;
+			}
+		}
+
+		path = path + getValue();
+
+		setPath(path);
 	}
 }

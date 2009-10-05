@@ -24,7 +24,7 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
-import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIndexHelper;
+import edu.unika.aifb.facetedSearch.index.builder.impl.FacetIdxBuilderHelper;
 import edu.unika.aifb.facetedSearch.index.builder.impl.FacetTreeIndexBuilder;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -56,7 +56,7 @@ public class FacetIndexCreator {
 			// FacetIndex facetIndex = new FacetIndex(m_idxDirectory,
 			// m_idxConfig);
 			IndexReader idxReader = new IndexReader(m_idxDirectory);
-			FacetIndexHelper helper = FacetIndexHelper.getInstance(idxReader,
+			FacetIdxBuilderHelper helper = FacetIdxBuilderHelper.getInstance(idxReader,
 					m_idxDirectory);
 
 			// s_log.debug("start building facet index vPos ... ");
@@ -111,7 +111,7 @@ public class FacetIndexCreator {
 			//
 			// s_log.debug("literal distance index trees finished!");
 
-			FacetIndexHelper.close();
+			FacetIdxBuilderHelper.close();
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

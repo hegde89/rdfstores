@@ -199,15 +199,13 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		return m_objectMap.duplicates(subject
-				+ String.valueOf(leave.getPathHashValue()));
+		return m_objectMap.duplicates(subject + leave.getPath());
 	}
-	
-	public Queue<Edge> getPath2Root(int pathHashValue)
-			throws DatabaseException, IOException {
 
-		return FacetDbUtils.get(m_pathDB, String.valueOf(pathHashValue),
-				m_pathBinding);
+	public Queue<Edge> getPath2Root(String path) throws DatabaseException,
+			IOException {
+
+		return FacetDbUtils.get(m_pathDB, path, m_pathBinding);
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException,

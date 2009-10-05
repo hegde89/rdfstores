@@ -20,14 +20,28 @@ package edu.unika.aifb.facetedSearch.facets.tree.model;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.List;
 
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 
 /**
  * @author andi
  * 
  */
 public interface INode extends Serializable {
+
+	public boolean addLeave(double leave);
+
+	public boolean containsClass();
+
+	public boolean containsDataProperty();
+
+	public boolean containsObjectProperty();
+
+	public boolean containsProperty();
+
+	public boolean containsRdfProperty();
 
 	public int getContent();
 
@@ -37,9 +51,9 @@ public interface INode extends Serializable {
 
 	public double getID();
 
-	public String getPath();
+	public List<Double> getLeaves();
 
-	public int getPathHashValue();
+	public String getPath();
 
 	public HashSet<String> getRangeExtensions();
 
@@ -53,8 +67,6 @@ public interface INode extends Serializable {
 
 	public boolean hasPath();
 
-	public boolean hasPathHashValue();
-
 	public boolean hasSameValueAs(Object object);
 
 	public boolean isInnerNode();
@@ -64,6 +76,8 @@ public interface INode extends Serializable {
 	public boolean isRangeRoot();
 
 	public boolean isRoot();
+
+	public boolean isSubTreeRoot();
 
 	public Facet makeFacet(String uri, int ftype, int dtype);
 
@@ -75,13 +89,17 @@ public interface INode extends Serializable {
 
 	public void setID(double id);
 
-	public void setPath(String path);
+	public void setIsSubTreeRoot(boolean isSubTreeRoot);
 
-	public void setPathHashValue(int pathHashValue);
+	public void setLeaves(List<Double> leaves);
+
+	public void setPath(String path);
 
 	public void setType(int type);
 
 	public void setValue(String label);
 
 	public void setWeight(double weight);
+
+	public void updatePath(FacetTree tree);
 }

@@ -34,7 +34,7 @@ import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
@@ -334,10 +334,10 @@ public class SearchSession {
 			CompositeCacheManager compositeCacheManager = CompositeCacheManager
 					.getUnconfiguredInstance();
 			compositeCacheManager.configure(cacheProps);
-
-			m_cache.setCompositeCacheManager(compositeCacheManager);
+			
 			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
-					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this);
+					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this, compositeCacheManager);
+			
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

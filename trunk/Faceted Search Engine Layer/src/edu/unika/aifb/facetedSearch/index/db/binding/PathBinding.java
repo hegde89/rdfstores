@@ -53,7 +53,7 @@ public class PathBinding extends TupleBinding<Queue<Edge>> {
 		int listSize = input.readInt();
 		int count = 0;
 
-		while (++count < listSize) {
+		while (count < listSize) {
 
 			Edge edge = new Edge();
 			edge.setType(input.readInt());
@@ -68,6 +68,8 @@ public class PathBinding extends TupleBinding<Queue<Edge>> {
 			edge.setTarget(target);
 
 			edges.add(edge);
+			
+			count++;
 		}
 
 		return edges;

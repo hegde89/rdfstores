@@ -42,7 +42,7 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList.CleanType;
-import edu.unika.aifb.facetedSearch.facets.tree.impl.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;

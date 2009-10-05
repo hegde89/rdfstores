@@ -1,13 +1,23 @@
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
+import java.io.Serializable;
+
 import edu.unika.aifb.facetedSearch.search.datastructure.IResult;
 import edu.unika.aifb.graphindex.data.Table;
 
 /**
  * @author andi
  */
-public class Result implements IResult {
+public class Result implements IResult, Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4386192143288472710L;
+	
+	/*
+	 * 
+	 */
 	private Table<String> m_resultTable;
 	private FacetPage m_facetPage;
 
@@ -24,7 +34,8 @@ public class Result implements IResult {
 	}
 
 	public Table<String> getResultSubTable(int fromIndex, int toIndex) {
-		return m_resultTable.subTable(fromIndex, toIndex);
+		m_resultTable.subTable(fromIndex, toIndex);
+		return m_resultTable;
 	}
 
 	public Table<String> getResultTable() {
@@ -44,6 +55,6 @@ public class Result implements IResult {
 	}
 
 	public int size() {
-		return m_resultTable.size();
+		return m_resultTable.rowCount();
 	}
 }

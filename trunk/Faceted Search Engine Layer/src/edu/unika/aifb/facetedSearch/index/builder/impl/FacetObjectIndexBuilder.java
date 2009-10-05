@@ -51,7 +51,7 @@ public class FacetObjectIndexBuilder implements IFacetIndexBuilder {
 
 	private IndexReader m_idxReader;
 	private IndexDirectory m_idxDirectory;
-	private FacetIndexHelper m_helper;
+	private FacetIdxBuilderHelper m_helper;
 	private LuceneIndexStorage m_objectIndex;
 	// private LuceneIndexStorage m_sortedLitIndex;
 	// private LiteralComparator m_litComparator;
@@ -60,7 +60,7 @@ public class FacetObjectIndexBuilder implements IFacetIndexBuilder {
 			.getLogger(FacetObjectIndexBuilder.class);
 
 	public FacetObjectIndexBuilder(IndexDirectory idxDirectory,
-			IndexReader idxReader, FacetIndexHelper helper) {
+			IndexReader idxReader, FacetIdxBuilderHelper helper) {
 
 		m_idxReader = idxReader;
 		m_idxDirectory = idxDirectory;
@@ -173,8 +173,8 @@ public class FacetObjectIndexBuilder implements IFacetIndexBuilder {
 							FacetUtils.list2String(rangeExtensions) };
 
 					// add data to index
-					m_objectIndex.addDataWithMultipleValues(
-							IndexDescription.IEOE, key, values);
+					// m_objectIndex.addDataWithMultipleValues(
+					// IndexDescription.IEOE, key, values);
 				}
 
 				// key = new String[] { String.valueOf(property.getID()) };

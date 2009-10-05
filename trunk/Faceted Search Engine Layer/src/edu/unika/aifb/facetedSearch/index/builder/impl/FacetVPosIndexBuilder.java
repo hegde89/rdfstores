@@ -38,7 +38,7 @@ public class FacetVPosIndexBuilder implements IFacetIndexBuilder {
 	private LuceneIndexStorage m_vPosIndex;
 
 	public FacetVPosIndexBuilder(IndexDirectory idxDirectory,
-			IndexReader idxReader, FacetIndexHelper helper) {
+			IndexReader idxReader, FacetIdxBuilderHelper helper) {
 
 		// this.m_idxReader = idxReader;
 		// this.m_idxDirectory = idxDirectory;

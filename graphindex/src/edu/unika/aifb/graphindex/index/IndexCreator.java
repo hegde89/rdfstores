@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
+import org.openrdf.model.vocabulary.RDF;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -49,10 +50,12 @@ import edu.unika.aifb.graphindex.algorithm.largercp.LargeRCP;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
+import edu.unika.aifb.graphindex.index.IndexConfiguration.Option;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneExtendedIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneWarmer;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
@@ -94,6 +97,14 @@ public class IndexCreator implements TripleSink {
 	private final int TRIPLES_INTERVAL = 500000;
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
+	
+	public final static int STEP_DATA = 0;
+	public final static int STEP_ANALYZE = 1;
+	public final static int STEP_STRUCTURE = 2;
+	public final static int STEP_PARTITION = 3;
+	public final static int STEP_KEYWORD_PREPARE = 4;
+	public final static int STEP_KEYWORD = 5;
+	public final static int STEP_KEYWORD_RESUME = 6;
 	
 	public IndexCreator(IndexDirectory indexDirectory) throws IOException {
 		m_idxDirectory = indexDirectory;
@@ -162,6 +173,10 @@ public class IndexCreator implements TripleSink {
 		m_idxConfig.set(IndexConfiguration.KW_NSIZE, nsize);
 	}
 	
+	public void setOption(Option o, Object val) {
+		m_idxConfig.set(o, val);
+	}
+	
 	public void setImporter(Importer importer) {
 		m_importer = importer;
 	}
@@ -174,6 +189,10 @@ public class IndexCreator implements TripleSink {
 		m_idxConfig.addIndex(IndexConfiguration.SP_INDEXES, idx);
 	}
 	
+	public void create() throws FileNotFoundException, IOException, StorageException, InterruptedException {
+		create(STEP_DATA);
+	}
+	
 	/**
 	 * Creates indexes. Option have to be set beforehand.
 	 * @throws FileNotFoundException
@@ -183,47 +202,65 @@ public class IndexCreator implements TripleSink {
 	 * @throws DatabaseException
 	 * @throws InterruptedException
 	 */
-	public void create() throws FileNotFoundException, IOException, StorageException, InterruptedException {
+	public void create(int startFrom) throws FileNotFoundException, IOException, StorageException, InterruptedException {
 		m_idxDirectory.create();
 
-		addDataIndex(IndexDescription.SCOP);
-		addDataIndex(IndexDescription.OCPS);
-		addDataIndex(IndexDescription.PSOC);
-		addDataIndex(IndexDescription.CPSO);
-		addDataIndex(IndexDescription.POCS);
-		addDataIndex(IndexDescription.SOPC);
+		if (!m_idxConfig.getBoolean(IndexConfiguration.TRIPLES_ONLY)) {
+			addDataIndex(IndexDescription.SCOP);
+			addDataIndex(IndexDescription.OCPS);
+			addDataIndex(IndexDescription.PSOC);
+			addDataIndex(IndexDescription.CPSO);
+			addDataIndex(IndexDescription.POCS);
+			addDataIndex(IndexDescription.SOPC);
+		}
+		else {
+			addDataIndex(IndexDescription.POS);
+			addDataIndex(IndexDescription.PSO);
+			addDataIndex(IndexDescription.OSP);
+			addDataIndex(IndexDescription.SPO);
+		}
 		
 		addSPIndex(IndexDescription.PSESO);
 		addSPIndex(IndexDescription.POESS);
 		addSPIndex(IndexDescription.SES);
 		addSPIndex(IndexDescription.POES);
 		addSPIndex(IndexDescription.EXTENT);
+		addSPIndex(IndexDescription.EXTDP);
 		if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED) && m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
 			addSPIndex(IndexDescription.OEO);
 		
-		m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);
-		
-		importData();
-		
-		analyzeData();
+		if (startFrom == STEP_DATA)
+			m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);
 
-		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
-			log.debug("creating structure index");
-			try {
-				index();
-				createSPIndexes();
-			} catch (EnvironmentLockedException e) {
-				throw new StorageException(e);
-			} catch (DatabaseException e) {
-				throw new StorageException(e);
-			}
-		}
-		else
-			log.debug("not creating structure index");
+		if (startFrom <= STEP_DATA) {
+			importData();
 		
-		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_KW)) {
+		}
+		if (startFrom <= STEP_ANALYZE)
+			analyzeData();
+
+		try {
+			if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP) && startFrom <= STEP_STRUCTURE) {
+				log.debug("creating structure index");
+				index();
+			}
+			else
+				log.debug("not creating structure index");
+			
+			if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP) && startFrom <= STEP_PARTITION) 
+				createSPIndexes();
+		} catch (EnvironmentLockedException e) {
+			throw new StorageException(e);
+		} catch (DatabaseException e) {
+			throw new StorageException(e);
+		}
+		
+		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_KW) && startFrom <= STEP_KEYWORD_PREPARE) 
+			prepareKeywordIndex();
+		
+		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_KW) && (startFrom <= STEP_KEYWORD_RESUME)) { 
 			log.debug("creating keyword index");
-			createKWIndex();
+			createKWIndex(startFrom == STEP_KEYWORD_RESUME);
 		}
 		else
 			log.debug("not creating keyword index");
@@ -237,6 +274,7 @@ public class IndexCreator implements TripleSink {
 		m_dataIndexes = new HashMap<IndexDescription,IndexStorage>();
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
+//			IndexStorage is = new LuceneExtendedIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
 			is.initialize(true, false);
 			m_dataIndexes.put(idx, is);
 		}
@@ -258,14 +296,28 @@ public class IndexCreator implements TripleSink {
 	private void analyzeData() throws StorageException, IOException {
 		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
 
+		Set<String> overrideObjectProperties = new HashSet<String>();
+		Set<String> overrideDataProperties = new HashSet<String>();
+		
+		if (m_idxDirectory.exists(IndexDirectory.OVERRIDE_OBJECT_PROPERTIES_FILE))
+			overrideObjectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OVERRIDE_OBJECT_PROPERTIES_FILE));
+		if (m_idxDirectory.exists(IndexDirectory.OVERRIDE_DATA_PROPERTIES_FILE))
+			overrideDataProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OVERRIDE_DATA_PROPERTIES_FILE));
+		
 		Set<String> objectProperties = new HashSet<String>();
 		Set<String> dataProperties = new HashSet<String>();
 
 		for (String property : Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE))) {
-			if (hasEntity(dataIndex, property))
+			if (overrideObjectProperties.contains(property))
 				objectProperties.add(property);
-			else
+			else if (overrideDataProperties.contains(property))
 				dataProperties.add(property);
+			else {
+				if (hasEntity(dataIndex, property))
+					objectProperties.add(property);
+				else
+					dataProperties.add(property);
+			}
 		}
 		
 		Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE), dataProperties);
@@ -345,6 +397,7 @@ public class IndexCreator implements TripleSink {
 				is.addData(IndexDescription.POESS, new String[] { property, o, subExt}, Arrays.asList(s));
 				is.addData(IndexDescription.SES, new String[] { s }, subExt);
 				is.addData(IndexDescription.POES, new String[] { property, o }, subExt);
+				is.addData(IndexDescription.SES, new String[] { o }, objExt);
 				
 				is.addData(IndexDescription.EXTENT, new String[] { subExt }, s);
 				is.addData(IndexDescription.EXTENT, new String[] { objExt }, o);
@@ -359,6 +412,7 @@ public class IndexCreator implements TripleSink {
 		log.debug("index graph edges: " + indexEdges.size());
 		
 		triples = 0;
+		Set<String> extDataProps = new HashSet<String>();
 		for (String property : dataProperties) {
 			log.debug("data prop: " + property);
 			for (Iterator<String[]> ti = dataIndex.iterator(property); ti.hasNext(); ) {
@@ -370,6 +424,9 @@ public class IndexCreator implements TripleSink {
 				
 				if (subExt == null)
 					continue;
+				
+				if (!extDataProps.add(new StringBuilder().append(subExt).append("__").append(property).toString()))
+					is.addData(IndexDescription.EXTDP, new String[] { subExt }, property);
 
 				if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {
 					// add triples to extensions
@@ -413,8 +470,12 @@ public class IndexCreator implements TripleSink {
 		gs.mergeIndex(IndexDescription.PSO);
 		gs.mergeIndex(IndexDescription.POS);
 		
+		log.debug("optimizing...");
 		is.optimize();
 		gs.optimize();
+		log.debug("done");
+		
+		log.debug("nodes with ext: " + ((LuceneIndexStorage)is).numDocs(IndexDescription.SES.getIndexFieldName()));
 
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
 			Util.writeEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR).getAbsolutePath() + "/" + idx.getIndexFieldName() + "_warmup", LuceneWarmer.getWarmupTerms(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR).getAbsolutePath(), idx.getIndexFieldName(), 10));
@@ -425,10 +486,10 @@ public class IndexCreator implements TripleSink {
 		bc.close();
 	}
 	
-	protected void createKWIndex() throws IOException, StorageException {
-		prepareKeywordIndex();
-		
-		KeywordIndexBuilder kb = new KeywordIndexBuilder(m_idxDirectory, m_idxConfig); 
+	protected void createKWIndex(boolean resume) throws IOException, StorageException {
+//		prepareKeywordIndex();
+		edu.unika.aifb.graphindex.index.IndexReader ir = new edu.unika.aifb.graphindex.index.IndexReader(m_idxDirectory);
+		KeywordIndexBuilder kb = new KeywordIndexBuilder(ir, resume); 
 		kb.indexKeywords();
 	}
 	
@@ -450,9 +511,13 @@ public class IndexCreator implements TripleSink {
 		File attributes = m_idxDirectory.getTempFile("attributes", true);
 		
 		int triples = 0;
+		Set<String> overrideDataProperties = new HashSet<String>();
+		if (m_idxDirectory.exists(IndexDirectory.OVERRIDE_DATA_PROPERTIES_FILE))
+			overrideDataProperties  = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OVERRIDE_DATA_PROPERTIES_FILE));
 
+		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
 		try {
-			for (String property : properties) {
+			for (String property : objectProperties) {
 				for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
 					String[] t = i.next();
 					String s = t[0];
@@ -460,21 +525,10 @@ public class IndexCreator implements TripleSink {
 					String o = t[2];
 
 					entSet.add(s);
-
-					if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
-							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
-						relSet.add(p);
-						entSet.add(o);
-					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
-							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
-						attrSet.add(p);
-					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
-							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
+					entSet.add(o);
+					
+					if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
 						conSet.add(o);
-					}
 					
 					triples++;
 					if (triples % 1000000 == 0)
@@ -484,9 +538,56 @@ public class IndexCreator implements TripleSink {
 						Util.mergeRowSet(entities, entSet);
 						entSet.clear();
 					}
-					
 				}
 			}
+			
+//			for (String property : properties) {
+//				for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
+//					String[] t = i.next();
+//					String s = t[0];
+//					String p = t[1];
+//					String o = t[2];
+//
+//					entSet.add(s);
+//
+//					if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
+//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
+////						if (!overrideDataProperties.contains(p)) {
+////							relSet.add(p);
+////							entSet.add(o);
+////						}
+////						else
+////							attrSet.add(p);
+//					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
+//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
+//						attrSet.add(p);
+//					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
+//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
+//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
+//						conSet.add(o);
+//					}
+//					
+//					if (objectProperties.contains(property))
+//						entSet.add(o);
+//					
+//					triples++;
+//					if (triples % 1000000 == 0)
+//						System.out.println(triples);
+//					
+//					if (entSet.size() > 1000000) {
+//						Util.mergeRowSet(entities, entSet);
+//						entSet.clear();
+//					}
+//					
+//				}
+//			}
+			
+			attrSet = new TreeSet<String>(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+			relSet = new TreeSet<String>(objectProperties);
+			relSet.remove(RDF.TYPE.toString());
+			relSet.removeAll(TypeUtil.m_rdfsEdgeSet);
 			
 			Util.mergeRowSet(entities, entSet);
 			Util.writeEdgeSet(concepts, conSet);

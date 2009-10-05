@@ -47,6 +47,8 @@ public class IndexDirectory {
 	public static final int BW_EDGESET_FILE = addFile("backward_edgeset");
 	public static final int FW_EDGESET_FILE = addFile("forward_edgeset");
 	public static final int CARDINALITIES_FILE = addFile("cardinalities");
+	public static final int OVERRIDE_OBJECT_PROPERTIES_FILE = addFile("override_object_properties");
+	public static final int OVERRIDE_DATA_PROPERTIES_FILE = addFile("override_data_properties");
 	
 	public static final int SP_IDX_DIR = addDirectory("sp_idx");
 	public static final int SP_GRAPH_DIR = addDirectory("sp_graph");
@@ -84,6 +86,10 @@ public class IndexDirectory {
 		}
 		
 		return f;
+	}
+	
+	public boolean exists(int file) throws IOException {
+		return getFile(file).exists();
 	}
 	
 	public File getTempFile(String name, boolean truncate) throws IOException {

@@ -60,6 +60,8 @@ public class IndexConfiguration {
 
 	public static final Option IDX_VERSION = addOption("idx_version");
 	
+	public static final Option TRIPLES_ONLY = addOption("triples_only", false);
+	
 	public static final Option HAS_DI = addOption("has_di", true);
 	public static final Option HAS_SP = addOption("has_si", true);
 	public static final Option HAS_KW = addOption("has_kw", true);
@@ -71,7 +73,7 @@ public class IndexConfiguration {
 //	public static final Option SP_INDEX_DATA = addOption("sp_index_data", true);
 	
 	public static final Option DI_INDEXES = addOption("di_indexes");
-	
+	public static final Option DI_COMPRESSION = addOption("di_compression");
 	public static final Option DP_SP_BASED = addOption("dp_sp_based", true);
 	
 	public static final Option KW_NSIZE = addOption("kw_nsize", 0);

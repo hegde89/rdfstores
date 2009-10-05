@@ -32,11 +32,15 @@ class TriplesHandler implements RDFHandler {
 	private int m_triplesTotal;
 	private int m_triplesAdded;
 	private String m_defaultContext;
+	private String m_defaultDataType;
+
 	private TripleSink m_sink;
 
-	public TriplesHandler(TripleSink sink, boolean ignoreDataTypes) {
+	public TriplesHandler(TripleSink sink, boolean ignoreDataTypes,
+			String defaultDataType) {
 		m_sink = sink;
 		m_ignoreDataTypes = ignoreDataTypes;
+		m_defaultDataType = defaultDataType;
 	}
 
 	public void endRDF() throws RDFHandlerException {
@@ -79,9 +83,12 @@ class TriplesHandler implements RDFHandler {
 			// if (l.getDatatype() != null)
 			// target = l.getDatatype().toString();
 
-			target = m_ignoreDataTypes ? lit.stringValue() : lit.stringValue()
-					+ Character.toString((char) 94)
-					+ lit.getDatatype().toString();
+			String dataType = lit.getDatatype() == null ? m_defaultDataType
+					: lit.getDatatype().toString();
+			
+			target = m_ignoreDataTypes ? lit.stringValue()
+					: lit.stringValue() + Character.toString((char) 94)
+							+ dataType;
 
 			target = target.replaceAll("\n", "\\\\" + "n");
 		} else if (st.getObject() instanceof BNode) {

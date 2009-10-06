@@ -41,7 +41,7 @@ public class Environment {
 	public static final String DEFAULT_TEMPORAL_FILEPATH = "d://dbsqr/lucene";
 	
 	// For the r-radius graph whose size is too large, we consider it as a max r-radius graph without checking. 
-	public static final int SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING = 100;
+	public static final int SIZE_R_RADIUS_GRAPH_WITHOUT_CHECK = 100;
 	
 	/* Indexed Field of Entity Index*/
 	public static final String FIELD_ENTITY_TERM_LITERAL = "literal";

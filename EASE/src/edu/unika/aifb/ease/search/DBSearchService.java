@@ -8,8 +8,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.ease.Config;
 import edu.unika.aifb.ease.Environment;
-import edu.unika.aifb.ease.db.DBConfig;
 import edu.unika.aifb.ease.db.DBService;
 
 public class DBSearchService {
@@ -17,9 +17,9 @@ public class DBSearchService {
 private static final Logger log = Logger.getLogger(DBSearchService.class);
 	
 	private DBService m_dbService;
-	private DBConfig m_config;
+	private Config m_config;
 	
-	public DBSearchService(DBConfig config) {
+	public DBSearchService(Config config) {
 		m_config = config;
 		initializeDbService();
 		

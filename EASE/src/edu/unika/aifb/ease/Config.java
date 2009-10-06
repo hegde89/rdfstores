@@ -1,4 +1,4 @@
-package edu.unika.aifb.ease.db;
+package edu.unika.aifb.ease;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,11 +11,10 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
 
-import edu.unika.aifb.ease.Environment;
 
-public class DBConfig {
+public class Config {
 	
-	private static final Logger log = Logger.getLogger(DBConfig.class);
+	private static final Logger log = Logger.getLogger(Config.class);
 
 	//Server information
 	private String m_server = Environment.DEFAULT_SERVER;
@@ -34,29 +33,29 @@ public class DBConfig {
 	private int m_topResult = Environment.DEFAULT_TOP_RESULT;
 	// For the r-radius graph whose size is too large, 
 	// we consider it as a max r-radius graph without checking due to the efficiency issue. 
-	// If the size of the r-Radius graph > 'm_sizeGraphToCheck', 
+	// If the size of the r-Radius graph > 'm_sizeGraphWithoutCheck', 
 	// we consider it as a as a max r-radius graph without checking.  
-	private int m_sizeGraphWithoutCheck  = Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING;
+	private int m_sizeGraphWithoutCheck  = Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECK;
 	
 	//Temporary directory
 	private String m_tempDir = Environment.DEFAULT_TEMPORAL_FILEPATH;
 	private String m_stopwordFilePath = Environment.DEFAULT_STOPWORD_FILEPATH; 
 	
 	//singleton
-	public static DBConfig single = null;
+	public static Config single = null;
 	public static String configFilePath = null;
 
 	public static void setConfigFilePath(String configFileName) {
 		configFilePath = configFileName;
 	}
-	public static DBConfig getConfig() {
+	public static Config getConfig() {
 		if(single == null) {
-			single = new DBConfig(configFilePath);
+			single = new Config(configFilePath);
 		}
 		return single;
 	}
 	
-	private DBConfig(String configFileName) {
+	private Config(String configFileName) {
 		load(configFileName);
 	}
 	
@@ -77,7 +76,7 @@ public class DBConfig {
 		m_topKeyword = config.get("topKeyword") != null ? (Integer)config.get("topKeyword") : Environment.DEFAULT_TOP_KEYWORD;
 		m_topDatabase = config.get("topDatabase") != null ? (Integer)config.get("topDatabase") : Environment.DEFAULT_TOP_DATABASE;	
 		m_topResult = config.get("topResult") != null ? (Integer)config.get("topResult") : Environment.DEFAULT_TOP_RESULT;
-		m_sizeGraphWithoutCheck = config.get("sizeWithoutCheck") != null ? (Integer)config.get("sizeWithoutCheck") : Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING;
+		m_sizeGraphWithoutCheck = config.get("sizeWithoutCheck") != null ? (Integer)config.get("sizeWithoutCheck") : Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECK;
 		m_tempDir = config.get("tempDirectory") != null ? (String)config.get("tempDirectory") : Environment.DEFAULT_TEMPORAL_FILEPATH;
 		m_files = (List<String>)config.get("files");
 		m_stopwordFilePath = config.get("stopword") != null ? (String)config.get("stopword") : Environment.DEFAULT_STOPWORD_FILEPATH;

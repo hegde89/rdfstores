@@ -4,7 +4,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 
-import edu.unika.aifb.ease.db.DBConfig;
 import edu.unika.aifb.ease.search.DBSearchService;
 
 public class KeywordSearcher {
@@ -16,8 +15,8 @@ public class KeywordSearcher {
 //			return;
 //		}
 
-		DBConfig.setConfigFilePath("./res/config/config.cfg");
-		DBConfig config = DBConfig.getConfig();
+		Config.setConfigFilePath("./res/config/config.cfg");
+		Config config = Config.getConfig();
 
 		DBSearchService searcher = new DBSearchService(config);
 		Scanner scanner = new Scanner(System.in);

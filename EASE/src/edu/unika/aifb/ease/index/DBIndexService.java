@@ -31,8 +31,8 @@ import org.apache.lucene.util.Version;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 
+import edu.unika.aifb.ease.Config;
 import edu.unika.aifb.ease.Environment;
-import edu.unika.aifb.ease.db.DBConfig;
 import edu.unika.aifb.ease.db.DBService;
 import edu.unika.aifb.ease.importer.Importer;
 import edu.unika.aifb.ease.importer.N3Importer;
@@ -46,14 +46,14 @@ public class DBIndexService {
 	
 	private DBService m_dbService;
 	private Map<Integer, Importer> m_importers;
-	private DBConfig m_config;
+	private Config m_config;
 	
 	
-	public DBIndexService(DBConfig config) {
+	public DBIndexService(Config config) {
 		this(config, false);
 	}
 	
-	public DBIndexService(DBConfig config, boolean createDb) {
+	public DBIndexService(Config config, boolean createDb) {
 		m_config = config;
 		m_importers = new HashMap<Integer, Importer>();
 		
@@ -462,7 +462,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
 				ResultSet rs = stmt.executeQuery(selectSql);
 				while (rs.next()){
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -481,7 +481,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
 				rs = stmt.executeQuery(selectSql);
 				while (rs.next()){
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -500,7 +500,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
 				rs = stmt.executeQuery(selectSql);
 				while (rs.next()) {
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -539,7 +539,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
 				ResultSet rs = stmt.executeQuery(selectSql);
 				while (rs.next()){
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -557,7 +557,7 @@ public class DBIndexService {
 					" group by " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "A." + Environment.ENTITY_RELATION_VID_COLUMN;  
 				rs = stmt.executeQuery(selectSql);
 				while (rs.next()) {
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -576,7 +576,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
 				rs = stmt.executeQuery(selectSql);
 				while (rs.next()){
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -595,7 +595,7 @@ public class DBIndexService {
 					" group by " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
 				rs = stmt.executeQuery(selectSql);
 				while (rs.next()) {
-					if(++num % 1000 == 0)
+					if(++num % 10000 == 0)
 						log.info(num);
 					int entityId1 = rs.getInt(1);
 					int entityId2 = rs.getInt(2);
@@ -898,7 +898,7 @@ public class DBIndexService {
 			// processing each entity
 			while(rsEntity.next()) {
 				numEntities++;
-				if(numEntities % 1000 == 0)
+				if(numEntities % 10000 == 0)
 					log.info("Processed Entities: " + numEntities);
 				String entityUri = rsEntity.getString(Environment.ENTITY_URI_COLUMN);
 				int nEntityId = rsEntity.getInt(Environment.ENTITY_ID_COLUMN);
@@ -1040,7 +1040,7 @@ public class DBIndexService {
 			TermEnum tEnum = ireader.terms();
 			while(tEnum.next()) {
 				keywordId++;
-				if(keywordId % 1000 == 0)
+				if(keywordId % 10000 == 0)
 					log.info("Processed Keywords: " + keywordId);
 				Term term = tEnum.term();
 				String field = term.field();
@@ -1371,6 +1371,10 @@ public class DBIndexService {
 //			e.printStackTrace();
 //		}
 //	}
+	
+	public void cleanDB() {
+		
+	}
 	
 	public static String trucateUri(String uri) {
 		if( uri.lastIndexOf("#") != -1 ) {

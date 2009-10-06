@@ -28,9 +28,15 @@ public class DBConfig {
 	private List<String> m_files;
   
 	//Configuration information
-	private int m_maxDistance = Environment.DEFAULT_MAX_DISTANCE;
+	private int m_maxRadius = Environment.DEFAULT_MAX_RADIUS;
 	private int m_topKeyword = Environment.DEFAULT_TOP_KEYWORD;
 	private int m_topDatabase = Environment.DEFAULT_TOP_DATABASE;
+	private int m_topResult = Environment.DEFAULT_TOP_RESULT;
+	// For the r-radius graph whose size is too large, 
+	// we consider it as a max r-radius graph without checking due to the efficiency issue. 
+	// If the size of the r-Radius graph > 'm_sizeGraphToCheck', 
+	// we consider it as a as a max r-radius graph without checking.  
+	private int m_sizeGraphWithoutCheck  = Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING;
 	
 	//Temporary directory
 	private String m_tempDir = Environment.DEFAULT_TEMPORAL_FILEPATH;
@@ -67,9 +73,11 @@ public class DBConfig {
 		m_password = config.get("password") != null ? (String)config.get("password") : Environment.DEFAULT_PASSWORD;	
 		m_dbname = config.get("dbname") != null ? (String)config.get("dbname") : Environment.DEFAULT_DATABASE_NAME;	
 		m_port = config.get("port") != null ? ((Integer)config.get("port")).toString() : Environment.DEFAULT_PORT;
-		m_maxDistance = config.get("maxDistance") != null ? (Integer)config.get("maxDistance") : Environment.DEFAULT_MAX_DISTANCE;
+		m_maxRadius = config.get("maxRadius") != null ? (Integer)config.get("maxRadius") : Environment.DEFAULT_MAX_RADIUS;
 		m_topKeyword = config.get("topKeyword") != null ? (Integer)config.get("topKeyword") : Environment.DEFAULT_TOP_KEYWORD;
 		m_topDatabase = config.get("topDatabase") != null ? (Integer)config.get("topDatabase") : Environment.DEFAULT_TOP_DATABASE;	
+		m_topResult = config.get("topResult") != null ? (Integer)config.get("topResult") : Environment.DEFAULT_TOP_RESULT;
+		m_sizeGraphWithoutCheck = config.get("sizeWithoutCheck") != null ? (Integer)config.get("sizeWithoutCheck") : Environment.SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING;
 		m_tempDir = config.get("tempDirectory") != null ? (String)config.get("tempDirectory") : Environment.DEFAULT_TEMPORAL_FILEPATH;
 		m_files = (List<String>)config.get("files");
 		m_stopwordFilePath = config.get("stopword") != null ? (String)config.get("stopword") : Environment.DEFAULT_STOPWORD_FILEPATH;
@@ -95,8 +103,8 @@ public class DBConfig {
 		return m_port; 
 	}
 	
-	public int getMaxDistance() {
-		return m_maxDistance;
+	public int getMaxRadius() {
+		return m_maxRadius;
 	}
 	
 	public int getTopKeyword() {
@@ -107,10 +115,17 @@ public class DBConfig {
 		return m_topDatabase;
 	}
 	
+	public int getTopResult() {
+		return m_topResult;
+	}
+	
+	public int getSizeOfGraphWithoutCheck() {
+		return m_sizeGraphWithoutCheck;
+	}
+	
 	public List<String> getDataFiles() {
 		return m_files;
 	}
-	
 	
 	public String getTemporaryDirectory() {
 		return m_tempDir;

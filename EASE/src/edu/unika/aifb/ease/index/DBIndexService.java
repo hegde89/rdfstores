@@ -639,7 +639,7 @@ public class DBIndexService {
 		log.info("---- Creating r-Radius Graph Center Table ----");
 		long start = System.currentTimeMillis();
 		
-		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxDistance(); 
+		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxRadius(); 
 		Statement stmt = m_dbService.createStatement(ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
         try {
         	// Create r-Radius Graph Center Table 
@@ -714,16 +714,16 @@ public class DBIndexService {
 	public void findMaxRRadiusGraphCenter() {
 		long start = System.currentTimeMillis();
 		
-		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxDistance(); 
+		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxRadius(); 
 		Statement stmt = m_dbService.createStatement();
         try {
 			log.info("---- Finding Max r-Radius Graphs ----");
 			// Find the max r-Radius Graph Center
 			String updateSql = "update " + Environment.R_RADIUS_GRAPH_CENTER_TABLE +
 				" set " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH + 
-				" where " + Environment.GRAPH_SIZE_COLUMN + " >= " + Environment.SIZE_R_RADIUS_GRAPH_TO_CHECK;
+				" where " + Environment.GRAPH_SIZE_COLUMN + " >= " + m_config.getSizeOfGraphWithoutCheck();
 			int numCenters = stmt.executeUpdate(updateSql);
-			log.info("Processed Centers: " + numCenters + "\t" + "Processed Graph Size: " + Environment.SIZE_R_RADIUS_GRAPH_TO_CHECK);
+			log.info("Processed Centers: " + numCenters + "\t" + "Processed Graph Size: " + m_config.getSizeOfGraphWithoutCheck());
 			
 			String selectCenterSql = "select " + Environment.GRAPH_CENTER_ID_COLUMN + ", " + Environment.GRAPH_SIZE_COLUMN +
 				" from " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
@@ -814,7 +814,7 @@ public class DBIndexService {
 		log.info("---- Creating Max r-Radius Graph Table ----");
 		long start = System.currentTimeMillis();
 		
-		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxDistance(); 
+		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxRadius(); 
 		Statement stmt = m_dbService.createStatement(ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
         try {
         	// Create Max r-Radius Graph Table
@@ -1146,7 +1146,7 @@ public class DBIndexService {
 		
 		// Retrieve Keywords from Lucene Index
 		
-		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxDistance(); 
+		String R_max_d = Environment.ENTITY_RELATION_TABLE + m_config.getMaxRadius(); 
         Statement stmt = m_dbService.createStatement(ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
 		try {
 			Directory readDirectory = FSDirectory.open(new File(m_config.getTemporaryDirectory() + "/entity"));

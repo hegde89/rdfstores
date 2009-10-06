@@ -21,20 +21,20 @@ public class Preprocessor {
 		DBConfig config = DBConfig.getConfig();
 
 		DBIndexService indexBuilder = new DBIndexService(config);
-//		indexBuilder.createTripleTable();
-//		indexBuilder.createDatasourceTable();
-//		indexBuilder.createSchemaTable();
-//		indexBuilder.createEntityTable();
-//		indexBuilder.createEntityRelationTable();
+		indexBuilder.createTripleTable();
+		indexBuilder.createDatasourceTable();
+		indexBuilder.createSchemaTable();
+		indexBuilder.createEntityTable();
+		indexBuilder.createEntityRelationTable();
 		indexBuilder.createKeywordEntityInclusionTable();
-		int maxDistance = config.getMaxDistance();
-//		for(int i = 2; i <= maxDistance; i++) {
-//			indexBuilder.createEntityRelationTable(i);
-//		}
-//		indexBuilder.createRRadiusGraphCenterTable();
-//		indexBuilder.findMaxRRadiusGraphCenter();
-//		indexBuilder.createMaxRRadiusGraphTable();
-//		indexBuilder.createKeywordGraphInclusionTable();
+		int maxRadius = config.getMaxRadius();
+		for(int i = 2; i <= maxRadius; i++) {
+			indexBuilder.createEntityRelationTable(i);
+		}
+		indexBuilder.createRRadiusGraphCenterTable();
+		indexBuilder.findMaxRRadiusGraphCenter();
+		indexBuilder.createMaxRRadiusGraphTable();
+		indexBuilder.createKeywordGraphInclusionTable();
 		indexBuilder.close();
 
 		long end = System.currentTimeMillis();

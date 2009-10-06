@@ -33,11 +33,15 @@ public class Environment {
 	public static final String DEFAULT_DATABASE_NAME = "db_dbsqr";
 	
 	/* Default configuration information */
-	public static final int DEFAULT_MAX_DISTANCE = 2;
+	public static final int DEFAULT_MAX_RADIUS = 2;
 	public static final int DEFAULT_TOP_KEYWORD = 4;
 	public static final int DEFAULT_TOP_DATABASE = 4;
+	public static final int DEFAULT_TOP_RESULT = 100;
 	public static final String DEFAULT_STOPWORD_FILEPATH = "stop_words.txt"; 
 	public static final String DEFAULT_TEMPORAL_FILEPATH = "d://dbsqr/lucene";
+	
+	// For the r-radius graph whose size is too large, we consider it as a max r-radius graph without checking. 
+	public static final int SIZE_R_RADIUS_GRAPH_WITHOUT_CHECKING = 100;
 	
 	/* Indexed Field of Entity Index*/
 	public static final String FIELD_ENTITY_TERM_LITERAL = "literal";
@@ -68,10 +72,6 @@ public class Environment {
 	public static final int IS_MAX_GRAPH_UNKOWN = -1; 
 	public static final int IS_NOT_MAX_GRAPH = 0;
 	public static final int IS_MAX_GRAPH = 1;
-	
-	
-	// For the r-radius graph whose size is too large, we consider it as a max r-radius graph without checking. 
-	public static final int SIZE_R_RADIUS_GRAPH_TO_CHECK = 100;
 	
 	/* Table names and column names */
 	// Triple table

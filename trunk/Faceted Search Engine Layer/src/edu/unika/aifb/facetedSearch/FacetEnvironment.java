@@ -35,7 +35,7 @@ public class FacetEnvironment {
 		public static final String DISTANCE = "dis";
 		public static final String SUBJECTS = "subj";
 		public static final String OBJECTS = "obj";
-		
+
 	}
 
 	public static class DatabaseName {
@@ -115,13 +115,6 @@ public class FacetEnvironment {
 
 	}
 
-	public static class EndPointType {
-
-		public static final int DATA_PROPERTY = 1;
-		public static final int OBJECT_PROPERTY = 2;
-		public static final int RDF_PROPERTY = 3;
-	}
-
 	public enum EvaluatorType {
 		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator, ChangePageEvaluator
 	}
@@ -136,10 +129,7 @@ public class FacetEnvironment {
 	}
 
 	public static class Keys {
-
 		public static final String RESULT_SET = "re";
-		// public static final String RANGEROOT_PATH = "rr";
-		// public static final String ROOT_PATH = "r";
 	}
 
 	public static class LiteralClustererType {
@@ -315,6 +305,7 @@ public class FacetEnvironment {
 	}
 
 	public static final String NEW_LINE = System.getProperty("line.separator");
+	public static final String DIVIDER = "--------------------------------------------";
 
 	public static final HashSet<String> PROPERTIES_TO_IGNORE = new HashSet<String>(
 			Arrays.asList(new String[]{

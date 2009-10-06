@@ -26,7 +26,7 @@ public class Preprocessor {
 //		indexBuilder.createSchemaTable();
 //		indexBuilder.createEntityTable();
 //		indexBuilder.createEntityRelationTable();
-//		indexBuilder.createKeywordEntityInclusionTable();
+		indexBuilder.createKeywordEntityInclusionTable();
 		int maxDistance = config.getMaxDistance();
 //		for(int i = 2; i <= maxDistance; i++) {
 //			indexBuilder.createEntityRelationTable(i);
@@ -34,7 +34,7 @@ public class Preprocessor {
 //		indexBuilder.createRRadiusGraphCenterTable();
 //		indexBuilder.findMaxRRadiusGraphCenter();
 //		indexBuilder.createMaxRRadiusGraphTable();
-		indexBuilder.createKeywordGraphInclusionTable();
+//		indexBuilder.createKeywordGraphInclusionTable();
 		indexBuilder.close();
 
 		long end = System.currentTimeMillis();

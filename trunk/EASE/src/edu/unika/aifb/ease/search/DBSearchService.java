@@ -86,7 +86,7 @@ private static final Logger log = Logger.getLogger(DBSearchService.class);
 			fromSql += Environment.KEYWORD_TABLE + " as KT" + i + ", " + 
 				Environment.KEYWORD_GRAPH_INCLUSION_TABLE +  " as KGT" + i + ", ";
 			whereSql += "KT" + i + "." + Environment.KEYWORD_ID_COLUMN + " = " + "KGT" + i + "." + Environment.KEYWORD_GRAPH_INCLUSION_KEYWORD_ID_COLUMN + 
-				" and " + "KT" + i + "." + Environment.KEYWORD_COLUMN + " = " + "'" + keywordList.get(i) + "'" + " and ";
+				" and " + "KT" + i + "." + Environment.KEYWORD_COLUMN + " = " + "'" + keywordList.get(i).toLowerCase() + "'" + " and ";
 			orderSql += "KGT" + i + "." + Environment.KEYWORD_GRAPH_INCLUSION_SCORE_COLUMN + " + ";
 		}
 		fromSql = fromSql + Environment.ENTITY_TABLE + " as ET ";

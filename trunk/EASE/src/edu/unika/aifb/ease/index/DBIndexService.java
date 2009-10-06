@@ -834,13 +834,13 @@ public class DBIndexService {
 			// Populate Max r-Radius Graph Table
 			String insertSql = "insert IGNORE into " + Environment.MAX_R_RADIUS_GRAPH_TABLE + 
 				"(" + Environment.MAX_GRAPH_CENTER_ID_COLUMN + ", " + Environment.MAX_GRAPH_VERTEX_ID_COLUMN + ") "; 
-			String selectSql = "select distinct" + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_VID_COLUMN + 
+			String selectSql = "select distinct " + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_VID_COLUMN + 
 				" from " + R_max_d + " as A, " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " as B " +
 				" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.GRAPH_CENTER_ID_COLUMN +
 				" and " + "B." + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH;
 			stmt.executeUpdate(insertSql + selectSql);
 			
-			selectSql = "select distinct" + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_UID_COLUMN + 
+			selectSql = "select distinct " + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_UID_COLUMN + 
 				" from " + R_max_d + " as A, " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " as B " +
 				" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.GRAPH_CENTER_ID_COLUMN +
 				" and " + "B." + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH; 
@@ -848,7 +848,7 @@ public class DBIndexService {
 			
 			selectSql = "select " + Environment.GRAPH_CENTER_ID_COLUMN + ", " + Environment.GRAPH_CENTER_ID_COLUMN +
 				" from " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
-				" and " + "B." + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH; 
+				" where " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH; 
 			stmt.executeUpdate(insertSql + selectSql);
 			
 			if(stmt != null)
@@ -903,7 +903,7 @@ public class DBIndexService {
 				String entityUri = rsEntity.getString(Environment.ENTITY_URI_COLUMN);
 				int nEntityId = rsEntity.getInt(Environment.ENTITY_ID_COLUMN);
 				String entityId = String.valueOf(nEntityId);
-				String termsOfLiterals = trucateUri(entityUri);
+				String termsOfLiterals = trucateUri(entityUri) + " ";
 				String termsOfDataProperties = "";
 				String termsOfObjectProperties = "";
 				String termsOfConcepts = "";
@@ -941,15 +941,15 @@ public class DBIndexService {
 					rsTriple.close();
 				
 				Document doc = new Document();
-				doc.add(new Field(Environment.FIELD_CENTER_URI, entityUri, Field.Store.YES, Field.Index.NO));
-				doc.add(new Field(Environment.FIELD_CENTER_ID, entityId, Field.Store.YES, Field.Index.NO));
-					doc.add(new Field(Environment.FIELD_ENTITY_TERM_LITERAL, termsOfLiterals, Field.Store.YES, Field.Index.ANALYZED));
+				doc.add(new Field(Environment.FIELD_ENTITY_URI, entityUri, Field.Store.YES, Field.Index.NO));
+				doc.add(new Field(Environment.FIELD_ENTITY_ID, entityId, Field.Store.YES, Field.Index.NO));
+					doc.add(new Field(Environment.FIELD_ENTITY_TERM_LITERAL, termsOfLiterals, Field.Store.NO, Field.Index.ANALYZED));
 				if(!termsOfConcepts.equals(""))
-					doc.add(new Field(Environment.FIELD_ENTITY_TERM_CONCEPT, termsOfConcepts, Field.Store.YES, Field.Index.ANALYZED));
+					doc.add(new Field(Environment.FIELD_ENTITY_TERM_CONCEPT, termsOfConcepts, Field.Store.NO, Field.Index.ANALYZED));
 				if(!termsOfDataProperties.equals(""))
-					doc.add(new Field(Environment.FIELD_ENTITY_TERM_DATAPROPERTY, termsOfDataProperties, Field.Store.YES, Field.Index.ANALYZED));
+					doc.add(new Field(Environment.FIELD_ENTITY_TERM_DATAPROPERTY, termsOfDataProperties, Field.Store.NO, Field.Index.ANALYZED));
 				if(!termsOfObjectProperties.equals(""))
-					doc.add(new Field(Environment.FIELD_ENTITY_TERM_OBJECTPROPERTY, termsOfObjectProperties, Field.Store.YES, Field.Index.ANALYZED));
+					doc.add(new Field(Environment.FIELD_ENTITY_TERM_OBJECTPROPERTY, termsOfObjectProperties, Field.Store.NO, Field.Index.ANALYZED));
 				iwriter.addDocument(doc);
 			}	
 			
@@ -975,7 +975,7 @@ public class DBIndexService {
 	}
 	
 	public void createKeywordEntityInclusionTable() {
-		// construct entity keyword index using Lucene
+		// construct entity keyword index 
 		createKeywordEntityLuceneIndex();
 		log.info("---- Creating Keyword Entity Inclusion Table and Keyword Table ----");
 		long start = System.currentTimeMillis();
@@ -999,7 +999,7 @@ public class DBIndexService {
 			createSql = "create table " + Environment.KEYWORD_ENTITY_INCLUSION_TABLE + "( " + 
 				Environment.KEYWORD_ENTITY_INCLUSION_KEYWORD_ID_COLUMN + " int unsigned not null, " + 
 				Environment.KEYWORD_ENTITY_INCLUSION_ENTITY_ID_COLUMN + " int unsigned not null, " + 
-				Environment.KEYWORD_ENTITY_INCLUSION_SCORE_COLUMN + " float unsigned not null, " + 
+				Environment.KEYWORD_ENTITY_INCLUSION_SCORE_COLUMN + " double unsigned not null, " + 
 				Environment.KEYWORD_ENTITY_INCLUSION_KEYWORD_TYPE_COLUMN + " tinyint(1) unsigned not null, " + 
 				"primary key(" + Environment.KEYWORD_ENTITY_INCLUSION_KEYWORD_ID_COLUMN + ", " + 
 				Environment.KEYWORD_ENTITY_INCLUSION_ENTITY_ID_COLUMN + ")) " + 
@@ -1025,7 +1025,7 @@ public class DBIndexService {
 			
 			int numDocs = ireader.numDocs();
 			
-			String[] loadFields = {Environment.FIELD_CENTER_ID};
+			String[] loadFields = {Environment.FIELD_ENTITY_ID};
 			MapFieldSelector fieldSelector = new MapFieldSelector(loadFields);
 			Map<String,Integer> keywordTypes = new HashMap<String,Integer>();
 			keywordTypes.put(Environment.FIELD_ENTITY_TERM_LITERAL, Environment.KEYWORD_OF_LITERAL);
@@ -1034,7 +1034,7 @@ public class DBIndexService {
 			keywordTypes.put(Environment.FIELD_ENTITY_TERM_CONCEPT, Environment.KEYWORD_OF_CONCEPT);
 			
 			// For Test
-			PrintWriter pw = new PrintWriter("d://keyword.txt"); 
+			PrintWriter pw = new PrintWriter("./res/keyword.txt"); 
 			
 			int keywordId = 0;
 			TermEnum tEnum = ireader.terms();
@@ -1061,14 +1061,14 @@ public class DBIndexService {
 					int docID = tDocs.doc();
 					int termFreqInDoc = tDocs.freq();
 					int docFreqOfTerm = ireader.docFreq(term);
-					float score = 1f; 
+					double score = (1 + Math.log(1 + Math.log(termFreqInDoc)))*Math.log((numDocs + 1)/docFreqOfTerm);
 					
 					Document doc = ireader.document(docID, fieldSelector);
-					int entityId = Integer.valueOf(doc.get(Environment.FIELD_CENTER_ID)); 
+					int entityId = Integer.valueOf(doc.get(Environment.FIELD_ENTITY_ID)); 
 					
 					psInsertKeywEntity.setInt(1, keywordId);
 					psInsertKeywEntity.setInt(2, entityId);
-					psInsertKeywEntity.setFloat(3, score);
+					psInsertKeywEntity.setDouble(3, score);
 					psInsertKeywEntity.setInt(4, keywordType);
 					psInsertKeywEntity.executeUpdate();
 				}
@@ -1081,9 +1081,9 @@ public class DBIndexService {
 			pw.close();
 
 			long end = System.currentTimeMillis();
-			log.info("Time for Creating Keyword Entity inclusion Table: " + (double) (end - start) / (double)1000  + "(sec)");
+			log.info("Time for Creating Keyword Entity inclusion Table and Keyword Table: " + (double) (end - start) / (double)1000  + "(sec)");
 		} catch (SQLException ex) {
-			log.warn("A warning in the process of creating keyword entity inclusion table:");
+			log.warn("A warning in the process of creating keyword entity inclusion table and keyword table:");
 			log.warn(ex.getMessage());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -1103,7 +1103,7 @@ public class DBIndexService {
 			String createSql = "create table " + Environment.KEYWORD_GRAPH_INCLUSION_TABLE + "( " + 
 				Environment.KEYWORD_GRAPH_INCLUSION_KEYWORD_ID_COLUMN + " int unsigned not null, " + 
 				Environment.KEYWORD_GRAPH_INCLUSION_CENTER_ID_COLUMN + " int unsigned not null, " + 
-				Environment.KEYWORD_GRAPH_INCLUSION_SCORE_COLUMN + " float unsigned not null, " + 
+				Environment.KEYWORD_GRAPH_INCLUSION_SCORE_COLUMN + " double unsigned not null, " + 
 				Environment.KEYWORD_GRAPH_INCLUSION_KEYWORD_TYPE_COLUMN + " tinyint(1) unsigned not null, " + 
 				"primary key(" + Environment.KEYWORD_GRAPH_INCLUSION_KEYWORD_ID_COLUMN + ", " + 
 				Environment.KEYWORD_GRAPH_INCLUSION_CENTER_ID_COLUMN + ")) " + 
@@ -1116,7 +1116,8 @@ public class DBIndexService {
 			// Statement for Keyword Graph Inclusion Table
 			String insertSql = "insert IGNORE into " + Environment.KEYWORD_GRAPH_INCLUSION_TABLE + " "; 
 			String selectSql = "select " + Environment.KEYWORD_ENTITY_INCLUSION_KEYWORD_ID_COLUMN + ", " + 
-				Environment.MAX_GRAPH_CENTER_ID_COLUMN + ", " + "count(*)" + ", " + 
+				Environment.MAX_GRAPH_CENTER_ID_COLUMN + ", " + 
+				"sum(" + Environment.KEYWORD_ENTITY_INCLUSION_SCORE_COLUMN + ")" + ", " + 
 				Environment.KEYWORD_ENTITY_INCLUSION_KEYWORD_TYPE_COLUMN + 
 				" from " + Environment.KEYWORD_ENTITY_INCLUSION_TABLE + ", " + Environment.MAX_R_RADIUS_GRAPH_TABLE + 
 				" where " + Environment.KEYWORD_ENTITY_INCLUSION_ENTITY_ID_COLUMN + " = " + Environment.MAX_GRAPH_VERTEX_ID_COLUMN + 

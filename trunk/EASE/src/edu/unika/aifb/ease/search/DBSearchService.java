@@ -59,6 +59,8 @@ private static final Logger log = Logger.getLogger(DBSearchService.class);
 				centers.add(center);
 			} 
 
+			rs.close();
+			stmt.close();
 			long end = System.currentTimeMillis();
 			log.info("Time for Getting the Centers of Max r-Radius Graphs: " + (end - start) + "(ms)");
 			log.info("Time for Getting the Centers of Max r-Radius Graphs: " + (double) (end - start) / (double)1000  + "(sec)");

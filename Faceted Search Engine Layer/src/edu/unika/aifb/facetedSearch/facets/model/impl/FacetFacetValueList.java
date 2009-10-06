@@ -150,7 +150,7 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 		return m_facet;
 	}
 
-	public Iterator<Facet> getFacetIterator() {
+	public Iterator<Facet> getSubFacetIterator() {
 		return m_subfacets.iterator();
 	}
 
@@ -161,7 +161,7 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 	public List<AbstractFacetValue> getFacetValueList() {
 		return m_facetValueList;
 	}
-	public Iterator<AbstractFacetValue> getFacetValueListIterator() {
+	public Iterator<AbstractFacetValue> getFacetValueIterator() {
 		return m_facetValueList.iterator();
 	}
 

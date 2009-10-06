@@ -20,6 +20,7 @@ package edu.unika.aifb.facetedSearch.facets.model.impl;
 import java.io.Serializable;
 
 import edu.unika.aifb.facetedSearch.facets.model.IAbstractBrowsingObject;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -107,7 +108,8 @@ public abstract class AbstractBrowsingObject
 	public String toString() {
 
 		if (m_value != null) {
-			return m_value.toLowerCase() + " (" + m_countS + ")";
+			return Util.truncateUri(m_value.toLowerCase()) + " (" + m_countS
+					+ ")";
 		} else {
 			return "N/A";
 		}

@@ -115,19 +115,20 @@ public class FacetTreeBuilder implements IBuilder {
 					sourceExtension, resItem);
 
 			for (Node leave : oldLeaves) {
-
+				
 				StaticNode newLeave = m_helper.insertPathAtRoot(newTree, leave,
-						m_paths);
+						m_paths);				
 				newLeaves.add(newLeave);
 
 				m_cache.updateLeaveGroups(newLeave.getID(), resItem);
 			}
 		}
 
-		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
-		
 		// prune ranges
 		newTree = m_helper.pruneRanges(newTree, newLeaves);
+		
+		// add leaves for this subtree
+		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
 
 		long time2 = System.currentTimeMillis();
 

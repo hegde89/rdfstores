@@ -198,7 +198,7 @@ public class BuilderHelper {
 			// walk to root
 
 			while (!reachedRangeRoot) {
-
+				
 				Iterator<Edge> incomingEdgesIter = tree.incomingEdgesOf(
 						currentNode).iterator();
 
@@ -217,7 +217,8 @@ public class BuilderHelper {
 
 					} else {
 
-						if ((tree.outgoingEdgesOf(father).size() == 1)) {
+						if ((tree.outgoingEdgesOf(father).size() == 1) &&
+								!leaves.contains(father)) {
 
 							Edge edge2fathersfather = tree.incomingEdgesOf(
 									father).iterator().next();

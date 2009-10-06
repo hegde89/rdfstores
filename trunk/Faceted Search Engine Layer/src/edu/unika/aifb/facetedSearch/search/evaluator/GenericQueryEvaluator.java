@@ -123,7 +123,7 @@ public class GenericQueryEvaluator {
 
 				FacetedQuery fquery = new FacetedQuery(query);
 				m_session.setCurrentQuery(fquery);
-				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+				m_session.getHistory().putResult(fquery.getId(),
 						result);
 
 			} catch (IOException e) {
@@ -149,7 +149,7 @@ public class GenericQueryEvaluator {
 
 				FacetedQuery fquery = new FacetedQuery(query);
 				m_session.setCurrentQuery(fquery);
-				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+				m_session.getHistory().putResult(fquery.getId(),
 						result);
 
 			} catch (IOException e) {
@@ -175,7 +175,7 @@ public class GenericQueryEvaluator {
 
 				FacetedQuery fquery = new FacetedQuery(query);
 				m_session.setCurrentQuery(fquery);
-				m_session.getHistory().putQueryResultTuple(fquery.getId(),
+				m_session.getHistory().putResult(fquery.getId(),
 						result);
 
 			} catch (IOException e) {

@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -61,6 +62,7 @@ import edu.unika.aifb.facetedSearch.index.db.binding.PathBinding;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.facetedSearch.util.LRUCache;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
@@ -134,29 +136,15 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		LRUCache<String, Stack<Node>> cache = new LRUCache<String, Stack<Node>>(
 				FacetEnvironment.DefaultValue.SIMPLE_CACHE_SIZE);
 
-		/*
-		 * 
-		 */
-		IndexDescription dataIndex = m_idxReader.getDataIndex()
-				.getSuitableIndex(
-						new DataField[]{DataField.SUBJECT, DataField.PROPERTY});
-
-		IndexStorage dataIndexStorage = m_idxReader.getDataIndex()
-				.getIndexStorage(dataIndex);
-
 		IndexStorage spIdx = m_idxReader.getStructureIndex()
 				.getSPIndexStorage();
 
-		/*
-		 * 
-		 */
 		Set<NodeElement> source_extensions = m_facetHelper.getIndexGraph()
 				.vertexSet();
 
 		HashSet<Node> leaves = new HashSet<Node>();
 
 		int count_ext = 0;
-		int count_ind = 0;
 
 		for (NodeElement source_extension : source_extensions) {
 
@@ -239,36 +227,33 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 				s_log.debug("inserted properties in facetTree!");
 				s_log.debug("start going over endpoints... ");
 
+				List<String> individuals = spIdx.getDataList(
+						IndexDescription.EXTENT, DataField.ENT,
+						source_extension.getLabel());
+
+				s_log.debug("extension contains " + individuals.size()
+						+ " individuals.");
+
 				for (Entry<Node, HashSet<String>> endpointEntry : endPoints
 						.entrySet()) {
 
-					Iterator<String[]> individualIter = spIdx.iterator(
-							IndexDescription.EXTENT, new DataField[]{
-									DataField.EXT, DataField.ENT},
-							source_extension.getLabel());
-
-					count_ind = 0;
-
 					Node property = endpointEntry.getKey();
 
-					while (individualIter.hasNext()) {
+					for (String individual : individuals) {
 
-						count_ind++;
-
-						String individual = individualIter.next()[1];
+						if (individual
+								.equals("http://www.Department8.University0.edu/GraduateCourse14")) {
+							System.out.println();
+						}
 
 						try {
 
-							Iterator<String[]> tripleIter = dataIndexStorage
-									.iterator(dataIndex, new DataField[]{
-											DataField.SUBJECT,
-											DataField.PROPERTY,
-											DataField.OBJECT}, dataIndex
-											.createValueArray(
-													DataField.SUBJECT,
-													individual,
-													DataField.PROPERTY,
-													property.getValue()));
+							Table<String> triples = m_idxReader.getDataIndex()
+									.getTriples(individual,
+											property.getValue(), null);
+
+							Iterator<String[]> tripleIter = triples.getRows()
+									.iterator();
 
 							while (tripleIter.hasNext()) {
 
@@ -484,20 +469,15 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			}
 
 			s_log.debug("finished facet tree for extension: "
-					+ source_extension + ", containing " + count_ind
-					+ " individuals!");
+					+ source_extension + "!");
 
 			for (Node leave : leaves) {
 
 				Queue<Edge> path2root = getAncestorPath2Root(facetTree, leave
 						.getID());
 
-				if (!FacetDbUtils.contains(m_pathDB, leave.getPath(),
-						m_pathBinding)) {
-
-					FacetDbUtils.store(m_pathDB, leave.getPath(), path2root,
-							m_pathBinding);
-				}
+				FacetDbUtils.store(m_pathDB, leave.getPath(), path2root,
+						m_pathBinding);
 			}
 		}
 	}

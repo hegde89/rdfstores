@@ -27,6 +27,7 @@ import joptsimple.OptionSet;
 import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionFactory;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
@@ -76,21 +77,47 @@ public class Demo {
 
 			GenericQueryEvaluator eval = session.getStore().getEvaluator();
 
-			// create a structured query
-			StructuredQuery q = new StructuredQuery("q1");
-			q
-					.addEdge("?x",
-							"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
-			q
+			// StructuredQuery sq = new StructuredQuery("q1");
+			// sq
+			// .addEdge("?x",
+			// "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
+			// sq
+			// .addEdge(
+			// "?x",
+			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom",
+			// "?y");
+			//
+			// eval.evaluate(sq);
+			//
+			// StructuredQuery sq2 = new StructuredQuery("q2");
+			// sq2
+			// .addEdge("?x",
+			// "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#Publication");
+			//
+			// eval.evaluate(sq2);
+
+			StructuredQuery sq3 = new StructuredQuery("q3");
+			sq3
 					.addEdge(
 							"?x",
-							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom",
+							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse",
 							"?y");
-			
-			q.setAsSelect("?x");
 
-			eval.evaluate(q);
+			sq3
+					.addEdge(
+							"?x",
+							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#memberOf",
+							"http://www.Department8.University0.edu");
+
+			sq3.setAsSelect("?x");
+
+			eval.evaluate(sq3);
+
+			KeywordQuery kq = new KeywordQuery("q3",
+					"Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
+			eval.evaluate(kq);
 
 			// TODO
 

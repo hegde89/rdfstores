@@ -2,7 +2,6 @@ package edu.unika.aifb.ease;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.ease.db.DBConfig;
 import edu.unika.aifb.ease.index.DBIndexService;
 
 public class Preprocessor {
@@ -17,8 +16,8 @@ public class Preprocessor {
 //		}
 		long start = System.currentTimeMillis();
 
-		DBConfig.setConfigFilePath("./res/config/config.cfg");
-		DBConfig config = DBConfig.getConfig();
+		Config.setConfigFilePath("./res/config/config.cfg");
+		Config config = Config.getConfig();
 
 		DBIndexService indexBuilder = new DBIndexService(config);
 		indexBuilder.createTripleTable();

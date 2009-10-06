@@ -178,7 +178,15 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		return m_leaveMap.duplicates(fv.getSourceExt() + fv.getValue());
+		Collection<Node> leaves = m_leaveMap.duplicates(fv.getSourceExt()
+				+ fv.getValue());
+
+		if ((leaves == null) || leaves.isEmpty()) {
+			throw new DatabaseException("no leaves found for ext '" + fv.getSourceExt()
+					+ "' / individual '" + fv.getValue() + "'");
+		}
+
+		return leaves;
 	}
 
 	public Collection<Node> getLeaves(String extension, String srcInd)
@@ -188,7 +196,14 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		return m_leaveMap.duplicates(extension + srcInd);
+		Collection<Node> leaves = m_leaveMap.duplicates(extension + srcInd);
+
+		if ((leaves == null) || leaves.isEmpty()) {
+			throw new DatabaseException("no leaves found for ext '" + extension
+					+ "' / individual '" + srcInd + "'");
+		}
+
+		return leaves;
 	}
 
 	public Collection<AbstractSingleFacetValue> getObjects(Node leave,
@@ -199,13 +214,26 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		return m_objectMap.duplicates(subject + leave.getPath());
-	}
+		Collection<AbstractSingleFacetValue> obj = m_objectMap
+				.duplicates(subject + leave.getPath());
 
+		if ((obj == null) || obj.isEmpty()) {
+			throw new DatabaseException("no objects found for leave '" + leave
+					+ "' / subject '" + subject + "'");
+		}
+
+		return obj;
+	}
 	public Queue<Edge> getPath2Root(String path) throws DatabaseException,
 			IOException {
 
-		return FacetDbUtils.get(m_pathDB, path, m_pathBinding);
+		Queue<Edge> path2Root = FacetDbUtils.get(m_pathDB, path, m_pathBinding);
+
+		if ((path2Root == null) || path2Root.isEmpty()) {
+			throw new DatabaseException("path to root is empty: " + path);
+		}
+
+		return path2Root;
 	}
 
 	private void init() throws EnvironmentLockedException, DatabaseException,

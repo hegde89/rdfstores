@@ -18,6 +18,7 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -35,13 +36,13 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.INode;
  * @author andi
  * 
  */
-public class Node implements INode {
+public class Node implements INode, Serializable {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1484769190480836362L;
-	
+
 	/*
 	 * 
 	 */

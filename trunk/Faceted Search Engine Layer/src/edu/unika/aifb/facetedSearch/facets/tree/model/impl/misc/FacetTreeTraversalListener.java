@@ -17,6 +17,8 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl.misc;
 
+import java.io.Serializable;
+
 import org.jgrapht.event.ConnectedComponentTraversalEvent;
 import org.jgrapht.event.EdgeTraversalEvent;
 import org.jgrapht.event.TraversalListener;
@@ -31,7 +33,13 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
  */
 public class FacetTreeTraversalListener
 		implements
-			TraversalListener<Node, Edge> {
+			TraversalListener<Node, Edge>,
+			Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 684313623803736709L;
 
 	/*
 	 * (non-Javadoc)

@@ -155,7 +155,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	@Override
 	public boolean containsVertex(Node node) {
-		return m_nodeMap.containsKey(node.getID());
+		return m_nodeMap.containsKey(node.getID())
+				|| super.containsVertex(node);
 	}
 
 	public List<Node> getChildren(Node father) {
@@ -213,6 +214,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 			while (!reachedSubTreeRoot) {
 
 				if ((node = getFather(node)).isSubTreeRoot()) {
+					
+					subTreeRoot = node;
 					reachedSubTreeRoot = true;
 				}
 			}

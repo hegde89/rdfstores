@@ -1034,7 +1034,7 @@ public class DBIndexService {
 			keywordTypes.put(Environment.FIELD_ENTITY_TERM_CONCEPT, Environment.KEYWORD_OF_CONCEPT);
 			
 			// For Test
-			PrintWriter pw = new PrintWriter("./res/keyword.txt"); 
+//			PrintWriter pw = new PrintWriter("./res/keyword.txt"); 
 			
 			int keywordId = 0;
 			TermEnum tEnum = ireader.terms();
@@ -1048,8 +1048,8 @@ public class DBIndexService {
 				int keywordType = keywordTypes.get(field); 
 				
 				// For Test
-				pw.print(keywordId + "\t" + field + ": " + text);
-				pw.println();
+//				pw.print(keywordId + "\t" + field + ": " + text);
+//				pw.println();
 				
 				psInsertKeyw.setInt(1, keywordId);
 				psInsertKeyw.setString(2, text);
@@ -1078,7 +1078,7 @@ public class DBIndexService {
 			directory.close();
 
 			// For Test
-			pw.close();
+//			pw.close();
 
 			long end = System.currentTimeMillis();
 			log.info("Time for Creating Keyword Entity inclusion Table and Keyword Table: " + (double) (end - start) / (double)1000  + "(sec)");

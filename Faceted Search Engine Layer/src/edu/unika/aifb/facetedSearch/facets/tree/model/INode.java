@@ -18,7 +18,6 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 
@@ -29,7 +28,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
  * @author andi
  * 
  */
-public interface INode extends Serializable {
+public interface INode {
 
 	public boolean addLeave(double leave);
 

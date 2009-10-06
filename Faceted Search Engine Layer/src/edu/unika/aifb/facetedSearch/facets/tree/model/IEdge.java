@@ -18,13 +18,12 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model;
 
-import java.io.Serializable;
 
 /**
  * @author andi
  * 
  */
-public interface IEdge extends Serializable {
+public interface IEdge {
 
 	public int getType();
 

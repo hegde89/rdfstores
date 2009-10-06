@@ -29,7 +29,7 @@ public class NxImporter extends Importer {
 	private TLDManager tldM;
 	
 	public NxImporter() {
-		TLDManager tldM = new TLDManager();
+		tldM = new TLDManager();
 		try {
 			tldM.readList("./res/tld.dat");
 		} catch (IOException e) {

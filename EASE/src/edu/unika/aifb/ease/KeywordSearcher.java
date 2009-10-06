@@ -31,7 +31,7 @@ public class KeywordSearcher {
 			for(int i=0;i<tokens.length;i++) {
 				keywordList.add(tokens[i]);
 			}
-			List<String> centers = searcher.getMaxRRadiusGraphCenters(keywordList, 100);
+			List<String> centers = searcher.getMaxRRadiusGraphCenters(keywordList);
 //			for(String center : centers) {
 //				System.out.println(center);
 //			}

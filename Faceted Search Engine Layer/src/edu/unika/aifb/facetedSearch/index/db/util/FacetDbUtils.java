@@ -35,9 +35,6 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.util.LRUCache;
-
 /**
  * @author andi
  * 
@@ -50,38 +47,27 @@ public class FacetDbUtils {
 	@SuppressWarnings("unused")
 	private static Logger s_log = Logger.getLogger(FacetDbUtils.class);
 
-	/*
-	 * 	
-	 */
-	private static LRUCache<String, Object> s_cache = new LRUCache<String, Object>(
-			FacetEnvironment.DefaultValue.SIMPLE_CACHE_SIZE);
-
 	public static <T> boolean contains(Database db, String key,
 			EntryBinding<T> binding) throws DatabaseException, IOException {
 		return get(db, key, binding) == null ? false : true;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static <T> T get(Database db, String key, EntryBinding<T> binding)
 			throws DatabaseException, IOException {
 
-		T res;
+		T res = null;
 
-		if ((res = (T) s_cache.get(key)) == null) {
+		Cursor cursor = db.openCursor(null, null);
+		DatabaseEntry keyEntry = new DatabaseEntry();
+		DatabaseEntry out = new DatabaseEntry();
 
-			Cursor cursor = db.openCursor(null, null);
-			DatabaseEntry keyEntry = new DatabaseEntry();
-			DatabaseEntry out = new DatabaseEntry();
+		StringBinding.stringToEntry(key, keyEntry);
 
-			StringBinding.stringToEntry(key, keyEntry);
-
-			if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-				res = binding.entryToObject(out);
-			}
-
-			cursor.close();
-			s_cache.put(key, res);
+		if (cursor.getSearchKey(keyEntry, out, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+			res = binding.entryToObject(out);
 		}
+
+		cursor.close();
 
 		return res;
 	}
@@ -90,64 +76,53 @@ public class FacetDbUtils {
 	public static <T> List<T> getAllAsList(Database db, String key,
 			EntryBinding<T> binding) throws DatabaseException, IOException {
 
-		List<T> res;
+		List<T> res = new ArrayList<T>();
 
-		if ((res = (List<T>) s_cache.get(key)) == null) {
+		Cursor cursor = db.openCursor(null, null);
 
-			res = new ArrayList<T>();
+		DatabaseEntry keyEntry = new DatabaseEntry();
+		DatabaseEntry out = new DatabaseEntry();
 
-			Cursor cursor = db.openCursor(null, null);
+		StringBinding.stringToEntry(key, keyEntry);
 
-			DatabaseEntry keyEntry = new DatabaseEntry();
-			DatabaseEntry out = new DatabaseEntry();
+		OperationStatus retVal = cursor.getSearchKey(keyEntry, out,
+				LockMode.DEFAULT);
 
-			StringBinding.stringToEntry(key, keyEntry);
+		while (retVal == OperationStatus.SUCCESS) {
 
-			OperationStatus retVal = cursor.getSearchKey(keyEntry, out,
-					LockMode.DEFAULT);
-
-			while (retVal == OperationStatus.SUCCESS) {
-
-				res.add(binding.entryToObject(out));
-				retVal = cursor.getNextDup(keyEntry, out, LockMode.DEFAULT);
-			}
-
-			cursor.close();
-			s_cache.put(key, res);
+			res.add(binding.entryToObject(out));
+			retVal = cursor.getNextDup(keyEntry, out, LockMode.DEFAULT);
 		}
+
+		cursor.close();
 
 		return res;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static <T> HashSet<T> getAllAsSet(Database db, String key,
 			EntryBinding<T> binding) throws DatabaseException, IOException {
 
-		HashSet<T> res;
+		HashSet<T> res = null;
 
-		if ((res = (HashSet<T>) s_cache.get(key)) == null) {
+		res = new HashSet<T>();
 
-			res = new HashSet<T>();
+		Cursor cursor = db.openCursor(null, null);
 
-			Cursor cursor = db.openCursor(null, null);
+		DatabaseEntry keyEntry = new DatabaseEntry();
+		DatabaseEntry out = new DatabaseEntry();
 
-			DatabaseEntry keyEntry = new DatabaseEntry();
-			DatabaseEntry out = new DatabaseEntry();
+		StringBinding.stringToEntry(key, keyEntry);
 
-			StringBinding.stringToEntry(key, keyEntry);
+		OperationStatus retVal = cursor.getSearchKey(keyEntry, out,
+				LockMode.DEFAULT);
 
-			OperationStatus retVal = cursor.getSearchKey(keyEntry, out,
-					LockMode.DEFAULT);
+		while (retVal == OperationStatus.SUCCESS) {
 
-			while (retVal == OperationStatus.SUCCESS) {
-
-				res.add(binding.entryToObject(out));
-				retVal = cursor.getNextDup(keyEntry, out, LockMode.DEFAULT);
-			}
-
-			cursor.close();
-			s_cache.put(key, res);
+			res.add(binding.entryToObject(out));
+			retVal = cursor.getNextDup(keyEntry, out, LockMode.DEFAULT);
 		}
+
+		cursor.close();
 
 		return res;
 	}

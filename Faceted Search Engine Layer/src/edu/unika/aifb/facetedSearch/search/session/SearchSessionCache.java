@@ -70,7 +70,7 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class SearchSessionCache {
 
 	public enum CleanType {
-		ALL, PATHS, DISTANCES, TREES, HISTORY, LEAVE_GROUPS
+		ALL, PATHS, DISTANCES, HISTORY, LEAVE_GROUPS, FPAGE
 	}
 
 	private static final Logger s_log = Logger
@@ -115,9 +115,8 @@ public class SearchSessionCache {
 	private Database m_sourceCache;
 
 	/*
-	 * tree delegator
+	 * delegator caches
 	 */
-	private Database m_treeCache;
 	private Database m_fpageCache;
 
 	/*
@@ -126,7 +125,7 @@ public class SearchSessionCache {
 	private Database m_historyCache;
 
 	/*
-	 * 
+	 * other
 	 */
 	private Database m_classDB;
 
@@ -200,11 +199,6 @@ public class SearchSessionCache {
 					m_litCache.close();
 					m_litCache = null;
 				}
-				if (m_treeCache != null) {
-
-					m_treeCache.close();
-					m_treeCache = null;
-				}
 				if (m_historyCache != null) {
 
 					m_historyCache.close();
@@ -250,18 +244,6 @@ public class SearchSessionCache {
 				m_object2sourceMap.clear();
 				break;
 			}
-			case TREES : {
-
-				if (m_treeCache != null) {
-
-					m_treeCache.close();
-					m_treeCache = null;
-				}
-
-				System.gc();
-				reOpen();
-				break;
-			}
 			case HISTORY : {
 
 				if (m_historyCache != null) {
@@ -290,6 +272,18 @@ public class SearchSessionCache {
 				}
 
 				System.gc();
+				break;
+			}
+
+			case FPAGE : {
+
+				if (m_fpageCache != null) {
+					m_fpageCache.close();
+					m_fpageCache = null;
+				}
+
+				System.gc();
+				reOpen();
 				break;
 			}
 		}
@@ -363,11 +357,7 @@ public class SearchSessionCache {
 
 	public Database getDB(String name) {
 
-		if (name.equals(FacetEnvironment.DatabaseName.FTREE_CACHE)) {
-
-			return m_treeCache;
-
-		} else if (name.equals(FacetEnvironment.DatabaseName.CLASS)) {
+		if (name.equals(FacetEnvironment.DatabaseName.CLASS)) {
 
 			return m_classDB;
 
@@ -420,7 +410,9 @@ public class SearchSessionCache {
 			for (double leaveID : leaveIDs) {
 
 				Node leave = m_treeDelegator.getNode(node.getDomain(), leaveID);
-				Collection<String> subjects = getSubjects4Leave(leaveID);
+
+				Collection<String> subjects = new HashSet<String>();
+				subjects.addAll(getSubjects4Leave(leaveID));
 
 				for (String subject : subjects) {
 
@@ -549,8 +541,10 @@ public class SearchSessionCache {
 
 			for (AbstractSingleFacetValue fv : fvList) {
 
-				Collection<String> newSources = getSources4Object(dynamicNode
-						.getDomain(), fv.getValue());
+				Collection<String> newSources = new HashSet<String>(
+						getSources4Object(dynamicNode.getDomain(), fv
+								.getValue()));
+
 				sources.addAll(newSources);
 			}
 
@@ -572,7 +566,7 @@ public class SearchSessionCache {
 
 		return sources;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public Collection<String> getSources4Leave(String domain, double leaveID) {
 
@@ -582,13 +576,16 @@ public class SearchSessionCache {
 				.get(leaveID)) == null) {
 
 			sources = new HashSet<String>();
-			Collection<String> subjects = getSubjects4Leave(leaveID);
+
+			Collection<String> subjects = new HashSet<String>();
+			subjects.addAll(getSubjects4Leave(leaveID));
 
 			for (String subject : subjects) {
 
-				Collection<String> newSources;
+				Collection<String> newSources = new HashSet<String>(
+						getSources4Object(domain, subject));
 
-				if ((newSources = getSources4Object(domain, subject)) != null) {
+				if (!newSources.isEmpty()) {
 					sources.addAll(newSources);
 				} else {
 
@@ -611,7 +608,6 @@ public class SearchSessionCache {
 
 		return sources;
 	}
-
 	public Collection<String> getSources4Object(String domain, String object) {
 		return m_object2sourceMap.duplicates(domain + object);
 	}
@@ -652,10 +648,10 @@ public class SearchSessionCache {
 	@SuppressWarnings("unchecked")
 	public Collection<String> getSubjects4Node(Node node) {
 
-		Set<String> subjects;
+		Collection<String> subjects;
 
-		if ((subjects = (Set<String>) m_subjects4NodeCacheAccess.get(node
-				.getID())) == null) {
+		if ((subjects = (Collection<String>) m_subjects4NodeCacheAccess
+				.get(node.getID())) == null) {
 
 			subjects = new HashSet<String>();
 
@@ -664,7 +660,8 @@ public class SearchSessionCache {
 
 			for (double leaveID : leaveIDs) {
 
-				Collection<String> newSubjects = getSubjects4Leave(leaveID);
+				Collection<String> newSubjects = new HashSet<String>(
+						getSubjects4Leave(leaveID));
 				subjects.addAll(newSubjects);
 			}
 
@@ -727,9 +724,6 @@ public class SearchSessionCache {
 		m_resCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
 
-		m_treeCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
-
 		m_historyCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FHIST_CACHE, m_dbConfig);
 
@@ -752,7 +746,6 @@ public class SearchSessionCache {
 		m_dbs = new ArrayList<Database>();
 		m_dbs.add(m_resCache);
 		m_dbs.add(m_sourceCache);
-		m_dbs.add(m_treeCache);
 		m_dbs.add(m_historyCache);
 		m_dbs.add(m_fpageCache);
 		m_dbs.add(m_litCache);
@@ -810,10 +803,6 @@ public class SearchSessionCache {
 		if (m_litCache == null) {
 			m_litCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
-		}
-		if (m_treeCache == null) {
-			m_treeCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
 		}
 		if (m_historyCache == null) {
 			m_historyCache = m_env.openDatabase(null,

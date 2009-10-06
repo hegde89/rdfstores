@@ -38,6 +38,9 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
  */
 public class QueryHistoryManager {
 
+	/*
+	 * 
+	 */
 	private static QueryHistoryManager s_instance;
 
 	public static QueryHistoryManager getInstance(SearchSession session) {
@@ -54,15 +57,15 @@ public class QueryHistoryManager {
 	 * bindings
 	 */
 	private EntryBinding<Result> m_resBinding;
-
 	private EntryBinding<Double> m_doubleBinding;
+
 	/*
 	 * session stuff
 	 */
 	@SuppressWarnings("unused")
 	private SearchSession m_session;
-
 	private SearchSessionCache m_cache;
+
 	private QueryHistoryManager(SearchSession session) {
 
 		m_session = session;
@@ -120,14 +123,21 @@ public class QueryHistoryManager {
 
 	}
 
-	public boolean putQueryResultTuple(double queryID, Result res) {
+	public boolean isOpen() {
+		return m_history != null;
+	}
+
+	public boolean putResult(double queryID, Result res) {
 		return m_history.put(queryID, res) == null ? true : false;
 	}
 
 	public void reOpen() {
 
-		m_history = new StoredMap<Double, Result>(m_cache
-				.getDB(FacetEnvironment.DatabaseName.FHIST_CACHE),
-				m_doubleBinding, m_resBinding, true);
+		if (m_history == null) {
+
+			m_history = new StoredMap<Double, Result>(m_cache
+					.getDB(FacetEnvironment.DatabaseName.FHIST_CACHE),
+					m_doubleBinding, m_resBinding, true);
+		}
 	}
 }

@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
 import com.sleepycat.bind.EntryBinding;
@@ -148,6 +149,16 @@ public class FacetPageManager {
 		init();
 	}
 
+	public void clean() throws DatabaseException, CacheException {
+
+		m_cache.clean(SearchSessionCache.CleanType.FPAGE);
+		reOpen();
+	}
+
+	public void close() throws DatabaseException, CacheException {
+		m_cache.clean(SearchSessionCache.CleanType.FPAGE);
+	}
+
 	public FacetPage getInitialFacetPage() {
 
 		FacetPage fpage = new FacetPage();
@@ -165,15 +176,14 @@ public class FacetPageManager {
 
 				Node facetNode = facetIter.next();
 
-				if ((facetNode.getContent() == NodeContent.DATA_PROPERTY)
-						|| (facetNode.getContent() == NodeContent.OBJECT_PROPERTY)
-						|| (facetNode.getContent() == NodeContent.TYPE_PROPERTY)) {
+				if (facetNode.containsDataProperty()
+						|| facetNode.containsObjectProperty()
+						|| facetNode.containsRdfProperty()) {
+
+					Facet facet = m_tree2facetConverter.node2facet(facetNode);
 
 					FacetFacetValueList fvList = new FacetFacetValueList();
-
-					fvList
-							.setFacet(m_tree2facetConverter
-									.node2facet(facetNode));
+					fvList.setFacet(facet);
 
 					List<Node> subFacets = new ArrayList<Node>();
 					List<Node> rangeChildren = new ArrayList<Node>();
@@ -213,6 +223,8 @@ public class FacetPageManager {
 							.nodeList2facetValueList(rangeChildren));
 					fvList.setSubfacets(m_tree2facetConverter
 							.nodeList2facetList(subFacets));
+
+					fpage.put(domain, facet, fvList);
 
 				} else {
 					s_log.error("tree structure is not valid! tree: '"
@@ -318,6 +330,7 @@ public class FacetPageManager {
 
 		return fpage;
 	}
+
 	private void init() {
 
 		StoredClassCatalog cata;
@@ -341,8 +354,22 @@ public class FacetPageManager {
 		}
 	}
 
+	public boolean isOpen() {
+		return m_facetPageMap != null;
+	}
+
 	private FacetPage loadPreviousFacetPage() {
 		return m_facetPageMap.get(FACETPAGE_KEY);
+	}
+
+	public void reOpen() {
+
+		if (m_facetPageMap == null) {
+
+			m_facetPageMap = new StoredSortedMap<Integer, FacetPage>(m_cache
+					.getDB(FacetEnvironment.DatabaseName.FPAGE_CACHE),
+					m_intBinding, m_fpageBinding, true);
+		}
 	}
 
 	private boolean storeFacetPage(FacetPage fpage) {

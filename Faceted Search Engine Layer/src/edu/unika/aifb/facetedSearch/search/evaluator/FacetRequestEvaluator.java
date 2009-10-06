@@ -165,7 +165,7 @@ public class FacetRequestEvaluator extends Searcher {
 				 * store result & update history
 				 */
 				m_cache.storeResult(res);
-				m_history.putQueryResultTuple(fquery.getId(), res);
+				m_history.putResult(fquery.getId(), res);
 
 			} catch (DatabaseException e) {
 				e.printStackTrace();

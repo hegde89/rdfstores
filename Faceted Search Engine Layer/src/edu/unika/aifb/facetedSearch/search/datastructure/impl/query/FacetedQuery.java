@@ -17,9 +17,11 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.query;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.graphindex.query.Query;
 
@@ -33,9 +35,16 @@ public class FacetedQuery {
 	private Query m_initialQuery;
 	private List<FacetFacetValueTuple> m_tuples;
 
+	public FacetedQuery() {
+
+		init();
+		updateId();
+	}
+
 	public FacetedQuery(Query query) {
 
 		m_initialQuery = query;
+		init();
 		updateId();
 	}
 
@@ -87,11 +96,15 @@ public class FacetedQuery {
 	public double getId() {
 		return m_id;
 	}
+
 	public Query getInitialQuery() {
 		return m_initialQuery;
 	}
 	public List<FacetFacetValueTuple> getTuples() {
 		return m_tuples;
+	}
+	private void init() {
+		m_tuples = new ArrayList<FacetFacetValueTuple>();
 	}
 
 	public boolean removeAllFacetFacetValueTuples(
@@ -115,6 +128,27 @@ public class FacetedQuery {
 
 		m_tuples = tuples;
 		updateId();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+
+		String out = new String();
+		out += "Initial Query: " + m_initialQuery;
+		out += FacetEnvironment.NEW_LINE;
+
+		for (FacetFacetValueTuple tuple : m_tuples) {
+
+			out += "facetFacetValue tuple: " + tuple;
+			out += FacetEnvironment.NEW_LINE;
+		}
+
+		return out;
 	}
 
 	private void updateId() {

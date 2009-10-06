@@ -92,7 +92,7 @@ public class SearchSession {
 	/*
 	 * history
 	 */
-	private QueryHistoryManager m_history;
+	private QueryHistoryManager m_historyManager;
 
 	/*
 	 * 
@@ -135,12 +135,9 @@ public class SearchSession {
 	}
 
 	public void clean() {
-
+		
 		try {
-
 			m_cache.clean(CleanType.ALL);
-			m_history.clean();
-
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		} catch (CacheException e) {
@@ -151,16 +148,16 @@ public class SearchSession {
 		m_rankingDelegator.clean();
 		m_constructionDelegator.clean();
 
+		m_historyManager.reOpen();
+		m_fpageManager.reOpen();
+		
 		System.gc();
 	}
 
 	public void close() {
 
 		try {
-
 			m_cache.close();
-			m_history.clean();
-
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		} catch (CacheException e) {
@@ -236,7 +233,7 @@ public class SearchSession {
 	}
 
 	public QueryHistoryManager getHistory() {
-		return m_history;
+		return m_historyManager;
 	}
 
 	public int getId() {
@@ -317,7 +314,7 @@ public class SearchSession {
 		m_rankingDelegator = RankingDelegator.getInstance(this);
 		m_constructionDelegator = ConstructionDelegator.getInstance(this);
 
-		m_history = QueryHistoryManager.getInstance(this);
+		m_historyManager = QueryHistoryManager.getInstance(this);
 		m_fpageManager = FacetPageManager.getInstance(this);
 
 		initCache();
@@ -357,6 +354,6 @@ public class SearchSession {
 	}
 
 	public void setHistory(QueryHistoryManager history) {
-		m_history = history;
+		m_historyManager = history;
 	}
 }

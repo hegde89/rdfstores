@@ -228,7 +228,9 @@ public class IndexCreator implements TripleSink {
 		addSPIndex(IndexDescription.EXTDP);
 		if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED) && m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
 			addSPIndex(IndexDescription.OEO);
-		
+
+		m_idxConfig.store(m_idxDirectory);
+
 		if (startFrom == STEP_DATA)
 			m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);
 

@@ -230,6 +230,7 @@ public class IndexCreator implements TripleSink {
 			addSPIndex(IndexDescription.OEO);
 
 		m_idxConfig.store(m_idxDirectory);
+		m_idxConfig.load(m_idxDirectory);
 
 		if (startFrom == STEP_DATA)
 			m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true);

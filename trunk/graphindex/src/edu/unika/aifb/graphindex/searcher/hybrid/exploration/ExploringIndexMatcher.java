@@ -218,7 +218,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 							EdgeElement dataEdge = getEdge(node, property);
 							
 							if (dataEdge == null) {
-								log.warn("data edge missing");
+								log.warn("data edge missing " + node + " " + property);
 								continue;
 							}
 							

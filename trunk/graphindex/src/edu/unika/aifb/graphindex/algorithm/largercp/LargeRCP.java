@@ -45,8 +45,11 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.DataIndex;
 import edu.unika.aifb.graphindex.index.DataIndex.NodeListener;
+import edu.unika.aifb.graphindex.storage.DataField;
+import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -255,32 +258,43 @@ public class LargeRCP {
 				
 				log.debug(property);
 
-				BufferedReader in = new BufferedReader(new FileReader(blockFile));
+//				BufferedReader in = new BufferedReader(new FileReader(blockFile));
 				String input;
 				String currentBlock = null;
-				Set<String> image = new HashSet<String>();
-				while ((input = in.readLine()) != null) {
-					input = input.trim();
-					
-					if (input.startsWith("block:")) {
-						if (currentBlock != null) {
-//							if (image.size() > 0)
-//								log.debug("image size of " + currentBlock + ": " + image.size());
-							
-							refine(blocks, image);
-						}
-						
-						currentBlock = input;
-						image = new HashSet<String>();
-					}
-					else {
-						image.addAll(m_gs.getImage(input, property, forward));
-					}
+//				Set<String> image = new HashSet<String>();
+//				while ((input = in.readLine()) != null) {
+//					input = input.trim();
+//					
+//					if (input.startsWith("block:")) {
+//						if (currentBlock != null) {
+//							
+//							refine(blocks, image);
+//						}
+//						
+//						currentBlock = input;
+//						image = new HashSet<String>();
+//					}
+//					else {
+//						image.addAll(m_gs.getImage(input, property, forward));
+//					}
+//				}
+//				in.close();
+//				
+				Table<String> table = null;
+				if (!forward) {
+					table = m_gs.getIndexStorage(IndexDescription.POS).getTable(IndexDescription.POS, new DataField[] { DataField.OBJECT }, property);
 				}
-				in.close();
+				else {
+					table = m_gs.getIndexStorage(IndexDescription.PSO).getTable(IndexDescription.PSO, new DataField[] { DataField.SUBJECT }, property);
+				}
 				
+//				log.debug("image size: " + image.size());
+				HashSet<String> image = new HashSet<String>(table.rowCount() / 4 + 1);
+				for (String[] row : table)
+					image.add(row[0]);
+
 				if (image != null && image.size() > 0) {
-//					log.debug("image size of " + currentBlock + ": " + image.size());
+					log.debug("image size of " + currentBlock + ": " + image.size());
 					refine(blocks, image);
 				}
 				

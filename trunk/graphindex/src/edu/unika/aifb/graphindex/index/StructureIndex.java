@@ -46,9 +46,19 @@ public class StructureIndex extends Index {
 		openAllIndexes();
 	}
 	
+	public StructureIndex(IndexReader reader, boolean warmup) throws IOException, StorageException {
+		super(reader, warmup);
+		
+		m_backwardSet = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.BW_EDGESET_FILE));
+		m_forwardSet = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.FW_EDGESET_FILE));
+		
+		openAllIndexes();
+	}
+
 	private void openAllIndexes() throws StorageException, IOException {
-		for (IndexDescription index : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
-			((LuceneIndexStorage)getSPIndexStorage()).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
+		if (m_warmup)
+			for (IndexDescription index : m_idxConfig.getIndexes(IndexConfiguration.SP_INDEXES))
+				((LuceneIndexStorage)getSPIndexStorage()).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 	}
 	
 	public IndexDescription getCompatibleIndex(DataField... fields) {

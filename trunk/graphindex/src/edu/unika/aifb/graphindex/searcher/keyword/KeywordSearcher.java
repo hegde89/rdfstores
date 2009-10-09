@@ -548,10 +548,8 @@ public class KeywordSearcher {
 				for (String keyword : segement.getKeywords()) {
 					queryString += "+" + Constant.CONTENT_FIELD + ":" + keyword + " ";
 				}
-				log.debug(queryString);
 				QueryParser qp = new QueryParser(Constant.CONTENT_FIELD, analyzer);
 				Query q = qp.parse(queryString);
-				log.debug(q);
 //				if (segement.getKeywords().size() > 1)
 //					continue;
 				

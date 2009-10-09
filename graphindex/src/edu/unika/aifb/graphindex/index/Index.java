@@ -26,17 +26,28 @@ public abstract class Index {
 	protected IndexDirectory m_idxDirectory;
 	protected IndexConfiguration m_idxConfig;
 	protected IndexReader m_idxReader;
+	protected boolean m_warmup;
 	
-	public Index(IndexDirectory idxDirectory, IndexConfiguration idxConfig) {
+	public Index(IndexDirectory idxDirectory, IndexConfiguration idxConfig, boolean warmup) {
 		m_idxReader = null;
 		m_idxDirectory = idxDirectory;
 		m_idxConfig = idxConfig;
+		m_warmup = warmup;
+	}
+
+	public Index(IndexDirectory idxDirectory, IndexConfiguration idxConfig) {
+		this(idxDirectory, idxConfig, true);
 	}
 	
-	public Index(IndexReader reader) {
+	public Index(IndexReader reader, boolean warmup) {
 		m_idxReader = reader;
 		m_idxDirectory = reader.getIndexDirectory();
 		m_idxConfig = reader.getIndexConfiguration();
+		m_warmup = warmup;
+	}
+
+	public Index(IndexReader reader) {
+		this(reader, true);
 	}
 
 	public abstract void close() throws StorageException;

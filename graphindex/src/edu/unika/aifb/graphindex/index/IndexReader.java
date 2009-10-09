@@ -46,6 +46,7 @@ public class IndexReader {
 	private NeighborhoodStorage m_neighborhoodStorage;
 	private Set<String> m_objectProperties;
 	private Set<String> m_dataProperties;
+	private boolean m_warmup = true;
 	
 	private StatisticsCollector m_collector;
 	
@@ -62,17 +63,23 @@ public class IndexReader {
 //			log.info("di index: " + idx);
 		
 		m_collector = new StatisticsCollector();
+		
+		log.debug(Util.memory());
+	}
+	
+	public void enableWarmup(boolean warmup) {
+		m_warmup = warmup;
 	}
 	
 	public DataIndex getDataIndex() throws IOException, StorageException {
 		if (m_dataIndex == null) 
-			m_dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
+			m_dataIndex = new DataIndex(m_idxDirectory, m_idxConfig, m_warmup);
 		return m_dataIndex;
 	}
 	
 	public StructureIndex getStructureIndex() throws IOException, StorageException {
 		if (m_structureIndex == null)
-			m_structureIndex = new StructureIndex(this);
+			m_structureIndex = new StructureIndex(this, m_warmup);
 		return m_structureIndex;
 	}
 

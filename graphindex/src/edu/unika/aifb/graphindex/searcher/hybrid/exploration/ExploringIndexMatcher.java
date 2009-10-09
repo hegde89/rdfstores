@@ -77,6 +77,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		super(idxReader);
 	
 		m_iso = new GraphIsomorphism();
+		
+		log.debug(Util.memory());
 	}
 	
 	private void reset() {
@@ -121,6 +123,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			for (String[] row : table) {
 				String src = row[0];
 				String trg = row[1];
+				
+				if (src.equals(trg)) // ignore reflexive edges, because queries have different semantic in this regard
+					continue;
 				
 				NodeElement source = m_nodes.get(src);
 				if (source == null) {
@@ -388,6 +393,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor);
+//					Set<String> labels = new HashSet<String>();
+//					for (GraphElement neighbor : neighbors)
+//						labels.add(neighbor.getLabel());
+//					log.debug(neighbors.size() + " " + labels.size());
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
 							Cursor c = minCursor.getNextCursor(neighbor);

@@ -43,7 +43,7 @@ import edu.unika.aifb.graphindex.util.Util;
 
 public class DataIndex extends Index {
 	private Map<IndexDescription,IndexStorage> m_indexes;
-	
+
 	private static final Logger log = Logger.getLogger(DataIndex.class);
 	
 	public interface NodeListener {
@@ -51,11 +51,15 @@ public class DataIndex extends Index {
 	}
 	
 	public DataIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException, StorageException {
-		super(idxDirectory, idxConfig);
+		this(idxDirectory, idxConfig, true);
+	}
+
+	public DataIndex(IndexDirectory idxDirectory, IndexConfiguration idxConfig, boolean warmup) throws IOException, StorageException {
+		super(idxDirectory, idxConfig, warmup);
 		m_indexes = new HashMap<IndexDescription, IndexStorage>();
 		openAllIndexes();
 	}
-	
+
 	public void close() throws StorageException {
 		for (IndexStorage is : m_indexes.values())
 			is.close();
@@ -95,7 +99,8 @@ public class DataIndex extends Index {
 				is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 //				is = new LuceneExtendedIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 				is.initialize(false, true);
-				((LuceneIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
+				if (m_warmup)
+					((LuceneIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 //				((LuceneExtendedIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
 				m_indexes.put(index, is);
 			} catch (IOException e) {

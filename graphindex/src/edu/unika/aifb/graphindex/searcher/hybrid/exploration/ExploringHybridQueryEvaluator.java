@@ -78,7 +78,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		m_validator = new SmallIndexMatchesValidator(idxReader);
 	}
 	
-	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) throws StorageException {
+	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) throws StorageException, IOException {
 		List<String> list = KeywordSearcher.getKeywordList(query);
 //		log.debug("keyword list: " + list);
 		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
@@ -88,7 +88,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	protected void explore(HybridQuery query, int k, Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, 
 			List<TranslatedQuery> queries, Map<KeywordSegment,List<GraphElement>> segment2elements, Timings timings, Counters counters) throws StorageException, IOException {
 		Set<KeywordElement> keywordNodeElements = new HashSet<KeywordElement>();
-		int augmentedEdgeCount = 0;
+
 		for (KeywordSegment ks : entities.keySet()) {
 			List<GraphElement> elements = new ArrayList<GraphElement>(entities.get(ks).size());
 			Map<String,NodeElement> label2node = new HashMap<String,NodeElement>();
@@ -208,7 +208,10 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	
 	public Table<String> evaluate(HybridQuery query) throws StorageException, IOException {
 		List<TranslatedQuery> queries = evaluate(query, 1, 1);
-		return queries.get(0).getResult();
+		if (queries.size() > 0 && queries.get(0) != null)
+			return queries.get(0).getResult();
+		else
+			return new Table<String>();
 	}
 
 	private String getKSId(KeywordSegment ks) {

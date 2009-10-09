@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -47,6 +48,7 @@ import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
+import org.ho.yaml.Yaml;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 
@@ -94,6 +96,8 @@ public class KeywordIndexBuilder {
 	private boolean resume = false;
 	private Set<String> properties;
 	private StructureIndex structureIndex;
+	private IndexWriter valueWriter;
+	private Map<String,Double> propertyWeights;
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);
 	
@@ -106,6 +110,9 @@ public class KeywordIndexBuilder {
 		
 		this.ns = new LuceneNeighborhoodStorage(idxDirectory.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR, !resume));
 		this.ns.initialize(!resume, false);
+		
+		this.propertyWeights = (Map<String,Double>)Yaml.load(idxDirectory.getFile(IndexDirectory.PROPERTY_FREQ_FILE));
+		log.debug(propertyWeights);
 		
 		log.info("resume: " + resume);
 		
@@ -123,6 +130,7 @@ public class KeywordIndexBuilder {
 
 	public void indexKeywords() throws StorageException, IOException {
 		File indexDir = idxDirectory.getDirectory(IndexDirectory.KEYWORD_DIR, !resume);
+		File valueDir = idxDirectory.getDirectory(IndexDirectory.VALUE_DIR, !resume);
 
 		this.relations = Util.readEdgeSet(idxDirectory.getTempFile("relations", false));
 		this.attributes = Util.readEdgeSet(idxDirectory.getTempFile("attributes", false));
@@ -137,6 +145,8 @@ public class KeywordIndexBuilder {
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, MaxFieldLength.LIMITED);
 			indexWriter.setMaxFieldLength(MAXFIELDLENGTH);
 			log.debug("max terms per field: " + indexWriter.getMaxFieldLength());
+			
+			valueWriter = new IndexWriter(valueDir, analyzer, !resume, MaxFieldLength.LIMITED);
 			
 			org.apache.lucene.index.IndexReader reader = null;
 			if (resume) {
@@ -159,10 +169,14 @@ public class KeywordIndexBuilder {
 			indexEntity(indexWriter, idxDirectory.getTempFile("entities", false), reader);
 			
 			indexWriter.commit();
+			valueWriter.commit();
 			
 			log.debug("optimizing...");
 			indexWriter.optimize();
+			valueWriter.optimize();
+			
 			indexWriter.close();
+			valueWriter.close();
 			
 			if (blockSearcher != null)
 				blockSearcher.close();
@@ -357,6 +371,7 @@ public class KeywordIndexBuilder {
 				entities++;
 				if (entities % 50000 == 0) {
 					indexWriter.commit();
+					valueWriter.commit();
 					log.debug("entities indexed: " + entities + " avg: " + ((System.currentTimeMillis() - time)/50000.0));
 					time = System.currentTimeMillis();
 				}
@@ -370,134 +385,75 @@ public class KeywordIndexBuilder {
 		}
 	}
 	
-	public Set<String> computeConcepts(String entityUri)  throws IOException, StorageException {
+	private Set<String> computeConcepts(String entityUri)  throws IOException, StorageException {
 		Set<String> set = new HashSet<String>(); 
 		BooleanQuery bq = new BooleanQuery();
-//		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
-//		bq.add(tq, BooleanClause.Occur.MUST);
-//		tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDF.TYPE.stringValue()));
-//		bq.add(tq, BooleanClause.Occur.MUST);
-//		
-//		Hits hits = dataSearcher.search(bq);
-//		if(hits != null && hits.length() != 0) {
-//			Iterator iter = hits.iterator();
-//			while(iter.hasNext()) {
-//				Document doc = ((Hit)iter.next()).getDocument();
-//				String typeEdge = doc.get(LuceneGraphStorage.FIELD_EDGE);
-//				String concept = doc.get(LuceneGraphStorage.FIELD_DST);
-//				if(typeEdge.equals(RDF.TYPE.stringValue()))
-//					set.add(concept);
-//			}
-//			return set;
-//		} else 
-//			return null;
-		
-//		Table<String> table = dataIndex.getTriples(entityUri, RDF.TYPE.stringValue(), null);
+
 		IndexDescription idx = dataIndex.getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
 		set = dataIndex.getIndexStorage(idx).getDataSet(idx, DataField.OBJECT, idx.createValueArray(DataField.PROPERTY, RDF.TYPE.stringValue(), DataField.SUBJECT, entityUri));
-//		if (table.rowCount() == 0)
-//			return null;
-//		for (String[] row : table) {
-//			set.add(row[2]); 
-//		}
+
 		return set;
 	}  
 	
-	public Set<String> computeLabels(String entityUri) throws IOException, StorageException {
+	private Set<String> computeLabels(String entityUri) throws IOException, StorageException {
 		Set<String> set = new HashSet<String>(); 
-//		BooleanQuery bq = new BooleanQuery();
-//		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
-//		bq.add(tq, BooleanClause.Occur.MUST);
-//		tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDFS.LABEL.stringValue()));
-//		bq.add(tq, BooleanClause.Occur.MUST);
-//		
-//		Hits hits = dataSearcher.search(bq);
-//		if(hits != null && hits.length() != 0) {
-//			Iterator iter = hits.iterator();
-//			while(iter.hasNext()) {
-//				Document doc = ((Hit)iter.next()).getDocument();
-//				String attribute = doc.get(LuceneGraphStorage.FIELD_EDGE);
-//				String value = doc.get(LuceneGraphStorage.FIELD_DST);
-//				if(attribute.equals(RDFS.LABEL.toString()))
-//					set.add(value);
-//			}
-//			return set;
-//		} else 
-//			return null;
+
 		IndexDescription idx = dataIndex.getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
 		set = dataIndex.getIndexStorage(idx).getDataSet(idx, DataField.OBJECT, idx.createValueArray(DataField.PROPERTY, RDFS.LABEL.stringValue(), DataField.SUBJECT, entityUri));
-//		Table<String> table = dataIndex.getTriples(entityUri, RDFS.LABEL.stringValue(), null);
-//		if (table.rowCount() == 0)
-//			return null;
-//		for (String[] row : table) {
-//			set.add(row[2]); 
-//		}
+
 		return set;
 	} 
 	
 	private Set<String> computeEntityDescriptions(String entityUri) throws IOException, StorageException {
 		HashSet<String> set = new HashSet<String>(); 
 		
-//		TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
-//		Hits hits = dataSearcher.search(tq);
-//		if(hits != null && hits.length() != 0) {
-//			Iterator iter = hits.iterator();
-//			while(iter.hasNext()) {
-//				Document doc = ((Hit)iter.next()).getDocument();
-//				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
-//				String object = doc.get(LuceneGraphStorage.FIELD_DST);
-//				
-//				String type = TypeUtil.checkType(predicate, object);
-//				if(type.equals(TypeUtil.ATTRIBUTE)) {
-//					set.add(object + SEPARATOR + predicate);
-//				}
-//				else if(type.equals(TypeUtil.RELATION)) {
-//					String localname = TypeUtil.getLocalName(object).trim();
-//					set.add(localname + SEPARATOR + predicate);
-//					
-//					Set<String> entitylabels = computeLabels(object);
-//					if(entitylabels != null && entitylabels.size() != 0) {
-//						for(String label : entitylabels) {
-//							set.add(label + SEPARATOR + predicate);
-//						}
-//					}
-//				}   
-//			} 
-//			return set;
-//		} else 
-//			return null;
-		
-		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
-//		for (String predicate : properties) {
-//			Table<String> table = dataIndex.getTriples(entityUri, predicate, null);
-			if (table.rowCount() == 0)
-				return null;
-			for (String[] row : table) {
-				String predicate = row[1];
-				String object = row[2];
+		if (table.rowCount() == 0)
+			return null;
+		for (String[] row : table) {
+			String predicate = row[1];
+			String object = row[2];
+			
+			if (!properties.contains(predicate) || relations.contains(predicate)) // TODO maybe index relations
+				continue;
+			
+			Document doc = new Document();
+			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
+			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NO));
+			
+			float boost = ENTITY_DESCRIPTIVE_BOOST;
+			if (predicate.equals(RDFS.LABEL.toString()))
+				boost = ENTITY_DISCRIMINATIVE_BOOST;
+			if (TypeUtil.getLocalName(predicate).contains("name"))
+				boost = ENTITY_DISCRIMINATIVE_BOOST;
+			
+			boost *= propertyWeights.get(predicate);
+			
+			doc.setBoost(boost);
+			
+			if (attributes.contains(predicate)) {
+//				set.add(object + SEPARATOR + predicate);
+				Field f = new Field(Constant.CONTENT_FIELD, object, Field.Store.NO, Field.Index.ANALYZED);
+				f.setBoost(boost);
+				doc.add(f);
+			}
+			else if (relations.contains(predicate)) {
+				String localname = TypeUtil.getLocalName(object).trim();
+//				set.add(localname + SEPARATOR + predicate);
 				
-				if (!properties.contains(predicate))
-					continue;
+				Field f = new Field(Constant.CONTENT_FIELD, localname, Field.Store.NO, Field.Index.ANALYZED);
+				f.setBoost(boost);
+				doc.add(f);
 				
-				String type = TypeUtil.checkType(predicate, object);
-//				if(type.equals(TypeUtil.ATTRIBUTE)) {
-				if (attributes.contains(predicate)) {
-					set.add(object + SEPARATOR + predicate);
-				}
-//				else if(type.equals(TypeUtil.RELATION)) {
-				else if (relations.contains(predicate)) {
-					String localname = TypeUtil.getLocalName(object).trim();
-					set.add(localname + SEPARATOR + predicate);
-					
-					Set<String> entitylabels = computeLabels(object);
-					if(entitylabels != null && entitylabels.size() != 0) {
-						for(String label : entitylabels) {
-							set.add(label + SEPARATOR + predicate);
-						}
-					}
-				}   
-//			}
+//				Set<String> entitylabels = computeLabels(object);
+//				if(entitylabels != null && entitylabels.size() != 0) {
+//					for(String label : entitylabels) {
+//						set.add(label + SEPARATOR + predicate);
+//					}
+//				}
+			} 
+			
+			valueWriter.addDocument(doc);
 		}
 		
 		return set;
@@ -506,61 +462,24 @@ public class KeywordIndexBuilder {
 	public Set<String> computeNeighbors(String entityUri) throws IOException, StorageException {
 		HashSet<String> set = new HashSet<String>(500); 
 
-//		TermQuery tqfw = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, entityUri));
-//		TermQuery tqbw = new TermQuery(new Term(LuceneGraphStorage.FIELD_DST, entityUri));
-		
-//		Hits hits = dataSearcher.search(tqfw);
-//		if(hits != null && hits.length() != 0) {
-//			Iterator iter = hits.iterator();
-//			while(iter.hasNext()) {
-//				Document doc = ((Hit)iter.next()).getDocument();
-//				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
-//				String object = doc.get(LuceneGraphStorage.FIELD_DST);
-//				String type = TypeUtil.checkType(predicate, object);
-//				if(type.equals(TypeUtil.RELATION))
-//					set.add(object);
-//			}
-//		}
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
-//		for (String predicate : relations) {
-//			Table<String> table = dataIndex.getTriples(entityUri, predicate, null);
 
-			for (String[] row : table) {
-				String predicate = row[1];
-				String object = row[2];
-				if (relations.contains(predicate)) {
-//				String type = TypeUtil.checkType(predicate, object);
-//				if(type.equals(TypeUtil.RELATION))
-					set.add(object);
-				}
+		for (String[] row : table) {
+			String predicate = row[1];
+			String object = row[2];
+			if (relations.contains(predicate)) {
+				set.add(object);
 			}
-//		}
+		}
 		
-//		hits = dataSearcher.search(tqbw);
-//		if(hits != null && hits.length() != 0) {
-//			Iterator iter = hits.iterator();
-//			while(iter.hasNext()) {
-//				Document doc = ((Hit)iter.next()).getDocument();
-//				String predicate = doc.get(LuceneGraphStorage.FIELD_EDGE);
-//				String subject = doc.get(LuceneGraphStorage.FIELD_SRC);
-//				String type = TypeUtil.checkType(predicate, entityUri);
-//				if(type.equals(TypeUtil.RELATION))
-//					set.add(subject);
-//			}
-//		} 
 		table = dataIndex.getTriples(null, null, entityUri);
-//		for (String predicate : relations) {
-//			Table<String> table = dataIndex.getTriples(null, predicate, entityUri);
-	
-			for (String[] row : table) {
-				String predicate = row[1];
-				String subject = row[0];
-//				String type = TypeUtil.checkType(predicate, entityUri);
-//				if(type.equals(TypeUtil.RELATION))
-				if (relations.contains(predicate))
-					set.add(subject);
-			}
-//		}		
+		for (String[] row : table) {
+			String predicate = row[1];
+			String subject = row[0];
+			if (relations.contains(predicate))
+				set.add(subject);
+		}
+
 		return set;
 	} 
 	

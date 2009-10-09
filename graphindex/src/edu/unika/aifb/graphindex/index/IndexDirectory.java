@@ -49,11 +49,14 @@ public class IndexDirectory {
 	public static final int CARDINALITIES_FILE = addFile("cardinalities");
 	public static final int OVERRIDE_OBJECT_PROPERTIES_FILE = addFile("override_object_properties");
 	public static final int OVERRIDE_DATA_PROPERTIES_FILE = addFile("override_data_properties");
+	public static final int PROPERTY_FREQ_FILE = addFile("property_frequencies");
+	public static final int EXT_WEIGHTS_FILE = addFile("extension_weights");
 	
 	public static final int SP_IDX_DIR = addDirectory("sp_idx");
 	public static final int SP_GRAPH_DIR = addDirectory("sp_graph");
 	public static final int VP_DIR = addDirectory("vp");
 	public static final int KEYWORD_DIR = addDirectory("keyword");
+	public static final int VALUE_DIR = addDirectory("values");
 	public static final int BDB_DIR = addDirectory("bdb");
 	public static final int TEMP_DIR = addDirectory("temp");
 	public static final int NEIGHBORHOOD_DIR = addDirectory("neighborhood");

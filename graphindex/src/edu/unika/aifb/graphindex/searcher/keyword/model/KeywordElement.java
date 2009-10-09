@@ -237,8 +237,16 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 			return ((NamedConcept)resource).getExtension();
 		else
 			return null;
-	} 
-		
+	}
+
+	public void setExtensionId(String ext) {
+		if(resource instanceof Entity) {
+			((Entity)resource).setExtension(ext); 	
+		}
+		else if (resource instanceof NamedConcept)
+			((NamedConcept)resource).setExtension(ext);
+	}
+	
 	public String toString(){
 		if(resource == null)return null;
 		if(resource instanceof NamedConcept)

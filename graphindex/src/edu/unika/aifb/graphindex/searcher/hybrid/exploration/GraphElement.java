@@ -34,9 +34,15 @@ public abstract class GraphElement {
 	protected String m_label;
 	protected Map<String,List<Cursor>> m_keywordCursors;
 	protected Set<String> m_keywords;
+	protected double m_cost;
 	
 	public GraphElement(String label) {
 		m_label = label;
+		m_keywordCursors = new HashMap<String,List<Cursor>>();
+		m_keywords = new HashSet<String>();
+	}
+	
+	public void reset() {
 		m_keywordCursors = new HashMap<String,List<Cursor>>();
 		m_keywords = new HashSet<String>();
 	}
@@ -45,7 +51,11 @@ public abstract class GraphElement {
 		return m_label;
 	}
 	
-	public abstract int getCost();
+	public void setCost(double cost) {
+		m_cost = cost;
+	}
+	
+	public abstract double getCost();
 	
 	public void addCursor(Cursor c) {
 		for (KeywordSegment ks : c.getKeywordSegments()) {
@@ -77,6 +87,7 @@ public abstract class GraphElement {
 			List<Cursor> combination = new ArrayList<Cursor>();
 			for (int i = 0; i < keywords.size(); i++)
 				combination.add(m_keywordCursors.get(keywords.get(i)).get(idx[i]));
+			
 			list.add(combination);
 
 			carry = true;
@@ -97,7 +108,8 @@ public abstract class GraphElement {
 		return list;
 	}
 	
-	public abstract List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor);
+//	public abstract List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor);
+	public abstract List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> node2edges, Cursor cursor);
 	
 	@Override
 	public int hashCode() {

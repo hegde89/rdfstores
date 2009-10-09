@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
+import org.ho.yaml.Yaml;
 import org.openrdf.model.vocabulary.RDF;
 
 import com.sleepycat.je.DatabaseException;
@@ -519,88 +520,106 @@ public class IndexCreator implements TripleSink {
 			overrideDataProperties  = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OVERRIDE_DATA_PROPERTIES_FILE));
 
 		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
-		try {
-			for (String property : objectProperties) {
-				for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
-					String[] t = i.next();
-					String s = t[0];
-					String p = t[1];
-					String o = t[2];
+		Set<String> dataProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
 
-					entSet.add(s);
-					entSet.add(o);
-					
-					if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
-						conSet.add(o);
-					
-					triples++;
-					if (triples % 1000000 == 0)
-						System.out.println(triples);
-					
-					if (entSet.size() > 1000000) {
-						Util.mergeRowSet(entities, entSet);
-						entSet.clear();
-					}
+		Map<String,Integer> propertyInstances = new HashMap<String,Integer>();
+		double max = 0.0;
+		for (String property : objectProperties) {
+			int instances = 0;
+			for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
+				String[] t = i.next();
+				String s = t[0];
+				String p = t[1];
+				String o = t[2];
+
+				entSet.add(s);
+				entSet.add(o);
+				
+				if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
+					conSet.add(s);
+				
+				if (property.equals(RDF.TYPE.toString()))
+					conSet.add(o);
+				
+				triples++;
+				if (triples % 1000000 == 0)
+					System.out.println(triples);
+				
+				if (entSet.size() > 1000000) {
+					Util.mergeRowSet(entities, entSet);
+					entSet.clear();
+				}
+
+				instances++;
+			}
+			propertyInstances.put(property, instances);
+			
+			max = Math.max(max, instances);
+		}
+		
+		for (String property : dataProperties) {
+			int instances = 0;
+			for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
+				i.next();
+				instances++;
+				triples++;
+			}
+			propertyInstances.put(property, instances);
+			max = Math.max(max, instances);
+		}
+
+		double factor = triples / max;
+		
+		Map<String,Double> weight = new HashMap<String,Double>();
+		for (String property : propertyInstances.keySet())
+			weight.put(property, (double)propertyInstances.get(property) / triples * factor);
+		
+		Yaml.dump(weight, m_idxDirectory.getFile(IndexDirectory.PROPERTY_FREQ_FILE, true));
+		
+		attrSet = new TreeSet<String>(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+		relSet = new TreeSet<String>(objectProperties);
+		relSet.remove(RDF.TYPE.toString());
+		relSet.removeAll(TypeUtil.m_rdfsEdgeSet);
+		
+		Util.mergeRowSet(entities, entSet);
+		Util.writeEdgeSet(concepts, conSet);
+		Util.writeEdgeSet(relations, relSet);
+		Util.writeEdgeSet(attributes, attrSet);
+		
+		IndexStorage gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR), new StatisticsCollector());
+		gs.initialize(false, true);
+
+		IndexStorage is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR), new StatisticsCollector());
+		is.initialize(false, true);
+		
+		Map<String,Integer> sizes = new HashMap<String,Integer>();
+		max = 0.0;
+		int nodes = 0;
+		for (String property : objectProperties) {
+			for (Iterator<String[]> i = gs.iterator(IndexDescription.PSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, property); i.hasNext(); ) {
+				String[] row = i.next();
+				String s = row[0];
+				String o = row[1];
+				if (!sizes.containsKey(s)) {
+					sizes.put(s, is.getDataList(IndexDescription.EXTENT, DataField.ENT, s).size());
+					nodes += sizes.get(s);
+					max = Math.max(max, sizes.get(s));
+				}
+				if (!sizes.containsKey(o)) {
+					sizes.put(o, is.getDataList(IndexDescription.EXTENT, DataField.ENT, o).size());
+					nodes += sizes.get(o);
+					max = Math.max(max, sizes.get(o));
 				}
 			}
-			
-//			for (String property : properties) {
-//				for (Iterator<String[]> i = dataIndex.iterator(property); i.hasNext(); ) {
-//					String[] t = i.next();
-//					String s = t[0];
-//					String p = t[1];
-//					String o = t[2];
-//
-//					entSet.add(s);
-//
-//					if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)
-//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.RELATION)) {
-////						if (!overrideDataProperties.contains(p)) {
-////							relSet.add(p);
-////							entSet.add(o);
-////						}
-////						else
-////							attrSet.add(p);
-//					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.LITERAL)
-//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.ATTRIBUTE)) {
-//						attrSet.add(p);
-//					} else if (TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY)
-//							&& TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)
-//							&& TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE)) {
-//						conSet.add(o);
-//					}
-//					
-//					if (objectProperties.contains(property))
-//						entSet.add(o);
-//					
-//					triples++;
-//					if (triples % 1000000 == 0)
-//						System.out.println(triples);
-//					
-//					if (entSet.size() > 1000000) {
-//						Util.mergeRowSet(entities, entSet);
-//						entSet.clear();
-//					}
-//					
-//				}
-//			}
-			
-			attrSet = new TreeSet<String>(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
-			relSet = new TreeSet<String>(objectProperties);
-			relSet.remove(RDF.TYPE.toString());
-			relSet.removeAll(TypeUtil.m_rdfsEdgeSet);
-			
-			Util.mergeRowSet(entities, entSet);
-			Util.writeEdgeSet(concepts, conSet);
-			Util.writeEdgeSet(relations, relSet);
-			Util.writeEdgeSet(attributes, attrSet);
-		} catch (CorruptIndexException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
+		
+		factor = nodes /max;
+		
+		Map<String,Double> extWeights = new HashMap<String,Double>();
+		for (String ext : sizes.keySet())
+			extWeights.put(ext, (double)sizes.get(ext) / nodes * factor);
+		
+		Yaml.dump(extWeights, m_idxDirectory.getFile(IndexDirectory.EXT_WEIGHTS_FILE, true));
 	} 
 	
 	private boolean hasEntity(DataIndex dataIndex, String property) throws StorageException {

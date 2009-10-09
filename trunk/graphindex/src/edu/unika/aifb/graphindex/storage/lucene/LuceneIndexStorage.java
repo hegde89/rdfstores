@@ -809,6 +809,7 @@ public class LuceneIndexStorage implements IndexStorage {
 		private boolean m_usesValue = false;
 		private String[] m_indexTerms;
 		private Term m_next = null;
+		private boolean m_empty = false;
 		
 		public TermIterator(IndexDescription index, String indexKey, DataField... columnFields) throws StorageException {
 			m_index = index;
@@ -817,6 +818,9 @@ public class LuceneIndexStorage implements IndexStorage {
 			try {
 				m_termEnum = m_reader.terms(new Term(index.getIndexFieldName(), indexKey));
 				m_next = m_termEnum.term();
+				
+				if (!isPrefix(m_next))
+					m_empty = true;
 			} catch (IOException e) {
 				throw new StorageException(e);
 			}
@@ -871,6 +875,9 @@ public class LuceneIndexStorage implements IndexStorage {
 		
 		public boolean hasNext() {
 			try {
+				if (m_empty)
+					return false;
+				
 				if (!m_usesValue && peekNext() == null)
 					return false;
 

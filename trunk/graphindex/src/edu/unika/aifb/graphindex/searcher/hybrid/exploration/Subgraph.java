@@ -43,12 +43,12 @@ import edu.unika.aifb.graphindex.util.Util;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
 
-public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> implements Comparable<Subgraph> {
+public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implements Comparable<Subgraph> {
 	private static final long serialVersionUID = -5730502189634789126L;
 	
 	private Set<Cursor> m_cursors;
 	private Set<EdgeElement> m_edges;
-	private int m_cost;
+	private double m_cost;
 	private Map<String,String> m_label2var;
 	private NodeElement m_structuredNode = null;
 	private Set<Map<NodeElement,NodeElement>> m_mappings;
@@ -56,6 +56,9 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	private Map<NodeElement,Set<KeywordSegment>> m_nodeSegments;
 
 	private HashMap<String,Set<KeywordSegment>> m_select2ks;
+
+	private boolean m_valid = true;
+	private HashMap<String,String> m_rename;
 
 
 	private static final Logger log = Logger.getLogger(Subgraph.class);
@@ -67,56 +70,82 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		m_label2var = new HashMap<String,String>();
 		m_augmentedNodes = new HashSet<NodeElement>();
 		m_nodeSegments = new HashMap<NodeElement,Set<KeywordSegment>>();
+		m_rename = new HashMap<String,String>();
 	}
 
 	public Subgraph(Set<Cursor> cursors) {
 		this(EdgeElement.class);
 		
 		m_cursors = cursors;
+		Set<String> nodes = new HashSet<String>();
 		for (Cursor c : cursors) {
-			if (c.getCost() > m_cost)
-				m_cost = c.getCost();
+//			if (c.getCost() > m_cost)
+//				m_cost = c.getCost();
+			
 			
 			if (c instanceof StructuredQueryCursor)
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
 			else {
 				Cursor startCursor = c.getStartCursor();
-				NodeElement startNode = (NodeElement)startCursor.getGraphElement();
-				Set<KeywordSegment> kss = m_nodeSegments.get(startNode);
-				if (kss == null) {
-					kss = new HashSet<KeywordSegment>();
-					m_nodeSegments.put(startNode, kss);
+				String name = m_rename.get(startCursor.getGraphElement().getLabel());
+				if (name == null)
+					name = startCursor.getKeywordSegments().toString();
+				else {
+					name += "," + startCursor.getKeywordSegments().toString();
+					m_valid = false;
 				}
-				kss.addAll(startCursor.getKeywordSegments());
+				m_rename.put(startCursor.getGraphElement().getLabel(), name);
+//				NodeElement startNode = (NodeElement)startCursor.getGraphElement();
+//				Set<KeywordSegment> kss = m_nodeSegments.get(startNode);
+//				if (kss == null) {
+//					kss = new HashSet<KeywordSegment>();
+//					m_nodeSegments.put(startNode, kss);
+//				}
+//				kss.addAll(startCursor.getKeywordSegments());
 			}
 			
 			for (EdgeElement e : c.getEdges()) {
-				m_edges.add((EdgeElement)e);
+				m_edges.add(e);
 				
 				addVertex(((EdgeElement)e).getSource());
 				addVertex(((EdgeElement)e).getTarget());
 				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
 			}
 			
-			if (c.getParent() == null) {
-				addVertex((NodeElement)c.getGraphElement());
-			}
+//			if (c.getParent() == null) {
+//				addVertex((NodeElement)c.getGraphElement());
+//			}
 		}
+		
+		Set<String> values = new HashSet<String>();
+		values.addAll(m_rename.values());
+		if (values.size() < m_rename.size())
+			m_valid = false;
 
-		NodeElement start = null;
-		for (NodeElement node : vertexSet()) {
-			if (inDegreeOf(node) + outDegreeOf(node) == 1) {
-				start = node;
-				break;
-			}
-		}	
-		if (start != null)
-			m_cost = getLongestPath(start, new ArrayList<String>());
-		else
-			m_cost = m_edges.size();
+		m_cost = 0;
+		for (EdgeElement edge : edgeSet())
+			m_cost += edge.getCost();
+		for (NodeElement node : vertexSet())
+			m_cost += node.getCost();
+
+//		NodeElement start = null;
+//		for (NodeElement node : vertexSet()) {
+//			if (inDegreeOf(node) + outDegreeOf(node) == 1) {
+//				start = node;
+//				break;
+//			}
+//		}	
+//		if (start != null)
+//			m_cost = getLongestPath(start, new ArrayList<String>());
+//		else
+//			m_cost = m_edges.size();
 		
 //		if (m_edges.size() == 3 && m_cost == 3)
 //			log.debug("blah");
+	}
+	
+	public boolean isValid() {
+		return m_valid;
 	}
 	
 	public Set<Cursor> getCursors() {
@@ -158,12 +187,12 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 		return Math.max(max, newPath.size() - 1);
 	}
 	
-	public int getCost() {
+	public double getCost() {
 		return m_cost;
 	}
 
 	public int compareTo(Subgraph o) {
-		return ((Integer)getCost()).compareTo(o.getCost());
+		return ((Double)getCost()).compareTo(o.getCost());
 	}
 	
 	private void addAugmentedEdges() {
@@ -230,8 +259,10 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	public List<TranslatedQuery> attachQuery(StructuredQuery query, Map<String,Set<QNode>> ext2vars) {
 		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();
 		
-		addAugmentedEdges();
+//		addAugmentedEdges();
 
+		m_label2var.putAll(m_rename);
+		
 		int x = 0;
 		for (EdgeElement edge : edgeSet()) {
 			String src = m_label2var.get(edge.getSource().getLabel());
@@ -377,7 +408,13 @@ public class Subgraph extends DefaultDirectedGraph<NodeElement,EdgeElement> impl
 	}
 	
 	public String toString() {
-		return "subgraph size: " + m_edges.size() + ", cost: " + m_cost + ", strucstart: " + m_structuredNode + ", " + m_edges;
+		String edges = "";
+		String addComma = "";
+		for (EdgeElement edge : edgeSet()) {
+			edges += addComma + edge.getLabel() + "[" + edge.getCost() + "](" + edge.getSource().getLabel() + "," + edge.getTarget().getLabel() + ")";
+			addComma = ",";
+		}
+		return "SG[" + edgeSet().size() + "," + m_cost + "," + edges + "]";
 	}
 
 	@Override

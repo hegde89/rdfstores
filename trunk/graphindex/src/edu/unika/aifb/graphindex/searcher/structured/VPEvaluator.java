@@ -180,6 +180,8 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 
 		m_qe.addResult(resultTables.get(0), true);
 		
+		m_qe = null;
+		
 		return resultTables.get(0);
 	}
 	

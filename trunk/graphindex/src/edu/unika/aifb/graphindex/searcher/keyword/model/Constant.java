@@ -21,6 +21,7 @@ package edu.unika.aifb.graphindex.searcher.keyword.model;
 public class Constant {
 	public static final String TYPE_FIELD = "type";
 	public static final String SCHEMA_FIELD = "schema";
+	public static final String ATTRIBUTE_FIELD = "attribute";
 	public static final String ENTITY_FIELD = "entity";
 	public static final String URI_FIELD = "uri";
 	public static final String EXTENSION_FIELD = "extension";
@@ -28,6 +29,7 @@ public class Constant {
 	public static final String CONCEPT_FIELD = "concept";
 	public static final String LOCALNAME_FIELD = "localname";
 	public static final String LABEL_FIELD = "label";
+	public static final String CONTENT_FIELD = "content";
 	
 	public static final String URI_PREFIX = "http://";
 	

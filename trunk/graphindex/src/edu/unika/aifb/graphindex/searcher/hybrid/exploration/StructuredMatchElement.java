@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
@@ -34,7 +35,7 @@ public class StructuredMatchElement extends GraphElement {
 		return m_query;
 	}
 	
-	public int getCost() {
+	public double getCost() {
 		return 0;
 //		return m_query.getQueryGraph().edgeSet().size();
 	}
@@ -61,7 +62,7 @@ public class StructuredMatchElement extends GraphElement {
 //	}
 
 	@Override
-	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
 		Set<GraphElement> neighbors = new HashSet<GraphElement>();
 		return m_node.getNeighbors(graph, cursor);
 //		for (NodeElement node : m_nodes)

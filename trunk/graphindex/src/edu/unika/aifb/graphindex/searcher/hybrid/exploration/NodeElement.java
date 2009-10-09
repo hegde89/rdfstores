@@ -41,8 +41,15 @@ public class NodeElement extends GraphElement {
 		m_segmentEntities = new HashMap<KeywordSegment,Table<String>>();
 	}
 	
-	public int getCost() {
-		return 0;
+	@Override
+	public void reset() {
+		super.reset();
+		m_augmentEdges = new HashMap<String,List<KeywordSegment>>();
+		m_segmentEntities = new HashMap<KeywordSegment,Table<String>>();
+	}
+	
+	public double getCost() {
+		return m_cost;
 	}
 	
 	public void addFrom(NodeElement node) {
@@ -79,13 +86,13 @@ public class NodeElement extends GraphElement {
 		return m_augmentEdges;
 	}
 	
-	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
 		EdgeElement prevEdge = (EdgeElement)(cursor.getParent() != null ? cursor.getParent().getGraphElement() : null);
 
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
-		for (EdgeElement edge : graph.edgesOf(this)) {
-			if (!edge.equals(prevEdge))
+		for (EdgeElement edge : graph.get(this)) {
+			if (!edge.equals(prevEdge) && !cursor.getParents().contains(edge.getSource()) && !cursor.getParents().contains(edge.getTarget()))
 				neighbors.add(edge);
 		}
 		
@@ -93,6 +100,6 @@ public class NodeElement extends GraphElement {
 	}
 	
 	public String toString() {
-		return m_label + "[" + m_keywordCursors.size() + "," + m_segmentEntities.size() + "," + m_augmentEdges.size() + "]";
+		return m_label + "[" + getCost() + "," + m_keywordCursors.size() + "," + m_segmentEntities.size() + "," + m_augmentEdges.size() + "]";
 	}
 }

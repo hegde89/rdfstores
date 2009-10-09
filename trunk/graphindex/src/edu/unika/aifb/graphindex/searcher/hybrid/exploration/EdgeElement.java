@@ -21,6 +21,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
@@ -38,11 +39,11 @@ public class EdgeElement extends GraphElement {
 		m_target = target;
 	}
 	
-	public int getCost() {
-		return 1;
+	public double getCost() {
+		return m_cost;
 	}
 	
-	public List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
 		if (cursor.getParent() == null) {
@@ -102,6 +103,6 @@ public class EdgeElement extends GraphElement {
 	}
 	
 	public String toString() {
-		return m_label + "[" + m_keywordCursors.size() + "](" + m_source + "," + m_target + ")";
+		return m_label + "[" + getCost() + "," + m_keywordCursors.size() + "](" + m_source + "," + m_target + ")";
 	}
 }

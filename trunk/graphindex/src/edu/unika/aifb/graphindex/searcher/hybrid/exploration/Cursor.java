@@ -33,12 +33,19 @@ public abstract class Cursor implements Comparable<Cursor> {
 	protected Cursor m_parent;
 	protected GraphElement m_element;
 	protected int m_distance;
-	protected int m_cost;
+	protected double m_cost;
 	private List<GraphElement> m_path = null;
 	private Set<GraphElement> m_parents;
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
 		this(keywords, element, null);
+//		double score = 0;
+//		for (KeywordSegment ks : keywords)
+//			if (ks.getKeywords().size() > 1)
+//				score += 0.5;
+//		m_cost -= score;
+		
+		m_cost = element.getCost();
 	}
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element, Cursor parent) {
@@ -84,13 +91,17 @@ public abstract class Cursor implements Comparable<Cursor> {
 	public GraphElement getGraphElement() {
 		return m_element;
 	}
+	
+	public void setCost(double cost) {
+		m_cost = cost;
+	}
 
-	public int getCost() {
+	public double getCost() {
 		return m_cost;
 	}
 
 	public int compareTo(Cursor o) {
-		return ((Integer)m_cost).compareTo(o.getCost());
+		return ((Double)m_cost).compareTo(o.getCost());
 	}
 	
 	public GraphElement getStartElement() {

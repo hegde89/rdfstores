@@ -19,7 +19,6 @@
 package edu.unika.aifb.facetedSearch.index.builder.impl;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -37,11 +36,14 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.Expressivity;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.FacetType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -54,6 +56,11 @@ import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 public class FacetIdxBuilderHelper {
+
+	/*
+	 * 
+	 */
+	private static String s_expressivity;
 
 	/*
 	 * 
@@ -77,8 +84,6 @@ public class FacetIdxBuilderHelper {
 	 * 
 	 */
 	private static HashSet<String> s_classes;
-	private static ArrayList<String> s_objectProperties;
-	private static ArrayList<String> s_dataProperties;
 
 	/*
 	 * 
@@ -106,31 +111,30 @@ public class FacetIdxBuilderHelper {
 		s_idxDirectory.getDirectory(IndexDirectory.FACET_TEMP_DIR).delete();
 
 		s_classes = null;
-		s_objectProperties = null;
-		s_dataProperties = null;
 		s_instance = null;
 
 		System.gc();
 	}
 
 	public static FacetIdxBuilderHelper getInstance(IndexReader idxReader,
-			IndexDirectory idxDirectory) throws EnvironmentLockedException,
-			DatabaseException, IOException, StorageException {
+			IndexDirectory idxDirectory, String expressivity)
+			throws EnvironmentLockedException, DatabaseException, IOException,
+			StorageException {
 
 		return s_instance == null ? s_instance = new FacetIdxBuilderHelper(
-				idxReader, idxDirectory) : s_instance;
+				idxReader, idxDirectory, expressivity) : s_instance;
 	}
 
 	private FacetIdxBuilderHelper(IndexReader idxReader,
-			IndexDirectory idxDirectory) throws EnvironmentLockedException,
-			DatabaseException, IOException, StorageException {
+			IndexDirectory idxDirectory, String expressivity)
+			throws EnvironmentLockedException, DatabaseException, IOException,
+			StorageException {
 
 		s_idxDirectory = idxDirectory;
 		s_idxReader = idxReader;
 		s_structureIndex = s_idxReader.getStructureIndex();
 
-		s_objectProperties = new ArrayList<String>();
-		s_dataProperties = new ArrayList<String>();
+		s_expressivity = expressivity;
 
 		initGraphIndex(idxReader);
 		initClasses(idxReader);
@@ -173,6 +177,52 @@ public class FacetIdxBuilderHelper {
 		return clazz;
 	}
 
+	public int getDataType(String prop) throws IOException, DatabaseException {
+
+		if (isDataProperty(prop)) {
+
+			String dataType = null;
+
+			if ((dataType = FacetDbUtils.get(s_cacheDB, "dataType_" + prop,
+					s_stringBinding)) == null) {
+
+				try {
+
+					Table<String> triples = s_idxReader
+							.getDataIndex()
+							.getTriples(
+									prop,
+									"http://www.w3.org/2000/01/rdf-schema#range",
+									null);
+
+					if (!triples.getRows().isEmpty()) {
+						
+						dataType = String.valueOf(FacetUtils
+								.range2DataType(triples.getRow(0)[2]));
+					} else {
+						dataType = String.valueOf(DataType.NOT_SET);
+					}
+				} catch (StorageException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (NullPointerException e) {
+					e.printStackTrace();
+				}
+
+				if (dataType != null) {
+					FacetDbUtils.store(s_cacheDB, "dataType_" + prop, dataType,
+							s_stringBinding);
+				}
+			}
+
+			return Integer.parseInt(dataType);
+
+		} else {
+			return DataType.NOT_SET;
+		}
+	}
+
 	public String getExtension(String object) throws StorageException,
 			IOException, DatabaseException {
 
@@ -196,6 +246,43 @@ public class FacetIdxBuilderHelper {
 		return s_indexGraph;
 	}
 
+	public String getLabel(String res) throws DatabaseException, IOException {
+
+		String label = null;
+
+		if ((label = FacetDbUtils.get(s_cacheDB, "label_" + res,
+				s_stringBinding)) == null) {
+
+			try {
+
+				Table<String> triples = s_idxReader.getDataIndex()
+						.getTriples(res,
+								"http://www.w3.org/2000/01/rdf-schema#label",
+								null);
+
+				if (!triples.getRows().isEmpty()) {
+					label = FacetUtils.getValueOfLiteral(triples.getRow(0)[2]);
+				} else {
+					label = FacetEnvironment.DefaultValue.NO_LABEL;
+				}
+
+			} catch (StorageException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (NullPointerException e) {
+				e.printStackTrace();
+			}
+
+			if (label != null) {
+				FacetDbUtils.store(s_cacheDB, "label_" + res, label,
+						s_stringBinding);
+			}
+		}
+
+		return label;
+	}
+
 	public Node getRange(Node property) throws DatabaseException, IOException {
 
 		String rangeClassLabel = null;
@@ -211,7 +298,7 @@ public class FacetIdxBuilderHelper {
 								+ FacetEnvironment.RDFS.HAS_RANGE, null);
 
 				if (!triples.getRows().isEmpty()) {
-					rangeClassLabel = triples.getRow(0)[2];
+					rangeClassLabel = "Range: "+triples.getRow(0)[2];
 				}
 			} catch (StorageException e) {
 				e.printStackTrace();
@@ -249,6 +336,7 @@ public class FacetIdxBuilderHelper {
 				if (!triples.getRows().isEmpty()) {
 					superClass = triples.getRow(0)[2];
 				}
+
 			} catch (StorageException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -319,8 +407,14 @@ public class FacetIdxBuilderHelper {
 					? NodeContent.DATA_PROPERTY
 					: NodeContent.OBJECT_PROPERTY);
 
-			superPropertyNode.setFacet(superPropertyNode.makeFacet(
-					superProperty, ftype, DataType.NOT_SET));
+			
+			Facet facet = new Facet(superProperty, ftype,
+					DataType.NOT_SET);
+
+			facet.setDataType(getDataType(property));
+			facet.setLabel(getLabel(property));
+			
+			superPropertyNode.setFacet(facet);
 
 			return superPropertyNode;
 		}
@@ -360,9 +454,20 @@ public class FacetIdxBuilderHelper {
 
 			s_classes = new HashSet<String>();
 
-			Table<String> triples = idxReader.getDataIndex().getTriples(null,
-					"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-					"http://www.w3.org/2000/01/rdf-schema#Class");
+			Table<String> triples;
+
+			if (s_expressivity.equals(Expressivity.RDF)) {
+
+				triples = idxReader.getDataIndex().getTriples(null,
+						"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+						"http://www.w3.org/2000/01/rdf-schema#Class");
+
+			} else {
+
+				triples = idxReader.getDataIndex().getTriples(null,
+						"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+						"http://www.w3.org/2002/07/owl#Class");
+			}
 
 			Iterator<String[]> rowIter = triples.getRows().iterator();
 
@@ -397,8 +502,6 @@ public class FacetIdxBuilderHelper {
 				Table<String> table = gs.getIndexTable(IndexDescription.POS,
 						DataField.SUBJECT, DataField.OBJECT, property);
 
-				s_objectProperties.add(property);
-
 				for (String[] row : table) {
 
 					String src = row[0];
@@ -423,8 +526,6 @@ public class FacetIdxBuilderHelper {
 				Table<String> table = gs.getIndexTable(IndexDescription.POS,
 						DataField.SUBJECT, DataField.OBJECT, property);
 
-				s_dataProperties.add(property);
-
 				for (String[] row : table) {
 
 					String src = row[0];
@@ -448,12 +549,54 @@ public class FacetIdxBuilderHelper {
 		}
 	}
 
-	public boolean isDataProperty(String prop) throws IOException {
-		return s_dataProperties.contains(prop);
+	public boolean isDataProperty(String prop) throws IOException,
+			DatabaseException {
+
+		String isDataProperty = null;
+
+		if ((isDataProperty = FacetDbUtils.get(s_cacheDB, "isDataProperty_"
+				+ prop, s_stringBinding)) == null) {
+
+			try {
+
+				Table<String> triples = s_idxReader
+						.getDataIndex()
+						.getTriples(
+								prop,
+								"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+								null);
+
+				if (!triples.getRows().isEmpty()) {
+
+					if (triples.getRow(0)[2]
+							.equals("http://www.w3.org/2002/07/owl#DatatypeProperty")) {
+						isDataProperty = "1";
+					} else {
+						isDataProperty = "0";
+					}
+				} else {
+					isDataProperty = "1";
+				}
+			} catch (StorageException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (NullPointerException e) {
+				e.printStackTrace();
+			}
+
+			if (isDataProperty != null) {
+				FacetDbUtils.store(s_cacheDB, "isDataProperty_" + prop,
+						isDataProperty, s_stringBinding);
+			}
+		}
+
+		return isDataProperty.equals("1");
 	}
 
-	public boolean isObjectProperty(String prop) throws IOException {
-		return s_objectProperties.contains(prop);
+	public boolean isObjectProperty(String prop) throws IOException,
+			DatabaseException {
+		return !isDataProperty(prop);
 	}
 
 	/**
@@ -483,7 +626,7 @@ public class FacetIdxBuilderHelper {
 				String currentClass = class1.getValue();
 				Node superClass;
 
-				while ((superClass = this.getSuperClass(currentClass)) != null) {
+				while ((superClass = getSuperClass(currentClass)) != null) {
 
 					if (superClass.hasSameValueAs(class2)) {
 

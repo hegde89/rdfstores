@@ -17,14 +17,12 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectCollection;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
-
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
@@ -48,44 +46,37 @@ public class FacetPage implements IFacetPage, Serializable {
 	/*
 	 * 
 	 */
-	private Int2ObjectOpenHashMap<String> m_domainHash2domainStringMap;
-
-	/*
-	 * 
-	 */
-	private Int2ObjectOpenHashMap<List<FacetFacetValueList>> m_facet2FacetValuesLists;
+	private HashMap<String, List<FacetFacetValueList>> m_domain2FacetValuesLists;
 
 	public FacetPage() {
 
-		m_domainHash2domainStringMap = new Int2ObjectOpenHashMap<String>();
-		m_facet2FacetValuesLists = new Int2ObjectOpenHashMap<List<FacetFacetValueList>>();
+		m_domain2FacetValuesLists = new HashMap<String, List<FacetFacetValueList>>();
 	}
 
 	public void addDomain(String domain) {
 
-		if (!m_facet2FacetValuesLists.containsKey(domain.hashCode())) {
+		if (!m_domain2FacetValuesLists.containsKey(domain)) {
 
-			m_domainHash2domainStringMap.put(domain.hashCode(), domain);
-			m_facet2FacetValuesLists.put(domain.hashCode(),
+			m_domain2FacetValuesLists.put(domain,
 					new ArrayList<FacetFacetValueList>());
 		}
 	}
 
-	public ObjectIterator<Entry<Integer, List<FacetFacetValueList>>> getDomainEntryIterator() {
-		return m_facet2FacetValuesLists.entrySet().iterator();
+	public Iterator<Entry<String, List<FacetFacetValueList>>> getDomainEntryIterator() {
+		return m_domain2FacetValuesLists.entrySet().iterator();
 	}
 
-	public ObjectIterator<String> getDomainIterator() {
-		return m_domainHash2domainStringMap.values().iterator();
+	public Iterator<String> getDomainIterator() {
+		return m_domain2FacetValuesLists.keySet().iterator();
 	}
 
-	public ObjectCollection<String> getDomains() {
-		return m_domainHash2domainStringMap.values();
+	public Set<String> getDomains() {
+		return m_domain2FacetValuesLists.keySet();
 	}
 
 	public Iterator<FacetFacetValueList> getFacetFacetValueListIterator(
 			String domain) {
-		return m_facet2FacetValuesLists.get(domain.hashCode()).iterator();
+		return m_domain2FacetValuesLists.get(domain).iterator();
 	}
 
 	public FacetFacetValueList getFacetFacetValuesList(String domain,
@@ -109,7 +100,7 @@ public class FacetPage implements IFacetPage, Serializable {
 	}
 
 	public boolean hasDomain(String domain) {
-		return m_facet2FacetValuesLists.containsKey(domain.hashCode());
+		return m_domain2FacetValuesLists.containsKey(domain);
 	}
 
 	public boolean put(String domain, Facet facet, FacetFacetValueList list) {
@@ -118,7 +109,7 @@ public class FacetPage implements IFacetPage, Serializable {
 			addDomain(domain);
 		}
 
-		return m_facet2FacetValuesLists.get(domain.hashCode()).add(list);
+		return m_domain2FacetValuesLists.get(domain).add(list);
 	}
 
 	/*
@@ -130,20 +121,19 @@ public class FacetPage implements IFacetPage, Serializable {
 	public String toString() {
 
 		String out = new String();
-		ObjectIterator<Entry<Integer, List<FacetFacetValueList>>> domainEntryIter = getDomainEntryIterator();
+		Iterator<Entry<String, List<FacetFacetValueList>>> domainEntryIter = getDomainEntryIterator();
 
 		while (domainEntryIter.hasNext()) {
 
-			Entry<Integer, List<FacetFacetValueList>> domainEntry = domainEntryIter
+			Entry<String, List<FacetFacetValueList>> domainEntry = domainEntryIter
 					.next();
 
 			out += FacetEnvironment.DIVIDER;
 			out += FacetEnvironment.NEW_LINE;
 
-			out += "domain: "
-					+ m_domainHash2domainStringMap.get(domainEntry.getKey());
+			out += "domain: " + domainEntry.getKey();
 			out += FacetEnvironment.NEW_LINE;
-			
+
 			Iterator<FacetFacetValueList> fvListMapIter = domainEntry
 					.getValue().iterator();
 

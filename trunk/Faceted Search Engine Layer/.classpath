@@ -15,5 +15,6 @@
 	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar" sourcepath="lib/src/commons-collections-3.2.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/fastutil-5.1.5.jar" sourcepath="lib/src/fastutil-5.1.5/"/>
 	<classpathentry kind="lib" path="lib/jcs-1.3.jar"/>
+	<classpathentry kind="lib" path="lib/colt.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

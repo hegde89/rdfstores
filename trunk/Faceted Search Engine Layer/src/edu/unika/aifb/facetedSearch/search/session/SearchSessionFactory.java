@@ -46,7 +46,8 @@ public class SearchSessionFactory {
 			FacetEnvironment.DefaultValue.MAX_SESSIONS);
 
 	public static SearchSessionFactory getInstance(Properties props) {
-		return s_instance == null ? s_instance = new SearchSessionFactory(props)
+		return s_instance == null
+				? s_instance = new SearchSessionFactory(props)
 				: s_instance;
 	}
 
@@ -93,7 +94,7 @@ public class SearchSessionFactory {
 	}
 
 	public void closeSession(SearchSession session) {
-		session.clean();
+		session.clean(SearchSession.CleanType.ALL);
 		// session.close();
 		release(session.getId());
 	}

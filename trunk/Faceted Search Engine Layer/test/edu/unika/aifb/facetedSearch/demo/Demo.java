@@ -20,14 +20,20 @@ package edu.unika.aifb.facetedSearch.demo;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
+import java.util.Map.Entry;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.FacetValueRefinementRequest;
 import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionFactory;
-import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
@@ -77,19 +83,54 @@ public class Demo {
 
 			GenericQueryEvaluator eval = session.getStore().getEvaluator();
 
-			// StructuredQuery sq = new StructuredQuery("q1");
-			// sq
-			// .addEdge("?x",
-			// "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#FullProfessor");
-			// sq
-			// .addEdge(
-			// "?x",
-			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#undergraduateDegreeFrom",
-			// "?y");
-			//
-			// eval.evaluate(sq);
-			//
+			StructuredQuery sq = new StructuredQuery("q1");
+			sq
+					.addEdge("?x",
+							"http://dbpedia.org/ontology/largestCity",
+							"http://dbpedia.org/resource/Cheyenne%2C_Wyoming");
+
+			ResultPage resPage = eval.evaluate(sq);
+			FacetPage fpage = resPage.getFacetPage();
+
+			Entry<String, List<FacetFacetValueList>> entry = fpage
+					.getDomainEntryIterator().next();
+
+			FacetFacetValueList ffvList = entry.getValue().get(0);
+			FacetFacetValueTuple ffvTuple = ffvList
+					.getFacetFacetValueTupleList().get(0);
+
+			FacetValueRefinementRequest refineReq = new FacetValueRefinementRequest();
+			refineReq.setTuple(ffvTuple);
+
+			resPage = eval.evaluate(refineReq);
+			fpage = resPage.getFacetPage();
+			entry = fpage.getDomainEntryIterator().next();
+
+			ffvList = entry.getValue().get(0);
+			ffvTuple = ffvList.getFacetFacetValueTupleList().get(0);
+
+			refineReq.setTuple(ffvTuple);
+
+			resPage = eval.evaluate(refineReq);
+			fpage = resPage.getFacetPage();
+			entry = fpage.getDomainEntryIterator().next();
+
+			ffvList = entry.getValue().get(1);
+			ffvTuple = ffvList.getFacetFacetValueTupleList().get(0);
+
+			refineReq.setTuple(ffvTuple);
+
+			resPage = eval.evaluate(refineReq);
+			fpage = resPage.getFacetPage();
+			entry = fpage.getDomainEntryIterator().next();
+
+			ffvList = entry.getValue().get(1);
+			ffvTuple = ffvList.getFacetFacetValueTupleList().get(0);
+
+			refineReq.setTuple(ffvTuple);
+
+			eval.evaluate(refineReq);
+
 			// StructuredQuery sq2 = new StructuredQuery("q2");
 			// sq2
 			// .addEdge("?x",
@@ -97,27 +138,27 @@ public class Demo {
 			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#Publication");
 			//
 			// eval.evaluate(sq2);
+			//
+			// StructuredQuery sq3 = new StructuredQuery("q3");
+			// sq3
+			// .addEdge(
+			// "?x",
+			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse",
+			// "?y");
+			//
+			// sq3
+			// .addEdge(
+			// "?x",
+			// "http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#memberOf",
+			// "http://www.Department8.University0.edu");
+			//
+			// sq3.setAsSelect("?x");
+			//
+			// eval.evaluate(sq3);
 
-			StructuredQuery sq3 = new StructuredQuery("q3");
-			sq3
-					.addEdge(
-							"?x",
-							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#takesCourse",
-							"?y");
-
-			sq3
-					.addEdge(
-							"?x",
-							"http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#memberOf",
-							"http://www.Department8.University0.edu");
-
-			sq3.setAsSelect("?x");
-
-			eval.evaluate(sq3);
-
-			KeywordQuery kq = new KeywordQuery("q3",
-					"Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
-			eval.evaluate(kq);
+			// KeywordQuery kq = new KeywordQuery("q3",
+			// "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");
+			// eval.evaluate(kq);
 
 			// TODO
 

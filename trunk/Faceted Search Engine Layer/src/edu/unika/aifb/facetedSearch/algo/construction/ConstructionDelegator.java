@@ -38,7 +38,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Util;
@@ -87,13 +86,6 @@ public class ConstructionDelegator extends Delegator {
 	private ConstructionDelegator(SearchSession session) {
 
 		m_session = session;
-
-		/*
-		 * 
-		 */
-
-		m_treeDelegator = (FacetTreeDelegator) m_session
-				.getDelegator(Delegators.TREE);
 
 		/*
 		 * 
@@ -223,5 +215,9 @@ public class ConstructionDelegator extends Delegator {
 		}
 
 		return false;
+	}
+
+	public void setTreeDelegator(FacetTreeDelegator delegator) {
+		m_treeDelegator = delegator;
 	}
 }

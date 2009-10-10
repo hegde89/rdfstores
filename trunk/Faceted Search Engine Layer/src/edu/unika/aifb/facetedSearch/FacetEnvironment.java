@@ -29,6 +29,11 @@ import org.openrdf.model.vocabulary.XMLSchema;
  */
 public class FacetEnvironment {
 
+	public static class Expressivity {
+		public static final String OWL = "owl";
+		public static final String RDF = "rdf";
+	}
+
 	public static class CacheName {
 
 		public static final String SOURCES = "src";
@@ -103,6 +108,7 @@ public class FacetEnvironment {
 		public static int RANKING_METRIC = RankingMetricType.COUNT_S;
 		public static int LITERAL_CLUSTERER = LiteralClustererType.SIMPLE;
 		public static int SIMPLE_CACHE_SIZE = 5000;
+		public static String NO_LABEL = "no_label";
 
 	}
 
@@ -129,7 +135,8 @@ public class FacetEnvironment {
 	}
 
 	public static class Keys {
-		public static final String RESULT_SET = "re";
+		public static final String RESULT_SET_CURRENT = "reCu";
+		public static final String RESULT_SET_INITIAL = "reIn";
 	}
 
 	public static class LiteralClustererType {
@@ -183,6 +190,7 @@ public class FacetEnvironment {
 		public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
 		public static final String ONTO_LANGUAGE = "onto.language";
 		public static final String CACHE_DIR = "cache.config";
+		public static final String EXPRESSIVITY = "expressivity";
 
 	}
 
@@ -326,7 +334,18 @@ public class FacetEnvironment {
 
 					// RDF.NAMESPACE + RDF.TYPE,
 					RDF.NAMESPACE + RDF.VALUE, RDF.NAMESPACE + RDF.SUBJECT,
-					RDF.NAMESPACE + RDF.PREDICATE, RDF.NAMESPACE + RDF.OBJECT
+					RDF.NAMESPACE + RDF.PREDICATE, RDF.NAMESPACE + RDF.OBJECT,
+					RDF.NAMESPACE + RDFS.FIRST, RDF.NAMESPACE + RDFS.REST,
+
+					"http://dbpedia.org/property/abstract"
 
 			}));
+
+	// public static final HashSet<String> PROPERTIES_DONT_STORE_OBJECTS = new
+	// HashSet<String>(
+	// Arrays.asList(new String[]{
+	//
+	// "http://dbpedia.org/property/abstract"
+	//
+	// }));
 }

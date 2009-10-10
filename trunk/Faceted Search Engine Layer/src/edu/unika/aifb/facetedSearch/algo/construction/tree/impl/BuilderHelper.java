@@ -153,7 +153,6 @@ public class BuilderHelper {
 					newNode.setType(node2copy.getType());
 					newNode.setDomain(newTree.getDomain());
 					newNode.setSession(m_session);
-					newNode.setID(node2copy.getID());
 					newNode.setDepth(pos4insertion.getDepth() + 1);
 
 					String path = pathPrefix + pathDelta + newNode.getValue();

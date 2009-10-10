@@ -17,19 +17,18 @@
  */
 package edu.unika.aifb.facetedSearch.index.db.binding;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.bind.tuple.TupleInput;
 import com.sleepycat.bind.tuple.TupleOutput;
-
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Resource;
 
 /**
  * @author andi
  * 
  */
-public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingleFacetValue> {
+public class StringListBinding extends TupleBinding<List<String>> {
 
 	/*
 	 * (non-Javadoc)
@@ -39,29 +38,21 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 	 * .tuple.TupleInput)
 	 */
 	@Override
-	public AbstractSingleFacetValue entryToObject(TupleInput input) {
+	public List<String> entryToObject(TupleInput input) {
 
-		AbstractSingleFacetValue fv;
+		List<String> strgList = new ArrayList<String>();
+		int listSize = input.readInt();
+		int count = 0;
 
-		Boolean isResource = input.readBoolean();
-		String value = input.readString();
-		String sourceExt = input.readString();
-		String rangeExt = input.readString();
-		String label = input.readString();
+		while (count < listSize) {
 
-		if (isResource) {
-			fv = new Resource();
-		} else {
-			fv = new Literal();
+			String strg = input.readString();
+			strgList.add(strg);
+
+			count++;
 		}
 
-		fv.setIsResource(isResource);
-		fv.setValue(value);
-		fv.setSourceExt(sourceExt);
-		fv.setRangeExt(rangeExt);
-		fv.setLabel(label);
-
-		return fv;
+		return strgList;
 	}
 
 	/*
@@ -72,13 +63,12 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 	 * com.sleepycat.bind.tuple.TupleOutput)
 	 */
 	@Override
-	public void objectToEntry(AbstractSingleFacetValue object,
-			TupleOutput output) {
+	public void objectToEntry(List<String> object, TupleOutput output) {
 
-		output.writeBoolean(object.isResource());
-		output.writeString(object.getValue());
-		output.writeString(object.getSourceExt());
-		output.writeString(object.getRangeExt());
-		output.writeString(object.getLabel());
+		output.writeInt(object.size());
+
+		for (String strg : object) {
+			output.writeString(strg);
+		}
 	}
 }

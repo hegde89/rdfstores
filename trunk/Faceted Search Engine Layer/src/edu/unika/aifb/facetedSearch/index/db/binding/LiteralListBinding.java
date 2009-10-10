@@ -54,10 +54,12 @@ public class LiteralListBinding
 		int listSize = input.readInt();
 		int count = 0;
 
-		while (++count < listSize) {
+		while (count < listSize) {
 
 			AbstractSingleFacetValue fv = m_fvBinding.entryToObject(input);
 			fvList.add(fv);
+
+			count++;
 		}
 
 		return fvList;

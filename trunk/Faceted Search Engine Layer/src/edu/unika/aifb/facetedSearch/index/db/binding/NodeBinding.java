@@ -59,7 +59,8 @@ public class NodeBinding extends TupleBinding<Node> {
 		facet.setNodeId(input.readDouble());
 		facet.setType(input.readInt());
 		facet.setDataType(input.readInt());
-
+		facet.setLabel(input.readString());
+		
 		node.setFacet(facet);
 
 		return node;
@@ -92,6 +93,7 @@ public class NodeBinding extends TupleBinding<Node> {
 		output.writeDouble(facet.getNodeId());
 		output.writeInt(facet.getType());
 		output.writeInt(facet.getDataType());
-
+		output.writeString(facet.getLabel());
+		
 	}
 }

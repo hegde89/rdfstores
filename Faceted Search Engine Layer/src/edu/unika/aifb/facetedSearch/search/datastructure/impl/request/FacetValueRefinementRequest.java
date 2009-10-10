@@ -23,15 +23,15 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
  * @author andi
  * 
  */
-public class RefinementRequest extends AbstractFacetRequest {
+public class FacetValueRefinementRequest extends AbstractRefinementRequest {
 
 	private FacetFacetValueTuple m_tuple;
 
-	public RefinementRequest() {
+	public FacetValueRefinementRequest() {
 		super("refinementRequest");
 	}
 
-	public RefinementRequest(String name) {
+	public FacetValueRefinementRequest(String name) {
 		super(name);
 	}
 

@@ -17,30 +17,47 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-import edu.unika.aifb.graphindex.query.QNode;
-
 
 /**
  * @author andi
  * 
  */
-public class ExpansionRequest extends AbstractFacetRequest {
+public class KeywordRefinementRequest extends AbstractFacetRequest {
 
-	private QNode m_qNode;
+	private String m_domain;
+	private double m_facetID;
+	private String m_keywords;
 
-	public ExpansionRequest() {
-		super("expansionRequest");
+	public KeywordRefinementRequest() {
+		super("keywordRefinementRequest");
 	}
 
-	public ExpansionRequest(String name) {
+	public KeywordRefinementRequest(String name) {
 		super(name);
 	}
 
-	public void setQNode(QNode qNode) {
-		m_qNode = qNode;
+	public String getDomain() {
+		return m_domain;
 	}
 
-	public QNode getQNode() {
-		return m_qNode;
+	public double getFacetID() {
+		return m_facetID;
 	}
+
+	public String getKeywords() {
+		return m_keywords;
+	}
+
+	public void setDomain(String domain) {
+		m_domain = domain;
+	}
+
+	public void setFacetID(double facetID) {
+		m_facetID = facetID;
+	}
+
+	public void setKeywords(String keywords) {
+		m_keywords = keywords;
+	}
+
 }

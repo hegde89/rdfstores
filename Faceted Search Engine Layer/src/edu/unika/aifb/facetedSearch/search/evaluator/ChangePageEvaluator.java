@@ -48,7 +48,7 @@ public class ChangePageEvaluator extends Searcher {
 
 		try {
 
-			resPage = m_session.getCache().getResultPage(
+			resPage = m_session.getCache().getCurrentResultPage(
 					m_session.getCurrentPageNum());
 
 		} catch (DatabaseException e) {

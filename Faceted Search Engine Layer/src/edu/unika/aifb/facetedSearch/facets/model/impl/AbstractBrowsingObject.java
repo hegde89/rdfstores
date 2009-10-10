@@ -19,8 +19,8 @@ package edu.unika.aifb.facetedSearch.facets.model.impl;
 
 import java.io.Serializable;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.IAbstractBrowsingObject;
-import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -43,14 +43,16 @@ public abstract class AbstractBrowsingObject
 	private String m_domain;
 	private double m_nodeId;
 	private String m_value;
+	private int m_content;
+	private String m_label;
 
 	public AbstractBrowsingObject() {
-		m_countS = 0;
+		init();
 	}
 
 	public AbstractBrowsingObject(String value) {
 		m_value = value;
-		m_countS = 0;
+		init();
 	}
 
 	/*
@@ -63,11 +65,15 @@ public abstract class AbstractBrowsingObject
 
 		if (obj instanceof AbstractBrowsingObject) {
 
-			return ((AbstractBrowsingObject) obj).getNodeId() == getNodeId();
+			return ((AbstractBrowsingObject) obj).getValue().equals(getValue());
 
 		} else {
 			return false;
 		}
+	}
+
+	public int getContent() {
+		return m_content;
 	}
 
 	public int getCountS() {
@@ -78,6 +84,10 @@ public abstract class AbstractBrowsingObject
 		return m_domain;
 	}
 
+	public String getLabel() {
+		return m_label;
+	}
+
 	public double getNodeId() {
 		return m_nodeId;
 	}
@@ -86,7 +96,27 @@ public abstract class AbstractBrowsingObject
 		return m_value;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		return m_value.hashCode();
+	}
+
+	private void init() {
+		m_countS = 0;
+		m_nodeId = 0;
+		m_label = FacetEnvironment.DefaultValue.NO_LABEL;
+	}
+
 	public abstract boolean isLeave();
+
+	public void setContent(int content) {
+		m_content = content;
+	}
 
 	public void setCountS(int countS) {
 		m_countS = countS;
@@ -94,6 +124,10 @@ public abstract class AbstractBrowsingObject
 
 	public void setDomain(String domain) {
 		m_domain = domain;
+	}
+
+	public void setLabel(String label) {
+		m_label = label;
 	}
 
 	public void setNodeId(double nodeId) {
@@ -107,11 +141,12 @@ public abstract class AbstractBrowsingObject
 	@Override
 	public String toString() {
 
-		if (m_value != null) {
-			return Util.truncateUri(m_value.toLowerCase()) + " (" + m_countS
-					+ ")";
+		if (!m_label.equals(FacetEnvironment.DefaultValue.NO_LABEL)) {
+			return m_label;
+		} else if (m_value != null) {
+			return m_value;
 		} else {
-			return "N/A";
+			return "null";
 		}
 	}
 }

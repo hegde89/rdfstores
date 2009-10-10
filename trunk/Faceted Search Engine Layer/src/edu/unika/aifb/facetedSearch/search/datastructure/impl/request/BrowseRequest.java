@@ -17,30 +17,29 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-import edu.unika.aifb.graphindex.query.QNode;
-
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 
 /**
  * @author andi
  * 
  */
-public class ExpansionRequest extends AbstractFacetRequest {
+public class BrowseRequest extends AbstractFacetRequest {
 
-	private QNode m_qNode;
+	private FacetFacetValueTuple m_tuple;
 
-	public ExpansionRequest() {
-		super("expansionRequest");
+	public BrowseRequest() {
+		super("browseRequest");
 	}
 
-	public ExpansionRequest(String name) {
+	public BrowseRequest(String name) {
 		super(name);
 	}
 
-	public void setQNode(QNode qNode) {
-		m_qNode = qNode;
+	public FacetFacetValueTuple getTuple() {
+		return m_tuple;
 	}
 
-	public QNode getQNode() {
-		return m_qNode;
+	public void setTuple(FacetFacetValueTuple tuple) {
+		m_tuple = tuple;
 	}
 }

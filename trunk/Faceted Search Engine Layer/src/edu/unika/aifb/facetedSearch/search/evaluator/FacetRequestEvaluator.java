@@ -19,33 +19,49 @@ package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
+import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
+import edu.unika.aifb.facetedSearch.facets.model.IRefinementPath;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueRefinementPath;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
-import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractFacetRequest;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.AbstractRefinementRequest;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.BrowseRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ExpansionRequest;
-import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.RefinementRequest;
-import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.FacetValueRefinementRequest;
+import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.KeywordRefinementRequest;
+import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.CleanType;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.HybridQuery;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.Searcher;
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.ExploringHybridQueryEvaluator;
+import edu.unika.aifb.graphindex.searcher.hybrid.exploration.TranslatedQuery;
+import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
+import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
  * @author andi
@@ -65,91 +81,152 @@ public class FacetRequestEvaluator extends Searcher {
 	 * 
 	 */
 	private FacetPageManager m_fpageManager;
-	private QueryHistoryManager m_history;
 
 	/*
 	 * 
 	 */
 	private Facet2TreeModelConverter m_facet2TreeModelConverter;
+	private Tree2FacetModelConverter m_tree2facetModelConverter;
+
+	/*
+	 * 
+	 */
+	private FacetTreeDelegator m_treeDelegator;
+
+	/*
+	 * 
+	 */
+	private FacetRequestHelper m_helper;
 
 	public FacetRequestEvaluator(IndexReader idxReader, SearchSession session) {
 
 		super(idxReader);
 
+		/*
+		 * 
+		 */
 		m_session = session;
 		m_cache = session.getCache();
 
-		m_history = session.getHistory();
-		m_fpageManager = session.getFacetPageManager();
-
+		/*
+		 * 
+		 */
 		m_facet2TreeModelConverter = (Facet2TreeModelConverter) session
 				.getConverter(Converters.FACET2TREE);
+
+		m_tree2facetModelConverter = (Tree2FacetModelConverter) session
+				.getConverter(Converters.TREE2FACET);
+
+		/*
+		 * 
+		 */
+		m_treeDelegator = (FacetTreeDelegator) m_session
+				.getDelegator(Delegators.TREE);
+
+		/*
+		 * 
+		 */
+		m_helper = new FacetRequestHelper(session);
+
+		/*
+		 * 
+		 */
+		m_fpageManager = session.getFacetPageManager();
 
 	}
 
 	public ResultPage evaluate(AbstractFacetRequest facetRequest) {
 
-		m_session.setCurrentPage(1);
-
 		if (facetRequest instanceof ExpansionRequest) {
 
+			m_session.setCurrentPage(1);
+			m_session.clean(CleanType.ALL);
+
 			ResultPage resPage = ResultPage.EMPTY_PAGE;
-			ExpansionRequest expReq = (ExpansionRequest) facetRequest;
+			ExpansionRequest expansionReq = (ExpansionRequest) facetRequest;
 
 			/*
 			 * update query
 			 */
 			FacetedQuery fquery = m_session.getCurrentQuery();
-			fquery.removeAllFacetFacetValueTuples(expReq.getTuples());
-			m_session.setCurrentQuery(fquery);
+			boolean removedPath = fquery.removePath(expansionReq.getQNode());
 
-			if (m_history.containsResult(fquery.getId())) {
+			if (removedPath) {
 
 				try {
 
-					m_cache.storeResult(m_history.getResult(fquery.getId()));
+					VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
+							.getStore()
+							.getEvaluator()
+							.getEvaluator(
+									FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+
+					Table<String> expandedTable = structuredQueryEvaluator
+							.evaluate(fquery.getQuery());
+
+					Result res = new Result(expandedTable);
+
+					/*
+					 * store result
+					 */
+					m_cache.storeCurrentResult(res);
+
+					/*
+					 * set facet page
+					 */
+					FacetPage fpage = m_fpageManager.getInitialFacetPage();
+					res.setFacetPage(fpage);
+
+					/*
+					 * set res page
+					 */
+					resPage = m_cache.getCurrentResultPage(m_session
+							.getCurrentPageNum());
 
 				} catch (UnsupportedEncodingException e) {
 					e.printStackTrace();
 				} catch (DatabaseException e) {
 					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (StorageException e) {
+
 				}
+
+			} else {
 
 				try {
 
-					resPage = m_cache.getResultPage(m_session
+					resPage = m_cache.getCurrentResultPage(m_session
 							.getCurrentPageNum());
+					resPage
+							.setError("could not remove node and subtree for node'"
+									+ expansionReq.getQNode() + "' not found!");
+
+					s_log.error("could not remove node and subtree for node'"
+							+ expansionReq.getQNode() + "' not found!");
 
 				} catch (DatabaseException e) {
 					e.printStackTrace();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			} else {
-				// TODO
 			}
 
 			return resPage;
 
-		} else if (facetRequest instanceof RefinementRequest) {
+		} else if (facetRequest instanceof BrowseRequest) {
 
-			RefinementRequest refReq = (RefinementRequest) facetRequest;
-			FacetFacetValueTuple newTuple = refReq.getTuple();
+			ResultPage resPage = ResultPage.EMPTY_PAGE;
+			BrowseRequest browseReq = (BrowseRequest) facetRequest;
+			FacetFacetValueTuple newTuple = browseReq.getTuple();
 
 			try {
 
 				/*
 				 * refine table
 				 */
-				Result res = refineTable(newTuple.getFacetValue());
-
-				/*
-				 * update query
-				 */
-				FacetedQuery fquery = m_session.getCurrentQuery();
-				fquery.addFacetFacetValueTuple(newTuple);
-
-				m_session.setCurrentQuery(fquery);
+				Result res = m_cache.getCurrentResult();
 
 				/*
 				 * set refined facet page
@@ -160,12 +237,13 @@ public class FacetRequestEvaluator extends Searcher {
 
 				res.setFacetPage(fpage);
 
-				
 				/*
-				 * store result & update history
+				 * 
 				 */
-				m_cache.storeResult(res);
-				m_history.putResult(fquery.getId(), res);
+				m_cache.storeCurrentResult(res);
+
+				resPage = m_cache.getCurrentResultPage(m_session
+						.getCurrentPageNum());
 
 			} catch (DatabaseException e) {
 				e.printStackTrace();
@@ -173,96 +251,300 @@ public class FacetRequestEvaluator extends Searcher {
 				e.printStackTrace();
 			}
 
-			try {
+			return resPage;
 
-				return m_cache.getResultPage(m_session.getCurrentPageNum());
+		} else if (facetRequest instanceof AbstractRefinementRequest) {
 
-			} catch (DatabaseException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
+			m_session.setCurrentPage(1);
+			m_session.clean(CleanType.REFINEMENT);
+
+			ResultPage resPage = ResultPage.EMPTY_PAGE;
+
+			if (facetRequest instanceof FacetValueRefinementRequest) {
+
+				FacetValueRefinementRequest refReq = (FacetValueRefinementRequest) facetRequest;
+				FacetFacetValueTuple newTuple = refReq.getTuple();
+
+				try {
+
+					StaticNode node = (StaticNode) m_facet2TreeModelConverter
+							.facetValue2Node(newTuple.getFacetValue());
+
+					List<String> sources = new ArrayList<String>();
+					sources.addAll(node.getSources());
+
+					/*
+					 * refine table
+					 */
+					Table<String> refinedTable = m_helper.refineResult(sources,
+							newTuple.getDomain());
+
+					refinedTable.sort(node.getDomain());
+
+					/*
+					 * update query
+					 */
+					FacetFacetValueRefinementPath newPath = m_tree2facetModelConverter
+							.node2facetFacetValuePath(node);
+
+					FacetedQuery fquery = m_session.getCurrentQuery();
+					fquery.clearOldVar2newVarMap();
+					fquery.addPath(node.getDomain(), newPath);
+
+					m_session.setCurrentQuery(fquery);
+
+					StructuredQuery sq = newPath.getStructuredQuery();
+					m_helper.cleanQuery(sq, fquery);
+
+					VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
+							.getStore()
+							.getEvaluator()
+							.getEvaluator(
+									FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+
+					/*
+					 * get table with new columns ...
+					 */
+
+					Table<String> additionalTable = structuredQueryEvaluator
+							.evaluate(sq);
+					m_helper.updateColumns(additionalTable, fquery);
+
+					additionalTable.sort(node.getDomain());
+
+					/*
+					 * join to final result
+					 */
+
+					Table<String> finalTable = Tables.mergeJoin(refinedTable,
+							additionalTable, node.getDomain());
+
+					Result res = new Result(finalTable);
+					res.setQuery(fquery);
+
+					/*
+					 * store result
+					 */
+					m_cache.storeCurrentResult(res);
+
+					/*
+					 * set facet page
+					 */
+					FacetPage fpage = m_fpageManager.getInitialFacetPage();
+					res.setFacetPage(fpage);
+
+					resPage = m_cache.getCurrentResultPage(m_session
+							.getCurrentPageNum());
+
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (StorageException e) {
+					e.printStackTrace();
+				}
+
+			} else if (facetRequest instanceof KeywordRefinementRequest) {
+
+				KeywordRefinementRequest keyRefReq = (KeywordRefinementRequest) facetRequest;
+				StaticNode facet = (StaticNode) m_treeDelegator.getNode(
+						keyRefReq.getDomain(), keyRefReq.getFacetID());
+
+				if (facet.containsDataProperty()) {
+
+					try {
+
+						StructuredQuery sq = new StructuredQuery("sq");
+						sq.addEdge(keyRefReq.getDomain(), facet.getValue(),
+								keyRefReq.getKeywords());
+						sq.setAsSelect(keyRefReq.getDomain());
+
+						VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
+								.getStore()
+								.getEvaluator()
+								.getEvaluator(
+										FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+
+						Table<String> refinementTable = structuredQueryEvaluator
+								.evaluate(sq);
+
+						if (refinementTable.rowCount() > 0) {
+
+							/*
+							 * update query
+							 */
+							IRefinementPath newPath = m_helper
+									.query2facetFacetValuePath(keyRefReq
+											.getDomain(), sq);
+
+							FacetedQuery fquery = m_session.getCurrentQuery();
+							fquery.clearOldVar2newVarMap();
+							fquery.addPath(keyRefReq.getDomain(), newPath);
+
+							m_helper.updateColumns(refinementTable, fquery);
+
+							Result res = m_helper.refineResult(refinementTable,
+									keyRefReq.getDomain());
+
+							m_session.setCurrentQuery(fquery);
+							res.setQuery(fquery);
+
+							/*
+							 * store result
+							 */
+							m_cache.storeCurrentResult(res);
+
+							/*
+							 * set facet page
+							 */
+							FacetPage fpage = m_fpageManager
+									.getInitialFacetPage();
+							res.setFacetPage(fpage);
+
+							resPage = m_cache.getCurrentResultPage(m_session
+									.getCurrentPageNum());
+
+						} else {
+
+							resPage = m_cache.getCurrentResultPage(m_session
+									.getCurrentPageNum());
+
+							resPage.setError("no results found for query: "
+									+ sq);
+
+							s_log.debug("no results found for query: " + sq);
+						}
+					} catch (InvalidParameterException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (StorageException e) {
+						e.printStackTrace();
+					} catch (DatabaseException e) {
+						e.printStackTrace();
+					}
+
+				} else if (facet.containsObjectProperty()) {
+
+					try {
+
+						StructuredQuery sq = new StructuredQuery("sq");
+						sq.addEdge(keyRefReq.getDomain(), facet.getValue(),
+								"?tmp");
+						sq.setAsSelect(keyRefReq.getDomain());
+
+						KeywordQuery kwq = new KeywordQuery("kwq", keyRefReq
+								.getKeywords());
+
+						HybridQuery hq = new HybridQuery("hq", sq, kwq);
+
+						ExploringHybridQueryEvaluator hybridQueryEvaluator = (ExploringHybridQueryEvaluator) m_session
+								.getStore()
+								.getEvaluator()
+								.getEvaluator(
+										FacetEnvironment.EvaluatorType.HybridQueryEvaluator);
+
+						List<TranslatedQuery> translatedQueries = hybridQueryEvaluator
+								.evaluate(hq, 1, 1);
+
+						if (!translatedQueries.isEmpty()) {
+
+							Table<String> refinementTable = translatedQueries
+									.get(0).getResult();
+
+							if (refinementTable.rowCount() > 0) {
+
+								/*
+								 * update query
+								 */
+								IRefinementPath newPath = m_helper
+										.query2facetFacetValuePath(keyRefReq
+												.getDomain(), hq);
+
+								FacetedQuery fquery = m_session
+										.getCurrentQuery();
+								fquery.clearOldVar2newVarMap();
+								fquery.addPath(keyRefReq.getDomain(), newPath);
+
+								m_session.setCurrentQuery(fquery);
+
+								/*
+								 * update columns
+								 */
+								m_helper.updateColumns(refinementTable, fquery);
+
+								/*
+								 * refine result
+								 */
+								Result res = m_helper.refineResult(
+										refinementTable, keyRefReq.getDomain());
+
+								/*
+								 * store result
+								 */
+								m_cache.storeCurrentResult(res);
+
+								/*
+								 * set facet page
+								 */
+								FacetPage fpage = m_fpageManager
+										.getInitialFacetPage();
+								res.setFacetPage(fpage);
+
+								resPage = m_cache
+										.getCurrentResultPage(m_session
+												.getCurrentPageNum());
+							} else {
+
+								resPage = m_cache
+										.getCurrentResultPage(m_session
+												.getCurrentPageNum());
+
+								resPage.setError("no results found for query: "
+										+ hq);
+
+								s_log
+										.debug("no results found for query: "
+												+ hq);
+							}
+						} else {
+
+							resPage = m_cache.getCurrentResultPage(m_session
+									.getCurrentPageNum());
+
+							resPage
+									.setError("no translations found for query: "
+											+ hq);
+
+							s_log.debug("no translations found for query: "
+									+ hq);
+						}
+					} catch (InvalidParameterException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (StorageException e) {
+						e.printStackTrace();
+					} catch (DatabaseException e) {
+						e.printStackTrace();
+					}
+
+				} else {
+					s_log.error("should not be here node '" + facet + "'");
+					return resPage;
+				}
+
+			} else {
+				s_log.error("facetRequest '" + facetRequest + "'not valid!");
+				return resPage;
 			}
 
-			return ResultPage.EMPTY_PAGE;
+			return resPage;
 
 		} else {
+
 			s_log.error("facetRequest '" + facetRequest + "'not valid!");
 			return ResultPage.EMPTY_PAGE;
 		}
-	}
-	private Table<String> mergeJoin(Table<String> left, List<String> right,
-			String col) throws UnsupportedOperationException {
-
-		if (!left.isSorted() || !left.getSortedColumn().equals(col)) {
-			throw new UnsupportedOperationException(
-					"merge join with unsorted tables");
-		}
-
-		List<String> resultColumns = new ArrayList<String>();
-		resultColumns.add(col);
-
-		for (String strg : left.getColumnNames()) {
-			if (!strg.equals(col)) {
-				resultColumns.add(strg);
-			}
-		}
-
-		int lc = left.getColumn(col);
-
-		Table<String> result = new Table<String>(resultColumns, left.rowCount()
-				+ right.size());
-
-		int l = 0, r = 0;
-
-		while ((l < left.rowCount()) && (r < right.size())) {
-
-			String[] lrow = left.getRow(l);
-			String rrow = right.get(r);
-
-			int val = lrow[lc].compareTo(rrow);
-
-			if (val < 0) {
-				l++;
-			} else if (val > 0) {
-				r++;
-			} else {
-
-				result.addRow(lrow);
-
-				int i = l + 1;
-				while ((i < left.rowCount())
-						&& (left.getRow(i)[lc].compareTo(rrow) == 0)) {
-
-					result.addRow(left.getRow(i));
-					i++;
-				}
-
-				l++;
-				r++;
-			}
-		}
-
-		result.setSortedColumn(lc);
-		return result;
-	}
-
-	private Result refineTable(AbstractFacetValue fv) throws DatabaseException,
-			IOException {
-
-		StaticNode node = (StaticNode) m_facet2TreeModelConverter
-				.facetValue2Node(fv);
-
-		Table<String> oldTable = m_session.getCache().getResultTable();
-		oldTable.sort(fv.getDomain(), true);
-
-		List<String> sourceIndividuals = new ArrayList<String>(node
-				.getSources());
-		Collections.sort(sourceIndividuals);
-
-		Result res = new Result();
-		res.setResultTable(mergeJoin(oldTable, sourceIndividuals, fv
-				.getDomain()));
-
-		return res;
 	}
 }

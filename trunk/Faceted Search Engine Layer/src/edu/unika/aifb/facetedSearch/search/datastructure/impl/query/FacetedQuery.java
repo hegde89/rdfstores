@@ -18,12 +18,22 @@
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.query;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Stack;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
-import edu.unika.aifb.graphindex.query.Query;
+import org.apache.log4j.Logger;
+
+import edu.unika.aifb.facetedSearch.facets.model.IRefinementPath;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueRefinementPath;
+import edu.unika.aifb.facetedSearch.facets.model.impl.QueryRefinementPath;
+import edu.unika.aifb.graphindex.query.QNode;
+import edu.unika.aifb.graphindex.query.QueryEdge;
+import edu.unika.aifb.graphindex.query.QueryGraph;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -31,134 +41,230 @@ import edu.unika.aifb.graphindex.query.Query;
  */
 public class FacetedQuery {
 
-	private double m_id;
-	private Query m_initialQuery;
-	private List<FacetFacetValueTuple> m_tuples;
+	/*
+	 * 
+	 */
+	private static final String VAR_Q = "?q";
+
+	/*
+	 * 
+	 */
+	@SuppressWarnings("unused")
+	private static Logger s_log = Logger.getLogger(FacetedQuery.class);
+
+	/*
+	 * 
+	 */
+	private int m_varCount;
+
+	/*
+	 * 
+	 */
+	private QueryGraph m_qGraph;
+
+	/*
+	 * 
+	 */
+	private StructuredQuery m_query;
+
+	/*
+	 * 
+	 */
+	private Map<QueryEdge, Double> m_qEdge2genericNodeMap;
+
+	/*
+	 * 
+	 */
+	private Map<String, String> m_oldVar2newVarMap;
+
+	/*
+	 * 
+	 */
+	private List<QueryEdge> m_edge2genericNodes;
 
 	public FacetedQuery() {
 
+		StructuredQuery query = new StructuredQuery("");
+		query.getQueryGraph().addVertex(new QNode(VAR_Q));
+
+		m_query = query;
+		m_qGraph = m_query.getQueryGraph();
+
 		init();
-		updateId();
 	}
 
-	public FacetedQuery(Query query) {
+	public FacetedQuery(StructuredQuery query) {
 
-		m_initialQuery = query;
+		m_query = query;
+		m_qGraph = query.getQueryGraph();
+
 		init();
-		updateId();
 	}
 
-	public boolean addFacetFacetValueTuple(FacetFacetValueTuple tuple) {
+	public void addPath(String domain, IRefinementPath path) {
 
-		boolean success = m_tuples.add(tuple);
-		updateId();
+		m_edge2genericNodes.clear();
+		QNode domainQNode = m_qGraph.getNodeByLabel(domain);
 
-		return success;
-	}
+		if (path instanceof FacetFacetValueRefinementPath) {
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(Object obj) {
+			FacetFacetValueRefinementPath ffvPath = (FacetFacetValueRefinementPath) path;
+			QueryGraph queryGraph = ffvPath.getStructuredQuery()
+					.getQueryGraph();
 
-		if (obj instanceof FacetedQuery) {
+			QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
 
-			// boolean facetsEqual = true;
-			// FacetedQuery otherQuery = (FacetedQuery) obj;
-			//
-			// if (otherQuery.getTuples().size() == m_tuples.size()) {
-			//
-			// for (FacetFacetValueTuple otherTuple : otherQuery.getTuples()) {
-			//
-			// if (!m_tuples.contains(otherTuple)) {
-			// facetsEqual = false;
-			// break;
-			// }
-			// }
-			// } else {
-			// facetsEqual = false;
-			// }
-			//
-			// return m_initialQuery.equals(otherQuery.getInitialQuery())
-			// && facetsEqual;
+			Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+			todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
 
-			return m_id == ((FacetedQuery) obj).getId();
+			while (!todoStack.isEmpty()) {
 
+				QueryEdge oldEdge = todoStack.pop();
+				String srcLabel = oldEdge.getSource().getLabel();
+				String tarLabel = oldEdge.getTarget().getLabel();
+
+				if (m_oldVar2newVarMap.containsKey(srcLabel)) {
+					srcLabel = m_oldVar2newVarMap.get(srcLabel);
+				}
+
+				if (Util.isVariable(tarLabel)) {
+
+					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(),
+							getNextVar());
+
+					m_oldVar2newVarMap.put(tarLabel, getNextVar());
+
+				} else {
+
+					QueryEdge newEdge = m_qGraph.addEdge(srcLabel, oldEdge
+							.getProperty(), tarLabel);
+
+					if (oldEdge.getTarget().getGenericNodeID() != -1) {
+
+						m_edge2genericNodes.add(oldEdge);
+						m_qEdge2genericNodeMap.put(newEdge, oldEdge.getTarget()
+								.getGenericNodeID());
+					}
+				}
+
+				todoStack.addAll(queryGraph
+						.outgoingEdgesOf(oldEdge.getTarget()));
+			}
 		} else {
-			return false;
+
+			StructuredQuery sQuery = ((QueryRefinementPath) path)
+					.getStructuredQuery();
+			QueryGraph queryGraph = sQuery.getQueryGraph();
+
+			QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
+
+			Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+			todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
+
+			while (!todoStack.isEmpty()) {
+
+				QueryEdge oldEdge = todoStack.pop();
+				String srcLabel = oldEdge.getSource().getLabel();
+				String tarLabel = oldEdge.getTarget().getLabel();
+
+				if (m_oldVar2newVarMap.containsKey(srcLabel)) {
+					srcLabel = m_oldVar2newVarMap.get(srcLabel);
+				}
+
+				if (Util.isVariable(tarLabel)) {
+
+					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(),
+							getNextVar());
+
+					m_oldVar2newVarMap.put(tarLabel, getNextVar());
+
+				} else {
+
+					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), tarLabel);
+
+				}
+
+				todoStack.addAll(queryGraph
+						.outgoingEdgesOf(oldEdge.getTarget()));
+			}
 		}
-
 	}
 
-	public double getId() {
-		return m_id;
+	public void clearOldVar2newVarMap() {
+		m_oldVar2newVarMap.clear();
 	}
 
-	public Query getInitialQuery() {
-		return m_initialQuery;
+	public List<QueryEdge> getEdges2GenericNodes() {
+		return m_edge2genericNodes;
 	}
-	public List<FacetFacetValueTuple> getTuples() {
-		return m_tuples;
+
+	private String getNextVar() {
+
+		String nextVar = VAR_Q + m_varCount;
+		m_varCount++;
+
+		return nextVar;
 	}
+
+	public Map<String, String> getOldVar2newVarMap() {
+		return m_oldVar2newVarMap;
+	}
+
+	public QueryGraph getQGraph() {
+		return m_qGraph;
+	}
+
+	public StructuredQuery getQuery() {
+		return m_query;
+	}
+
+	public boolean hasGenericNodes() {
+		return !m_qEdge2genericNodeMap.isEmpty();
+	}
+
 	private void init() {
-		m_tuples = new ArrayList<FacetFacetValueTuple>();
+
+		m_qEdge2genericNodeMap = new HashMap<QueryEdge, Double>();
+		m_oldVar2newVarMap = new HashMap<String, String>();
+		m_edge2genericNodes = new ArrayList<QueryEdge>();
+		m_varCount = 0;
 	}
 
-	public boolean removeAllFacetFacetValueTuples(
-			Collection<FacetFacetValueTuple> tuples) {
+	public boolean removePath(QNode node) {
 
-		boolean success = m_tuples.removeAll(tuples);
-		updateId();
+		boolean success = true;
 
-		return success;
-	}
+		Iterator<QueryEdge> inEdgesIter = m_qGraph.incomingEdgesOf(node)
+				.iterator();
 
-	public boolean removeFacetFacetValueTuple(FacetFacetValueTuple tuple) {
-
-		boolean success = m_tuples.remove(tuple);
-		updateId();
-
-		return success;
-	}
-
-	public void setTuples(List<FacetFacetValueTuple> tuples) {
-
-		m_tuples = tuples;
-		updateId();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-
-		String out = new String();
-		out += "Initial Query: " + m_initialQuery;
-		out += FacetEnvironment.NEW_LINE;
-
-		for (FacetFacetValueTuple tuple : m_tuples) {
-
-			out += "facetFacetValue tuple: " + tuple;
-			out += FacetEnvironment.NEW_LINE;
+		while (inEdgesIter.hasNext()) {
+			QueryEdge inEdge = inEdgesIter.next();
+			success = success && m_qGraph.removeEdge(inEdge);
 		}
 
-		return out;
-	}
+		Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+		todoStack.addAll(m_qGraph.outgoingEdgesOf(node));
 
-	private void updateId() {
+		while (!todoStack.isEmpty()) {
 
-		double sum = m_initialQuery.hashCode();
+			QueryEdge nextEdge = todoStack.pop();
+			m_qGraph.removeVertex(nextEdge.getSource());
 
-		for (FacetFacetValueTuple tuple : m_tuples) {
-			sum += tuple.getId();
+			if (m_qGraph.outDegreeOf(nextEdge.getTarget()) > 0) {
+
+				todoStack
+						.addAll(m_qGraph.outgoingEdgesOf(nextEdge.getTarget()));
+			} else {
+
+				success = success
+						&& m_qGraph.removeVertex(nextEdge.getTarget());
+			}
+
+			if (m_qEdge2genericNodeMap.containsKey(nextEdge)) {
+				m_qEdge2genericNodeMap.remove(nextEdge);
+			}
 		}
 
-		m_id = sum;
+		return success;
 	}
 }

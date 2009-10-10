@@ -17,30 +17,17 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-import edu.unika.aifb.graphindex.query.QNode;
-
-
 /**
  * @author andi
  * 
  */
-public class ExpansionRequest extends AbstractFacetRequest {
+public class AbstractRefinementRequest extends AbstractFacetRequest {
 
-	private QNode m_qNode;
-
-	public ExpansionRequest() {
-		super("expansionRequest");
+	public AbstractRefinementRequest() {
+		super("abstractRefinementRequest");
 	}
 
-	public ExpansionRequest(String name) {
+	public AbstractRefinementRequest(String name) {
 		super(name);
-	}
-
-	public void setQNode(QNode qNode) {
-		m_qNode = qNode;
-	}
-
-	public QNode getQNode() {
-		return m_qNode;
 	}
 }

@@ -17,16 +17,67 @@
  */
 package edu.unika.aifb.facetedSearch.build;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
+
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
+import edu.unika.aifb.graphindex.index.IndexDirectory;
+
 /**
  * @author andi
  * 
  */
 public class CommandlineBuilder {
 
-	// TODO
-
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
+		OptionParser op = new OptionParser();
+		op.accepts("c", "Path to config file.").withRequiredArg().ofType(
+				String.class);
+
+		OptionSet os = op.parse(args);
+
+		if (!os.has("c")) {
+			try {
+				op.printHelpOn(System.out);
+			} catch (IOException e) {
+				return;
+			}
+			return;
+		}
+
+		FileReader fileReader = null;
+
+		try {
+			fileReader = new FileReader((String) os.valueOf("c"));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		Properties props = new Properties();
+
+		try {
+			props.load(fileReader);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+
+			IndexDirectory idxDir = new IndexDirectory(props
+					.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY));
+
+			FacetIndexCreator fic = new FacetIndexCreator(idxDir, props
+					.getProperty(FacetEnvironment.Property.EXPRESSIVITY));
+			fic.create();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

@@ -34,6 +34,15 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	public FacetFacetValueTuple() {
 	}
 
+	public FacetFacetValueTuple(Facet facet, AbstractFacetValue value) {
+
+		m_facet = facet;
+		m_abstractFacetValue = value;
+		m_domain = m_abstractFacetValue.getDomain();
+		
+		updateID();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -72,12 +81,16 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	}
 
 	public void setFacet(Facet facet) {
+
 		m_facet = facet;
+		m_domain = facet.getDomain();
 		updateID();
 	}
 
 	public void setFacetValue(AbstractFacetValue abstractFacetValue) {
+
 		m_abstractFacetValue = abstractFacetValue;
+		m_domain = abstractFacetValue.getDomain();
 		updateID();
 	}
 

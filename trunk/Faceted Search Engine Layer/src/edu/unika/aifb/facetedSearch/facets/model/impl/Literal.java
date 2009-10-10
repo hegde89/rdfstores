@@ -20,6 +20,8 @@ package edu.unika.aifb.facetedSearch.facets.model.impl;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import edu.unika.aifb.facetedSearch.facets.model.ILiteral;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -43,7 +45,7 @@ public class Literal extends AbstractSingleFacetValue
 	public Literal() {
 
 	}
-	
+
 	public Literal(String value, Object parsedLit) {
 
 		super(value);
@@ -81,8 +83,26 @@ public class Literal extends AbstractSingleFacetValue
 		return m_parsedLiteral;
 	}
 
-
 	public void setParsedLiteral(Object parsedLiteral) {
 		m_parsedLiteral = parsedLiteral;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * edu.unika.aifb.facetedSearch.facets.model.impl.AbstractBrowsingObject
+	 * #toString()
+	 */
+	@Override
+	public String toString() {
+
+		if (super.getValue() != null) {
+			return Util.truncateUri(FacetUtils.getValueOfLiteral(
+					super.getValue()).toLowerCase())
+					+ " (" + super.getCountS() + ")";
+		} else {
+			return null;
+		}
 	}
 }

@@ -80,25 +80,6 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 		}
 	}
 
-	public boolean addFacetFacetValueTuple(FacetFacetValueTuple tuple) {
-
-		if (m_facet == null) {
-			m_facet = tuple.getFacet();
-		}
-
-		if (tuple.getFacet().equals(m_facet)
-				&& !m_nodeID2facetValueMap.containsKey(tuple.getFacetValue()
-						.getNodeId())) {
-
-			m_nodeID2facetValueMap.put(tuple.getFacetValue().getNodeId(), tuple
-					.getFacetValue());
-			return m_facetValueList.add(tuple.getFacetValue());
-
-		} else {
-			return false;
-		}
-	}
-
 	public boolean addFacetValue(AbstractFacetValue fv) {
 
 		if (!m_nodeID2facetValueMap.containsKey(fv.getNodeId())) {
@@ -150,30 +131,50 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 		return m_facet;
 	}
 
-	public Iterator<Facet> getSubFacetIterator() {
-		return m_subfacets.iterator();
+	public FacetFacetValueTuple getFacetFacetValueTuple(AbstractFacetValue fv) {
+		return new FacetFacetValueTuple(m_facet, fv);
+	}
+
+	public Iterator<FacetFacetValueTuple> getFacetFacetValueTupleIterator() {
+
+		return getFacetFacetValueTupleList().iterator();
+	}
+
+	public List<FacetFacetValueTuple> getFacetFacetValueTupleList() {
+
+		List<FacetFacetValueTuple> ffvTupleList = new ArrayList<FacetFacetValueTuple>();
+
+		for (AbstractFacetValue fv : m_facetValueList) {
+			ffvTupleList.add(getFacetFacetValueTuple(fv));
+		}
+
+		return ffvTupleList;
 	}
 
 	public AbstractFacetValue getFacetValue(double nodeID) {
 		return m_nodeID2facetValueMap.get(nodeID);
 	}
 
-	public List<AbstractFacetValue> getFacetValueList() {
-		return m_facetValueList;
-	}
 	public Iterator<AbstractFacetValue> getFacetValueIterator() {
 		return m_facetValueList.iterator();
 	}
 
-	public List<AbstractBrowsingObject> getHistory() {
-		return m_history;
+	public List<AbstractFacetValue> getFacetValueList() {
+		return m_facetValueList;
 	}
-
 	public Iterator<AbstractBrowsingObject> getHistoryIterator() {
 		return m_history.iterator();
 	}
 
-	public List<Facet> getSubfacets() {
+	public List<AbstractBrowsingObject> getHistoryList() {
+		return m_history;
+	}
+
+	public Iterator<Facet> getSubFacetIterator() {
+		return m_subfacets.iterator();
+	}
+
+	public List<Facet> getSubfacetList() {
 		return m_subfacets;
 	}
 

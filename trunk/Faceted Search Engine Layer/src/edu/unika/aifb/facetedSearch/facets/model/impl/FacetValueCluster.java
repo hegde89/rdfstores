@@ -71,5 +71,17 @@ public class FacetValueCluster extends AbstractFacetValue
 	public void setSourceExt(Set<String> sourceExt) {
 		m_sourceExt = sourceExt;
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see edu.unika.aifb.facetedSearch.facets.model.impl.AbstractBrowsingObject#toString()
+	 */
+	@Override
+	public String toString() {
+		
+		if(getName() != null) {
+			return getName();
+		} else {
+			return super.toString();
+		}
+	}
 }

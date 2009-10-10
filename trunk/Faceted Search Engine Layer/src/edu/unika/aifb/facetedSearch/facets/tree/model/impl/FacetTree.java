@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetTree;
@@ -345,7 +346,8 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		m_root.setDepth(0);
 		m_root.setIsSubTreeRoot(true);
 		m_root.setFacet(Facet.NULL);
-
+		m_root.setContent(NodeContent.CLASS);
+		
 		addVertex(m_root);
 	}
 
@@ -368,6 +370,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	public void setDomain(String domain) {
 		m_domain = domain;
+		m_root.setDomain(domain);
 	}
 
 	@Override

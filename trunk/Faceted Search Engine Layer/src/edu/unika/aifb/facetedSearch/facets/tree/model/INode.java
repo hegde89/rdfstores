@@ -78,8 +78,6 @@ public interface INode {
 
 	public boolean isSubTreeRoot();
 
-	public Facet makeFacet(String uri, int ftype, int dtype);
-
 	public void setContent(int content);
 
 	public void setDomain(String domain);

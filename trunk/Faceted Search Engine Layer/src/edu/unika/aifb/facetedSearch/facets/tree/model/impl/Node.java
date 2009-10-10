@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.apache.log4j.Logger;
 
+import cern.colt.map.HashFunctions;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
@@ -208,6 +209,16 @@ public class Node implements INode, Serializable {
 		return m_weight;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		return HashFunctions.hash(m_id);
+	}
+
 	public boolean hasPath() {
 		return m_path != null;
 	}
@@ -249,10 +260,6 @@ public class Node implements INode, Serializable {
 
 	public boolean isSubTreeRoot() {
 		return m_isSubTreeRoot;
-	}
-
-	public Facet makeFacet(String uri, int ftype, int dtype) {
-		return new Facet(uri, ftype, dtype);
 	}
 
 	public void setContent(int content) {

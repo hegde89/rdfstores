@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
@@ -80,9 +81,6 @@ public class FacetTreeDelegator extends Delegator {
 	private FacetTreeDelegator(SearchSession session) {
 
 		m_session = session;
-		m_constructionDelegator = (ConstructionDelegator) session
-				.getDelegator(Delegators.CONSTRUCTION);
-
 		init();
 	}
 
@@ -104,41 +102,44 @@ public class FacetTreeDelegator extends Delegator {
 		System.gc();
 	}
 
+	public List<Node> getChildren(StaticNode father) {
+
+		List<Node> children = new ArrayList<Node>();
+		FacetTree tree = m_domain2treeMap.get(father.getDomain());
+
+		if (!(father instanceof FacetValueNode)) {
+
+			if (!tree.hasChildren(father)) {
+				m_constructionDelegator.refine(tree, father);
+			}
+
+			children = tree.getChildren(father);
+		}
+
+		return children;
+	}
+
 	public List<Node> getChildren(String domain) {
 
 		Node root = m_domain2treeMap.get(domain).getRoot();
-		return getChildren(domain, root.getID());
+		return getChildren((StaticNode) root);
 	}
 
 	public List<Node> getChildren(String domain, double fatherID) {
 
-		List<Node> children = new ArrayList<Node>();
-
-		FacetTree tree = m_domain2treeMap.get(domain);
-		StaticNode node = (StaticNode) tree.getVertex(fatherID);
-
-		if (!(node instanceof FacetValueNode)) {
-
-			if (!tree.hasChildren(node)) {
-				m_constructionDelegator.refine(tree, node);
-			}
-
-			children = tree.getChildren(node);
-		}
-
-		return children;
+		Node father = m_domain2treeMap.get(domain).getVertex(fatherID);
+		return getChildren((StaticNode) father);
 	}
 
 	public Set<String> getDomains() {
 		return m_domain2treeMap.keySet();
 	}
 
-	public Node getFather(String domain, double nodeID) {
+	public Node getFather(Node child) {
 
 		Node father = null;
 
-		FacetTree tree = m_domain2treeMap.get(domain);
-		Node child = tree.getVertex(nodeID);
+		FacetTree tree = m_domain2treeMap.get(child.getDomain());
 
 		if (!child.equals(tree.getRoot())) {
 
@@ -158,9 +159,48 @@ public class FacetTreeDelegator extends Delegator {
 		return father;
 	}
 
+	public Node getFather(String domain, double nodeID) {
+
+		Node child = m_domain2treeMap.get(domain).getVertex(nodeID);
+		return getFather(child);
+	}
+
 	public Node getNode(String domain, double nodeID) {
 
 		return m_domain2treeMap.get(domain).getVertex(nodeID);
+	}
+	public Stack<Edge> getPathFromRoot(StaticNode toNode) {
+
+		FacetTree tree = m_domain2treeMap.get(toNode.getDomain());
+
+		Node currentNode = toNode;
+		Stack<Edge> path = new Stack<Edge>();
+		boolean reachedRoot = toNode.isRoot();
+
+		while (reachedRoot) {
+
+			Iterator<Edge> incomingEdgesIter = tree
+					.incomingEdgesOf(currentNode).iterator();
+
+			if (incomingEdgesIter.hasNext()) {
+
+				Edge edge2father = incomingEdgesIter.next();
+				path.push(edge2father);
+
+				Node father = tree.getEdgeSource(edge2father);
+
+				if (father.isRoot()) {
+					reachedRoot = true;
+				} else {
+					currentNode = father;
+				}
+			} else {
+				s_log.error("tree structure is not correct " + this);
+				break;
+			}
+		}
+
+		return path;
 	}
 
 	public List<Double> getRangeLeaves(String domain, double nodeID) {
@@ -170,55 +210,43 @@ public class FacetTreeDelegator extends Delegator {
 
 		if ((node.getLeaves() == null) || node.getLeaves().isEmpty()) {
 
-			if (node.containsClass()) {
+			Node subTreeRoot = tree.getSubTreeRoot4Node(node);
+			Set<Node> leaves = tree.getLeaves4SubtreeRoot(subTreeRoot.getID());
 
-				Node subTreeRoot = tree.getSubTreeRoot4Node(node);
-				Set<Node> leaves = tree.getLeaves4SubtreeRoot(subTreeRoot
-						.getID());
+			for (Node leave : leaves) {
 
-				for (Node leave : leaves) {
-
-					if (leave.getPath().startsWith(node.getPath())) {
-						node.addLeave(leave.getID());
-					}
-				}
-			} else {
-
-				Iterator<Node> childrenIter = getChildren(domain, nodeID)
-						.iterator();
-
-				Node rangeTop = null;
-
-				while (childrenIter.hasNext()) {
-
-					Node child = childrenIter.next();
-
-					if (child.containsClass()) {
-
-						rangeTop = child;
-						break;
-					}
-				}
-
-				if (rangeTop != null) {
-
-					Node subTreeRoot = tree.getSubTreeRoot4Node(rangeTop);
-					Set<Node> leaves = tree.getLeaves4SubtreeRoot(subTreeRoot
-							.getID());
-
-					for (Node leave : leaves) {
-
-						if (leave.getPath().startsWith(node.getPath())) {
-							node.addLeave(leave.getID());
-						}
-					}
-				} else {
-					s_log.error("tree structure not valid for tree: " + tree);
+				if (leave.getPath().startsWith(node.getPath())) {
+					node.addLeave(leave.getID());
 				}
 			}
 		}
 
 		return node.getLeaves();
+	}
+
+	public Node getRangeTop(StaticNode property) {
+
+		StaticNode rangeTop = null;
+		boolean foundRangeRoot = false;
+
+		List<Node> children = getChildren(property);
+
+		for (Node child : children) {
+
+			if (child.isRangeRoot()) {
+
+				rangeTop = (StaticNode) child;
+				foundRangeRoot = true;
+				break;
+			}
+		}
+
+		if (!foundRangeRoot) {
+			s_log.error("tree structure is not valid :"
+					+ m_domain2treeMap.get(property.getDomain()));
+		}
+
+		return rangeTop;
 	}
 
 	public FacetTree getTree(String domain) {
@@ -238,7 +266,7 @@ public class FacetTreeDelegator extends Delegator {
 
 		try {
 
-			resultTable = m_session.getCache().getResultTable();
+			resultTable = m_session.getCache().getCurrentResultTable();
 
 			((ConstructionDelegator) m_session
 					.getDelegator(Delegators.CONSTRUCTION))
@@ -274,6 +302,10 @@ public class FacetTreeDelegator extends Delegator {
 		} else {
 			return false;
 		}
+	}
+
+	public void setConstructionDelegator(ConstructionDelegator delegator) {
+		m_constructionDelegator = delegator;
 	}
 
 	public void storeTree(String domain, FacetTree tree) {

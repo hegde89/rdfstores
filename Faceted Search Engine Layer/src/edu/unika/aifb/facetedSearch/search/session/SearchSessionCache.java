@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -70,7 +71,7 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class SearchSessionCache {
 
 	public enum CleanType {
-		ALL, PATHS, DISTANCES, HISTORY, LEAVE_GROUPS, FPAGE
+		ALL, PATHS, DISTANCES, LEAVE_GROUPS, FPAGE, REFINEMENT
 	}
 
 	private static final Logger s_log = Logger
@@ -118,11 +119,6 @@ public class SearchSessionCache {
 	 * delegator caches
 	 */
 	private Database m_fpageCache;
-
-	/*
-	 * history
-	 */
-	private Database m_historyCache;
 
 	/*
 	 * other
@@ -199,10 +195,46 @@ public class SearchSessionCache {
 					m_litCache.close();
 					m_litCache = null;
 				}
-				if (m_historyCache != null) {
+				if (m_sourceCache != null) {
 
-					m_historyCache.close();
-					m_historyCache = null;
+					m_sourceCache.close();
+					m_sourceCache = null;
+				}
+				if (m_fpageCache != null) {
+
+					m_fpageCache.close();
+					m_fpageCache = null;
+				}
+				if (m_sources4NodeCacheAccess != null) {
+					m_sources4NodeCacheAccess.clear();
+				}
+				if (m_distanceCacheAccess != null) {
+					m_distanceCacheAccess.clear();
+				}
+				if (m_subjects4NodeCacheAccess != null) {
+					m_subjects4NodeCacheAccess.clear();
+				}
+				if (m_objects4NodeCacheAccess != null) {
+					m_objects4NodeCacheAccess.clear();
+				}
+
+				/*
+				 * maps
+				 */
+				m_leave2subjectsMap = null;
+				m_object2sourceMap = null;
+				m_dynNode2litListMap = null;
+
+				System.gc();
+				reOpen();
+				break;
+			}
+			case REFINEMENT : {
+
+				if (m_litCache != null) {
+
+					m_litCache.close();
+					m_litCache = null;
 				}
 				if (m_sourceCache != null) {
 
@@ -244,18 +276,6 @@ public class SearchSessionCache {
 				m_object2sourceMap.clear();
 				break;
 			}
-			case HISTORY : {
-
-				if (m_historyCache != null) {
-
-					m_historyCache.close();
-					m_historyCache = null;
-				}
-
-				System.gc();
-				reOpen();
-				break;
-			}
 			case PATHS : {
 
 				if (m_sources4NodeCacheAccess != null) {
@@ -274,7 +294,6 @@ public class SearchSessionCache {
 				System.gc();
 				break;
 			}
-
 			case FPAGE : {
 
 				if (m_fpageCache != null) {
@@ -328,31 +347,102 @@ public class SearchSessionCache {
 
 	public int getCountS(StaticNode node) {
 
+		int countS;
+
 		if (node instanceof DynamicNode) {
 
-			return getCountS4DynNode((DynamicNode) node);
+			countS = getCountS4DynNode((DynamicNode) node);
 
 		} else if (node instanceof FacetValueNode) {
 
-			return getCountS4FacetValueNode((FacetValueNode) node);
+			countS = getCountS4FacetValueNode((FacetValueNode) node);
 
 		} else {
 
-			return getCountS4StaticNode(node);
-
+			countS = getCountS4StaticNode(node);
 		}
+
+		return countS;
 	}
 
 	public int getCountS4DynNode(DynamicNode dynamicNode) {
-		return getSources4DynNode(dynamicNode).size();
+
+		int countS = getSources4DynNode(dynamicNode).size();
+		return countS;
 	}
 
 	public int getCountS4FacetValueNode(FacetValueNode facetValueNode) {
-		return getSources4FacetValueNode(facetValueNode).size();
+
+		int countS = getSources4FacetValueNode(facetValueNode).size();
+		return countS;
 	}
 
 	public int getCountS4StaticNode(StaticNode node) {
-		return getSources4StaticNode(node).size();
+
+		int countS;
+
+		if (node.containsProperty()) {
+
+			/*
+			 * get range top & compute count/sources of range top ...
+			 */
+			StaticNode rangeTop = (StaticNode) m_treeDelegator
+					.getRangeTop(node);
+			countS = getSources4StaticNode(rangeTop).size();
+			rangeTop.setCountS(countS);
+
+		} else {
+
+			countS = getSources4StaticNode(node).size();
+		}
+
+		return countS;
+	}
+
+	public Result getCurrentResult() throws DatabaseException, IOException {
+
+		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET_CURRENT,
+				m_resBinding);
+	}
+
+	public ResultPage getCurrentResultPage(int pageNum)
+			throws DatabaseException, IOException {
+
+		int fromIndex;
+		Result res = FacetDbUtils.get(m_resCache, Keys.RESULT_SET_CURRENT,
+				m_resBinding);
+
+		Table<String> resTable = res.getResultTable();
+
+		if ((fromIndex = (pageNum - 1)
+				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > resTable
+				.rowCount()) {
+
+			return ResultPage.EMPTY_PAGE;
+
+		} else {
+
+			int toIndex = Math.min(pageNum
+					* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE,
+					resTable.rowCount());
+
+			ResultPage resPage = new ResultPage();
+			resPage.setPageNum(pageNum);
+			resPage.setResultTable(res.getResultSubTable(fromIndex, toIndex));
+
+			if (res.hasFacetPage()) {
+				resPage.setFacetPage(res.getFacetPage());
+			}
+
+			return resPage;
+		}
+	}
+
+	public Table<String> getCurrentResultTable() throws DatabaseException,
+			IOException {
+
+		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET_CURRENT,
+				m_resBinding).getResultTable();
 	}
 
 	public Database getDB(String name) {
@@ -361,11 +451,7 @@ public class SearchSessionCache {
 
 			return m_classDB;
 
-		} else if (name.equals(FacetEnvironment.DatabaseName.FHIST_CACHE)) {
-
-			return m_historyCache;
-
-		} else if (name.equals(FacetEnvironment.DatabaseName.FPAGE_CACHE)) {
+		}  else if (name.equals(FacetEnvironment.DatabaseName.FPAGE_CACHE)) {
 
 			return m_fpageCache;
 
@@ -484,50 +570,6 @@ public class SearchSessionCache {
 		return objects;
 	}
 
-	public Result getResult() throws DatabaseException, IOException {
-
-		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET, m_resBinding);
-	}
-
-	public ResultPage getResultPage(int pageNum) throws DatabaseException,
-			IOException {
-
-		int fromIndex;
-		Result res = FacetDbUtils
-				.get(m_resCache, Keys.RESULT_SET, m_resBinding);
-
-		Table<String> resTable = res.getResultTable();
-
-		if ((fromIndex = (pageNum - 1)
-				* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE) > resTable
-				.rowCount()) {
-
-			return ResultPage.EMPTY_PAGE;
-
-		} else {
-
-			int toIndex = Math.min(pageNum
-					* FacetEnvironment.DefaultValue.NUM_OF_RESITEMS_PER_PAGE,
-					resTable.rowCount());
-
-			ResultPage resPage = new ResultPage();
-			resPage.setPageNum(pageNum);
-			resPage.setResultTable(res.getResultSubTable(fromIndex, toIndex));
-
-			if (res.hasFacetPage()) {
-				resPage.setFacetPage(res.getFacetPage());
-			}
-
-			return resPage;
-		}
-	}
-
-	public Table<String> getResultTable() throws DatabaseException, IOException {
-
-		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET, m_resBinding)
-				.getResultTable();
-	}
-
 	@SuppressWarnings("unchecked")
 	public Set<String> getSources4DynNode(DynamicNode dynamicNode) {
 
@@ -570,20 +612,33 @@ public class SearchSessionCache {
 	@SuppressWarnings("unchecked")
 	public Collection<String> getSources4Leave(String domain, double leaveID) {
 
-		Collection<String> sources;
+		HashSet<String> sources;
 
-		if ((sources = (Collection<String>) m_sources4NodeCacheAccess
-				.get(leaveID)) == null) {
+		if ((sources = (HashSet<String>) m_sources4NodeCacheAccess.get(leaveID)) == null) {
 
 			sources = new HashSet<String>();
 
-			Collection<String> subjects = new HashSet<String>();
+			HashSet<String> subjects = new HashSet<String>();
 			subjects.addAll(getSubjects4Leave(leaveID));
+
+			Iterator<String> subjectIter = subjects.iterator();
+			HashSet<String> newSet = new HashSet<String>();
+			while (subjectIter.hasNext()) {
+
+				String next = subjectIter.next();
+
+				if (newSet.contains(next)) {
+					System.out
+							.println("DDDDDDDDDDDDUUUUUUUUUUUUUUUUUUPPPPPPPPPPPPPPPPPPPPPPP");
+				} else {
+					newSet.add(next);
+				}
+			}
 
 			for (String subject : subjects) {
 
-				Collection<String> newSources = new HashSet<String>(
-						getSources4Object(domain, subject));
+				HashSet<String> newSources = new HashSet<String>();
+				newSources.addAll(getSources4Object(domain, subject));
 
 				if (!newSources.isEmpty()) {
 					sources.addAll(newSources);
@@ -724,9 +779,6 @@ public class SearchSessionCache {
 		m_resCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
 
-		m_historyCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FHIST_CACHE, m_dbConfig);
-
 		m_fpageCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
 
@@ -746,7 +798,6 @@ public class SearchSessionCache {
 		m_dbs = new ArrayList<Database>();
 		m_dbs.add(m_resCache);
 		m_dbs.add(m_sourceCache);
-		m_dbs.add(m_historyCache);
 		m_dbs.add(m_fpageCache);
 		m_dbs.add(m_litCache);
 
@@ -804,10 +855,6 @@ public class SearchSessionCache {
 			m_litCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
 		}
-		if (m_historyCache == null) {
-			m_historyCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FHIST_CACHE, m_dbConfig);
-		}
 		if (m_fpageCache == null) {
 			m_fpageCache = m_env.openDatabase(null,
 					FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
@@ -837,15 +884,16 @@ public class SearchSessionCache {
 		}
 	}
 
+	public void storeCurrentResult(Result res)
+			throws UnsupportedEncodingException, DatabaseException {
+
+		FacetDbUtils.store(m_resCache, Keys.RESULT_SET_CURRENT, res,
+				m_resBinding);
+	}
+
 	public void storeLiterals(DynamicNode dynamicNode,
 			List<AbstractSingleFacetValue> lits) {
 		m_dynNode2litListMap.put(dynamicNode.getID(), lits);
-	}
-
-	public void storeResult(Result res) throws UnsupportedEncodingException,
-			DatabaseException {
-
-		FacetDbUtils.store(m_resCache, Keys.RESULT_SET, res, m_resBinding);
 	}
 
 	public void updateLeaveGroups(double leaveID, String subject) {

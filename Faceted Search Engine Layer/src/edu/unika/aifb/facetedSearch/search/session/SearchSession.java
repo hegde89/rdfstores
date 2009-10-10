@@ -35,14 +35,16 @@ import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
-import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
-import edu.unika.aifb.facetedSearch.search.history.QueryHistoryManager;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache.CleanType;
+import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
 public class SearchSession {
+
+	public enum CleanType {
+		ALL, REFINEMENT
+	}
 
 	public enum Converters {
 		FACET2TREE, TREE2FACET
@@ -90,11 +92,6 @@ public class SearchSession {
 	private SearchSessionCache m_cache;
 
 	/*
-	 * history
-	 */
-	private QueryHistoryManager m_historyManager;
-
-	/*
 	 * 
 	 */
 	private FacetPageManager m_fpageManager;
@@ -134,24 +131,51 @@ public class SearchSession {
 		}
 	}
 
-	public void clean() {
-		
-		try {
-			m_cache.clean(CleanType.ALL);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (CacheException e) {
-			e.printStackTrace();
+	public void clean(CleanType type) {
+
+		switch (type) {
+
+			case ALL : {
+
+				try {
+					m_cache.clean(SearchSessionCache.CleanType.ALL);
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (CacheException e) {
+					e.printStackTrace();
+				}
+
+				m_facetTreeDelegator.clean();
+				m_rankingDelegator.clean();
+				m_constructionDelegator.clean();
+				
+				m_fpageManager.reOpen();
+
+				System.gc();
+				break;
+			}
+			case REFINEMENT : {
+
+				try {
+					m_cache.clean(SearchSessionCache.CleanType.REFINEMENT);
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (CacheException e) {
+					e.printStackTrace();
+				}
+
+				m_facetTreeDelegator.clean();
+				m_rankingDelegator.clean();
+				m_constructionDelegator.clean();
+
+				m_fpageManager.reOpen();
+
+				System.gc();
+				break;
+			}
+			default :
+				break;
 		}
-
-		m_facetTreeDelegator.clean();
-		m_rankingDelegator.clean();
-		m_constructionDelegator.clean();
-
-		m_historyManager.reOpen();
-		m_fpageManager.reOpen();
-		
-		System.gc();
 	}
 
 	public void close() {
@@ -232,10 +256,6 @@ public class SearchSession {
 		return m_fpageManager;
 	}
 
-	public QueryHistoryManager getHistory() {
-		return m_historyManager;
-	}
-
 	public int getId() {
 		return m_id;
 	}
@@ -314,7 +334,9 @@ public class SearchSession {
 		m_rankingDelegator = RankingDelegator.getInstance(this);
 		m_constructionDelegator = ConstructionDelegator.getInstance(this);
 
-		m_historyManager = QueryHistoryManager.getInstance(this);
+		m_facetTreeDelegator.setConstructionDelegator(m_constructionDelegator);
+		m_constructionDelegator.setTreeDelegator(m_facetTreeDelegator);
+
 		m_fpageManager = FacetPageManager.getInstance(this);
 
 		initCache();
@@ -331,10 +353,10 @@ public class SearchSession {
 			CompositeCacheManager compositeCacheManager = CompositeCacheManager
 					.getUnconfiguredInstance();
 			compositeCacheManager.configure(cacheProps);
-			
+
 			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
-					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this, compositeCacheManager);
-			
+					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this,
+					compositeCacheManager);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();
@@ -351,9 +373,5 @@ public class SearchSession {
 
 	public void setCurrentQuery(FacetedQuery currentQuery) {
 		m_currentQuery = currentQuery;
-	}
-
-	public void setHistory(QueryHistoryManager history) {
-		m_historyManager = history;
 	}
 }

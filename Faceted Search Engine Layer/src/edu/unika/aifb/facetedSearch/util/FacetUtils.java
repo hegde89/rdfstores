@@ -48,6 +48,7 @@
 
 package edu.unika.aifb.facetedSearch.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -60,11 +61,19 @@ import org.openrdf.model.vocabulary.XMLSchema;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class FacetUtils {
 
+	/*
+	 * 
+	 */
 	private static Logger s_log = Logger.getLogger(FacetUtils.class);
+
+	/*
+	 * 
+	 */
 	private static final String LIST_DELIM = "//";
 
 	public static int getLiteralDataType(String literalString) {
@@ -81,62 +90,67 @@ public class FacetUtils {
 			}
 
 			if (last_token != null) {
-
-				try {
-
-					URI datatype = new URIImpl(last_token);
-
-					if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
-
-						if (datatype.equals(XMLSchema.DATETIME)) {
-
-							return DataType.DATE_TIME;
-
-						} else if (datatype.equals(XMLSchema.TIME)) {
-
-							return DataType.TIME;
-
-						} else if (datatype.equals(XMLSchema.DATE)) {
-
-							return DataType.DATE;
-
-						} else {
-
-							return DataType.UNKNOWN;
-
-						}
-
-					} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
-							.contains(datatype.stringValue())) {
-
-						return DataType.NUMERICAL;
-
-					} else if (FacetEnvironment.XMLS.STRING_TYPES
-							.contains(datatype.stringValue())) {
-
-						return DataType.STRING;
-
-					} else {
-
-						return DataType.UNKNOWN;
-
-					}
-				} catch (IllegalArgumentException e) {
-
-					s_log.error("datatype " + last_token + " is no valid URI!");
-					return DataType.NOT_SET;
-				}
+				return range2DataType(last_token);
+				
 			} else {
 
 				s_log.debug("found no datatype attached to literal.");
-				return DataType.NOT_SET;
+				return DataType.STRING;
 			}
 		} else {
 
-			return DataType.NOT_SET;
+			return DataType.STRING;
 		}
 	}
 
+	public static int range2DataType(String range) {
+		
+		try {
+
+			URI datatype = new URIImpl(range);
+
+			if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
+
+				if (datatype.equals(XMLSchema.DATETIME)) {
+
+					return DataType.DATE_TIME;
+
+				} else if (datatype.equals(XMLSchema.TIME)) {
+
+					return DataType.TIME;
+
+				} else if (datatype.equals(XMLSchema.DATE)) {
+
+					return DataType.DATE;
+
+				} else {
+
+					return DataType.STRING;
+
+				}
+
+			} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
+					.contains(datatype.stringValue())) {
+
+				return DataType.NUMERICAL;
+
+			} else if (FacetEnvironment.XMLS.STRING_TYPES
+					.contains(datatype.stringValue())) {
+
+				return DataType.STRING;
+
+			} else {
+
+				return DataType.STRING;
+
+			}
+		} catch (IllegalArgumentException e) {
+
+			s_log.error("datatype " + range + " is no valid URI!");
+			return DataType.STRING;
+		}
+	}
+	
 	public static String getLiteralValue(String lit) {
 
 		return lit.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM) == -1
@@ -153,7 +167,11 @@ public class FacetUtils {
 		StringTokenizer tokenizer = new StringTokenizer(lit,
 				FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
-		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : null;
+		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : lit;
+	}
+
+	public static boolean isDynamicValueCluster(String nodeLabel) {
+		return nodeLabel.startsWith("[") && nodeLabel.endsWith("]");
 	}
 
 	public static String list2String(List<String> list) {
@@ -170,6 +188,63 @@ public class FacetUtils {
 		}
 
 		return out;
+	}
+
+	public static Table<String> mergeJoin(Table<String> left,
+			List<String> right, String col)
+			throws UnsupportedOperationException {
+
+		if (!left.isSorted() || !left.getSortedColumn().equals(col)) {
+			throw new UnsupportedOperationException(
+					"merge join with unsorted tables");
+		}
+
+		List<String> resultColumns = new ArrayList<String>();
+		resultColumns.add(col);
+
+		for (String strg : left.getColumnNames()) {
+			if (!strg.equals(col)) {
+				resultColumns.add(strg);
+			}
+		}
+
+		int lc = left.getColumn(col);
+
+		Table<String> result = new Table<String>(resultColumns, left.rowCount()
+				+ right.size());
+
+		int l = 0, r = 0;
+
+		while ((l < left.rowCount()) && (r < right.size())) {
+
+			String[] lrow = left.getRow(l);
+			String rrow = right.get(r);
+
+			int val = lrow[lc].compareTo(rrow);
+
+			if (val < 0) {
+				l++;
+			} else if (val > 0) {
+				r++;
+			} else {
+
+				result.addRow(lrow);
+
+				int i = l + 1;
+				while ((i < left.rowCount())
+						&& (left.getRow(i)[lc].compareTo(rrow) == 0)) {
+
+					result.addRow(left.getRow(i));
+					i++;
+				}
+
+				l++;
+				r++;
+			}
+		}
+
+		result.setSortedColumn(lc);
+		return result;
 	}
 
 	public static List<String> string2List(String str) {

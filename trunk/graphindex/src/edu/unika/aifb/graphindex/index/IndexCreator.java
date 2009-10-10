@@ -424,12 +424,15 @@ public class IndexCreator implements TripleSink {
 				String s = triple[0];
 				String o = triple[2];
 				
+				if (s.contains("Windward_Islands_%"))
+					log.debug(s + " " + property + " " + o);
+				
 				String subExt = bc.getBlockName(s);
 				
 				if (subExt == null)
 					continue;
 				
-				if (!extDataProps.add(new StringBuilder().append(subExt).append("__").append(property).toString()))
+				if (extDataProps.add(new StringBuilder().append(subExt).append("__").append(property).toString()))
 					is.addData(IndexDescription.EXTDP, new String[] { subExt }, property);
 
 				if (m_idxConfig.getBoolean(IndexConfiguration.DP_SP_BASED)) {

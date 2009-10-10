@@ -33,7 +33,6 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.ComparatorPool;
-import edu.unika.aifb.facetedSearch.algo.construction.clustering.metric.DistanceMetricPool;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
@@ -43,6 +42,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
  * @author andi
@@ -140,10 +140,11 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 				? FacetEnvironment.DataType.STRING
 				: node.getFacet().getDataType();
 
-		DistanceMetricPool.getMetric(datatype);
-		List<AbstractSingleFacetValue> lits = new ArrayList<AbstractSingleFacetValue>();
+		List<AbstractSingleFacetValue> lits;
 
 		if (!(node instanceof FacetValueNode) && !(node instanceof DynamicNode)) {
+
+			lits = new ArrayList<AbstractSingleFacetValue>();
 
 			String domain = node.getDomain();
 			Iterator<String> subjIter = node.getSubjects().iterator();
@@ -198,30 +199,32 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 			int i = 0;
 
-			while (i < FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1) {
+			while (i < lits.size()) {
 
 				DynamicNode dynNode = new DynamicNode();
 				dynNode.setLeftBorder(lits.get(i).getValue());
-				dynNode.setType(node.getType());
 				dynNode.setContent(node.getContent());
 				dynNode.setDomain(node.getDomain());
 				dynNode.setSession(m_session);
 				dynNode.setFacet(node.getFacet());
 
-				if (i == FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE - 1) {
+				if ((i + delta) >= lits.size()) {
 
 					dynNode
 							.setRightBorder(lits.get(lits.size() - 1)
 									.getValue());
-					dynNode.setValue(dynNode.getLeftBorder() + " - "
-							+ dynNode.getRightBorder());
+					dynNode.setValue(FacetUtils.getLiteralValue(dynNode
+							.getLeftBorder())
+							+ " - "
+							+ FacetUtils.getLiteralValue(dynNode
+									.getRightBorder()));
 					dynNode.setLiterals(lits.subList(i, lits.size()));
 
 				} else {
 
 					dynNode.setRightBorder(lits.get(i + delta).getValue());
-					dynNode.setValue(dynNode.getLeftBorder() + " - "
-							+ dynNode.getRightBorder());
+					dynNode.setValue(FacetUtils.getLiteralValue(dynNode.getLeftBorder()) + " - "
+							+ FacetUtils.getLiteralValue(dynNode.getRightBorder()));
 					dynNode.setLiterals(lits.subList(i, i + delta + 1));
 				}
 

@@ -72,6 +72,11 @@ public class FacetSubTreeBuilder implements IBuilder {
 	 */
 	private FacetIndex m_facetIndex;
 
+	/*
+	 * 
+	 */
+	private HashSet<String> m_parsedSubjects;
+
 	public FacetSubTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
@@ -97,50 +102,66 @@ public class FacetSubTreeBuilder implements IBuilder {
 				Iterator<String> subjIter = node.getSubjects().iterator();
 
 				while (subjIter.hasNext()) {
-					
+
 					String subject = subjIter.next();
 
-					Iterator<AbstractSingleFacetValue> objIter = node
-							.getObjects(subject).iterator();
+					if (!m_parsedSubjects.contains(subject)) {
 
-					while (objIter.hasNext()) {
+						Iterator<AbstractSingleFacetValue> objIter = node
+								.getObjects(subject).iterator();
 
-						AbstractSingleFacetValue fv = objIter.next();
+						while (objIter.hasNext()) {
 
-						Iterator<String> sourcesIter = m_cache
-								.getSources4Object(domain, subject).iterator();
+							AbstractSingleFacetValue fv = objIter.next();
 
-						if (sourcesIter.hasNext()) {
+							Iterator<String> sourcesIter = m_cache
+									.getSources4Object(domain, subject)
+									.iterator();
 
-							while (sourcesIter.hasNext()) {
+							/*
+							 * update object -> source mapping
+							 */
+
+							if (sourcesIter.hasNext()) {
+
+								while (sourcesIter.hasNext()) {
+
+									m_cache.addObject2SourceMapping(domain, fv
+											.getValue(), sourcesIter.next());
+
+								}
+							} else {
 
 								m_cache.addObject2SourceMapping(domain, fv
-										.getValue(), sourcesIter.next());
-
+										.getValue(), subject);
 							}
-						} else {
 
-							m_cache.addObject2SourceMapping(domain, fv
-									.getValue(), subject);
+							/*
+							 * update tree
+							 */
+
+							Collection<Node> oldLeaves = m_facetIndex
+									.getLeaves(fv);
+
+							for (Node leave : oldLeaves) {
+
+								StaticNode newLeave = m_helper
+										.insertPathAtNode(tree, leave, node,
+												m_paths);
+								newLeaves.add(newLeave);
+
+								m_cache.updateLeaveGroups(newLeave.getID(), fv
+										.getValue());
+							}
 						}
 
-						Collection<Node> oldLeaves = m_facetIndex.getLeaves(fv);
-
-						for (Node leave : oldLeaves) {
-
-							StaticNode newLeave = m_helper.insertPathAtNode(
-									tree, leave, node, m_paths);
-							newLeaves.add(newLeave);
-
-							m_cache.updateLeaveGroups(newLeave.getID(), fv
-									.getValue());
-						}
+						m_parsedSubjects.add(subject);
 					}
 				}
 
 				node.setIsSubTreeRoot(true);
 				tree.addLeaves2SubtreeRoot(node.getID(), newLeaves);
-				
+
 				// prune ranges
 				tree = m_helper.pruneRanges(tree, newLeaves);
 
@@ -159,6 +180,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 			return false;
 		}
 	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -166,6 +188,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 	 */
 	public void clean() {
 		m_paths.clear();
+		m_parsedSubjects.clear();
 	}
 
 	/*
@@ -177,11 +200,13 @@ public class FacetSubTreeBuilder implements IBuilder {
 
 		clean();
 		m_paths = null;
+		m_parsedSubjects = null;
 	}
 
 	private void init() {
 
 		m_paths = new Int2ObjectOpenHashMap<StaticNode>();
+		m_parsedSubjects = new HashSet<String>();
 
 		try {
 

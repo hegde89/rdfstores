@@ -63,12 +63,12 @@ public class RdfStoreConnection implements IConnection {
 
 		GenericRdfStore store = null;
 
-		try{
-			store = loadStore();
-		}
-		catch(Exception e){
+//		try{
+//			store = loadStore();
+//		}
+//		catch(Exception e){
 			store = createStore();
-		}		
+//		}		
 
 		return store;
 	}

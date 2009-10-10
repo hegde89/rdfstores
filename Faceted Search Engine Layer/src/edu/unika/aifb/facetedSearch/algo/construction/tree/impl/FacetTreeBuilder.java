@@ -80,14 +80,16 @@ public class FacetTreeBuilder implements IBuilder {
 	 */
 	private BuilderHelper m_helper;
 
+	/*
+	 * 
+	 */
+	private HashSet<String> m_parsedResources;
+
 	public FacetTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
 		m_helper = helper;
 		m_cache = session.getCache();
-
-		m_treeDelegator = (FacetTreeDelegator) session
-				.getDelegator(Delegators.TREE);
 
 		init();
 	}
@@ -109,24 +111,30 @@ public class FacetTreeBuilder implements IBuilder {
 		while (iter.hasNext()) {
 
 			String resItem = iter.next()[column];
-			String sourceExtension = m_structureIndex.getExtension(resItem);
 
-			Collection<Node> oldLeaves = m_facetIndex.getLeaves(
-					sourceExtension, resItem);
+			if (!m_parsedResources.contains(resItem)) {
 
-			for (Node leave : oldLeaves) {
-				
-				StaticNode newLeave = m_helper.insertPathAtRoot(newTree, leave,
-						m_paths);				
-				newLeaves.add(newLeave);
+				String sourceExtension = m_structureIndex.getExtension(resItem);
 
-				m_cache.updateLeaveGroups(newLeave.getID(), resItem);
+				Collection<Node> oldLeaves = m_facetIndex.getLeaves(
+						sourceExtension, resItem);
+
+				for (Node leave : oldLeaves) {
+
+					StaticNode newLeave = m_helper.insertPathAtRoot(newTree,
+							leave, m_paths);
+					newLeaves.add(newLeave);
+
+					m_cache.updateLeaveGroups(newLeave.getID(), resItem);
+				}
+
+				m_parsedResources.add(resItem);
 			}
 		}
 
 		// prune ranges
 		newTree = m_helper.pruneRanges(newTree, newLeaves);
-		
+
 		// add leaves for this subtree
 		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
 
@@ -146,18 +154,25 @@ public class FacetTreeBuilder implements IBuilder {
 	 * @see edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder#clean()
 	 */
 	public void clean() {
+
 		m_paths.clear();
+		m_parsedResources.clear();
 	}
 
 	public void close() {
 
 		clean();
 		m_paths = null;
+		m_parsedResources = null;
 	}
 
 	private void init() {
 
+		m_treeDelegator = (FacetTreeDelegator) m_session
+				.getDelegator(Delegators.TREE);
+
 		m_paths = new Int2ObjectOpenHashMap<StaticNode>();
+		m_parsedResources = new HashSet<String>();
 
 		try {
 

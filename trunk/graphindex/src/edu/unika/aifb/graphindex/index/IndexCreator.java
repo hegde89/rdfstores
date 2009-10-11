@@ -424,9 +424,6 @@ public class IndexCreator implements TripleSink {
 				String s = triple[0];
 				String o = triple[2];
 				
-				if (s.contains("Windward_Islands_%"))
-					log.debug(s + " " + property + " " + o);
-				
 				String subExt = bc.getBlockName(s);
 				
 				if (subExt == null)

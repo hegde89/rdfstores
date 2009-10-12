@@ -28,10 +28,8 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.facets.converter.facet2query.Facet2QueryModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
-import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
-import edu.unika.aifb.facetedSearch.facets.model.IRefinementPath;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueRefinementPath;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
@@ -52,7 +50,6 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession.CleanType;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
@@ -86,7 +83,7 @@ public class FacetRequestEvaluator extends Searcher {
 	 * 
 	 */
 	private Facet2TreeModelConverter m_facet2TreeModelConverter;
-	private Tree2FacetModelConverter m_tree2facetModelConverter;
+	private Facet2QueryModelConverter m_facet2QueryModelConverter;
 
 	/*
 	 * 
@@ -113,9 +110,8 @@ public class FacetRequestEvaluator extends Searcher {
 		 */
 		m_facet2TreeModelConverter = (Facet2TreeModelConverter) session
 				.getConverter(Converters.FACET2TREE);
-
-		m_tree2facetModelConverter = (Tree2FacetModelConverter) session
-				.getConverter(Converters.TREE2FACET);
+		m_facet2QueryModelConverter = (Facet2QueryModelConverter) session
+				.getConverter(Converters.FACET2QUERY);
 
 		/*
 		 * 
@@ -155,14 +151,17 @@ public class FacetRequestEvaluator extends Searcher {
 
 				try {
 
-					VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
-							.getStore()
-							.getEvaluator()
-							.getEvaluator(
-									FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+					// VPEvaluator structuredQueryEvaluator = (VPEvaluator)
+					// m_session
+					// .getStore()
+					// .getEvaluator()
+					// .getEvaluator(
+					// FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+					//
+					// Table<String> expandedTable = structuredQueryEvaluator
+					// .evaluate(fquery.getQGraph());
 
-					Table<String> expandedTable = structuredQueryEvaluator
-							.evaluate(fquery.getQuery());
+					Table<String> expandedTable = null;
 
 					Result res = new Result(expandedTable);
 
@@ -189,8 +188,6 @@ public class FacetRequestEvaluator extends Searcher {
 					e.printStackTrace();
 				} catch (IOException e) {
 					e.printStackTrace();
-				} catch (StorageException e) {
-
 				}
 
 			} else {
@@ -270,56 +267,30 @@ public class FacetRequestEvaluator extends Searcher {
 					StaticNode node = (StaticNode) m_facet2TreeModelConverter
 							.facetValue2Node(newTuple.getFacetValue());
 
+					StructuredQuery sQuery = m_facet2QueryModelConverter
+							.node2facetFacetValuePath(node);
+
 					List<String> sources = new ArrayList<String>();
 					sources.addAll(node.getSources());
 
 					/*
 					 * refine table
 					 */
-					Table<String> refinedTable = m_helper.refineResult(sources,
-							newTuple.getDomain());
-
-					refinedTable.sort(node.getDomain());
+					Table<String> refinedTable = m_helper.refineResult(node,
+							sources, sQuery);
 
 					/*
 					 * update query
 					 */
-					FacetFacetValueRefinementPath newPath = m_tree2facetModelConverter
-							.node2facetFacetValuePath(node);
-
 					FacetedQuery fquery = m_session.getCurrentQuery();
 					fquery.clearOldVar2newVarMap();
-					fquery.addPath(node.getDomain(), newPath);
+					fquery
+							.mergeWithAdditionalQuery(node.getDomain(),
+									sQuery);
 
 					m_session.setCurrentQuery(fquery);
 
-					StructuredQuery sq = newPath.getStructuredQuery();
-					m_helper.cleanQuery(sq, fquery);
-
-					VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
-							.getStore()
-							.getEvaluator()
-							.getEvaluator(
-									FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
-
-					/*
-					 * get table with new columns ...
-					 */
-
-					Table<String> additionalTable = structuredQueryEvaluator
-							.evaluate(sq);
-					m_helper.updateColumns(additionalTable, fquery);
-
-					additionalTable.sort(node.getDomain());
-
-					/*
-					 * join to final result
-					 */
-
-					Table<String> finalTable = Tables.mergeJoin(refinedTable,
-							additionalTable, node.getDomain());
-
-					Result res = new Result(finalTable);
+					Result res = new Result(refinedTable);
 					res.setQuery(fquery);
 
 					/*
@@ -339,8 +310,6 @@ public class FacetRequestEvaluator extends Searcher {
 				} catch (DatabaseException e) {
 					e.printStackTrace();
 				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (StorageException e) {
 					e.printStackTrace();
 				}
 
@@ -370,16 +339,10 @@ public class FacetRequestEvaluator extends Searcher {
 
 						if (refinementTable.rowCount() > 0) {
 
-							/*
-							 * update query
-							 */
-							IRefinementPath newPath = m_helper
-									.query2facetFacetValuePath(keyRefReq
-											.getDomain(), sq);
-
 							FacetedQuery fquery = m_session.getCurrentQuery();
 							fquery.clearOldVar2newVarMap();
-							fquery.addPath(keyRefReq.getDomain(), newPath);
+							fquery.mergeWithAdditionalQuery(keyRefReq
+									.getDomain(), sq);
 
 							m_helper.updateColumns(refinementTable, fquery);
 
@@ -454,17 +417,14 @@ public class FacetRequestEvaluator extends Searcher {
 
 							if (refinementTable.rowCount() > 0) {
 
-								/*
-								 * update query
-								 */
-								IRefinementPath newPath = m_helper
-										.query2facetFacetValuePath(keyRefReq
-												.getDomain(), hq);
+								StructuredQuery sQueryTranslated = translatedQueries
+										.get(0);
 
 								FacetedQuery fquery = m_session
 										.getCurrentQuery();
 								fquery.clearOldVar2newVarMap();
-								fquery.addPath(keyRefReq.getDomain(), newPath);
+								fquery.mergeWithAdditionalQuery(keyRefReq
+										.getDomain(), sQueryTranslated);
 
 								m_session.setCurrentQuery(fquery);
 

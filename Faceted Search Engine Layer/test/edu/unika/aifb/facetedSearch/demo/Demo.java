@@ -89,7 +89,7 @@ public class Demo {
 							"http://dbpedia.org/ontology/largestCity",
 							"http://dbpedia.org/resource/Cheyenne%2C_Wyoming");
 
-			ResultPage resPage = eval.evaluate(sq);
+			ResultPage resPage = (ResultPage) eval.evaluate(sq);
 			FacetPage fpage = resPage.getFacetPage();
 
 			Entry<String, List<FacetFacetValueList>> entry = fpage
@@ -102,7 +102,7 @@ public class Demo {
 			FacetValueRefinementRequest refineReq = new FacetValueRefinementRequest();
 			refineReq.setTuple(ffvTuple);
 
-			resPage = eval.evaluate(refineReq);
+			resPage = (ResultPage) eval.evaluate(refineReq);
 			fpage = resPage.getFacetPage();
 			entry = fpage.getDomainEntryIterator().next();
 
@@ -111,7 +111,7 @@ public class Demo {
 
 			refineReq.setTuple(ffvTuple);
 
-			resPage = eval.evaluate(refineReq);
+			resPage = (ResultPage) eval.evaluate(refineReq);
 			fpage = resPage.getFacetPage();
 			entry = fpage.getDomainEntryIterator().next();
 
@@ -120,7 +120,7 @@ public class Demo {
 
 			refineReq.setTuple(ffvTuple);
 
-			resPage = eval.evaluate(refineReq);
+			resPage = (ResultPage) eval.evaluate(refineReq);
 			fpage = resPage.getFacetPage();
 			entry = fpage.getDomainEntryIterator().next();
 

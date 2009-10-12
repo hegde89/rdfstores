@@ -24,6 +24,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnection;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnectionProvider;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
@@ -54,6 +55,8 @@ public class SearchSessionFactory {
 	private SearchSessionFactory(Properties props) {
 
 		m_con = RdfStoreConnectionProvider.getInstance(props).getConnection();
+		readProperties(props);
+
 		try {
 			m_store = m_con.loadOrCreateStore();
 		} catch (InvalidParameterException e1) {
@@ -76,6 +79,34 @@ public class SearchSessionFactory {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private void readProperties(Properties props) {
+
+		FacetedSearchLayerConfig.setFacetIdxDirStrg(props
+				.getProperty(FacetEnvironment.Property.FACET_INDEX_DIR));
+
+		FacetedSearchLayerConfig.setFacetsEnabled(new Boolean(props
+				.getProperty(FacetEnvironment.Property.FACETS_ENABLED)));
+
+		FacetedSearchLayerConfig.setRankingEnabled(new Boolean(props
+				.getProperty(FacetEnvironment.Property.RANKING_ENABLED)));
+
+		FacetedSearchLayerConfig.setExpressivity(props
+				.getProperty(FacetEnvironment.Property.EXPRESSIVITY));
+
+		FacetedSearchLayerConfig.setCreateFacetIdx(new Boolean(props
+				.getProperty(FacetEnvironment.Property.CREATE_FACET_IDX)));
+
+		FacetedSearchLayerConfig.setCreateGraphIdx(new Boolean(props
+				.getProperty(FacetEnvironment.Property.CREATE_GRAPH_IDX)));
+
+		FacetedSearchLayerConfig.setCacheDirStrg((props
+				.getProperty(FacetEnvironment.Property.CACHE_DIR)));
+
+		FacetedSearchLayerConfig.setRefinementMode(Integer.parseInt((props
+				.getProperty(FacetEnvironment.Property.REFINEMENT_MODE))));
+
 	}
 
 	public int acquire() throws InterruptedException {

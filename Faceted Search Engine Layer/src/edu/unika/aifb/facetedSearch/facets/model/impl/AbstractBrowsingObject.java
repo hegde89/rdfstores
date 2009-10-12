@@ -29,7 +29,8 @@ import edu.unika.aifb.facetedSearch.facets.model.IAbstractBrowsingObject;
 public abstract class AbstractBrowsingObject
 		implements
 			IAbstractBrowsingObject,
-			Serializable {
+			Serializable,
+			Comparable<AbstractBrowsingObject> {
 
 	/**
 	 * 
@@ -53,6 +54,23 @@ public abstract class AbstractBrowsingObject
 	public AbstractBrowsingObject(String value) {
 		m_value = value;
 		init();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 */
+	@Override
+	public int compareTo(AbstractBrowsingObject obj) {
+
+		if (obj.getCountS() < getCountS()) {
+			return 1;
+		} else if (obj.getCountS() > getCountS()) {
+			return -1;
+		} else {
+			return 0;
+		}
 	}
 
 	/*

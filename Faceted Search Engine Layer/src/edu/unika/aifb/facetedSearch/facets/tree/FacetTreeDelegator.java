@@ -169,6 +169,7 @@ public class FacetTreeDelegator extends Delegator {
 
 		return m_domain2treeMap.get(domain).getVertex(nodeID);
 	}
+	
 	public Stack<Edge> getPathFromRoot(StaticNode toNode) {
 
 		FacetTree tree = m_domain2treeMap.get(toNode.getDomain());

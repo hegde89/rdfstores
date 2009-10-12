@@ -27,10 +27,7 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author andi
  * 
  */
-public class Literal extends AbstractSingleFacetValue
-		implements
-			ILiteral,
-			Comparable<Literal> {
+public class Literal extends AbstractSingleFacetValue implements ILiteral {
 
 	/**
 	 * 
@@ -53,27 +50,33 @@ public class Literal extends AbstractSingleFacetValue
 
 	}
 
-	public int compareTo(Literal o) {
+	@Override
+	public int compareTo(AbstractBrowsingObject obj) {
 
-		if ((m_parsedLiteral instanceof String)
-				&& (o.getParsedLiteral() instanceof String)) {
+		if (obj instanceof Literal) {
 
-			return ((String) m_parsedLiteral).compareTo((String) o
-					.getParsedLiteral());
+			Literal lit = (Literal) obj;
 
-		} else if ((m_parsedLiteral instanceof Double)
-				&& (o.getParsedLiteral() instanceof Double)) {
+			if ((m_parsedLiteral instanceof String)
+					&& (lit.getParsedLiteral() instanceof String)) {
 
-			return ((Double) m_parsedLiteral).compareTo((Double) o
-					.getParsedLiteral());
+				return ((String) m_parsedLiteral).compareTo((String) lit
+						.getParsedLiteral());
 
-		} else if ((m_parsedLiteral instanceof XMLGregorianCalendar)
-				&& (o.getParsedLiteral() instanceof XMLGregorianCalendar)) {
+			} else if ((m_parsedLiteral instanceof Double)
+					&& (lit.getParsedLiteral() instanceof Double)) {
 
-			return ((XMLGregorianCalendar) m_parsedLiteral)
-					.toGregorianCalendar().compareTo(
-							((XMLGregorianCalendar) o.getParsedLiteral())
-									.toGregorianCalendar());
+				return ((Double) m_parsedLiteral).compareTo((Double) lit
+						.getParsedLiteral());
+
+			} else if ((m_parsedLiteral instanceof XMLGregorianCalendar)
+					&& (lit.getParsedLiteral() instanceof XMLGregorianCalendar)) {
+
+				return ((XMLGregorianCalendar) m_parsedLiteral)
+						.toGregorianCalendar().compareTo(
+								((XMLGregorianCalendar) lit.getParsedLiteral())
+										.toGregorianCalendar());
+			}
 		}
 
 		return 0;

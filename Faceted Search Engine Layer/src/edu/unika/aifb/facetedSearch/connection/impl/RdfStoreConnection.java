@@ -22,6 +22,7 @@ import java.security.InvalidParameterException;
 import java.util.Properties;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.connection.IConnection;
 import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
@@ -63,12 +64,19 @@ public class RdfStoreConnection implements IConnection {
 
 		GenericRdfStore store = null;
 
-//		try{
-//			store = loadStore();
-//		}
-//		catch(Exception e){
+		if(FacetedSearchLayerConfig.createGraphIdx()) {
+			
 			store = createStore();
-//		}		
+			store.createFacetIndex();
+			
+		} else {
+			
+			store = loadStore();
+			
+			if(FacetedSearchLayerConfig.createFacetIdx()) {
+				store.createFacetIndex();
+			}
+		}	
 
 		return store;
 	}
@@ -77,11 +85,11 @@ public class RdfStoreConnection implements IConnection {
 			InvalidParameterException, IOException, StorageException,
 			InterruptedException {
 
-		String idxDir = m_props.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY);
+		String idxDir = m_props.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR);
 
 		if (idxDir == null) {
 			throw new MissingParameterException(ExceptionHelper.createMessage(
-					FacetEnvironment.Property.INDEX_DIRECTORY, ExceptionHelper.Cause.MISSING));
+					FacetEnvironment.Property.GRAPH_INDEX_DIR, ExceptionHelper.Cause.MISSING));
 		}
 
 		return new GenericRdfStore(m_props, FacetEnvironment.StoreAction.LOAD_STORE);

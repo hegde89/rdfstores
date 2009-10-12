@@ -42,7 +42,6 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.index.StructureIndex;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
 /**
@@ -68,7 +67,6 @@ public class FacetTreeBuilder implements IBuilder {
 	 * Indices
 	 */
 	private FacetIndex m_facetIndex;
-	private StructureIndex m_structureIndex;
 
 	/*
 	 * 
@@ -114,10 +112,7 @@ public class FacetTreeBuilder implements IBuilder {
 
 			if (!m_parsedResources.contains(resItem)) {
 
-				String sourceExtension = m_structureIndex.getExtension(resItem);
-
-				Collection<Node> oldLeaves = m_facetIndex.getLeaves(
-						sourceExtension, resItem);
+				Collection<Node> oldLeaves = m_facetIndex.getLeaves(resItem);
 
 				for (Node leave : oldLeaves) {
 
@@ -178,8 +173,6 @@ public class FacetTreeBuilder implements IBuilder {
 
 			m_facetIndex = (FacetIndex) m_session.getStore().getIndex(
 					IndexName.FACET_INDEX);
-			m_structureIndex = (StructureIndex) m_session.getStore().getIndex(
-					IndexName.STRUCTURE_INDEX);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

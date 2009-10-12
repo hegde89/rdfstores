@@ -17,6 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.index;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.log4j.Logger;
@@ -38,13 +39,15 @@ public class FacetIndexCreator {
 
 	private IndexDirectory m_idxDirectory;
 	private String m_expressivity;
+	private File m_dir;
 
 	private final static Logger s_log = Logger
 			.getLogger(FacetIndexCreator.class);
 
-	public FacetIndexCreator(IndexDirectory indexDirectory, String expressivity)
-			throws IOException {
-		
+	public FacetIndexCreator(IndexDirectory indexDirectory,
+			String expressivity, File dir) throws IOException {
+
+		m_dir = dir;
 		m_idxDirectory = indexDirectory;
 		m_expressivity = expressivity;
 	}
@@ -57,19 +60,18 @@ public class FacetIndexCreator {
 
 			IndexReader idxReader = new IndexReader(m_idxDirectory);
 			FacetIdxBuilderHelper helper = FacetIdxBuilderHelper.getInstance(
-					idxReader, m_idxDirectory, m_expressivity);
+					idxReader, m_expressivity);
 
 			s_log.debug("start building facet trees ... ");
 
 			FacetTreeIndexBuilder treeBuilder = new FacetTreeIndexBuilder(
-					this.m_idxDirectory, idxReader, helper);
+					idxReader, helper, m_dir);
 			treeBuilder.build();
 			treeBuilder.close();
-			
+
 			FacetIdxBuilderHelper.close();
-			
+
 			s_log.debug("facet trees finished!");
-			
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

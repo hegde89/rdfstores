@@ -29,11 +29,6 @@ import org.openrdf.model.vocabulary.XMLSchema;
  */
 public class FacetEnvironment {
 
-	public static class Expressivity {
-		public static final String OWL = "owl";
-		public static final String RDF = "rdf";
-	}
-
 	public static class CacheName {
 
 		public static final String SOURCES = "src";
@@ -109,7 +104,7 @@ public class FacetEnvironment {
 		public static int LITERAL_CLUSTERER = LiteralClustererType.SIMPLE;
 		public static int SIMPLE_CACHE_SIZE = 5000;
 		public static String NO_LABEL = "no_label";
-
+		public static String VAR = "?q";
 	}
 
 	public static class EdgeType {
@@ -123,6 +118,11 @@ public class FacetEnvironment {
 
 	public enum EvaluatorType {
 		StructuredQueryEvaluator, KeywordQueryEvaluator, FacetQueryEvaluator, HybridQueryEvaluator, ChangePageEvaluator
+	}
+
+	public static class Expressivity {
+		public static final String OWL = "owl";
+		public static final String RDF = "rdf";
 	}
 
 	public static class FacetType {
@@ -174,9 +174,15 @@ public class FacetEnvironment {
 		public static final String RDF = "rdf";
 	}
 
+	public static class OWL {
+
+		public static String NAMESPACE = "http://www.w3.org/2002/07/owl";
+
+	}
+
 	public static class Property {
 
-		public static final String INDEX_DIRECTORY = "idx.dir";
+		public static final String GRAPH_INDEX_DIR = "graphidx.dir";
 		public static final String RANKING_ENABLED = "ranking.enabled";
 		public static final String FACETS_ENABLED = "facets.enabled";
 		public static final String FILES = "files";
@@ -189,8 +195,13 @@ public class FacetEnvironment {
 		public static final String STRUCTURE_BASED_DATA_PARTIONING = "structureBased.dataPartitioning";
 		public static final String CREATE_DATA_EXTENSIONS = "createDataExtensions";
 		public static final String ONTO_LANGUAGE = "onto.language";
-		public static final String CACHE_DIR = "cache.config";
+		public static final String CACHE_CONFIG = "cache.config";
 		public static final String EXPRESSIVITY = "expressivity";
+		public static final String FACET_INDEX_DIR = "facetidx.dir";
+		public static final String CREATE_GRAPH_IDX = "create.graphIdx";
+		public static final String CREATE_FACET_IDX = "create.facetIdx";
+		public static final String CACHE_DIR = "cache.dir";
+		public static final String REFINEMENT_MODE = "refine.mode";
 
 	}
 
@@ -241,6 +252,17 @@ public class FacetEnvironment {
 
 	}
 
+	public static class RefinementMode {
+
+		public static final int SELECT_NEW_VARS = 1;
+		public static final int DONT_SELECT_NEW_VARS = 2;
+
+	}
+
+	/*
+	 * keys for properties
+	 */
+
 	/*
 	 * abstract-object types
 	 */
@@ -250,10 +272,6 @@ public class FacetEnvironment {
 		public static final String INDIVIDUAL = "individual";
 
 	}
-
-	/*
-	 * keys for properties
-	 */
 
 	public static class StoreAction {
 
@@ -324,8 +342,10 @@ public class FacetEnvironment {
 					RDFS.NAMESPACE + RDFS.SUBCLASS_OF,
 					RDFS.NAMESPACE + RDFS.HAS_DOMAIN,
 					RDFS.NAMESPACE + RDFS.HAS_RANGE,
-					RDFS.NAMESPACE + RDFS.LABEL, RDFS.NAMESPACE + RDFS.COMMENT,
-					RDFS.NAMESPACE + RDFS.MEMBER, RDFS.NAMESPACE + RDFS.FIRST,
+					RDFS.NAMESPACE + RDFS.LABEL,
+					RDFS.NAMESPACE + RDFS.COMMENT,
+					RDFS.NAMESPACE + RDFS.MEMBER,
+					RDFS.NAMESPACE + RDFS.FIRST,
 					RDFS.NAMESPACE + RDFS.REST,
 					RDFS.NAMESPACE + RDFS.SEE_ALSO,
 					RDFS.NAMESPACE + RDFS.IS_DEFINED_BY,
@@ -341,11 +361,4 @@ public class FacetEnvironment {
 
 			}));
 
-	// public static final HashSet<String> PROPERTIES_DONT_STORE_OBJECTS = new
-	// HashSet<String>(
-	// Arrays.asList(new String[]{
-	//
-	// "http://dbpedia.org/property/abstract"
-	//
-	// }));
 }

@@ -1,6 +1,6 @@
 # DEFAULT CACHE REGION
 jcs.default=DC
-jcs.default.cacheattributes.MaxObjects=20000
+jcs.default.cacheattributes.MaxObjects=20000000
 jcs.default.cacheattributes.MemoryCacheName=org.apache.jcs.engine.memory.lru.LRUMemoryCache
 
 jcs.default.cacheattributes.UseMemoryShrinker=true
@@ -13,5 +13,5 @@ jcs.default.elementattributes.IsEternal=false
 
 jcs.auxiliary.DC=org.apache.jcs.auxiliary.disk.indexed.IndexedDiskCacheFactory
 jcs.auxiliary.DC.attributes=org.apache.jcs.auxiliary.disk.indexed.IndexedDiskCacheAttributes
-jcs.auxiliary.DC.attributes.DiskPath=D:/Data/DA/cache
+# jcs.auxiliary.DC.attributes.DiskPath=D:/Data/DA/cache
 

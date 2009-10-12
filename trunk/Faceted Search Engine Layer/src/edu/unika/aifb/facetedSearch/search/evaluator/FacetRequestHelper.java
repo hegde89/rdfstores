@@ -18,23 +18,29 @@
 package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.facets.model.IRefinementPath;
-import edu.unika.aifb.facetedSearch.facets.model.impl.QueryRefinementPath;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
+import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
+import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
-import edu.unika.aifb.graphindex.query.Query;
-import edu.unika.aifb.graphindex.query.QueryEdge;
+import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
@@ -43,6 +49,9 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
  */
 public class FacetRequestHelper {
 
+	/*
+	 * 
+	 */
 	private static Logger s_log = Logger.getLogger(FacetRequestHelper.class);
 
 	/*
@@ -50,31 +59,152 @@ public class FacetRequestHelper {
 	 */
 	private SearchSession m_session;
 
+	/*
+	 * 
+	 */
+	private FacetTreeDelegator m_treeDelegator;
+
 	public FacetRequestHelper(SearchSession session) {
+
 		m_session = session;
+		m_treeDelegator = (FacetTreeDelegator) session
+				.getDelegator(Delegators.TREE);
 	}
 
-	public IRefinementPath query2facetFacetValuePath(String domain, Query query) {
+	private Table<String> getAdditionalTable(StaticNode node,
+			List<String> sources, StructuredQuery sQuery) {
 
-		if (query instanceof StructuredQuery) {
+		ArrayList<String> columnNames = new ArrayList<String>();
+		ArrayList<String[]> rows = new ArrayList<String[]>();
 
-			return new QueryRefinementPath(domain, (StructuredQuery) query);
+		List<QNode> vars = sQuery.getVariables();
 
-		} else {
-			s_log.error("should not be here: query '" + query + "'");
-			return null;
+		for (QNode var : vars) {
+			columnNames.add(var.getLabel());
 		}
-	}
 
-	public Table<String> refineResult(List<String> nodeSources, String domain)
-			throws DatabaseException, IOException {
+		Table<String> additionalTable = new Table<String>(columnNames);
+		Stack<Edge> path = m_treeDelegator.getPathFromRoot(node);
+
+		Edge edge;
+		Node src;
+		Node tar;
+
+		int colSize = columnNames.size();
+
+		for (String source : sources) {
+
+			int countColumn = 0;
+
+			ArrayList<String[]> newRows = new ArrayList<String[]>();
+			String[] newRow = new String[colSize];
+
+			newRow[countColumn] = source;
+			newRows.add(newRow);
+
+			countColumn++;
+
+			while (!path.isEmpty()) {
+
+				edge = path.pop();
+				src = edge.getSource();
+
+				if (src.isSubTreeRoot()) {
+
+					while (edge.getType() != EdgeType.HAS_RANGE) {
+						edge = path.pop();
+					}
+
+					if (path.isEmpty()) {
+
+						tar = edge.getTarget();
+
+						Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
+								.getObjects();
+
+						if (fvs.size() > 0) {
+
+							for (String[] row : newRows) {
+
+								newRows.remove(row);
+
+								for (AbstractSingleFacetValue fv : fvs) {
+
+									String[] rowCopy = new String[colSize];
+									System.arraycopy(row, 0, rowCopy, 0,
+											colSize);
+
+									rowCopy[countColumn] = fv.getValue();
+									newRows.add(rowCopy);
+								}
+							}
+
+							countColumn++;
+						}
+					} else {
+
+						edge = path.pop();
+
+						while (!path.isEmpty()
+								&& (edge.getType() == EdgeType.SUBCLASS_OF)) {
+							edge = path.pop();
+						}
+
+						if (path.isEmpty()) {
+
+							tar = edge.getTarget();
+
+							Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
+									.getObjects();
+
+							if (fvs.size() > 0) {
+
+								for (String[] row : newRows) {
+
+									newRows.remove(row);
+
+									for (AbstractSingleFacetValue fv : fvs) {
+
+										String[] rowCopy = new String[colSize];
+										System.arraycopy(row, 0, rowCopy, 0,
+												colSize);
+
+										rowCopy[countColumn] = fv.getValue();
+										newRows.add(rowCopy);
+									}
+								}
+
+								countColumn++;
+							}
+						} else {
+
+							path.push(edge);
+						}
+					}
+				} else {
+					s_log.error("structure not correct for tree :"
+							+ m_treeDelegator.getTree(node.getDomain()));
+				}
+			}
+
+			rows.addAll(newRows);
+		}
+
+		additionalTable.setRows(rows);
+		additionalTable.setSortedColumn(0);
+
+		return additionalTable;
+	}
+	public Table<String> refineResult(StaticNode node, List<String> sources,
+			StructuredQuery sQuery) throws DatabaseException, IOException {
+
+		Collections.sort(sources);
+		Table<String> addTable = getAdditionalTable(node, sources, sQuery);
 
 		Table<String> oldTable = m_session.getCache().getCurrentResultTable();
-		oldTable.sort(domain, true);
+		oldTable.sort(node.getDomain(), true);
 
-		Collections.sort(nodeSources);
-
-		return FacetUtils.mergeJoin(oldTable, nodeSources, domain);
+		return Tables.mergeJoin(oldTable, addTable, node.getDomain());
 	}
 
 	public Result refineResult(Table<String> refinementTable, String domain) {
@@ -111,15 +241,6 @@ public class FacetRequestHelper {
 				String newName = fquery.getOldVar2newVarMap().get(name);
 				newTable.setColumnName(newTable.getColumn(name), newName);
 			}
-		}
-	}
-
-	public void cleanQuery(StructuredQuery sQuery, FacetedQuery fQuery) {
-
-		List<QueryEdge> egdes2GenericNodes = fQuery.getEdges2GenericNodes();
-
-		for (QueryEdge edge : egdes2GenericNodes) {
-			sQuery.getQueryGraph().removeEdge(edge);
 		}
 	}
 }

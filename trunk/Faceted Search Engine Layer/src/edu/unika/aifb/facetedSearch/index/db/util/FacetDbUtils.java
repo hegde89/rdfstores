@@ -72,7 +72,6 @@ public class FacetDbUtils {
 		return res;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static <T> List<T> getAllAsList(Database db, String key,
 			EntryBinding<T> binding) throws DatabaseException, IOException {
 

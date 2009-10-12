@@ -29,16 +29,17 @@ import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
 import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
+import edu.unika.aifb.facetedSearch.facets.converter.facet2query.Facet2QueryModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
-import edu.unika.aifb.graphindex.index.IndexDirectory;
 
 public class SearchSession {
 
@@ -47,7 +48,7 @@ public class SearchSession {
 	}
 
 	public enum Converters {
-		FACET2TREE, TREE2FACET
+		FACET2TREE, TREE2FACET, FACET2QUERY
 	}
 
 	public enum DefaultValues {
@@ -148,7 +149,7 @@ public class SearchSession {
 				m_facetTreeDelegator.clean();
 				m_rankingDelegator.clean();
 				m_constructionDelegator.clean();
-				
+
 				m_fpageManager.reOpen();
 
 				System.gc();
@@ -215,6 +216,10 @@ public class SearchSession {
 			}
 			case TREE2FACET : {
 				converter = Tree2FacetModelConverter.getInstance(this);
+				break;
+			}
+			case FACET2QUERY : {
+				converter = Facet2QueryModelConverter.getInstance(this);
 				break;
 			}
 			default : {
@@ -297,7 +302,7 @@ public class SearchSession {
 			}
 			case INDEX_DIRECTORY : {
 				return m_props
-						.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY);
+						.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR);
 			}
 			case NEIGHBORHOOD_SIZE : {
 				return m_props
@@ -348,15 +353,16 @@ public class SearchSession {
 
 			Properties cacheProps = new Properties();
 			cacheProps.load(new FileReader(m_props
-					.getProperty(FacetEnvironment.Property.CACHE_DIR)));
+					.getProperty(FacetEnvironment.Property.CACHE_CONFIG)));
+			cacheProps.put("jcs.auxiliary.DC.attributes.DiskPath",
+					FacetedSearchLayerConfig.getCacheDir() + "/" + m_id);
 
 			CompositeCacheManager compositeCacheManager = CompositeCacheManager
 					.getUnconfiguredInstance();
 			compositeCacheManager.configure(cacheProps);
 
-			m_cache = new SearchSessionCache(m_store.getIdxDir().getDirectory(
-					IndexDirectory.FACET_SEARCH_LAYER_CACHE, true), this,
-					compositeCacheManager);
+			m_cache = new SearchSessionCache(FacetedSearchLayerConfig
+					.getCacheDir4Session(m_id), this, compositeCacheManager);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

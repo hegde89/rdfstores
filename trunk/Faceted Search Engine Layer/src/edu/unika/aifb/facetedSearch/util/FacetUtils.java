@@ -61,6 +61,8 @@ import org.openrdf.model.vocabulary.XMLSchema;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -76,6 +78,26 @@ public class FacetUtils {
 	 */
 	private static final String LIST_DELIM = "//";
 
+	public static String getName4DynamicNode(DynamicNode dyn) {
+
+		String name;
+		int diffPos = 0;
+
+		while ((dyn.getLeftBorder().length() < diffPos)
+				&& (dyn.getRightBorder().length() < diffPos)
+				&& (dyn.getLeftBorder().charAt(diffPos) == dyn.getRightBorder()
+						.charAt(diffPos))) {
+			diffPos++;
+		}
+
+		name = "[" + dyn.getLeftBorder().substring(0, diffPos + 1)
+				+ (diffPos < dyn.getLeftBorder().length() ? "..." : "") + " - "
+				+ dyn.getRightBorder().substring(0, diffPos + 1)
+				+ (diffPos < dyn.getRightBorder().length() ? "..." : "") + "]";
+
+		return name;
+	}
+	
 	public static int getLiteralDataType(String literalString) {
 
 		if (Util.isDataValue(literalString)) {
@@ -91,7 +113,7 @@ public class FacetUtils {
 
 			if (last_token != null) {
 				return range2DataType(last_token);
-				
+
 			} else {
 
 				s_log.debug("found no datatype attached to literal.");
@@ -103,54 +125,6 @@ public class FacetUtils {
 		}
 	}
 
-	public static int range2DataType(String range) {
-		
-		try {
-
-			URI datatype = new URIImpl(range);
-
-			if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
-
-				if (datatype.equals(XMLSchema.DATETIME)) {
-
-					return DataType.DATE_TIME;
-
-				} else if (datatype.equals(XMLSchema.TIME)) {
-
-					return DataType.TIME;
-
-				} else if (datatype.equals(XMLSchema.DATE)) {
-
-					return DataType.DATE;
-
-				} else {
-
-					return DataType.STRING;
-
-				}
-
-			} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES
-					.contains(datatype.stringValue())) {
-
-				return DataType.NUMERICAL;
-
-			} else if (FacetEnvironment.XMLS.STRING_TYPES
-					.contains(datatype.stringValue())) {
-
-				return DataType.STRING;
-
-			} else {
-
-				return DataType.STRING;
-
-			}
-		} catch (IllegalArgumentException e) {
-
-			s_log.error("datatype " + range + " is no valid URI!");
-			return DataType.STRING;
-		}
-	}
-	
 	public static String getLiteralValue(String lit) {
 
 		return lit.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM) == -1
@@ -170,8 +144,15 @@ public class FacetUtils {
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : lit;
 	}
 
-	public static boolean isDynamicValueCluster(String nodeLabel) {
-		return nodeLabel.startsWith("[") && nodeLabel.endsWith("]");
+	public static boolean isGenericNode(Node node) {
+
+		if (node.getValue().startsWith("[") && node.getValue().endsWith("]")) {
+			return true;
+		} else if (node.getValue().startsWith("Generic")) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	public static String list2String(List<String> list) {
@@ -245,6 +226,54 @@ public class FacetUtils {
 
 		result.setSortedColumn(lc);
 		return result;
+	}
+
+	public static int range2DataType(String range) {
+
+		try {
+
+			URI datatype = new URIImpl(range);
+
+			if (XMLDatatypeUtil.isCalendarDatatype(datatype)) {
+
+				if (datatype.equals(XMLSchema.DATETIME)) {
+
+					return DataType.DATE_TIME;
+
+				} else if (datatype.equals(XMLSchema.TIME)) {
+
+					return DataType.TIME;
+
+				} else if (datatype.equals(XMLSchema.DATE)) {
+
+					return DataType.DATE;
+
+				} else {
+
+					return DataType.STRING;
+
+				}
+
+			} else if (FacetEnvironment.XMLS.NUMERICAL_TYPES.contains(datatype
+					.stringValue())) {
+
+				return DataType.NUMERICAL;
+
+			} else if (FacetEnvironment.XMLS.STRING_TYPES.contains(datatype
+					.stringValue())) {
+
+				return DataType.STRING;
+
+			} else {
+
+				return DataType.STRING;
+
+			}
+		} catch (IllegalArgumentException e) {
+
+			s_log.error("datatype " + range + " is no valid URI!");
+			return DataType.STRING;
+		}
 	}
 
 	public static List<String> string2List(String str) {

@@ -17,18 +17,14 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.query;
 
-import java.util.ArrayList;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.facetedSearch.facets.model.IRefinementPath;
-import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueRefinementPath;
-import edu.unika.aifb.facetedSearch.facets.model.impl.QueryRefinementPath;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
@@ -39,7 +35,12 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author andi
  * 
  */
-public class FacetedQuery {
+public class FacetedQuery implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4412170844553508893L;
 
 	/*
 	 * 
@@ -65,140 +66,26 @@ public class FacetedQuery {
 	/*
 	 * 
 	 */
-	private StructuredQuery m_query;
-
-	/*
-	 * 
-	 */
-	private Map<QueryEdge, Double> m_qEdge2genericNodeMap;
-
-	/*
-	 * 
-	 */
 	private Map<String, String> m_oldVar2newVarMap;
-
-	/*
-	 * 
-	 */
-	private List<QueryEdge> m_edge2genericNodes;
 
 	public FacetedQuery() {
 
-		StructuredQuery query = new StructuredQuery("");
-		query.getQueryGraph().addVertex(new QNode(VAR_Q));
-
-		m_query = query;
-		m_qGraph = m_query.getQueryGraph();
-
+		m_qGraph = new QueryGraph();
+		m_qGraph.addVertex(new QNode(VAR_Q));
 		init();
 	}
 
 	public FacetedQuery(StructuredQuery query) {
 
-		m_query = query;
 		m_qGraph = query.getQueryGraph();
-
 		init();
-	}
-
-	public void addPath(String domain, IRefinementPath path) {
-
-		m_edge2genericNodes.clear();
-		QNode domainQNode = m_qGraph.getNodeByLabel(domain);
-
-		if (path instanceof FacetFacetValueRefinementPath) {
-
-			FacetFacetValueRefinementPath ffvPath = (FacetFacetValueRefinementPath) path;
-			QueryGraph queryGraph = ffvPath.getStructuredQuery()
-					.getQueryGraph();
-
-			QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
-
-			Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
-			todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
-
-			while (!todoStack.isEmpty()) {
-
-				QueryEdge oldEdge = todoStack.pop();
-				String srcLabel = oldEdge.getSource().getLabel();
-				String tarLabel = oldEdge.getTarget().getLabel();
-
-				if (m_oldVar2newVarMap.containsKey(srcLabel)) {
-					srcLabel = m_oldVar2newVarMap.get(srcLabel);
-				}
-
-				if (Util.isVariable(tarLabel)) {
-
-					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(),
-							getNextVar());
-
-					m_oldVar2newVarMap.put(tarLabel, getNextVar());
-
-				} else {
-
-					QueryEdge newEdge = m_qGraph.addEdge(srcLabel, oldEdge
-							.getProperty(), tarLabel);
-
-					if (oldEdge.getTarget().getGenericNodeID() != -1) {
-
-						m_edge2genericNodes.add(oldEdge);
-						m_qEdge2genericNodeMap.put(newEdge, oldEdge.getTarget()
-								.getGenericNodeID());
-					}
-				}
-
-				todoStack.addAll(queryGraph
-						.outgoingEdgesOf(oldEdge.getTarget()));
-			}
-		} else {
-
-			StructuredQuery sQuery = ((QueryRefinementPath) path)
-					.getStructuredQuery();
-			QueryGraph queryGraph = sQuery.getQueryGraph();
-
-			QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
-
-			Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
-			todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
-
-			while (!todoStack.isEmpty()) {
-
-				QueryEdge oldEdge = todoStack.pop();
-				String srcLabel = oldEdge.getSource().getLabel();
-				String tarLabel = oldEdge.getTarget().getLabel();
-
-				if (m_oldVar2newVarMap.containsKey(srcLabel)) {
-					srcLabel = m_oldVar2newVarMap.get(srcLabel);
-				}
-
-				if (Util.isVariable(tarLabel)) {
-
-					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(),
-							getNextVar());
-
-					m_oldVar2newVarMap.put(tarLabel, getNextVar());
-
-				} else {
-
-					m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), tarLabel);
-
-				}
-
-				todoStack.addAll(queryGraph
-						.outgoingEdgesOf(oldEdge.getTarget()));
-			}
-		}
 	}
 
 	public void clearOldVar2newVarMap() {
 		m_oldVar2newVarMap.clear();
 	}
 
-	public List<QueryEdge> getEdges2GenericNodes() {
-		return m_edge2genericNodes;
-	}
-
-	private String getNextVar() {
+	public String getNextVar() {
 
 		String nextVar = VAR_Q + m_varCount;
 		m_varCount++;
@@ -214,20 +101,44 @@ public class FacetedQuery {
 		return m_qGraph;
 	}
 
-	public StructuredQuery getQuery() {
-		return m_query;
-	}
-
-	public boolean hasGenericNodes() {
-		return !m_qEdge2genericNodeMap.isEmpty();
-	}
-
 	private void init() {
 
-		m_qEdge2genericNodeMap = new HashMap<QueryEdge, Double>();
 		m_oldVar2newVarMap = new HashMap<String, String>();
-		m_edge2genericNodes = new ArrayList<QueryEdge>();
 		m_varCount = 0;
+	}
+
+	public void mergeWithAdditionalQuery(String domain, StructuredQuery sq) {
+
+		QNode domainQNode = m_qGraph.getNodeByLabel(domain);
+		QueryGraph queryGraph = sq.getQueryGraph();
+		QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
+
+		Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+		todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
+
+		while (!todoStack.isEmpty()) {
+
+			QueryEdge oldEdge = todoStack.pop();
+			String srcLabel = oldEdge.getSource().getLabel();
+			String tarLabel = oldEdge.getTarget().getLabel();
+
+			if (m_oldVar2newVarMap.containsKey(srcLabel)) {
+				srcLabel = m_oldVar2newVarMap.get(srcLabel);
+			}
+
+			if (Util.isVariable(tarLabel)) {
+
+				m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), getNextVar());
+				m_oldVar2newVarMap.put(tarLabel, getNextVar());
+
+			} else {
+
+				m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), tarLabel);
+
+			}
+
+			todoStack.addAll(queryGraph.outgoingEdgesOf(oldEdge.getTarget()));
+		}
 	}
 
 	public boolean removePath(QNode node) {
@@ -260,9 +171,6 @@ public class FacetedQuery {
 						&& m_qGraph.removeVertex(nextEdge.getTarget());
 			}
 
-			if (m_qEdge2genericNodeMap.containsKey(nextEdge)) {
-				m_qEdge2genericNodeMap.remove(nextEdge);
-			}
 		}
 
 		return success;

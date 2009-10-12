@@ -23,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -451,7 +450,7 @@ public class SearchSessionCache {
 
 			return m_classDB;
 
-		}  else if (name.equals(FacetEnvironment.DatabaseName.FPAGE_CACHE)) {
+		} else if (name.equals(FacetEnvironment.DatabaseName.FPAGE_CACHE)) {
 
 			return m_fpageCache;
 
@@ -621,20 +620,6 @@ public class SearchSessionCache {
 			HashSet<String> subjects = new HashSet<String>();
 			subjects.addAll(getSubjects4Leave(leaveID));
 
-			Iterator<String> subjectIter = subjects.iterator();
-			HashSet<String> newSet = new HashSet<String>();
-			while (subjectIter.hasNext()) {
-
-				String next = subjectIter.next();
-
-				if (newSet.contains(next)) {
-					System.out
-							.println("DDDDDDDDDDDDUUUUUUUUUUUUUUUUUUPPPPPPPPPPPPPPPPPPPPPPP");
-				} else {
-					newSet.add(next);
-				}
-			}
-
 			for (String subject : subjects) {
 
 				HashSet<String> newSources = new HashSet<String>();
@@ -740,7 +725,7 @@ public class SearchSessionCache {
 		} catch (StorageException e) {
 			e.printStackTrace();
 		}
-
+		
 		/*
 		 * JCS caches
 		 */

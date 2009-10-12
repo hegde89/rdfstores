@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Sun Oct 11 21:28:13 CEST 2009
+onejar.license.required=false
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=true
+jarname=D\:\\fsl.jar
+manifest.mergeall=true
+manifest.mainclass=edu.unika.aifb.facetedSearch.build.CommandlineBuilder
+manifest.file=<createnew>
+jarname.isextern=true
+onejar.expand=
+excludes=<po|graphindex>~log4j.properties;<jar|simmetrics_jar_v1_6_2_d07_02_07.jar>;<jar|tuple.jar>;<jar|junit.jar>;<jar|jgrapht-jdk1.5.jar>;<jar|colt-1.2.0.jar>;<jar|je-3.3.82.jar>;<jar|nxparser-1.1.jar>
+includes=

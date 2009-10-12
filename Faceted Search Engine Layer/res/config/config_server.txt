@@ -1,0 +1,3 @@
+graphidx.dir=/local/users/swc/dtidx
+facetidx.dir=/local2_aifbleros/users/swc/fsl/idx/
+expressivity=owl

@@ -25,6 +25,7 @@ import java.util.Properties;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 
@@ -70,10 +71,14 @@ public class CommandlineBuilder {
 		try {
 
 			IndexDirectory idxDir = new IndexDirectory(props
-					.getProperty(FacetEnvironment.Property.INDEX_DIRECTORY));
+					.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR));
+
+			FacetedSearchLayerConfig.setFacetIdxDirStrg(props
+					.getProperty(FacetEnvironment.Property.FACET_INDEX_DIR));
 
 			FacetIndexCreator fic = new FacetIndexCreator(idxDir, props
-					.getProperty(FacetEnvironment.Property.EXPRESSIVITY));
+					.getProperty(FacetEnvironment.Property.EXPRESSIVITY),
+					FacetedSearchLayerConfig.getFacetTreeIdxDir());
 			fic.create();
 
 		} catch (IOException e) {

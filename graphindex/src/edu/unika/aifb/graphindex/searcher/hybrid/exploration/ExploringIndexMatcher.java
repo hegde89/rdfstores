@@ -211,6 +211,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				if (ele instanceof NodeElement) {
 					// HACK replace NodeElement objects with their equivalent from the graph
 					NodeElement node = m_nodes.get(ele.getLabel());
+					if (node == null) {
+						log.debug("node missing in graph " + node);
+						continue;
+					}
 					node.addFrom((NodeElement)ele); // don't forget to copy stuff
 					
 					if (keyword.getKeywords().contains("STRUCTURED"))

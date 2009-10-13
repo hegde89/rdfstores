@@ -387,7 +387,6 @@ public class KeywordIndexBuilder {
 	
 	private Set<String> computeConcepts(String entityUri)  throws IOException, StorageException {
 		Set<String> set = new HashSet<String>(); 
-		BooleanQuery bq = new BooleanQuery();
 
 		IndexDescription idx = dataIndex.getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
 		set = dataIndex.getIndexStorage(idx).getDataSet(idx, DataField.OBJECT, idx.createValueArray(DataField.PROPERTY, RDF.TYPE.stringValue(), DataField.SUBJECT, entityUri));
@@ -419,7 +418,7 @@ public class KeywordIndexBuilder {
 			
 			Document doc = new Document();
 			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
-			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NO));
+			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 			
 			float boost = ENTITY_DESCRIPTIVE_BOOST;
 			if (predicate.equals(RDFS.LABEL.toString()))

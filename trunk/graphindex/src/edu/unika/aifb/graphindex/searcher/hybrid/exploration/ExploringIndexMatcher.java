@@ -67,7 +67,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private Map<KeywordSegment,Set<NodeElement>> m_ksStartNodes;
 	private Map<NodeElement,List<EdgeElement>> m_node2edges;
 	private GraphIsomorphism m_iso;
+	private Map<String,Double> m_propertyWeights;
 	private long m_matchingStart;
+	private int m_dataEdges;
+	private Set<String> m_dataProperties;
 	
 	private final long TIMEOUT = 5000;
 	
@@ -101,8 +104,14 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		m_ksStartNodes = new HashMap<KeywordSegment,Set<NodeElement>>();
 		m_keywordSegments = new HashMap<KeywordSegment,List<GraphElement>>();
 		
-		for (NodeElement node : m_node2edges.keySet())
+		for (NodeElement node : m_node2edges.keySet()) {
 			node.reset();
+			for (Iterator<EdgeElement> i = m_node2edges.get(node).iterator(); i.hasNext(); )
+				if (m_dataProperties.contains(i.next().getLabel()))
+					i.remove();
+		}
+		
+		m_dataEdges = 0;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -111,9 +120,11 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		m_indexGraph = new DirectedMultigraph<NodeElement,EdgeElement>(EdgeElement.class);
 		m_node2edges = new HashMap<NodeElement,List<EdgeElement>>();
 		m_nodes = new HashMap<String,NodeElement>();
+		
+		m_dataProperties = m_idxReader.getDataProperties();
 
 		Map<String,Double> extensionWeights = (Map<String,Double>)Yaml.load(m_idxReader.getIndexDirectory().getFile(IndexDirectory.EXT_WEIGHTS_FILE));
-		Map<String,Double> propertyWeights = (Map<String,Double>)Yaml.load(m_idxReader.getIndexDirectory().getFile(IndexDirectory.PROPERTY_FREQ_FILE));
+		m_propertyWeights = (Map<String,Double>)Yaml.load(m_idxReader.getIndexDirectory().getFile(IndexDirectory.PROPERTY_FREQ_FILE));
 		
 		IndexStorage gs = m_idxReader.getStructureIndex().getGraphIndexStorage();
 
@@ -124,8 +135,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				String src = row[0];
 				String trg = row[1];
 				
-				if (src.equals(trg)) // ignore reflexive edges, because queries have different semantic in this regard
-					continue;
+				if (src.equals(trg)) // ignore reflexive edges, because queries have different semantics in this regard,  
+					continue;		 // i.e. a reflexive edge at the sig level does not necessarily translate into a reflexive edges
+									 // at the data level
 				
 				NodeElement source = m_nodes.get(src);
 				if (source == null) {
@@ -145,7 +157,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					m_node2edges.put(target, new ArrayList<EdgeElement>(10));
 				}
 				EdgeElement edge = new EdgeElement(source, property, target);
-				edge.setCost(1 - propertyWeights.get(property));
+				edge.setCost(1 - m_propertyWeights.get(property));
 				m_node2edges.get(source).add(edge);
 				m_node2edges.get(target).add(edge);
 				
@@ -154,39 +166,91 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			}
 		}
 		
-		int dataEdges = 0;
+//		int dataEdges = 0;
+//		Map<NodeElement,List<EdgeElement>> toAdd = new HashMap<NodeElement,List<EdgeElement>>();
+//		for (NodeElement node : m_node2edges.keySet()) {
+//			List<EdgeElement> sourceEdges = m_node2edges.get(node);
+//			for (Iterator<String[]> i = m_idxReader.getStructureIndex().getSPIndexStorage().iterator(IndexDescription.EXTDP, new DataField[] { DataField.PROPERTY }, node.getLabel()); i.hasNext(); ) {
+//				String[] res = i.next();
+//				
+//				NodeElement target = new NodeElement("db" + dataEdges);
+//				target.setCost(1);
+//				EdgeElement edge = new EdgeElement(node, res[0], target);
+//				edge.setCost(1 - m_propertyWeights.get(res[0]));
+//				
+//				List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
+//				targetEdges.add(edge);
+//				toAdd.put(target, targetEdges);
+//				
+//				sourceEdges.add(edge);
+//				
+//				dataEdges++;
+//			}
+//		}
+//		
+//		for (NodeElement node : toAdd.keySet())
+//			m_node2edges.put(node, toAdd.get(node));
+		
+		m_p2ts = null;
+		m_p2to = null;
+		extensionWeights = null;
+		System.gc();
+		log.debug(Util.memory());
+		
+		log.debug("graph edges: " + graphEdges);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void addEdges(Set<String> properties) throws StorageException, IOException {
 		Map<NodeElement,List<EdgeElement>> toAdd = new HashMap<NodeElement,List<EdgeElement>>();
 		for (NodeElement node : m_node2edges.keySet()) {
 			List<EdgeElement> sourceEdges = m_node2edges.get(node);
 			for (Iterator<String[]> i = m_idxReader.getStructureIndex().getSPIndexStorage().iterator(IndexDescription.EXTDP, new DataField[] { DataField.PROPERTY }, node.getLabel()); i.hasNext(); ) {
 				String[] res = i.next();
 				
-				NodeElement target = new NodeElement("db" + dataEdges);
-				target.setCost(1);
-				EdgeElement edge = new EdgeElement(node, res[0], target);
-				edge.setCost(1 - propertyWeights.get(res[0]));
-				
-				List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
-				targetEdges.add(edge);
-				toAdd.put(target, targetEdges);
-				
-				sourceEdges.add(edge);
-				
-				dataEdges++;
+				if (properties.contains(res[0])) {					
+					NodeElement target = new NodeElement("db" + m_dataEdges);
+					target.setCost(1);
+					EdgeElement edge = new EdgeElement(node, res[0], target);
+					edge.setCost(1 - m_propertyWeights.get(res[0]));
+					
+					List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
+					targetEdges.add(edge);
+					toAdd.put(target, targetEdges);
+					
+					sourceEdges.add(edge);
+					
+					m_dataEdges++;
+				}
 			}
 		}
 		
 		for (NodeElement node : toAdd.keySet())
 			m_node2edges.put(node, toAdd.get(node));
+	}
+	
+	private EdgeElement addEdge(NodeElement node, String property) {
+		for (EdgeElement edge : m_node2edges.get(node)) {
+			if (edge.getLabel().equals(property)) 
+				return edge;
+		}
 		
-		m_p2ts = null;
-		m_p2to = null;
-		extensionWeights = null;
-		propertyWeights = null;
-		System.gc();
-		log.debug(Util.memory());
+		NodeElement target = new NodeElement("dbe" + m_dataEdges);
+		target.setCost(1);
 		
-		log.debug("graph edges: " + graphEdges + ", data edges: " + dataEdges + ", total: " + (graphEdges + dataEdges));
+		EdgeElement edge = new EdgeElement(node, property, target);
+		edge.setCost(1 - m_propertyWeights.get(property));
+		
+		m_node2edges.get(node).add(edge);
+		
+		List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
+		targetEdges.add(edge);
+		
+		m_node2edges.put(target, targetEdges);
+		
+		m_dataEdges++;
+		
+		return edge;
 	}
 	
 	private EdgeElement getEdge(NodeElement node, String property) {
@@ -197,7 +261,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		return null;
 	}
 	
-	public void setKeywords(Map<KeywordSegment,List<GraphElement>> keywords) {
+	public void setKeywords(Map<KeywordSegment,List<GraphElement>> keywords) throws StorageException, IOException {
 		reset();
 //		log.debug(keywords);
 		for (KeywordSegment keyword : keywords.keySet()) {
@@ -212,7 +276,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					// HACK replace NodeElement objects with their equivalent from the graph
 					NodeElement node = m_nodes.get(ele.getLabel());
 					if (node == null) {
-						log.debug("node missing in graph " + node);
+						log.debug("node missing in graph " + ele.getLabel());
 						continue;
 					}
 					node.addFrom((NodeElement)ele); // don't forget to copy stuff
@@ -224,7 +288,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 							if (!node.getAugmentedEdges().get(property).contains(keyword))
 								continue;
 							
-							EdgeElement dataEdge = getEdge(node, property);
+//							EdgeElement dataEdge = getEdge(node, property);
+							EdgeElement dataEdge = addEdge(node, property);
 							
 							if (dataEdge == null) {
 								log.warn("data edge missing " + node + " " + property);
@@ -276,6 +341,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		}
 		log.debug("keywords: " + m_keywords);
 		
+		addEdges(m_edgeUri2Keywords.keySet());
+		
 		Set<String> nodeKeywords = new HashSet<String>();
 		Set<String> edgeKeywords = new HashSet<String>();
 		for (KeywordSegment ks : m_keywordQueues.keySet())
@@ -296,6 +363,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		
 		setMaxDistance(nodeKeywords.size() * 2);
 		log.debug("max distance: " + m_maxDistance);
+		log.debug("data edges added: " + m_dataEdges);
 	}
 	
 	public void setK(int k) {
@@ -348,8 +416,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //			log.debug(m_subgraphs.size());
 		}
 		
-		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT * 1.2)
+		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT * 1.2) {
+			Collections.sort(m_subgraphs);
 			return true;
+		}
 		
 		if (m_subgraphs.size() < m_k)
 			return false;
@@ -368,8 +438,13 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		log.debug(m_subgraphs.get(m_subgraphs.size() - 1).edgeSet().size() + " "  + m_queues.peek().peek().getEdges().size());
 //		log.debug(highestCost + " " + lowestCost + " " + m_queues.peek().peek()); 
 		
-		if (highestCost <= lowestCost || System.currentTimeMillis() - m_matchingStart > TIMEOUT) {
+		if (highestCost <= lowestCost) {
 			log.debug("topk reached");
+			return true;
+		}
+		
+		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT) {
+			log.debug("topk");
 			return true;
 		}
 		
@@ -378,6 +453,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	
 	public void match() throws StorageException {
 		int i = 0;
+		int expansions = 0;
 		m_matchingStart = System.currentTimeMillis();
 		while (m_queues.size() > 0) {
 			boolean done = false;
@@ -397,14 +473,37 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor);
-//					Set<String> labels = new HashSet<String>();
-//					for (GraphElement neighbor : neighbors)
-//						labels.add(neighbor.getLabel());
-//					log.debug(neighbors.size() + " " + labels.size());
+					long start = System.currentTimeMillis();
+					Map<String,List<GraphElement>> labels = new HashMap<String,List<GraphElement>>();
+					for (GraphElement neighbor : neighbors) {
+						List<GraphElement> labelNeighbors = labels.get(neighbor.getLabel());
+						if (labelNeighbors == null) {
+							labelNeighbors = new ArrayList<GraphElement>();
+							labels.put(neighbor.getLabel(), labelNeighbors);
+						}
+						labelNeighbors.add(neighbor);
+					}
+					
+					neighbors = new ArrayList<GraphElement>();
+					for (String label : labels.keySet()) {
+						List<GraphElement> labelNeighbors = labels.get(label);
+						Collections.sort(labelNeighbors, new Comparator<GraphElement>() {
+							@Override
+							public int compare(GraphElement o1, GraphElement o2) {
+								return ((Double)o1.getCost()).compareTo(o2.getCost());
+							}
+						});
+						
+						for (int j = 0; j < Math.min(labelNeighbors.size(), 5); j++)
+							neighbors.add(labelNeighbors.get(j));
+					}
+					
+//					log.debug(neighbors.size() + " " + labels.size() + " " + (System.currentTimeMillis() - start));
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
 							Cursor c = minCursor.getNextCursor(neighbor);
 							cursorQueue.add(c);
+							expansions++;
 
 							// if a cursor crosses an edge whose property was matched to one or more keyword
 							// segments, add these segments to the new cursor
@@ -448,6 +547,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //				log.debug(s + " " + m_subgraphs.size());
 //			}
 		}
+		
+		log.debug("expansions: " + expansions);
 	}
 	
 	public List<TranslatedQuery> indexMatches(StructuredQuery sq, Map<String,Set<QNode>> ext2var) {

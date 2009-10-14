@@ -44,17 +44,17 @@ public class IndexConfiguration {
 		}
 	}
 	
-	private static final List<Option> m_options = new ArrayList<Option>();
+	private static final List<Option> OPTIONS_LIST = new ArrayList<Option>();
 	
 	private static Option addOption(String name) {
 		Option o = new Option(name);
-		m_options.add(o);
+		OPTIONS_LIST.add(o);
 		return o;
 	}
 	
 	private static Option addOption(String name, Object value) {
 		Option o = new Option(name, value);
-		m_options.add(o);
+		OPTIONS_LIST.add(o);
 		return o;
 	}
 
@@ -70,6 +70,7 @@ public class IndexConfiguration {
 	public static final Option SP_DATA_EXTENSIONS = addOption("sp_data_extensions", false);
 	public static final Option SP_INDEXES = addOption("sp_indexes");
 	public static final Option SP_BACKWARD_ONLY = addOption("sp_backward_only", false);
+	public static final Option SP_FORWARD_ONLY = addOption("sp_forward_only", false);
 //	public static final Option SP_INDEX_DATA = addOption("sp_index_data", true);
 	
 	public static final Option DI_INDEXES = addOption("di_indexes");
@@ -77,8 +78,12 @@ public class IndexConfiguration {
 	public static final Option DP_SP_BASED = addOption("dp_sp_based", true);
 	
 	public static final Option KW_NSIZE = addOption("kw_nsize", 0);
+
 	
+	private List<Option> m_options;
+
 	public IndexConfiguration() throws IOException {
+		m_options = new ArrayList<Option>(OPTIONS_LIST);
 	}
 	
 	@SuppressWarnings("unchecked")

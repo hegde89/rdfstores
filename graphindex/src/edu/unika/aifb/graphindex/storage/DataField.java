@@ -54,6 +54,8 @@ public class DataField {
 	public static final DataField E_SOURCE = new DataField("e1");
 	public static final DataField E_TARGET = new DataField("e2");
 	public static final DataField DS_TARGET = new DataField("ds2");
+	public static final DataField E_TARGET_EXT = new DataField("etx");
+	public static final DataField E_SOURCE_EXT = new DataField("esx");
 	
 	private String m_type;
 	

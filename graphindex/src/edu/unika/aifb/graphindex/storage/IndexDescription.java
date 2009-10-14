@@ -109,8 +109,14 @@ public class IndexDescription {
 		DataField.SUBJECT, DataField.OBJECT, DataField.PROPERTY, DataField.CONTEXT);
 	
 	// MappingIndex
-	public static final IndexDescription DSEEDS = new IndexDescription("dseeds", "p",
-			DataField.DS_SOURCE, DataField.E_SOURCE, DataField.E_TARGET, DataField.DS_TARGET, DataField.CONTEXT);
+	public static final IndexDescription DSDTESET = new IndexDescription("dsdteset", "et",
+			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_SOURCE, DataField.E_TARGET);
+	public static final IndexDescription DSDTETES = new IndexDescription("dsdtetes", "es",
+			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_TARGET, DataField.E_SOURCE);
+	public static final IndexDescription DSDTESXETX = new IndexDescription ("dsdtesxetx", "etx",
+			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_SOURCE_EXT, DataField.E_TARGET_EXT);
+	public static final IndexDescription DSDTETXESX = new IndexDescription ("dsdtetxesx", "esx",
+			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_TARGET_EXT, DataField.E_SOURCE_EXT);
 
 
 	// Facet indices

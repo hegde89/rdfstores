@@ -127,6 +127,14 @@ public class BlockCache {
 		}
 	}
 	
+	public void setBlock(String node, int id) {
+		try {
+			m_nodeDb.put(null, new DatabaseEntry(node.getBytes()), new DatabaseEntry(Util.intToBytes(id)));
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public long getNodeCount() {
 		try {
 			return m_nodeDb.count();

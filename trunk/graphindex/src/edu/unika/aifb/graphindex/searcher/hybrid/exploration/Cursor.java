@@ -20,6 +20,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -34,8 +35,11 @@ public abstract class Cursor implements Comparable<Cursor> {
 	protected GraphElement m_element;
 	protected int m_distance;
 	protected double m_cost;
-	private List<GraphElement> m_path = null;
-	private Set<GraphElement> m_parents;
+	protected List<GraphElement> m_path = null;
+	protected Set<GraphElement> m_parents;
+	protected boolean m_finished;
+	protected Set<String> m_inProperties = new HashSet<String>();
+	protected Set<String> m_outProperties = new HashSet<String>();
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
 		this(keywords, element, null);
@@ -73,6 +77,22 @@ public abstract class Cursor implements Comparable<Cursor> {
 		return m_keywords;
 	}
 	
+	public void addInProperties(Collection<String> properties) {
+		m_inProperties.addAll(properties);
+	}
+	
+	public Set<String> getInProperties() {
+		return m_inProperties;
+	}
+	
+	public void addOutProperties(Collection<String> properties) {
+		m_outProperties.addAll(properties);
+	}
+	
+	public Set<String> getOutProperties() {
+		return m_outProperties;
+	}
+
 	public void addKeywordSegment(KeywordSegment ks) {
 		m_keywords.add(ks);
 	}
@@ -178,5 +198,13 @@ public abstract class Cursor implements Comparable<Cursor> {
 
 	public String toString() {
 		return "(" + m_keywords + "," + m_element + "," + m_distance + "," + m_cost + ")";
+	}
+
+	public void setFinished(boolean finished) {
+		m_finished = finished;
+	}
+	
+	public boolean isFinished() {
+		return m_finished;
 	}
 }

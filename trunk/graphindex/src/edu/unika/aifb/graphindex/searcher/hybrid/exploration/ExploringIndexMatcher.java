@@ -42,6 +42,7 @@ import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.structured.sig.AbstractIndexGraphMatcher;
 import edu.unika.aifb.graphindex.storage.DataField;
@@ -129,15 +130,21 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		IndexStorage gs = m_idxReader.getStructureIndex().getGraphIndexStorage();
 
 		int graphEdges = 0;
+		int reflexiveEdges = 0;
 		for (String property : m_idxReader.getObjectProperties()) {
 			Table<String> table = gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property);
 			for (String[] row : table) {
 				String src = row[0];
 				String trg = row[1];
 				
-				if (src.equals(trg)) // ignore reflexive edges, because queries have different semantics in this regard,  
-					continue;		 // i.e. a reflexive edge at the sig level does not necessarily translate into a reflexive edges
-									 // at the data level
+				// ignore reflexive edges, because queries have different semantics in this regard,
+				// i.e. a reflexive edge at the sig level does not necessarily translate into a reflexive edges
+				// at the data level
+				if (src.equals(trg)) {
+//					log.debug("reflexive edge: " + row[0] + " " + property + " " + row[1]);
+					reflexiveEdges++;
+					continue;		 
+				}					 
 				
 				NodeElement source = m_nodes.get(src);
 				if (source == null) {
@@ -198,9 +205,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		log.debug(Util.memory());
 		
 		log.debug("graph edges: " + graphEdges);
+		log.debug("reflexive edges ignored: " + reflexiveEdges);
 	}
 	
-	@SuppressWarnings("unchecked")
 	private void addEdges(Set<String> properties) throws StorageException, IOException {
 		Map<NodeElement,List<EdgeElement>> toAdd = new HashMap<NodeElement,List<EdgeElement>>();
 		for (NodeElement node : m_node2edges.keySet()) {
@@ -213,7 +220,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					target.setCost(1);
 					EdgeElement edge = new EdgeElement(node, res[0], target);
 					edge.setCost(1 - m_propertyWeights.get(res[0]));
-					
+
 					List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
 					targetEdges.add(edge);
 					toAdd.put(target, targetEdges);
@@ -261,77 +268,85 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		return null;
 	}
 	
-	public void setKeywords(Map<KeywordSegment,List<GraphElement>> keywords) throws StorageException, IOException {
+	public void setKeywords(Map<KeywordSegment,List<KeywordElement>> keywords) throws StorageException, IOException {
 		reset();
 //		log.debug(keywords);
 		for (KeywordSegment keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
 			m_keywords.addAll(keyword.getKeywords());
 			m_ksStartNodes.put(keyword, new HashSet<NodeElement>());
-			for (GraphElement ele : keywords.get(keyword)) {
+			
+			for (KeywordElement ele : keywords.get(keyword)) {
 				Set<KeywordSegment> keywordSet = new HashSet<KeywordSegment>();
 				keywordSet.add(keyword);
 				
-				if (ele instanceof NodeElement) {
+				if (ele.getType() == KeywordElement.ENTITY) {
 					// HACK replace NodeElement objects with their equivalent from the graph
-					NodeElement node = m_nodes.get(ele.getLabel());
+					NodeElement node = m_nodes.get(ele.getUri());
 					if (node == null) {
-						log.debug("node missing in graph " + ele.getLabel());
+						log.debug("node missing in graph " + ele.getUri());
 						continue;
 					}
-					node.addFrom((NodeElement)ele); // don't forget to copy stuff
+//					node.addFrom((NodeElement)ele); // don't forget to copy stuff
 					
 					if (keyword.getKeywords().contains("STRUCTURED"))
 						queue.add(new StructuredQueryCursor(keywordSet, node));
 					else {
-						for (String property : node.getAugmentedEdges().keySet()) {
-							if (!node.getAugmentedEdges().get(property).contains(keyword))
-								continue;
+//						for (String property : node.getAugmentedEdges().keySet()) {
+//							if (!node.getAugmentedEdges().get(property).contains(keyword))
+//								continue;
 							
 //							EdgeElement dataEdge = getEdge(node, property);
+						String property = ele.getAttributeUri();
 							EdgeElement dataEdge = addEdge(node, property);
 							
 							if (dataEdge == null) {
 								log.warn("data edge missing " + node + " " + property);
 								continue;
 							}
-							
+
 							Cursor start = new NodeCursor(keywordSet, dataEdge.getTarget());
 							start.setCost(start.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
+//							log.debug(start + " =>");
+							start.setCost(start.getCost() / ele.getMatchingScore());
+//							log.debug(" " + start + "(" + dataEdge + ", " + ele.getMatchingScore() + ")");
 							Cursor edgeCursor = new EdgeCursor(keywordSet, dataEdge, start);
 							Cursor nodeCursor = new NodeCursor(keywordSet, node, edgeCursor);
 						
+							nodeCursor.addInProperties(ele.getInProperties());
+							nodeCursor.addOutProperties(ele.getOutProperties());
+							
 //							queue.add(new NodeCursor(keywordSet, node));
 							queue.add(nodeCursor);
-						}
+//						}
 					}
 					
 					m_ksStartNodes.get(keyword).add(node);
 				}
-				else if (ele instanceof EdgeElement) {
-					Set<KeywordSegment> edgeKeywords = m_edgeUri2Keywords.get(ele.getLabel());
+				else if (ele.getType() == KeywordElement.RELATION || ele.getType() == KeywordElement.ATTRIBUTE) {
+					Set<KeywordSegment> edgeKeywords = m_edgeUri2Keywords.get(ele.getUri());
 					if (edgeKeywords == null) {
 						edgeKeywords = new HashSet<KeywordSegment>();
-						m_edgeUri2Keywords.put(ele.getLabel(), edgeKeywords);
+						m_edgeUri2Keywords.put(ele.getUri(), edgeKeywords);
 					}
 					edgeKeywords.add(keyword);
 				}
-				else if (ele instanceof StructuredMatchElement) {
-//					Set<NodeElement> nodes = new HashSet<NodeElement>();
-//					for (NodeElement node : ((StructuredMatchElement)ele).getNodes()) {
-//						// HACK replace NodeElement objects with their equivalent from the graph
-//						NodeElement n = m_nodes.get(node.getLabel()); 
-//						n.addFrom(node); // don't forget to copy stuff
-//						
-//						queue.add(new StructuredQueryCursor(keywordSet, ele, n));
-//						nodes.add(n);
-//					}
-//					((StructuredMatchElement)ele).setNodes(nodes);
-					NodeElement node = m_nodes.get(((StructuredMatchElement)ele).getNode().getLabel());
-					node.addFrom(((StructuredMatchElement)ele).getNode());
-					((StructuredMatchElement)ele).setNode(node);
-					queue.add(new StructuredQueryCursor(keywordSet, ele));
-				}
+//				else if (ele instanceof StructuredMatchElement) {
+////					Set<NodeElement> nodes = new HashSet<NodeElement>();
+////					for (NodeElement node : ((StructuredMatchElement)ele).getNodes()) {
+////						// HACK replace NodeElement objects with their equivalent from the graph
+////						NodeElement n = m_nodes.get(node.getLabel()); 
+////						n.addFrom(node); // don't forget to copy stuff
+////						
+////						queue.add(new StructuredQueryCursor(keywordSet, ele, n));
+////						nodes.add(n);
+////					}
+////					((StructuredMatchElement)ele).setNodes(nodes);
+//					NodeElement node = m_nodes.get(((StructuredMatchElement)ele).getNode().getLabel());
+//					node.addFrom(((StructuredMatchElement)ele).getNode());
+//					((StructuredMatchElement)ele).setNode(node);
+//					queue.add(new StructuredQueryCursor(keywordSet, ele));
+//				}
 			}
 //			log.debug("queue size for " + keyword + ": " + queue.size());
 			if (!queue.isEmpty()) {
@@ -351,6 +366,14 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 			if (!m_keywordQueues.containsKey(ks))
 				edgeKeywords.addAll(ks.getKeywords());
 		
+		// add edge keyword elements to permitted next edges in the cursors
+		for (PriorityQueue<Cursor> queue : m_queues) {
+			for (Cursor c : queue) {
+				c.addOutProperties(m_edgeUri2Keywords.keySet());
+				c.addInProperties(m_edgeUri2Keywords.keySet());
+			}
+		}
+		
 //		log.debug("node keywords: " + nodeKeywords);
 //		log.debug("edge keywords: " + edgeKeywords);
 //		log.debug(m_ksStartNodes);
@@ -359,7 +382,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		m_counters.set(Counters.KWQUERY_EDGE_KEYWORDS, edgeKeywords.size());
 		m_counters.set(Counters.KWQUERY_KEYWORDS, m_keywords.size());
 
-		m_keywordSegments = keywords;
+//		m_keywordSegments = keywords;
 		
 		setMaxDistance(nodeKeywords.size() * 2);
 		log.debug("max distance: " + m_maxDistance);
@@ -502,6 +525,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
 							Cursor c = minCursor.getNextCursor(neighbor);
+							
+							if (c == null)
+								continue;
+							
 							cursorQueue.add(c);
 							expansions++;
 

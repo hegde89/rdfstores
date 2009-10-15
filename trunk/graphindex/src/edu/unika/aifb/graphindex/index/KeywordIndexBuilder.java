@@ -81,9 +81,6 @@ public class KeywordIndexBuilder {
 	private static int HOP;  
 	private static int MAXFIELDLENGTH = 50;
 	
-	/*
-	 * False positives will happen with probability 2<sup>-<var>NUMBER_HASHFUNCTION</var></sup>
-	 * */
 	private static double FALSE_POSITIVE = 0.001;
 
 	private IndexDirectory idxDirectory;
@@ -91,6 +88,7 @@ public class KeywordIndexBuilder {
 	protected DataIndex dataIndex;
 	private BlockCache  blockSearcher;
 	private NeighborhoodStorage ns;
+	private Set<String> objectProperties;
 	private Set<String> relations;
 	private Set<String> attributes;
 	private boolean resume = false;
@@ -132,6 +130,7 @@ public class KeywordIndexBuilder {
 		File indexDir = idxDirectory.getDirectory(IndexDirectory.KEYWORD_DIR, !resume);
 		File valueDir = idxDirectory.getDirectory(IndexDirectory.VALUE_DIR, !resume);
 
+		this.objectProperties = Util.readEdgeSet(idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
 		this.relations = Util.readEdgeSet(idxDirectory.getTempFile("relations", false));
 		this.attributes = Util.readEdgeSet(idxDirectory.getTempFile("attributes", false));
 		properties = new HashSet<String>();
@@ -302,24 +301,30 @@ public class KeywordIndexBuilder {
 		}	
 		
 		// indexing attribute-value and relation-entityID compounds
-		Set<String> compounds = computeEntityDescriptions(uri);
-		if(compounds != null && compounds.size() != 0) {
-			for(String compound : compounds){
-				String[] str = compound.trim().split(SEPARATOR);
-				String attributeOrRelation,valueOrEntitiyId;
-				if(str.length == 2) {
-					attributeOrRelation = str[1];
-					valueOrEntitiyId = str[0]; 
-				}
-				else {
-					continue;
-				}
-				
-				field = new Field(attributeOrRelation, valueOrEntitiyId, Field.Store.YES, Field.Index.ANALYZED);
-				field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
-				fields.add(field);
-			} 
-		}	
+		Set<Field> fs = computeEntityDescriptions(uri);
+//		if(compounds != null && compounds.size() != 0) {
+//			for(String compound : compounds){
+//				String[] str = compound.trim().split(SEPARATOR);
+//				String attributeOrRelation,valueOrEntitiyId;
+//				if(str.length == 2) {
+//					attributeOrRelation = str[1];
+//					valueOrEntitiyId = str[0]; 
+//				}
+//				else {
+//					continue;
+//				}
+//				
+//				field = new Field(attributeOrRelation, valueOrEntitiyId, Field.Store.YES, Field.Index.ANALYZED);
+//				field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
+//				fields.add(field);
+//			} 
+//		}
+		if (fs != null && fs.size() > 0)
+			fields.addAll(fs);
+		
+		List<Field> propertyFields = computeProperties(uri);
+		fields.addAll(propertyFields);
+
 
 		// indexing reachable entities
 		Set<String> reachableEntities = computeReachableEntities(uri);
@@ -338,7 +343,7 @@ public class KeywordIndexBuilder {
 		return fields;
 	}
 	
-	public void indexEntity(IndexWriter indexWriter, File file, IndexReader reader) throws IOException, StorageException {
+	private void indexEntity(IndexWriter indexWriter, File file, IndexReader reader) throws IOException, StorageException {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			String line;
@@ -369,10 +374,10 @@ public class KeywordIndexBuilder {
 //				indexWriter.commit();
 				
 				entities++;
-				if (entities % 50000 == 0) {
+				if (entities % 100000 == 0) {
 					indexWriter.commit();
 					valueWriter.commit();
-					log.debug("entities indexed: " + entities + " avg: " + ((System.currentTimeMillis() - time)/50000.0));
+					log.debug("entities indexed: " + entities + " avg: " + ((System.currentTimeMillis() - time)/100000.0));
 					time = System.currentTimeMillis();
 				}
 			}
@@ -403,8 +408,9 @@ public class KeywordIndexBuilder {
 		return set;
 	} 
 	
-	private Set<String> computeEntityDescriptions(String entityUri) throws IOException, StorageException {
-		HashSet<String> set = new HashSet<String>(); 
+	private Set<Field> computeEntityDescriptions(String entityUri) throws IOException, StorageException {
+		Set<Field> set = new HashSet<Field>(); 
+		Set<String> entityObjectProperties = new HashSet<String>();
 		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)
@@ -412,7 +418,7 @@ public class KeywordIndexBuilder {
 		for (String[] row : table) {
 			String predicate = row[1];
 			String object = row[2];
-			
+		
 			if (!properties.contains(predicate) || relations.contains(predicate)) // TODO maybe index relations
 				continue;
 			
@@ -455,10 +461,48 @@ public class KeywordIndexBuilder {
 			valueWriter.addDocument(doc);
 		}
 		
+		
 		return set;
 	}
 	
-	public Set<String> computeNeighbors(String entityUri) throws IOException, StorageException {
+	private List<Field> computeProperties(String uri) throws StorageException {
+		Set<String> inProperties = new HashSet<String>(), outProperties = new HashSet<String>();
+		
+		Table<String> table = dataIndex.getTriples(uri, null, null);
+		if (table != null && table.rowCount() > 0) {
+			for (String[] row : table) {
+				if (objectProperties.contains(row[1]))
+					outProperties.add(row[1]);
+			}
+		}
+
+		table = dataIndex.getTriples(null, null, uri);
+		if (table != null && table.rowCount() > 0) {
+			for (String[] row : table) {
+				if (objectProperties.contains(row[1]))
+					inProperties.add(row[1]);
+			}
+		}
+		
+		// most entities have type anyway
+		outProperties.remove(RDF.TYPE.toString());
+		
+		List<Field> fields = new ArrayList<Field>();
+		
+		StringBuilder sb = new StringBuilder();
+		for (String property : inProperties)
+			sb.append(property).append('\n');
+		fields.add(new Field(Constant.IN_PROPERTIES_FIELD, sb.toString(), Field.Store.COMPRESS, Field.Index.NO));
+
+		sb = new StringBuilder();
+		for (String property : outProperties)
+			sb.append(property).append('\n');
+		fields.add(new Field(Constant.OUT_PROPERTIES_FIELD, sb.toString(), Field.Store.COMPRESS, Field.Index.NO));
+
+		return fields;
+	}
+	
+	private Set<String> computeNeighbors(String entityUri) throws IOException, StorageException {
 		HashSet<String> set = new HashSet<String>(500); 
 
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
@@ -482,7 +526,7 @@ public class KeywordIndexBuilder {
 		return set;
 	} 
 	
-	public Set<String> computeReachableEntities(String entityUri) throws IOException, StorageException {
+	private Set<String> computeReachableEntities(String entityUri) throws IOException, StorageException {
 		HashSet<String> reachableEntities = new HashSet<String>(); 
 		HashSet<String> currentLayer = new HashSet<String>();
 		HashSet<String> nextLayer = new HashSet<String>();

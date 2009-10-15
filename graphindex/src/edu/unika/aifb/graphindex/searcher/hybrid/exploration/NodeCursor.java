@@ -22,11 +22,15 @@ public class NodeCursor extends Cursor {
 	public Cursor getNextCursor(GraphElement element) {
 		if (element instanceof EdgeElement) {
 			EdgeElement edge = (EdgeElement)element;
-			NodeElement next = edge.getSource().equals(getGraphElement()) ? edge.getTarget() : edge.getSource();
-			return new NodeCursor(m_keywords, next, new EdgeCursor(m_keywords, element, this));
+			boolean out = edge.getSource().equals(getGraphElement());
+			NodeElement next = out ? edge.getTarget() : edge.getSource();
+			
+			if ((out && (m_outProperties == null || m_outProperties.size() == 0 || m_outProperties.contains(edge.getLabel())))
+				|| (!out && (m_inProperties == null || m_inProperties.size() == 0 || m_inProperties.contains(edge.getLabel()))) )
+				return new NodeCursor(m_keywords, next, new EdgeCursor(m_keywords, element, this));
 		}
 		else
-			log.error("next cursor has to be for edge");
+			log.error("next cursor has to be for an edge");
 		return null;
 	}
 

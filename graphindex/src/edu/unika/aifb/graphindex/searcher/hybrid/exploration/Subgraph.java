@@ -38,6 +38,7 @@ import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
+import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordQNode;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -58,7 +59,8 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 	private HashMap<String,Set<KeywordSegment>> m_select2ks;
 
 	private boolean m_valid = true;
-	private HashMap<String,String> m_rename;
+	private Map<String,String> m_rename;
+	private Map<String,KeywordQNode> m_keywordNodes;
 
 
 	private static final Logger log = Logger.getLogger(Subgraph.class);
@@ -71,22 +73,24 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		m_augmentedNodes = new HashSet<NodeElement>();
 		m_nodeSegments = new HashMap<NodeElement,Set<KeywordSegment>>();
 		m_rename = new HashMap<String,String>();
+		m_keywordNodes = new HashMap<String,KeywordQNode>();
 	}
 
 	public Subgraph(Set<Cursor> cursors) {
 		this(EdgeElement.class);
+		Map<String,Set<EdgeElement>> attributeEdges = new HashMap<String,Set<EdgeElement>>();
 		
 		m_cursors = cursors;
-		Set<String> nodes = new HashSet<String>();
+		
+		Map<NodeElement,Set<String>> node2AllowedOutEdgeLabels = new HashMap<NodeElement,Set<String>>();
+		Map<NodeElement,Set<String>> node2AllowedInEdgeLabels = new HashMap<NodeElement,Set<String>>();
+		
 		for (Cursor c : cursors) {
-//			if (c.getCost() > m_cost)
-//				m_cost = c.getCost();
-			
-			
 			if (c instanceof StructuredQueryCursor)
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
 			else {
 				Cursor startCursor = c.getStartCursor();
+				
 				String name = m_rename.get(startCursor.getGraphElement().getLabel());
 				if (name == null)
 					name = startCursor.getKeywordSegments().toString();
@@ -94,7 +98,16 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 					name += "," + startCursor.getKeywordSegments().toString();
 					m_valid = false;
 				}
+				
 				m_rename.put(startCursor.getGraphElement().getLabel(), name);
+				if (!m_keywordNodes.containsKey(name)) {
+					KeywordQNode qnode = new KeywordQNode(name);
+					for (KeywordSegment ks : startCursor.getKeywordSegments())
+						for (String keyword : ks.getKeywords())
+							qnode.addKeyword(keyword);
+					m_keywordNodes.put(name, qnode);
+				}
+
 //				NodeElement startNode = (NodeElement)startCursor.getGraphElement();
 //				Set<KeywordSegment> kss = m_nodeSegments.get(startNode);
 //				if (kss == null) {
@@ -104,6 +117,53 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 //				kss.addAll(startCursor.getKeywordSegments());
 			}
 			
+			// find the first edge in the cursor chain
+			Cursor cur = c.getParent();
+			EdgeElement last = null;
+			while (cur != null) {
+				last = (EdgeElement)cur.getGraphElement();
+				cur = cur.getParent().getParent();
+			}
+			
+			if (last != null) {
+				// there should be only one edge for each keyword matching element to eliminate stuff like (x->a, x->b)
+				Set<EdgeElement> edges = attributeEdges.get(last.getSource().getLabel());
+				if (edges == null) {
+					edges = new HashSet<EdgeElement>();
+					attributeEdges.put(last.getSource().getLabel(), edges);
+				}
+				edges.add(last);
+				
+				if (edges.size() > 1)
+					m_valid = false;
+			}
+			
+			// find the second node cursor from the beginning (which is the keyword element cursor)
+			cur = c;
+			NodeCursor elementCursor = null;
+			while (cur != null && cur.getParent() != null) {
+				elementCursor = (NodeCursor)cur;
+				cur = cur.getParent().getParent();
+			}
+			
+			if (elementCursor != null && elementCursor.getInProperties().size() > 0) {
+				Set<String> allowed = node2AllowedInEdgeLabels.get((NodeElement)elementCursor.getGraphElement());
+				if (allowed == null) {
+					allowed = new HashSet<String>(elementCursor.getInProperties());
+					node2AllowedInEdgeLabels.put((NodeElement)elementCursor.getGraphElement(), allowed);
+				}
+				allowed.addAll(elementCursor.getInProperties());
+			}
+
+			if (elementCursor != null && elementCursor.getOutProperties().size() > 0) {
+				Set<String> allowed = node2AllowedOutEdgeLabels.get((NodeElement)elementCursor.getGraphElement());
+				if (allowed == null) {
+					allowed = new HashSet<String>(elementCursor.getOutProperties());
+					node2AllowedOutEdgeLabels.put((NodeElement)elementCursor.getGraphElement(), allowed);
+				}
+				allowed.addAll(elementCursor.getOutProperties());
+			}
+
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add(e);
 				
@@ -121,6 +181,30 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		values.addAll(m_rename.values());
 		if (values.size() < m_rename.size())
 			m_valid = false;
+		
+		if (m_valid) {
+			for (NodeElement node : node2AllowedInEdgeLabels.keySet()) {
+				Set<String> allowedEdgeLabels = node2AllowedInEdgeLabels.get(node);
+				for (EdgeElement edge : edgesOf(node)) {
+					if (edge.getTarget().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
+						m_valid = false;
+						break;
+					}
+				}
+			}
+			
+			for (NodeElement node : node2AllowedOutEdgeLabels.keySet()) {
+				Set<String> allowedEdgeLabels = node2AllowedOutEdgeLabels.get(node);
+				for (EdgeElement edge : edgesOf(node)) {
+					if (edge.getSource().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
+						m_valid = false;
+						break;
+					}
+				}
+			}
+//			if (!m_valid)
+//				log.debug("invalid " + this);
+		}
 
 		m_cost = 0;
 		for (EdgeElement edge : edgeSet())
@@ -349,8 +433,10 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			for (EdgeElement edge : edgeSet()) {
 				if (Util.isVariable(m_label2var.get(edge.getTarget().getLabel())))
 					q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
-				else
-					q.addAttributeEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
+				else {
+					KeywordQNode qnode = m_keywordNodes.get(m_label2var.get(edge.getTarget().getLabel()));
+					q.addAttributeEdge(new QNode(m_label2var.get(edge.getSource().getLabel())), edge.getLabel(), qnode);
+				}
 			}
 
 			q.setIndexMatches(indexMatches);
@@ -361,6 +447,10 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				q.addResult(copy);
 				q.setAsSelect(copy.getColumnName(0));
 			}
+			
+			for (QNode qn : q.getQueryGraph().vertexSet())
+				if (qn.isVariable())
+					q.setAsSelect(qn.getLabel());
 			
 			queries.add(q);
 		}

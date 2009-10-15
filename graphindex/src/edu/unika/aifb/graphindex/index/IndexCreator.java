@@ -333,14 +333,29 @@ public class IndexCreator implements TripleSink {
 	private void index() throws EnvironmentLockedException, DatabaseException, IOException, StorageException, InterruptedException {
 		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
 		
-		Set<String> edges = new HashSet<String>();
-		edges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE)));
-		if (m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
-			edges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+		Set<String> backwardEdges = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.BW_EDGESET_FILE));
+		Set<String> forwardEdges = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.FW_EDGESET_FILE));
 		
+		if (backwardEdges.size() == 0) {
+			backwardEdges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE)));
+			if (m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
+				backwardEdges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+		}
+		
+		if (forwardEdges.size() == 0) {
+			forwardEdges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE)));
+			if (m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
+				forwardEdges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+		}
+		
+		Set<String> allEdges = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
+		if (m_idxConfig.getBoolean(IndexConfiguration.SP_DATA_EXTENSIONS))
+			allEdges.addAll(Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE)));
+
 		int pathLength = m_idxConfig.getInteger(IndexConfiguration.SP_PATH_LENGTH);
 		
-		log.debug("properties: " + edges.size());
+		log.debug("backward edges: " + backwardEdges.size());
+		log.debug("forward edges: " + forwardEdges.size());
 		log.debug("path length: " + pathLength);
 		
 		EnvironmentConfig config = new EnvironmentConfig();
@@ -349,10 +364,10 @@ public class IndexCreator implements TripleSink {
 
 		Environment env = new Environment(m_idxDirectory.getDirectory(IndexDirectory.BDB_DIR, true), config);
 
-		Set<String> backwardEdges = edges;
-		Set<String> forwardEdges = m_idxConfig.getBoolean(IndexConfiguration.SP_BACKWARD_ONLY) ? new HashSet<String>() : edges;
+		backwardEdges = m_idxConfig.getBoolean(IndexConfiguration.SP_FORWARD_ONLY) ? new HashSet<String>() : backwardEdges;
+		forwardEdges = m_idxConfig.getBoolean(IndexConfiguration.SP_BACKWARD_ONLY) ? new HashSet<String>() : forwardEdges;
 		
-		LargeRCP rcp = new LargeRCP(dataIndex, env, forwardEdges, backwardEdges);
+		LargeRCP rcp = new LargeRCP(dataIndex, env, forwardEdges, backwardEdges, allEdges);
 		rcp.setIgnoreDataValues(true);
 		rcp.setTempDir(m_idxDirectory.getDirectory(IndexDirectory.TEMP_DIR, true).getAbsolutePath());
 
@@ -374,6 +389,18 @@ public class IndexCreator implements TripleSink {
 		
 		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
 		Set<String> dataProperties =  Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
+		
+		if (m_idxConfig.getBoolean(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES)) {
+			int rounds = 0;
+			int lastMovedEntities = 0;
+			while (rounds < 5) {
+				int movedEntities = eliminateReflexiveEdges(dataIndex, bc);
+				if (movedEntities == lastMovedEntities)
+					break;
+				lastMovedEntities = movedEntities;
+				rounds++;
+			}
+		}
 		
 		Set<String> indexEdges = new HashSet<String>();
 		int triples = 0;
@@ -490,6 +517,44 @@ public class IndexCreator implements TripleSink {
 		bc.close();
 	}
 	
+	private int eliminateReflexiveEdges(DataIndex dataIndex, BlockCache bc) throws StorageException, IOException {
+		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
+		Set<String> dataProperties =  Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
+
+		int counter = -1;
+		Map<String,Integer> splitExts = new HashMap<String,Integer>();
+		Map<String,Integer> entity2newExt = new HashMap<String,Integer>();
+		
+		log.debug("eliminating reflexive edges");
+		for (String property : objectProperties) {
+			for (Iterator<String[]> ti = dataIndex.iterator(property); ti.hasNext(); ) {
+				String[] triple = ti.next();
+				String s = triple[0];
+				String o = triple[2];
+
+				if (!s.equals(o)) {
+					String subExt = bc.getBlockName(s);
+					String objExt = bc.getBlockName(o);
+					
+					if (subExt.equals(objExt)) {
+						if (!splitExts.containsKey(subExt))
+							splitExts.put(subExt, --counter);
+						entity2newExt.put(o, splitExts.get(subExt));
+					}
+				}
+			}
+		}
+
+		log.debug("exts split: " + splitExts.size());
+		log.debug("entities to move: " + entity2newExt.size());
+		
+		for (String entity : entity2newExt.keySet()) {
+			bc.setBlock(entity, entity2newExt.get(entity));
+		}
+		
+		return entity2newExt.size();
+	}
+
 	protected void createKWIndex(boolean resume) throws IOException, StorageException {
 //		prepareKeywordIndex();
 		edu.unika.aifb.graphindex.index.IndexReader ir = new edu.unika.aifb.graphindex.index.IndexReader(m_idxDirectory);

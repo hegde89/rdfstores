@@ -84,7 +84,7 @@ public class KeywordSearcher {
 	public static final double ENTITY_THRESHOLD = 0.8;
 //	private static final double ENTITY_THRESHOLD = 0.8;
 	private static final double SCHEMA_THRESHOLD = 0.8;
-	public static final int MAX_KEYWORDRESULT_SIZE = 500;
+	public static final int MAX_KEYWORDRESULT_SIZE = 800;
 	
 	private static final String SEPARATOR = ":";
 	
@@ -106,9 +106,11 @@ public class KeywordSearcher {
 			e.printStackTrace();
 		}
 	}
+	
 	public Map<KeywordSegment,Collection<KeywordElement>> searchKeywordElements(List<String> queries) throws StorageException, IOException {
 		return searchKeywordElements(queries, true);
-	}	
+	}
+	
 	public Map<KeywordSegment,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) throws StorageException, IOException {
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
@@ -146,6 +148,7 @@ public class KeywordSearcher {
 		for(KeywordSegment segement : segmentsWithEntities.keySet()) {
 			log.debug(segement + " " + segmentsWithEntities.get(segement).size());
 		}
+		
 //		doOverlap = false;
 		if (doOverlap) {
 			overlapNeighborhoods(keywordsWithEntities, segmentsWithEntities);
@@ -601,11 +604,13 @@ public class KeywordSearcher {
 
 	    Set<String> loadFieldNames = new HashSet<String>();
 //	    loadFieldNames.add(Constant.URI_FIELD);
-	    loadFieldNames.add(Constant.TYPE_FIELD);
-	    loadFieldNames.add(Constant.EXTENSION_FIELD);
+//	    loadFieldNames.add(Constant.TYPE_FIELD);
+//	    loadFieldNames.add(Constant.EXTENSION_FIELD);
 	    
 	    Set<String> lazyFieldNames = new HashSet<String>();
 	    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
+	    lazyFieldNames.add(Constant.IN_PROPERTIES_FIELD);
+	    lazyFieldNames.add(Constant.OUT_PROPERTIES_FIELD);
 	    
 	    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 
@@ -620,10 +625,10 @@ public class KeywordSearcher {
 	   		
 //	   		Document doc = reader.document(docHits[i].doc, fieldSelector);
 
-//	   		TermDocs td = reader.termDocs(new Term(Constant.URI_FIELD, uri));
-//	   		if (!td.next())
-//	   			continue;
-//	   		Document doc = reader.document(td.doc(), fieldSelector); 
+	   		TermDocs td = reader.termDocs(new Term(Constant.URI_FIELD, uri));
+	   		if (!td.next())
+	   			continue;
+	   		Document doc = reader.document(td.doc(), fieldSelector); 
 
 //		   		if(score < ENTITY_THRESHOLD)
 //		   			break;
@@ -638,7 +643,7 @@ public class KeywordSearcher {
 //    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
 //    			IEntity ent = new Entity(pruneString(uri), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
     			IEntity ent = new Entity(pruneString(uri), null);
-    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, null, score, ns);
+    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
     			KeywordSegment ks = new KeywordSegment(segement.getKeywords());
     			
     			ele.setAttributeUri(attributeUri);

@@ -56,15 +56,19 @@ import edu.unika.aifb.graphindex.util.Util;
 public class LargeRCP {
 	private BlockCache m_bc;
 	private boolean m_ignoreDataValues = false;
+	private Set<String> m_allEdges;
 	private Set<String> m_forwardEdges, m_backwardEdges;
 	private DataIndex m_gs;
 	private Environment m_env;
 	private String m_tempDir;
 	private static final Logger log = Logger.getLogger(LargeRCP.class);
 	
-	public LargeRCP(DataIndex gs, Environment env, Set<String> fw, Set<String> bw) throws EnvironmentLockedException, DatabaseException {
+	public LargeRCP(DataIndex gs, Environment env, Set<String> fw, Set<String> bw, Set<String> allEdges) throws EnvironmentLockedException, DatabaseException {
 		m_forwardEdges = fw;
 		m_backwardEdges = bw;
+		m_allEdges = allEdges;
+		m_allEdges.addAll(m_forwardEdges);
+		m_allEdges.addAll(m_backwardEdges);
 		
 		m_gs = gs;
 		m_env = env;
@@ -213,7 +217,7 @@ public class LargeRCP {
 			// start
 			// init block cache, set one block for all nodes; this block will be "empty", i.e. the blockDb won't contain
 			// the nodes, which will be fixed after the first splitting
-			for (String property : edges)
+			for (String property : m_allEdges)
 				m_gs.iterateNodes(property, new NodeListener() {
 					public void node(String node) {
 						m_bc.setBlock(node, b);

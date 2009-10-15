@@ -35,7 +35,9 @@ public class Main {
 		op.accepts("resume", "resume from analyzse, structure or keyword").withRequiredArg().ofType(String.class);
 		op.accepts("triples", "triples only");
 		op.accepts("bwonly", "backward only");
+		op.accepts("fwonly", "forward only");
 		op.accepts("dt", "do not ignore datatypes");
+		op.accepts("re", "eliminate reflexive edges");
 		
 		OptionSet os = op.parse(args);
 		
@@ -49,6 +51,14 @@ public class Main {
 		int nk = os.has("nk") ? (Integer)os.valueOf("nk") : 0;
 		boolean triplesOnly = os.has("triples");
 		boolean backwardOnly = os.has("bwonly");
+		boolean forwardOnly = os.has("fwonly");
+		boolean eliminateRE = os.has("re");
+		
+		if (backwardOnly && forwardOnly) {
+			log.error("only one of bwonly and fwonly can be specified");
+			return;
+		}
+			
 		
 		int startFrom = IndexCreator.STEP_DATA;
 		if (os.has("resume")) {
@@ -106,6 +116,8 @@ public class Main {
 		ic.setSICreateDataExtensions(os.has("sd"));
 		ic.setOption(IndexConfiguration.TRIPLES_ONLY, triplesOnly);
 		ic.setOption(IndexConfiguration.SP_BACKWARD_ONLY, backwardOnly);
+		ic.setOption(IndexConfiguration.SP_FORWARD_ONLY, backwardOnly);
+		ic.setOption(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES, eliminateRE);
 		
 		ic.create(startFrom);
 	}

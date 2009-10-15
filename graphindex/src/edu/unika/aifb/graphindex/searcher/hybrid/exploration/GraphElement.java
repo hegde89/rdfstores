@@ -58,6 +58,8 @@ public abstract class GraphElement {
 	public abstract double getCost();
 	
 	public void addCursor(Cursor c) {
+		boolean equalCursorPresent = false;
+		
 		for (KeywordSegment ks : c.getKeywordSegments()) {
 			for (String keyword : ks.getKeywords()) {
 				List<Cursor> cursors = m_keywordCursors.get(keyword);
@@ -65,10 +67,19 @@ public abstract class GraphElement {
 					cursors = new ArrayList<Cursor>();
 					m_keywordCursors.put(keyword, cursors);
 				}
+				else {
+					for (Cursor cursor : cursors) {
+						if (cursor.getStartCursor().getKeywordSegments().equals(c.getKeywordSegments()))
+							equalCursorPresent = true;
+					}
+				}
 				cursors.add(c);
 				Collections.sort(cursors);
 			}
 		}
+		
+		if (equalCursorPresent)
+			c.setFinished(true);
 	}
 	
 	public List<List<Cursor>> getCursorCombinations() {

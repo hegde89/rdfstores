@@ -1,5 +1,7 @@
 package edu.unika.aifb.graphindex.query;
 
+import org.apache.log4j.Logger;
+
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
  * 
@@ -21,11 +23,29 @@ package edu.unika.aifb.graphindex.query;
 public class HybridQuery extends Query {
 	private StructuredQuery m_structuredQuery;
 	private KeywordQuery m_keywordQuery;
+	private QNode m_attachNode;
+	
+	private static final Logger log = Logger.getLogger(HybridQuery.class);
 	
 	public HybridQuery(String name, StructuredQuery sq, KeywordQuery kq) {
 		super(name);
 		m_structuredQuery = sq;
 		m_keywordQuery = kq;
+	}
+
+	public HybridQuery(String name, StructuredQuery sq, KeywordQuery kq, String attachNode) {
+		super(name);
+		m_structuredQuery = sq;
+		m_keywordQuery = kq;
+		m_attachNode = m_structuredQuery.getNode(attachNode);
+		if (attachNode != null && m_attachNode == null) {
+			log.warn("attach node " + attachNode + " not in query graph!");
+			throw new IllegalArgumentException("attach node " + attachNode + " not in query graph!");
+		}
+	}
+	
+	public QNode getAttachNode() {
+		return m_attachNode;
 	}
 
 	public StructuredQuery getStructuredQuery() {

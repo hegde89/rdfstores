@@ -30,6 +30,8 @@ public class Constant {
 	public static final String LOCALNAME_FIELD = "localname";
 	public static final String LABEL_FIELD = "label";
 	public static final String CONTENT_FIELD = "content";
+	public static final String OUT_PROPERTIES_FIELD = "out_properties";
+	public static final String IN_PROPERTIES_FIELD = "in_properties";
 	
 	public static final String URI_PREFIX = "http://";
 	

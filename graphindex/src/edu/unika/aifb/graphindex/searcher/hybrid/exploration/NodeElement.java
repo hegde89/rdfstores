@@ -88,12 +88,15 @@ public class NodeElement extends GraphElement {
 	
 	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
 		EdgeElement prevEdge = (EdgeElement)(cursor.getParent() != null ? cursor.getParent().getGraphElement() : null);
+		Set<GraphElement> parents = cursor.getParents();
 
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
-		for (EdgeElement edge : graph.get(this)) {
-			if (!edge.equals(prevEdge) && !cursor.getParents().contains(edge.getSource()) && !cursor.getParents().contains(edge.getTarget()))
-				neighbors.add(edge);
+		if (!cursor.isFinished()) {
+			for (EdgeElement edge : graph.get(this)) {
+				if (!edge.equals(prevEdge) && !parents.contains(edge.getSource()) && !parents.contains(edge.getTarget()))
+					neighbors.add(edge);
+			}
 		}
 		
 		return neighbors;

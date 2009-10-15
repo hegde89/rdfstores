@@ -68,6 +68,7 @@ public class IndexConfiguration {
 	
 	public static final Option SP_PATH_LENGTH = addOption("sp_path_length", 1);
 	public static final Option SP_DATA_EXTENSIONS = addOption("sp_data_extensions", false);
+	public static final Option SP_ELIMINATE_REFLEXIVE_EDGES = addOption("sp_eliminate_reflexive_edges", false);
 	public static final Option SP_INDEXES = addOption("sp_indexes");
 	public static final Option SP_BACKWARD_ONLY = addOption("sp_backward_only", false);
 	public static final Option SP_FORWARD_ONLY = addOption("sp_forward_only", false);

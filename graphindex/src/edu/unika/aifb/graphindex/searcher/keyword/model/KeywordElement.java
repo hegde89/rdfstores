@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.document.Document;
@@ -37,6 +38,7 @@ import edu.unika.aifb.graphindex.model.impl.Relation;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
+import edu.unika.aifb.graphindex.util.StringSplitter;
 
 
 public class KeywordElement implements Comparable<KeywordElement>, Serializable {
@@ -62,6 +64,8 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	protected int type;
 
 	private NeighborhoodStorage ns;
+
+	private Set<String> m_inProperties, m_outProperties;
 	
 	public KeywordElement(IResource resource, int type, Document doc, double score, NeighborhoodStorage ns) {
 		this.resource = resource;
@@ -162,6 +166,46 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	
 	public void setBloomFilter(BloomFilter bf) {
 		bloomFilter = bf;
+	}
+	
+	public NeighborhoodStorage getNeighborhoodStorage() {
+		return ns;
+	}
+	
+	public Set<String> getInProperties() {
+		if (m_inProperties == null) {
+			m_inProperties = new HashSet<String>();
+			String s = doc.getFieldable(Constant.IN_PROPERTIES_FIELD).stringValue();
+			StringSplitter splitter = new StringSplitter(s, "\n");
+			while ((s = splitter.next()) != null)
+				m_inProperties.add(s.trim());
+		}
+		
+		return m_inProperties;
+	}
+	
+	public Set<String> getOutProperties() {
+		if (m_outProperties == null) {
+			m_outProperties = new HashSet<String>();
+			String s = doc.getFieldable(Constant.OUT_PROPERTIES_FIELD).stringValue();
+			StringSplitter splitter = new StringSplitter(s, "\n");
+			while ((s = splitter.next()) != null)
+				m_outProperties.add(s.trim());
+		}
+		
+		return m_outProperties;
+	}
+
+	public void addInProperties(Collection<String> properties) {
+		if (m_inProperties == null)
+			m_inProperties = new HashSet<String>();
+		m_inProperties.addAll(properties);
+	}
+
+	public void addOutProperties(Collection<String> properties) {
+		if (m_outProperties == null)
+			m_outProperties = new HashSet<String>();
+		m_outProperties.addAll(properties);
 	}
 	
 	public BloomFilter getBloomFilter() {

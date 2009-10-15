@@ -142,7 +142,12 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			cur = c;
 			NodeCursor elementCursor = null;
 			while (cur != null && cur.getParent() != null) {
-				elementCursor = (NodeCursor)cur;
+				if (cur instanceof NodeCursor)
+					elementCursor = (NodeCursor)cur;
+				else {
+					elementCursor = null;
+					break;
+				}
 				cur = cur.getParent().getParent();
 			}
 			

@@ -123,29 +123,36 @@ public class IndexConfiguration {
 		Yaml.dump(map, indexDir.getFile(IndexDirectory.CONFIG_FILE, true));
 	}
 	
+	private Option getLocalOption(Option o) {
+		for (Option localOption : m_options)
+			if (o.name.equals(localOption.name))
+				return localOption;
+		return null;
+	}
+	
 	public void set(Option o, Object value) {
-		o.value = value;
+		getLocalOption(o).value = value;
 	}
 	
 	public int getInteger(Option o) {
-		return (Integer)o.value;
+		return (Integer)getLocalOption(o).value;
 	}
 
 	public float getFloat(Option o) {
-		return (Float)o.value;
+		return (Float)getLocalOption(o).value;
 	}
 	
 	public boolean getBoolean(Option o) {
-		return (Boolean)o.value;
+		return (Boolean)getLocalOption(o).value;
 	}
 	
 	public String getString(Option o) {
-		return (String)o.value;
+		return (String)getLocalOption(o).value;
 	}
 	
 	@SuppressWarnings("unchecked")
 	public List getList(Option o) {
-		return (List)o.value;
+		return (List)getLocalOption(o).value;
 	}
 	
 	@SuppressWarnings("unchecked")

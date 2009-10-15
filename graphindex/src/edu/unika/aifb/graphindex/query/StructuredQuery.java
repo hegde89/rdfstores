@@ -66,7 +66,7 @@ public class StructuredQuery extends Query {
 	
 	public QNode getNode(String label) {
 		for (QNode node : m_queryGraph.vertexSet())
-			if (node.equals(label))
+			if (node.getLabel().equals(label))
 				return node;
 		return null;
 	}

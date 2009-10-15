@@ -118,7 +118,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					
 					schemaElement.addOutProperties(ele.getOutProperties());
 					schemaElement.addInProperties(ele.getInProperties());
-					
+
+					keywordNodeElements.add(ele);
 //					NodeElement node = label2node.get(ext);
 //					if (node == null) {
 //						node = new NodeElement(ext);
@@ -141,7 +142,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					log.error("unknown type...");
 			}
 
-			segment2elements .put(ks, elements);
+			segment2elements.put(ks, elements);
 			
 			log.debug("segment: " + ks + ", elements: " + elements.size());
 		}
@@ -151,57 +152,62 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		Table<String> queryIndexMatches = null;
 		
 		if (query.getStructuredQuery() != null) {
-//			List<GraphElement> elements = new ArrayList<GraphElement>();
-//			structuredResults = m_eval.evaluate(query.getStructuredQuery());
-//
-//			queryIndexMatches = new Table<String>(structuredResults, false);
-//			
-//			Set<String> sqExts = new HashSet<String>();
-//			for (String[] row : structuredResults) {
-//				// first check if any of the entities is in the neighborhood of a keyword matched entity
-//				boolean found = false;
-//				for (QNode s : query.getStructuredQuery().getVariables()) {
-//					String entity = row[structuredResults.getColumn(s.getLabel())];
-//
-//					for (KeywordElement ele: keywordNodeElements) {
-//						if (ele.isReachable(new KeywordElement(new Entity(entity), KeywordElement.ENTITY, null))) {
-//							found = true;
-//							break;
-//						}
-//					}
-//					
-//					if (found)
-//						break;
-//				}
-//				
-//				if (found) {
-////					log.debug("row connected");
-//					String[] extRow = new String[queryIndexMatches.columnCount()];
-//					for (QNode s : query.getStructuredQuery().getQueryGraph().vertexSet()) {
-//						if (s.isVariable()) {
-//							String ext = m_si.getExtension(row[structuredResults.getColumn(s.getLabel())]);
-//							sqExts.add(ext);
-//							extRow[queryIndexMatches.getColumn(s.getLabel())] = ext;
-//  							
-//							// record for which variables an extension appears
-//							Set<QNode> vars = ext2var.get(ext);
-//							if (vars == null) {
-//								vars = new HashSet<QNode>();
-//								ext2var.put(ext, vars);
-//							}
-//							vars.add(s);
-//						}
-//						else
-//							extRow[queryIndexMatches.getColumn(s.getLabel())] = s.getLabel();
-//					}
-//					queryIndexMatches.addRow(extRow);
-//				}
-//			}
-//			
-//			for (String ext : sqExts)
+			List<KeywordElement> elements = new ArrayList<KeywordElement>();
+			structuredResults = m_eval.evaluate(query.getStructuredQuery());
+
+			queryIndexMatches = new Table<String>(structuredResults, false);
+			
+			Set<String> sqExts = new HashSet<String>();
+			for (String[] row : structuredResults) {
+				// first check if any of the entities is in the neighborhood of a keyword matched entity
+				boolean found = false;
+				for (QNode s : query.getStructuredQuery().getVariables()) {
+					if (query.getAttachNode() != null || query.getAttachNode().equals(s)) {
+						String entity = row[structuredResults.getColumn(s.getLabel())];
+	
+						for (KeywordElement ele : keywordNodeElements) {
+							if (ele.isReachable(new KeywordElement(new Entity(entity), KeywordElement.ENTITY, null))) {
+								found = true;
+								break;
+							}
+						}
+						
+						if (found)
+							break;
+					}
+				}
+				
+				if (found) {
+//					log.debug("row connected");
+					String[] extRow = new String[queryIndexMatches.columnCount()];
+					for (QNode s : query.getStructuredQuery().getQueryGraph().vertexSet()) {
+						if (s.isVariable()) {
+							String ext = m_si.getExtension(row[structuredResults.getColumn(s.getLabel())]);
+							sqExts.add(ext);
+							extRow[queryIndexMatches.getColumn(s.getLabel())] = ext;
+  							
+							// record for which variables an extension appears
+							Set<QNode> vars = ext2var.get(ext);
+							if (vars == null) {
+								vars = new HashSet<QNode>();
+								ext2var.put(ext, vars);
+							}
+							vars.add(s);
+						}
+						else
+							extRow[queryIndexMatches.getColumn(s.getLabel())] = s.getLabel();
+					}
+					queryIndexMatches.addRow(extRow);
+				}
+			}
+			
+			for (String ext : sqExts) {
+				KeywordElement element = new KeywordElement(new Entity(ext), KeywordElement.ENTITY, 1.0, null, null);
+				elements.add(element);
 //				elements.add(new NodeElement(ext));
-//			
-//			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
+			}
+			
+			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
 		}
 		
 		if (k == 1)

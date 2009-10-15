@@ -57,6 +57,7 @@ import com.sleepycat.je.Environment;
 
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.searcher.keyword.HyphenationCompoundWordStandardAnalyzer;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -69,17 +70,14 @@ import edu.unika.aifb.graphindex.util.Util;
 
 public class KeywordIndexBuilder {
 	
-	private static final float CONCEPT_BOOST = 1.0f;
-	private static final float RELATION_BOOST = 0.5f;
-	private static final float ATTRIBUTE_BOOST = 0.5f;
+	private static final float CONCEPT_BOOST = 2.0f;
+	private static final float RELATION_BOOST = 1.0f;
+	private static final float ATTRIBUTE_BOOST = 1.0f;
 	private static final float ENTITY_BOOST = 1.0f;
-	private static final float ENTITY_DISCRIMINATIVE_BOOST = 1.0f;
-	private static final float ENTITY_DESCRIPTIVE_BOOST = 0.5f;
-	
-	private static final String SEPARATOR = "__";
+	private static final float ENTITY_DISCRIMINATIVE_BOOST = 5.0f;
+	private static final float ENTITY_DESCRIPTIVE_BOOST = 1.0f;
 	
 	private static int HOP;  
-	private static int MAXFIELDLENGTH = 50;
 	
 	private static double FALSE_POSITIVE = 0.001;
 
@@ -93,9 +91,8 @@ public class KeywordIndexBuilder {
 	private Set<String> attributes;
 	private boolean resume = false;
 	private Set<String> properties;
-	private StructureIndex structureIndex;
 	private IndexWriter valueWriter;
-	private Map<String,Double> propertyWeights;
+//	private Map<String,Double> propertyWeights;
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);
 	
@@ -103,14 +100,13 @@ public class KeywordIndexBuilder {
 		this.idxDirectory = idxReader.getIndexDirectory();
 		this.idxConfig = idxReader.getIndexConfiguration();
 		this.dataIndex = idxReader.getDataIndex();
-		this.structureIndex = idxReader.getStructureIndex();
 		this.resume = resume;
 		
 		this.ns = new LuceneNeighborhoodStorage(idxDirectory.getDirectory(IndexDirectory.NEIGHBORHOOD_DIR, !resume));
 		this.ns.initialize(!resume, false);
 		
-		this.propertyWeights = (Map<String,Double>)Yaml.load(idxDirectory.getFile(IndexDirectory.PROPERTY_FREQ_FILE));
-		log.debug(propertyWeights);
+//		this.propertyWeights = (Map<String,Double>)Yaml.load(idxDirectory.getFile(IndexDirectory.PROPERTY_FREQ_FILE));
+//		log.debug(propertyWeights);
 		
 		log.info("resume: " + resume);
 		
@@ -140,9 +136,11 @@ public class KeywordIndexBuilder {
 		log.debug("attributes: " + attributes.size() + ", relations: " + relations.size());
 
 		try {
-			StandardAnalyzer analyzer = new StandardAnalyzer();
+			HyphenationCompoundWordStandardAnalyzer analyzer = new HyphenationCompoundWordStandardAnalyzer(
+					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
+					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE),
+					idxDirectory.getFile(IndexDirectory.STOPWORDS_FILE));
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, MaxFieldLength.LIMITED);
-			indexWriter.setMaxFieldLength(MAXFIELDLENGTH);
 			log.debug("max terms per field: " + indexWriter.getMaxFieldLength());
 			
 			valueWriter = new IndexWriter(valueDir, analyzer, !resume, MaxFieldLength.LIMITED);
@@ -187,6 +185,9 @@ public class KeywordIndexBuilder {
 		} catch (DatabaseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -210,34 +211,19 @@ public class KeywordIndexBuilder {
 				Document doc = new Document();
 				
 				// indexing type of the element
-				doc.add(new Field(Constant.TYPE_FIELD, type, Field.Store.YES, Field.Index.UN_TOKENIZED));
+				doc.add(new Field(Constant.TYPE_FIELD, type, Field.Store.YES, Field.Index.NO));
 				
 				// indexing local name
-				doc.add(new Field(Constant.SCHEMA_FIELD, localName, Field.Store.YES,Field.Index.TOKENIZED));
+				doc.add(new Field(Constant.SCHEMA_FIELD, localName, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
 				
 				// indexing label 
-				
-//				BooleanQuery bq = new BooleanQuery();
-//				TermQuery tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_SRC, uri));
-//				bq.add(tq, BooleanClause.Occur.MUST);
-//				tq = new TermQuery(new Term(LuceneGraphStorage.FIELD_EDGE, RDFS.LABEL.stringValue()));
-//				bq.add(tq, BooleanClause.Occur.MUST);
-//				Hits lhits = dataSearcher.search(bq);
-//				if(lhits != null && lhits.length() != 0) {
-//					Iterator iter = lhits.iterator();
-//					while(iter.hasNext()) {
-//						Document ldoc = ((Hit)iter.next()).getDocument();
-//						String label = ldoc.get(LuceneGraphStorage.FIELD_DST);
-//						doc.add(new Field(Constant.SCHEMA_FIELD, label, Field.Store.YES,Field.Index.TOKENIZED));
-//					}
-//				} 
 				Table<String> table = dataIndex.getTriples(uri, RDFS.LABEL.stringValue(), null);
 				for (String[] row : table) {
-					doc.add(new Field(Constant.SCHEMA_FIELD, row[2], Field.Store.YES,Field.Index.TOKENIZED));
+					doc.add(new Field(Constant.SCHEMA_FIELD, row[2], Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
 				}
 				
 				// indexing uri
-				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.UN_TOKENIZED));
+				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NO));
 				
 				// indexing extension id for concept
 				if(type.equals(TypeUtil.CONCEPT) && idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
@@ -256,15 +242,9 @@ public class KeywordIndexBuilder {
 
 	protected List<Field> getFieldsForEntity(String uri) throws IOException, StorageException {
 		List<Field> fields = new ArrayList<Field>();
-		String localName = TypeUtil.getLocalName(uri).trim();
 		
 		// indexing type of the element
 		fields.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NO));
-		
-		// indexing local name
-		Field field = new Field(Constant.LOCALNAME_FIELD, localName, Field.Store.YES, Field.Index.ANALYZED);
-		field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
-		fields.add(field);
 		
 		// indexing uri
 		fields.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -284,47 +264,17 @@ public class KeywordIndexBuilder {
 		Set<String> concepts = computeConcepts(uri);
 		if(concepts != null && concepts.size() != 0) {
 			for(String concept : concepts) {
-				field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+				Field field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.NO);
+//				field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 				fields.add(field);
 			}
 		}
 		
-		// indexing label
-		Set<String> labels = computeLabels(uri);
-		if(labels != null && labels.size() != 0) {
-			for(String label : labels){
-				field = new Field(Constant.LABEL_FIELD, label, Field.Store.YES, Field.Index.ANALYZED);
-				field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
-				fields.add(field);
-			} 
-		}	
-		
-		// indexing attribute-value and relation-entityID compounds
-		Set<Field> fs = computeEntityDescriptions(uri);
-//		if(compounds != null && compounds.size() != 0) {
-//			for(String compound : compounds){
-//				String[] str = compound.trim().split(SEPARATOR);
-//				String attributeOrRelation,valueOrEntitiyId;
-//				if(str.length == 2) {
-//					attributeOrRelation = str[1];
-//					valueOrEntitiyId = str[0]; 
-//				}
-//				else {
-//					continue;
-//				}
-//				
-//				field = new Field(attributeOrRelation, valueOrEntitiyId, Field.Store.YES, Field.Index.ANALYZED);
-//				field.setBoost(ENTITY_DESCRIPTIVE_BOOST);
-//				fields.add(field);
-//			} 
-//		}
-		if (fs != null && fs.size() > 0)
-			fields.addAll(fs);
+		// indexing entity descriptions in value index
+		computeEntityDescriptions(uri);
 		
 		List<Field> propertyFields = computeProperties(uri);
 		fields.addAll(propertyFields);
-
 
 		// indexing reachable entities
 		Set<String> reachableEntities = computeReachableEntities(uri);
@@ -359,7 +309,6 @@ public class KeywordIndexBuilder {
 				}
 				
 				Document doc = new Document();
-				doc.setBoost(ENTITY_BOOST);
 
 				List<Field> fields = getFieldsForEntity(uri);
 				
@@ -408,13 +357,18 @@ public class KeywordIndexBuilder {
 		return set;
 	} 
 	
-	private Set<Field> computeEntityDescriptions(String entityUri) throws IOException, StorageException {
-		Set<Field> set = new HashSet<Field>(); 
-		Set<String> entityObjectProperties = new HashSet<String>();
+	private void computeEntityDescriptions(String entityUri) throws IOException, StorageException {
+		Document doc = new Document();
+		doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
+		doc.add(new Field(Constant.ATTRIBUTE_FIELD, Constant.ATTRIBUTE_LOCALNAME, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+		Field f = new Field(Constant.CONTENT_FIELD, TypeUtil.getLocalName(entityUri).trim(), Field.Store.NO, Field.Index.ANALYZED);
+//		f.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+		valueWriter.addDocument(doc);
 		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)
-			return null;
+			return;
 		for (String[] row : table) {
 			String predicate = row[1];
 			String object = row[2];
@@ -422,7 +376,7 @@ public class KeywordIndexBuilder {
 			if (!properties.contains(predicate) || relations.contains(predicate)) // TODO maybe index relations
 				continue;
 			
-			Document doc = new Document();
+			doc = new Document();
 			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
 			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 			
@@ -432,37 +386,25 @@ public class KeywordIndexBuilder {
 			if (TypeUtil.getLocalName(predicate).contains("name"))
 				boost = ENTITY_DISCRIMINATIVE_BOOST;
 			
-			boost *= propertyWeights.get(predicate);
-			
+//			boost *= propertyWeights.get(predicate);
 			doc.setBoost(boost);
 			
 			if (attributes.contains(predicate)) {
-//				set.add(object + SEPARATOR + predicate);
-				Field f = new Field(Constant.CONTENT_FIELD, object, Field.Store.NO, Field.Index.ANALYZED);
-				f.setBoost(boost);
+				f = new Field(Constant.CONTENT_FIELD, object, Field.Store.NO, Field.Index.ANALYZED);
+//				f.setBoost(boost);
 				doc.add(f);
 			}
 			else if (relations.contains(predicate)) {
 				String localname = TypeUtil.getLocalName(object).trim();
-//				set.add(localname + SEPARATOR + predicate);
 				
-				Field f = new Field(Constant.CONTENT_FIELD, localname, Field.Store.NO, Field.Index.ANALYZED);
-				f.setBoost(boost);
+				f = new Field(Constant.CONTENT_FIELD, localname, Field.Store.NO, Field.Index.ANALYZED);
+//				f.setBoost(boost);
 				doc.add(f);
-				
-//				Set<String> entitylabels = computeLabels(object);
-//				if(entitylabels != null && entitylabels.size() != 0) {
-//					for(String label : entitylabels) {
-//						set.add(label + SEPARATOR + predicate);
-//					}
-//				}
 			} 
 			
 			valueWriter.addDocument(doc);
 		}
 		
-		
-		return set;
 	}
 	
 	private List<Field> computeProperties(String uri) throws StorageException {

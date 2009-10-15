@@ -496,32 +496,33 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor);
-					long start = System.currentTimeMillis();
-					Map<String,List<GraphElement>> labels = new HashMap<String,List<GraphElement>>();
-					for (GraphElement neighbor : neighbors) {
-						List<GraphElement> labelNeighbors = labels.get(neighbor.getLabel());
-						if (labelNeighbors == null) {
-							labelNeighbors = new ArrayList<GraphElement>();
-							labels.put(neighbor.getLabel(), labelNeighbors);
-						}
-						labelNeighbors.add(neighbor);
-					}
-					
-					neighbors = new ArrayList<GraphElement>();
-					for (String label : labels.keySet()) {
-						List<GraphElement> labelNeighbors = labels.get(label);
-						Collections.sort(labelNeighbors, new Comparator<GraphElement>() {
-							@Override
-							public int compare(GraphElement o1, GraphElement o2) {
-								return ((Double)o1.getCost()).compareTo(o2.getCost());
-							}
-						});
-						
-						for (int j = 0; j < Math.min(labelNeighbors.size(), 5); j++)
-							neighbors.add(labelNeighbors.get(j));
-					}
-					
-//					log.debug(neighbors.size() + " " + labels.size() + " " + (System.currentTimeMillis() - start));
+//					int size = neighbors.size();
+//					long start = System.currentTimeMillis();
+//					Map<String,List<GraphElement>> labels = new HashMap<String,List<GraphElement>>();
+//					for (GraphElement neighbor : neighbors) {
+//						List<GraphElement> labelNeighbors = labels.get(neighbor.getLabel());
+//						if (labelNeighbors == null) {
+//							labelNeighbors = new ArrayList<GraphElement>();
+//							labels.put(neighbor.getLabel(), labelNeighbors);
+//						}
+//						labelNeighbors.add(neighbor);
+//					}
+//					
+//					neighbors = new ArrayList<GraphElement>();
+//					for (String label : labels.keySet()) {
+//						List<GraphElement> labelNeighbors = labels.get(label);
+//						Collections.sort(labelNeighbors, new Comparator<GraphElement>() {
+//							@Override
+//							public int compare(GraphElement o1, GraphElement o2) {
+//								return ((Double)o1.getCost()).compareTo(o2.getCost());
+//							}
+//						});
+//						
+//						for (int j = 0; j < Math.min(labelNeighbors.size(), 5); j++)
+//							neighbors.add(labelNeighbors.get(j));
+//					}
+//					
+//					log.debug(size + " " + neighbors.size() + " " + labels.size() + " " + (System.currentTimeMillis() - start));
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
 							Cursor c = minCursor.getNextCursor(neighbor);

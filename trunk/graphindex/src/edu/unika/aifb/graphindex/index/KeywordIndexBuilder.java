@@ -78,6 +78,7 @@ public class KeywordIndexBuilder {
 	private static final float ENTITY_DESCRIPTIVE_BOOST = 1.0f;
 	
 	private static int HOP;  
+	private static int MAXFIELDLENGTH = 100;
 	
 	private static double FALSE_POSITIVE = 0.001;
 
@@ -140,10 +141,10 @@ public class KeywordIndexBuilder {
 					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
 					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE),
 					idxDirectory.getFile(IndexDirectory.STOPWORDS_FILE));
-			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, MaxFieldLength.LIMITED);
+			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
 			log.debug("max terms per field: " + indexWriter.getMaxFieldLength());
 			
-			valueWriter = new IndexWriter(valueDir, analyzer, !resume, MaxFieldLength.LIMITED);
+			valueWriter = new IndexWriter(valueDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
 			
 			org.apache.lucene.index.IndexReader reader = null;
 			if (resume) {
@@ -211,7 +212,7 @@ public class KeywordIndexBuilder {
 				Document doc = new Document();
 				
 				// indexing type of the element
-				doc.add(new Field(Constant.TYPE_FIELD, type, Field.Store.YES, Field.Index.NO));
+				doc.add(new Field(Constant.TYPE_FIELD, type, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 				
 				// indexing local name
 				doc.add(new Field(Constant.SCHEMA_FIELD, localName, Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
@@ -244,7 +245,7 @@ public class KeywordIndexBuilder {
 		List<Field> fields = new ArrayList<Field>();
 		
 		// indexing type of the element
-		fields.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NO));
+		fields.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 		
 		// indexing uri
 		fields.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -265,7 +266,6 @@ public class KeywordIndexBuilder {
 		if(concepts != null && concepts.size() != 0) {
 			for(String concept : concepts) {
 				Field field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.NO);
-//				field.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 				fields.add(field);
 			}
 		}

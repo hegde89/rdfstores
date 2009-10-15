@@ -82,11 +82,8 @@ public class KeywordSearcher {
 	private Set<String> allAttributes;
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
-//	private static final double ENTITY_THRESHOLD = 0.8;
-	private static final double SCHEMA_THRESHOLD = 0.8;
+	public static final double SCHEMA_THRESHOLD = 0.8;
 	public static final int MAX_KEYWORDRESULT_SIZE = 800;
-	
-	private static final String SEPARATOR = ":";
 	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	
@@ -536,15 +533,15 @@ public class KeywordSearcher {
 
 		StandardAnalyzer analyzer = new StandardAnalyzer();
 		
-		Set<String> fields = new HashSet<String>();
-		fields.addAll(allAttributes);
+//		Set<String> fields = new HashSet<String>();
+//		fields.addAll(allAttributes);
+//		
+//		if (attributes != null && attributes.size() != 0)
+//			for (Collection<KeywordElement> coll : attributes.values())
+//				for (KeywordElement ele : coll) 
+//					fields.remove(ele.getResource().getUri());
 		
-		if (attributes != null && attributes.size() != 0)
-			for (Collection<KeywordElement> coll : attributes.values())
-				for (KeywordElement ele : coll) 
-					fields.remove(ele.getResource().getUri());
-		
-		KeywordQueryParser parser = new KeywordQueryParser(fields.toArray(new String[fields.size()]), analyzer);
+//		KeywordQueryParser parser = new KeywordQueryParser(fields.toArray(new String[fields.size()]), analyzer);
 		for (KeywordSegment segement : segements) {
 			try {
 				String queryString = "";
@@ -690,7 +687,7 @@ public class KeywordSearcher {
 				allAttributes.add(doc.get(Constant.URI_FIELD));
 			}
 //			allAttributes.add(Constant.LOCALNAME_FIELD);
-			allAttributes.add(Constant.LABEL_FIELD);
+//			allAttributes.add(Constant.LABEL_FIELD);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

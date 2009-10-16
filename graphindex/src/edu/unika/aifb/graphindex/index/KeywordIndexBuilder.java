@@ -139,11 +139,8 @@ public class KeywordIndexBuilder {
 		log.debug("attributes: " + attributes.size() + ", relations: " + relations.size());
 
 		try {
-//			HyphenationCompoundWordAnalyzer analyzer = new HyphenationCompoundWordAnalyzer(
-//					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
-//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE));
-//			DictionaryCompoundWordAnalyzer analyzer = new DictionaryCompoundWordAnalyzer(
-//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE));
+//			HyphenationCompoundWordAnalyzer analyzer = new HyphenationCompoundWordAnalyzer("./res/en_hyph_US.xml", "./res/en_US.dic");
+//			DictionaryCompoundWordAnalyzer analyzer = new DictionaryCompoundWordAnalyzer("./res/en_US.dic");
 			CapitalizationSplitterAnalyzer analyzer = new CapitalizationSplitterAnalyzer();
 			StandardAnalyzer valueAnalyzer = new StandardAnalyzer();
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));

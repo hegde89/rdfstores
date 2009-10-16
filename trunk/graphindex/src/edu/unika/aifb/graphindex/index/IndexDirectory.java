@@ -66,10 +66,6 @@ public class IndexDirectory {
 	public static final int FACET_TEMP_DIR = addDirectory("facets"+ "/"+"temp");	
 	public static final int FACET_SEARCH_LAYER_CACHE = addDirectory("facets"+ "/"+"fsl");
 	
-	public static final int HYPHENATION_GRAMMAR_FILE = addFile("en_hyph_US.xml");
-	public static final int DICTIONARY_FILE = addFile("en_US.dic");
-	public static final int STOPWORDS_FILE = addFile("en_stopWords");
-	
 	private String m_directory;
 	
 	public IndexDirectory(String dir) throws IOException {

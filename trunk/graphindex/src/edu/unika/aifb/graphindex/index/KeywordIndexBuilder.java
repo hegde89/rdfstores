@@ -212,7 +212,6 @@ public class KeywordIndexBuilder {
 					continue;
 				}
 				
-				localName = localName.toLowerCase();
 				/* Write Index */
 				Document doc = new Document();
 				
@@ -229,7 +228,7 @@ public class KeywordIndexBuilder {
 				}
 				
 				// indexing uri
-				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NO));
+				doc.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 				
 				// indexing extension id for concept
 				if(type.equals(TypeUtil.CONCEPT) && idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {

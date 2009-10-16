@@ -42,6 +42,33 @@ public class IndexConfiguration {
 			this.name = name;
 			this.value = value;
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Option other = (Option)obj;
+			if (name == null) {
+				if (other.name != null)
+					return false;
+			} else if (!name.equals(other.name))
+				return false;
+			return true;
+		}
+		
+		
 	}
 	
 	private static final List<Option> OPTIONS_LIST = new ArrayList<Option>();
@@ -96,7 +123,7 @@ public class IndexConfiguration {
 		for (Option o : m_options) {
 			o.value = map.get(o.name);
 			
-			if (o.value != null && (o == SP_INDEXES || o == DI_INDEXES)) {
+			if (o.value != null && (o.equals(SP_INDEXES) || o.equals(DI_INDEXES))) {
 				List<IndexDescription> indexes = new ArrayList<IndexDescription>();
 				for (Map indexMap : (List<Map>)o.value) {
 					indexes.add(new IndexDescription(indexMap));
@@ -111,7 +138,7 @@ public class IndexConfiguration {
 		Map map = new HashMap();
 		
 		for (Option o : m_options) {
-			if (o == SP_INDEXES || o == DI_INDEXES) {
+			if (o.equals(SP_INDEXES) || o.equals(DI_INDEXES)) {
 				List<Map> maps = new ArrayList<Map>();
 				for (IndexDescription index : (List<IndexDescription>)o.value) {
 					maps.add(index.asMap());

@@ -57,7 +57,7 @@ import com.sleepycat.je.Environment;
 
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.searcher.keyword.HyphenationCompoundWordStandardAnalyzer;
+import edu.unika.aifb.graphindex.searcher.keyword.analyzer.HyphenationCompoundWordStandardAnalyzer;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;

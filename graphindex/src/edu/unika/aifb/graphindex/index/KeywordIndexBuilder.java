@@ -57,7 +57,9 @@ import com.sleepycat.je.Environment;
 
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.searcher.keyword.analyzer.HyphenationCompoundWordStandardAnalyzer;
+import edu.unika.aifb.graphindex.searcher.keyword.analyzer.CapitalizationSplitterAnalyzer;
+import edu.unika.aifb.graphindex.searcher.keyword.analyzer.DictionaryCompoundWordAnalyzer;
+import edu.unika.aifb.graphindex.searcher.keyword.analyzer.HyphenationCompoundWordAnalyzer;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -137,15 +139,17 @@ public class KeywordIndexBuilder {
 		log.debug("attributes: " + attributes.size() + ", relations: " + relations.size());
 
 		try {
-//			HyphenationCompoundWordStandardAnalyzer analyzer = new HyphenationCompoundWordStandardAnalyzer(
+//			HyphenationCompoundWordAnalyzer analyzer = new HyphenationCompoundWordAnalyzer(
 //					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
-//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE),
-//					idxDirectory.getFile(IndexDirectory.STOPWORDS_FILE));
-			StandardAnalyzer analyzer = new StandardAnalyzer();
+//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE));
+//			DictionaryCompoundWordAnalyzer analyzer = new DictionaryCompoundWordAnalyzer(
+//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE));
+			CapitalizationSplitterAnalyzer analyzer = new CapitalizationSplitterAnalyzer();
+			StandardAnalyzer valueAnalyzer = new StandardAnalyzer();
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
 			log.debug("max terms per field: " + indexWriter.getMaxFieldLength());
 			
-			valueWriter = new IndexWriter(valueDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
+			valueWriter = new IndexWriter(valueDir, valueAnalyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
 			
 			org.apache.lucene.index.IndexReader reader = null;
 			if (resume) {

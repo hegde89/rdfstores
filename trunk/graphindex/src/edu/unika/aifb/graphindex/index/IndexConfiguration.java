@@ -84,7 +84,9 @@ public class IndexConfiguration {
 	private List<Option> m_options;
 
 	public IndexConfiguration() throws IOException {
-		m_options = new ArrayList<Option>(OPTIONS_LIST);
+		m_options = new ArrayList<Option>();
+		for (Option o : OPTIONS_LIST)
+			m_options.add(new Option(o.name, o.value));
 	}
 	
 	@SuppressWarnings("unchecked")

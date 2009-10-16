@@ -1,4 +1,4 @@
-package edu.unika.aifb.graphindex.searcher.keyword;
+package edu.unika.aifb.graphindex.searcher.keyword.analyzer;
 
 import java.io.File;
 

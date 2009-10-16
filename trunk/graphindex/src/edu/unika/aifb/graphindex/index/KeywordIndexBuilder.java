@@ -137,10 +137,11 @@ public class KeywordIndexBuilder {
 		log.debug("attributes: " + attributes.size() + ", relations: " + relations.size());
 
 		try {
-			HyphenationCompoundWordStandardAnalyzer analyzer = new HyphenationCompoundWordStandardAnalyzer(
-					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
-					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE),
-					idxDirectory.getFile(IndexDirectory.STOPWORDS_FILE));
+//			HyphenationCompoundWordStandardAnalyzer analyzer = new HyphenationCompoundWordStandardAnalyzer(
+//					idxDirectory.getFile(IndexDirectory.HYPHENATION_GRAMMAR_FILE),
+//					idxDirectory.getFile(IndexDirectory.DICTIONARY_FILE),
+//					idxDirectory.getFile(IndexDirectory.STOPWORDS_FILE));
+			StandardAnalyzer analyzer = new StandardAnalyzer();
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer, !resume, new MaxFieldLength(MAXFIELDLENGTH));
 			log.debug("max terms per field: " + indexWriter.getMaxFieldLength());
 			

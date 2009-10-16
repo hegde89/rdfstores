@@ -10,16 +10,14 @@ import java.util.Set;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.compound.CompoundWordTokenFilterBase;
-import org.apache.lucene.analysis.compound.HyphenationCompoundWordTokenFilter;
-import org.apache.lucene.analysis.compound.hyphenation.HyphenationTree;
+import org.apache.lucene.analysis.compound.DictionaryCompoundWordTokenFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 
-public class HyphenationCompoundWordStandardAnalyzer extends StandardAnalyzer {
-	
-	private HyphenationTree hyphenator;
+public class DictionaryCompoundWordAnalyzer extends StandardAnalyzer {
+
 	private Set<String> dict;
 	
-	public HyphenationCompoundWordStandardAnalyzer(String grammer, String dictionary) throws Exception {
+	public DictionaryCompoundWordAnalyzer(String dictionary) throws Exception {
 		super();
 		BufferedReader br = new BufferedReader(new FileReader(dictionary));
 		String line;
@@ -28,13 +26,9 @@ public class HyphenationCompoundWordStandardAnalyzer extends StandardAnalyzer {
 			dict.add(line);
 		}
 		br.close();
-
-		br = new BufferedReader(new FileReader(grammer));
-		hyphenator = HyphenationCompoundWordTokenFilter.getHyphenationTree(br);
-		br.close();
 	}
 	
-	public HyphenationCompoundWordStandardAnalyzer(String grammer, String dictionary, String stopWords) throws Exception {
+	public DictionaryCompoundWordAnalyzer(String dictionary, String stopWords) throws Exception {
 		super(new File(stopWords));
 		BufferedReader br = new BufferedReader(new FileReader(dictionary));
 		String line;
@@ -43,12 +37,9 @@ public class HyphenationCompoundWordStandardAnalyzer extends StandardAnalyzer {
 			dict.add(line);
 		}
 		br.close();
-
-		br = new BufferedReader(new FileReader(grammer));
-		hyphenator = HyphenationCompoundWordTokenFilter.getHyphenationTree(br);
 	}
 	
-	public HyphenationCompoundWordStandardAnalyzer(File grammer, File dictionary) throws Exception {
+	public DictionaryCompoundWordAnalyzer(File dictionary) throws Exception {
 		super();
 		BufferedReader br = new BufferedReader(new FileReader(dictionary));
 		String line;
@@ -57,13 +48,9 @@ public class HyphenationCompoundWordStandardAnalyzer extends StandardAnalyzer {
 			dict.add(line);
 		}
 		br.close();
-
-		br = new BufferedReader(new FileReader(grammer));
-		hyphenator = HyphenationCompoundWordTokenFilter.getHyphenationTree(br);
-		br.close();
 	}
 	
-	public HyphenationCompoundWordStandardAnalyzer(File grammer, File dictionary, File stopWords) throws Exception {
+	public DictionaryCompoundWordAnalyzer(File dictionary, File stopWords) throws Exception {
 		super(stopWords);
 		BufferedReader br = new BufferedReader(new FileReader(dictionary));
 		String line;
@@ -72,14 +59,11 @@ public class HyphenationCompoundWordStandardAnalyzer extends StandardAnalyzer {
 			dict.add(line);
 		}
 		br.close();
-
-		br = new BufferedReader(new FileReader(grammer));
-		hyphenator = HyphenationCompoundWordTokenFilter.getHyphenationTree(br);
 	}
 	
 	public TokenStream tokenStream(String field, Reader reader) {
-		return new HyphenationCompoundWordTokenFilter(
-				super.tokenStream(field, reader), hyphenator, dict,
+		return new DictionaryCompoundWordTokenFilter(
+				super.tokenStream(field, reader), dict,
 		CompoundWordTokenFilterBase.DEFAULT_MIN_WORD_SIZE,
 		CompoundWordTokenFilterBase.DEFAULT_MIN_SUBWORD_SIZE,
 		CompoundWordTokenFilterBase.DEFAULT_MAX_SUBWORD_SIZE, false);

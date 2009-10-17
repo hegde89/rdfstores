@@ -601,14 +601,17 @@ public class IndexCreator implements TripleSink {
 				String p = t[1];
 				String o = t[2];
 
-				entSet.add(s);
-				entSet.add(o);
-				
-				if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
+				if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT)) {
 					conSet.add(s);
-				
-				if (property.equals(RDF.TYPE.toString()))
+				}
+				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)) {
+					entSet.add(s);
 					conSet.add(o);
+				}
+				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)) {
+					entSet.add(s);
+					entSet.add(o);
+				}
 				
 				triples++;
 				if (triples % 1000000 == 0)

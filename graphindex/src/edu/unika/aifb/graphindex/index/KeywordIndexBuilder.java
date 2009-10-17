@@ -327,6 +327,7 @@ public class KeywordIndexBuilder {
 				if (entities % 100000 == 0) {
 					indexWriter.commit();
 					valueWriter.commit();
+					ns.commit();
 					log.debug("entities indexed: " + entities + " avg: " + ((System.currentTimeMillis() - time)/100000.0));
 					time = System.currentTimeMillis();
 				}

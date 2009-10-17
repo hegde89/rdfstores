@@ -393,7 +393,7 @@ public class IndexCreator implements TripleSink {
 		if (m_idxConfig.getBoolean(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES)) {
 			int rounds = 0;
 			int lastMovedEntities = 0;
-			while (rounds < 5) {
+			while (rounds < 10) {
 				int movedEntities = eliminateReflexiveEdges(dataIndex, bc);
 				if (movedEntities == lastMovedEntities)
 					break;
@@ -522,8 +522,9 @@ public class IndexCreator implements TripleSink {
 		Set<String> dataProperties =  Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
 
 		int counter = -1;
-		Map<String,Integer> splitExts = new HashMap<String,Integer>();
-		Map<String,Integer> entity2newExt = new HashMap<String,Integer>();
+		Map<String,Integer> splitExts = new HashMap<String,Integer>(5000);
+		Map<String,Integer> entity2newExt = new HashMap<String,Integer>(5000);
+		Set<String> fixedNodes = new HashSet<String>(5000);
 		
 		log.debug("eliminating reflexive edges");
 		for (String property : objectProperties) {
@@ -536,10 +537,13 @@ public class IndexCreator implements TripleSink {
 					String subExt = bc.getBlockName(s);
 					String objExt = bc.getBlockName(o);
 					
-					if (subExt.equals(objExt)) {
+					if (subExt.equals(objExt) && !fixedNodes.contains(o)) {
 						if (!splitExts.containsKey(subExt))
 							splitExts.put(subExt, --counter);
+						
 						entity2newExt.put(o, splitExts.get(subExt));
+						
+						fixedNodes.add(s);
 					}
 				}
 			}

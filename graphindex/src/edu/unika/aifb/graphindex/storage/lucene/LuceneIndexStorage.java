@@ -654,7 +654,6 @@ public class LuceneIndexStorage implements IndexStorage {
 
 	}
 	
-	@Override
 	public void mergeIndex(IndexDescription index) throws StorageException {
 		try {
 			reopen();
@@ -955,7 +954,6 @@ public class LuceneIndexStorage implements IndexStorage {
 		}
 	}
 	
-	@Override
 	public Iterator<String[]> iterator(IndexDescription index, DataField[] columns, String... indexValues)	throws StorageException {
 //		List<TermQuery> queries = new ArrayList<TermQuery>();
 //		

@@ -135,14 +135,29 @@ public class LuceneNeighborhoodStorage implements NeighborhoodStorage {
 	
 	public void optimize() throws StorageException {
 		try {
+			m_searcher.close();
+			m_reader.close();
+
 			m_writer.commit();
 			m_writer.optimize();
-			reopen();
-		} catch (CorruptIndexException e) {
+			
+			m_reader = IndexReader.open(m_directory);
+			m_searcher = new IndexSearcher(m_reader);
+			} catch (CorruptIndexException e) {
 			throw new StorageException(e);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
+	}
+	
+	public void commit() throws StorageException {
+		try {
+			m_writer.commit();
+		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}	
 	}
 	
 	public void reopen() throws StorageException {

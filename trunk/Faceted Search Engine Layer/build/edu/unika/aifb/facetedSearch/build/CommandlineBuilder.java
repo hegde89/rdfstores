@@ -76,6 +76,12 @@ public class CommandlineBuilder {
 			FacetedSearchLayerConfig.setFacetIdxDirStrg(props
 					.getProperty(FacetEnvironment.Property.FACET_INDEX_DIR));
 
+			FacetedSearchLayerConfig.setGraphIndexDirStrg(props
+					.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR));
+			
+			FacetedSearchLayerConfig.setSchemaOntoPath(props
+					.getProperty(FacetEnvironment.Property.SCHEMA_ONTO_PATH));
+			
 			FacetIndexCreator fic = new FacetIndexCreator(idxDir, props
 					.getProperty(FacetEnvironment.Property.EXPRESSIVITY),
 					FacetedSearchLayerConfig.getFacetTreeIdxDir());

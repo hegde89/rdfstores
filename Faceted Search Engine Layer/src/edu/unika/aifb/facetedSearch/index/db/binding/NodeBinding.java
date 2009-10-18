@@ -50,6 +50,7 @@ public class NodeBinding extends TupleBinding<Node> {
 		node.setValue(input.readString());
 		node.setType(input.readInt());
 		node.setPath(input.readString());
+		node.setGeneric(input.readBoolean());
 
 		/*
 		 * read facet
@@ -60,7 +61,7 @@ public class NodeBinding extends TupleBinding<Node> {
 		facet.setType(input.readInt());
 		facet.setDataType(input.readInt());
 		facet.setLabel(input.readString());
-		
+
 		node.setFacet(facet);
 
 		return node;
@@ -84,6 +85,7 @@ public class NodeBinding extends TupleBinding<Node> {
 		output.writeString(object.getValue());
 		output.writeInt(object.getType());
 		output.writeString(object.getPath());
+		output.writeBoolean(object.isGeneric());
 
 		/*
 		 * write facet
@@ -94,6 +96,6 @@ public class NodeBinding extends TupleBinding<Node> {
 		output.writeInt(facet.getType());
 		output.writeInt(facet.getDataType());
 		output.writeString(facet.getLabel());
-		
+
 	}
 }

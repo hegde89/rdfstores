@@ -79,6 +79,10 @@ public class FacetPage implements IFacetPage, Serializable {
 		return m_domain2FacetValuesLists.get(domain).iterator();
 	}
 
+	public List<FacetFacetValueList> getFacetFacetValueLists(String domain) {
+		return m_domain2FacetValuesLists.get(domain);
+	}
+
 	public FacetFacetValueList getFacetFacetValuesList(String domain,
 			String facetUri) {
 

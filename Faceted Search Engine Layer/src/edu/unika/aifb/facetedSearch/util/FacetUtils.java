@@ -51,6 +51,7 @@ package edu.unika.aifb.facetedSearch.util;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
@@ -64,6 +65,10 @@ import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.query.QNode;
+import edu.unika.aifb.graphindex.query.QueryEdge;
+import edu.unika.aifb.graphindex.query.QueryGraph;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class FacetUtils {
@@ -78,42 +83,78 @@ public class FacetUtils {
 	 */
 	private static final String LIST_DELIM = "//";
 
-	public static String getName4DynamicNode(DynamicNode dyn) {
+	public static String cleanURI(String dirtyURI) {
 
-		String name;
-		int diffPos = 0;
+		String cleanURI = new String();
 
-		while ((dyn.getLeftBorder().length() < diffPos)
-				&& (dyn.getRightBorder().length() < diffPos)
-				&& (dyn.getLeftBorder().charAt(diffPos) == dyn.getRightBorder()
-						.charAt(diffPos))) {
-			diffPos++;
+		if (dirtyURI.startsWith("_:")) {
+
+			cleanURI = "http:" + dirtyURI.substring(2);
+			return cleanURI;
+
+		} else if (dirtyURI.startsWith("ttp:")) {
+			cleanURI = "http:" + dirtyURI.substring(4);
+			return cleanURI;
+		} else {
+			return dirtyURI;
+		}
+	}
+
+	public static List<String> getColumnsNames4Table(StructuredQuery sq) {
+
+		List<String> columns = new ArrayList<String>();
+		QNode startNode = sq.getSelectVariables().get(0);
+		columns.add(startNode.getLabel());
+
+		QueryGraph qGraph = sq.getQueryGraph();
+
+		Stack<QueryEdge> outEdgesStack = new Stack<QueryEdge>();
+		outEdgesStack.addAll(qGraph.outgoingEdgesOf(startNode));
+
+		while (!outEdgesStack.isEmpty()) {
+
+			QueryEdge edge = outEdgesStack.pop();
+			QNode tar = edge.getTarget();
+
+			if (!edge.getProperty().equals(
+					FacetEnvironment.RDF.NAMESPACE + FacetEnvironment.RDF.TYPE)) {
+
+				if (FacetUtils.isVariable(tar.getLabel())) {
+					columns.add(tar.getLabel());
+				} else {
+					columns.add(edge.getSource().getLabel() + " - "
+							+ Util.truncateUri(edge.getProperty()) + " - "
+							+ Util.truncateUri(tar.getLabel()));
+				}
+
+				outEdgesStack.addAll(qGraph.outgoingEdgesOf(tar));
+			}
 		}
 
-		name = "[" + dyn.getLeftBorder().substring(0, diffPos + 1)
-				+ (diffPos < dyn.getLeftBorder().length() ? "..." : "") + " - "
-				+ dyn.getRightBorder().substring(0, diffPos + 1)
-				+ (diffPos < dyn.getRightBorder().length() ? "..." : "") + "]";
-
-		return name;
+		return columns;
 	}
-	
+
 	public static int getLiteralDataType(String literalString) {
 
 		if (Util.isDataValue(literalString)) {
 
-			StringTokenizer tokenizer = new StringTokenizer(literalString,
-					FacetEnvironment.DefaultValue.LITERAL_DELIM);
+			if (literalString
+					.contains(FacetEnvironment.DefaultValue.LITERAL_DELIM)) {
 
-			String last_token = null;
+				StringTokenizer tokenizer = new StringTokenizer(literalString,
+						FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
-			while (tokenizer.hasMoreTokens()) {
-				last_token = tokenizer.nextToken();
-			}
+				String last_token = null;
 
-			if (last_token != null) {
-				return range2DataType(last_token);
+				while (tokenizer.hasMoreTokens()) {
+					last_token = tokenizer.nextToken();
+				}
 
+				if (last_token != null) {
+					return range2DataType(last_token);
+				} else {
+					return DataType.STRING;
+				}
 			} else {
 
 				s_log.debug("found no datatype attached to literal.");
@@ -136,6 +177,26 @@ public class FacetUtils {
 										.lastIndexOf(FacetEnvironment.DefaultValue.LITERAL_DELIM));
 	}
 
+	public static String getName4DynamicNode(DynamicNode dyn) {
+
+		String name;
+		int diffPos = 0;
+
+		while ((dyn.getLeftBorder().length() < diffPos)
+				&& (dyn.getRightBorder().length() < diffPos)
+				&& (dyn.getLeftBorder().charAt(diffPos) == dyn.getRightBorder()
+						.charAt(diffPos))) {
+			diffPos++;
+		}
+
+		name = "[" + dyn.getLeftBorder().substring(0, diffPos + 1)
+				+ (diffPos < dyn.getLeftBorder().length() ? "..." : "") + " - "
+				+ dyn.getRightBorder().substring(0, diffPos + 1)
+				+ (diffPos < dyn.getRightBorder().length() ? "..." : "") + "]";
+
+		return name;
+	}
+
 	public static String getValueOfLiteral(String lit) {
 
 		StringTokenizer tokenizer = new StringTokenizer(lit,
@@ -144,15 +205,21 @@ public class FacetUtils {
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : lit;
 	}
 
+	public static boolean isDirty(String uri) {
+		return uri.startsWith("_:") || uri.startsWith("ttp://");
+	}
+
 	public static boolean isGenericNode(Node node) {
 
 		if (node.getValue().startsWith("[") && node.getValue().endsWith("]")) {
 			return true;
-		} else if (node.getValue().startsWith("Generic")) {
-			return true;
 		} else {
-			return false;
+			return node.isGeneric();
 		}
+	}
+
+	public static boolean isVariable(String columnLabel) {
+		return Util.isVariable(columnLabel) && !columnLabel.contains(" - ");
 	}
 
 	public static String list2String(List<String> list) {

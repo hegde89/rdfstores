@@ -48,6 +48,7 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 		String sourceExt = input.readString();
 		String rangeExt = input.readString();
 		String label = input.readString();
+		String domain = input.readString();
 
 		if (isResource) {
 			fv = new Resource();
@@ -60,6 +61,7 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 		fv.setSourceExt(sourceExt);
 		fv.setRangeExt(rangeExt);
 		fv.setLabel(label);
+		fv.setDomain(domain);
 
 		return fv;
 	}
@@ -80,5 +82,6 @@ public class AbstractSingleFacetValueBinding extends TupleBinding<AbstractSingle
 		output.writeString(object.getSourceExt());
 		output.writeString(object.getRangeExt());
 		output.writeString(object.getLabel());
+		output.writeString(object.getDomain());
 	}
 }

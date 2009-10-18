@@ -17,12 +17,11 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-
 /**
  * @author andi
  * 
  */
-public class KeywordRefinementRequest extends AbstractFacetRequest {
+public class KeywordRefinementRequest extends AbstractRefinementRequest {
 
 	private String m_domain;
 	private double m_facetID;

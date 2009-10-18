@@ -70,7 +70,7 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class SearchSessionCache {
 
 	public enum CleanType {
-		ALL, PATHS, DISTANCES, LEAVE_GROUPS, FPAGE, REFINEMENT
+		ALL, PATHS, DISTANCES, LEAVE_GROUPS
 	}
 
 	private static final Logger s_log = Logger
@@ -127,6 +127,7 @@ public class SearchSessionCache {
 	/*
 	 * stored maps
 	 */
+	private StoredMap<String, Result> m_resMap;
 	private StoredMap<Double, String> m_leave2subjectsMap;
 	private StoredMap<String, String> m_object2sourceMap;
 	private StoredMap<Double, List<AbstractSingleFacetValue>> m_dynNode2litListMap;
@@ -185,24 +186,16 @@ public class SearchSessionCache {
 			case ALL : {
 
 				if (m_resCache != null) {
-
-					m_resCache.close();
-					m_resCache = null;
+					m_resMap.clear();
 				}
-				if (m_litCache != null) {
-
-					m_litCache.close();
-					m_litCache = null;
+				if (m_dynNode2litListMap != null) {
+					m_dynNode2litListMap.clear();
 				}
-				if (m_sourceCache != null) {
-
-					m_sourceCache.close();
-					m_sourceCache = null;
+				if (m_object2sourceMap != null) {
+					m_object2sourceMap.clear();
 				}
-				if (m_fpageCache != null) {
-
-					m_fpageCache.close();
-					m_fpageCache = null;
+				if (m_leave2subjectsMap != null) {
+					m_leave2subjectsMap.clear();
 				}
 				if (m_sources4NodeCacheAccess != null) {
 					m_sources4NodeCacheAccess.clear();
@@ -217,62 +210,17 @@ public class SearchSessionCache {
 					m_objects4NodeCacheAccess.clear();
 				}
 
-				/*
-				 * maps
-				 */
-				m_leave2subjectsMap = null;
-				m_object2sourceMap = null;
-				m_dynNode2litListMap = null;
-
-				System.gc();
-				reOpen();
-				break;
-			}
-			case REFINEMENT : {
-
-				if (m_litCache != null) {
-
-					m_litCache.close();
-					m_litCache = null;
-				}
-				if (m_sourceCache != null) {
-
-					m_sourceCache.close();
-					m_sourceCache = null;
-				}
-				if (m_fpageCache != null) {
-
-					m_fpageCache.close();
-					m_fpageCache = null;
-				}
-				if (m_sources4NodeCacheAccess != null) {
-					m_sources4NodeCacheAccess.clear();
-				}
-				if (m_distanceCacheAccess != null) {
-					m_distanceCacheAccess.clear();
-				}
-				if (m_subjects4NodeCacheAccess != null) {
-					m_subjects4NodeCacheAccess.clear();
-				}
-				if (m_objects4NodeCacheAccess != null) {
-					m_objects4NodeCacheAccess.clear();
-				}
-
-				/*
-				 * maps
-				 */
-				m_leave2subjectsMap = null;
-				m_object2sourceMap = null;
-				m_dynNode2litListMap = null;
-
-				System.gc();
-				reOpen();
 				break;
 			}
 			case LEAVE_GROUPS : {
 
-				m_leave2subjectsMap.clear();
-				m_object2sourceMap.clear();
+				if (m_leave2subjectsMap != null) {
+					m_leave2subjectsMap.clear();
+				}
+				if (m_object2sourceMap != null) {
+					m_object2sourceMap.clear();
+				}
+
 				break;
 			}
 			case PATHS : {
@@ -281,7 +229,6 @@ public class SearchSessionCache {
 					m_sources4NodeCacheAccess.clear();
 				}
 
-				System.gc();
 				break;
 			}
 			case DISTANCES : {
@@ -290,18 +237,6 @@ public class SearchSessionCache {
 					m_distanceCacheAccess.clear();
 				}
 
-				System.gc();
-				break;
-			}
-			case FPAGE : {
-
-				if (m_fpageCache != null) {
-					m_fpageCache.close();
-					m_fpageCache = null;
-				}
-
-				System.gc();
-				reOpen();
 				break;
 			}
 		}
@@ -309,14 +244,47 @@ public class SearchSessionCache {
 
 	public void close() throws DatabaseException, CacheException {
 
-		clean(CleanType.ALL);
+		if (m_resCache != null) {
+			m_resCache.close();
+			m_resCache = null;
+		}
+		if (m_litCache != null) {
 
+			m_litCache.close();
+			m_litCache = null;
+		}
+		if (m_sourceCache != null) {
+
+			m_sourceCache.close();
+			m_sourceCache = null;
+		}
+		if (m_fpageCache != null) {
+
+			m_fpageCache.close();
+			m_fpageCache = null;
+		}
+		if (m_sources4NodeCacheAccess != null) {
+			m_sources4NodeCacheAccess.clear();
+		}
+		if (m_distanceCacheAccess != null) {
+			m_distanceCacheAccess.clear();
+		}
+		if (m_subjects4NodeCacheAccess != null) {
+			m_subjects4NodeCacheAccess.clear();
+		}
+		if (m_objects4NodeCacheAccess != null) {
+			m_objects4NodeCacheAccess.clear();
+		}
 		if (m_classDB != null) {
 			m_classDB.close();
 		}
 		if (m_env != null) {
 			m_env.close();
 		}
+
+		m_leave2subjectsMap = null;
+		m_object2sourceMap = null;
+		m_dynNode2litListMap = null;
 	}
 
 	public int getCountFV(StaticNode node) {
@@ -399,9 +367,7 @@ public class SearchSessionCache {
 	}
 
 	public Result getCurrentResult() throws DatabaseException, IOException {
-
-		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET_CURRENT,
-				m_resBinding);
+		return m_resMap.get(Keys.RESULT_SET_CURRENT);
 	}
 
 	public ResultPage getCurrentResultPage(int pageNum)
@@ -440,8 +406,7 @@ public class SearchSessionCache {
 	public Table<String> getCurrentResultTable() throws DatabaseException,
 			IOException {
 
-		return FacetDbUtils.get(m_resCache, Keys.RESULT_SET_CURRENT,
-				m_resBinding).getResultTable();
+		return m_resMap.get(Keys.RESULT_SET_CURRENT).getResultTable();
 	}
 
 	public Database getDB(String name) {
@@ -649,6 +614,7 @@ public class SearchSessionCache {
 		return sources;
 	}
 	public Collection<String> getSources4Object(String domain, String object) {
+
 		return m_object2sourceMap.duplicates(domain + object);
 	}
 
@@ -725,7 +691,7 @@ public class SearchSessionCache {
 		} catch (StorageException e) {
 			e.printStackTrace();
 		}
-		
+
 		/*
 		 * JCS caches
 		 */
@@ -801,6 +767,9 @@ public class SearchSessionCache {
 		/*
 		 * Create maps on top of dbs ...
 		 */
+		m_resMap = new StoredMap<String, Result>(m_resCache, m_strgBinding,
+				m_resBinding, true);
+
 		m_leave2subjectsMap = new StoredMap<Double, String>(m_sourceCache,
 				m_doubleBinding, m_strgBinding, true);
 
@@ -826,54 +795,10 @@ public class SearchSessionCache {
 		return isOpen;
 	}
 
-	public void reOpen() throws DatabaseException {
-
-		/*
-		 * databases
-		 */
-
-		if (m_resCache == null) {
-			m_resCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
-		}
-		if (m_litCache == null) {
-			m_litCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
-		}
-		if (m_fpageCache == null) {
-			m_fpageCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
-		}
-		if (m_sourceCache == null) {
-			m_sourceCache = m_env.openDatabase(null,
-					FacetEnvironment.DatabaseName.FS_CACHE, m_dbConfig2);
-		}
-
-		/*
-		 * Create maps on top of dbs ...
-		 */
-
-		if (m_leave2subjectsMap == null) {
-			m_leave2subjectsMap = new StoredMap<Double, String>(m_sourceCache,
-					m_doubleBinding, m_strgBinding, true);
-		}
-
-		if (m_object2sourceMap == null) {
-			m_object2sourceMap = new StoredMap<String, String>(m_sourceCache,
-					m_strgBinding, m_strgBinding, true);
-		}
-
-		if (m_dynNode2litListMap == null) {
-			m_dynNode2litListMap = new StoredMap<Double, List<AbstractSingleFacetValue>>(
-					m_sourceCache, m_doubleBinding, m_litListBinding, true);
-		}
-	}
-
 	public void storeCurrentResult(Result res)
 			throws UnsupportedEncodingException, DatabaseException {
 
-		FacetDbUtils.store(m_resCache, Keys.RESULT_SET_CURRENT, res,
-				m_resBinding);
+		m_resMap.put(Keys.RESULT_SET_CURRENT, res);
 	}
 
 	public void storeLiterals(DynamicNode dynamicNode,

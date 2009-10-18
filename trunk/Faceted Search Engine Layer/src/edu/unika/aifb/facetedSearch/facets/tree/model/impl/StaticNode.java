@@ -58,6 +58,7 @@ public class StaticNode extends Node implements IStaticNode {
 	private int m_height;
 	private int m_depth;
 	private int m_size;
+	private boolean m_isTypeLeave;
 
 	public StaticNode() {
 		super();
@@ -131,10 +132,15 @@ public class StaticNode extends Node implements IStaticNode {
 
 	private void init() {
 
+		m_isTypeLeave = false;
 		m_countFV = -1;
 		m_countS = -1;
 		m_height = -1;
 		m_size = -1;
+	}
+
+	public boolean isTypeLeave() {
+		return m_isTypeLeave;
 	}
 
 	public void setCache(SearchSessionCache cache) {
@@ -165,5 +171,9 @@ public class StaticNode extends Node implements IStaticNode {
 
 	public void setSize(int size) {
 		m_size = size;
+	}
+
+	public void setTypeLeave(boolean isTypeLeave) {
+		m_isTypeLeave = isTypeLeave;
 	}
 }

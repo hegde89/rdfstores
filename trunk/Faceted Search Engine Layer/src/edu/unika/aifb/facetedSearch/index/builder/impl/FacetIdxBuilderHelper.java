@@ -18,13 +18,31 @@
  */
 package edu.unika.aifb.facetedSearch.index.builder.impl;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.openrdf.OpenRDFException;
+import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.vocabulary.RDFS;
+import org.openrdf.repository.Repository;
+import org.openrdf.repository.RepositoryConnection;
+import org.openrdf.repository.RepositoryException;
+import org.openrdf.repository.RepositoryResult;
+import org.openrdf.repository.sail.SailRepository;
+import org.openrdf.rio.RDFFormat;
+import org.openrdf.sail.memory.MemoryStore;
 
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.tuple.TupleBinding;
@@ -59,6 +77,18 @@ public class FacetIdxBuilderHelper {
 	/*
 	 * 
 	 */
+	@SuppressWarnings("unused")
+	private static Logger s_log = Logger.getLogger(FacetIdxBuilderHelper.class);
+
+	/*
+	 * 
+	 */
+	private static HashSet<String> s_dataProperties;
+	private static HashSet<String> s_objectProperties;
+
+	/*
+	 * 
+	 */
 	private static String s_expressivity;
 
 	/*
@@ -88,6 +118,11 @@ public class FacetIdxBuilderHelper {
 	 */
 	private static DirectedMultigraph<NodeElement, EdgeElement> s_indexGraph;
 
+	/*
+	 * 
+	 */
+	private static Repository s_schemaOnto;
+
 	private static FacetIdxBuilderHelper s_instance;
 
 	public static void close() throws DatabaseException, StorageException,
@@ -106,10 +141,16 @@ public class FacetIdxBuilderHelper {
 			s_env.close();
 		}
 
+		s_schemaOnto = null;
+
+		s_classes.clear();
+		s_dataProperties.clear();
+		s_objectProperties.clear();
+
+		s_dataProperties = null;
+		s_objectProperties = null;
 		s_classes = null;
 		s_instance = null;
-
-		System.gc();
 	}
 
 	public static FacetIdxBuilderHelper getInstance(IndexReader idxReader,
@@ -127,50 +168,50 @@ public class FacetIdxBuilderHelper {
 		s_idxReader = idxReader;
 		s_structureIndex = s_idxReader.getStructureIndex();
 
+		s_dataProperties = new HashSet<String>();
+		s_objectProperties = new HashSet<String>();
+
 		s_expressivity = expressivity;
 
 		initGraphIndex(idxReader);
 		initClasses(idxReader);
 		initCache();
-
+		initProperties();
+		initSchemaOnto();
 	}
 
-	public String getClass(String individual) throws DatabaseException,
-			IOException {
+	public ArrayList<String> getClass(String individual)
+			throws DatabaseException, IOException {
 
-		String clazz = null;
+		individual = FacetUtils.cleanURI(individual);
+		ArrayList<String> clazzes = new ArrayList<String>();
 
-		if ((clazz = FacetDbUtils.get(s_cacheDB, "class_" + individual,
-				s_stringBinding)) == null) {
+		try {
 
-			try {
+			Table<String> triples = s_idxReader.getDataIndex().getTriples(
+					individual,
+					"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null);
 
-				Table<String> triples = s_idxReader.getDataIndex().getTriples(
-						individual,
-						FacetEnvironment.RDF.NAMESPACE
-								+ FacetEnvironment.RDF.TYPE, null);
+			Iterator<String[]> rowIter = triples.getRows().iterator();
 
-				if (!triples.getRows().isEmpty()) {
-					clazz = triples.getRow(0)[2];
-				} else {
-					clazz = "null";
-				}
-			} catch (StorageException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (NullPointerException e) {
-				e.printStackTrace();
+			while (rowIter.hasNext()) {
+				String[] row = rowIter.next();
+				clazzes.add(FacetUtils.cleanURI(row[2]));
 			}
-
-			FacetDbUtils.store(s_cacheDB, "class_" + individual, clazz,
-					s_stringBinding);
+		} catch (StorageException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (NullPointerException e) {
+			e.printStackTrace();
 		}
 
-		return clazz.equals("null") ? null : clazz;
+		return clazzes;
 	}
 
 	public int getDataType(String prop) throws IOException, DatabaseException {
+
+		prop = FacetUtils.cleanURI(prop);
 
 		if (isDataProperty(prop)) {
 
@@ -179,26 +220,79 @@ public class FacetIdxBuilderHelper {
 			if ((dataType = FacetDbUtils.get(s_cacheDB, "dataType_" + prop,
 					s_stringBinding)) == null) {
 
+				// try {
+				//
+				// Table<String> triples = s_idxReader
+				// .getDataIndex()
+				// .getTriples(
+				// cleanURI(prop),
+				// "http://www.w3.org/2000/01/rdf-schema#range",
+				// null);
+				//
+				// if (!triples.getRows().isEmpty()) {
+				// dataType = String
+				// .valueOf(FacetUtils
+				// .range2DataType(cleanURI(triples
+				// .getRow(0)[2])));
+				// } else {
+				// dataType = String.valueOf(DataType.NOT_SET);
+				// }
+				// } catch (StorageException e) {
+				// e.printStackTrace();
+				// } catch (IOException e) {
+				// e.printStackTrace();
+				// } catch (NullPointerException e) {
+				// e.printStackTrace();
+				// }
+
 				try {
 
-					Table<String> triples = s_idxReader
-							.getDataIndex()
-							.getTriples(
-									prop,
-									"http://www.w3.org/2000/01/rdf-schema#range",
-									null);
+					ValueFactory valueFactory = s_schemaOnto.getValueFactory();
+					RepositoryConnection con = s_schemaOnto.getConnection();
 
-					if (!triples.getRows().isEmpty()) {
+					URI propertyURI = valueFactory.createURI(prop);
+					RepositoryResult<Statement> stmts = con.getStatements(
+							propertyURI, RDFS.RANGE, null, true);
+
+					if (stmts.hasNext()) {
+
+						Statement stmt = stmts.next();
+
 						dataType = String.valueOf(FacetUtils
-								.range2DataType(triples.getRow(0)[2]));
+								.range2DataType(FacetUtils.cleanURI(stmt
+										.getObject().stringValue())));
 					} else {
-						dataType = String.valueOf(DataType.NOT_SET);
+
+						try {
+
+							Table<String> triples = s_idxReader
+									.getDataIndex()
+									.getTriples(
+											prop,
+											"http://www.w3.org/2000/01/rdf-schema#range",
+											null);
+
+							if (!triples.getRows().isEmpty()) {
+								dataType = String
+										.valueOf(FacetUtils
+												.range2DataType(FacetUtils
+														.cleanURI(triples
+																.getRow(0)[2])));
+							} else {
+								dataType = String.valueOf(DataType.NOT_SET);
+							}
+						} catch (StorageException e) {
+							e.printStackTrace();
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (NullPointerException e) {
+							e.printStackTrace();
+						}
 					}
-				} catch (StorageException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (NullPointerException e) {
+
+					con.close();
+
+				} catch (RepositoryException e) {
 					e.printStackTrace();
 				}
 
@@ -238,6 +332,7 @@ public class FacetIdxBuilderHelper {
 
 	public String getLabel(String res) throws DatabaseException, IOException {
 
+		res = FacetUtils.cleanURI(res);
 		String label = null;
 
 		if ((label = FacetDbUtils.get(s_cacheDB, "label_" + res,
@@ -251,7 +346,8 @@ public class FacetIdxBuilderHelper {
 								null);
 
 				if (!triples.getRows().isEmpty()) {
-					label = FacetUtils.getValueOfLiteral(triples.getRow(0)[2]);
+					label = FacetUtils.getValueOfLiteral(FacetUtils
+							.cleanURI(triples.getRow(0)[2]));
 				} else {
 					label = FacetEnvironment.DefaultValue.NO_LABEL;
 				}
@@ -264,74 +360,34 @@ public class FacetIdxBuilderHelper {
 				e.printStackTrace();
 			}
 
+			// try {
+			//				
+			// ValueFactory valueFactory = s_schemaOnto.getValueFactory();
+			// RepositoryConnection con = s_schemaOnto.getConnection();
+			//				
+			// URI resURI = valueFactory.createURI(res);
+			// RepositoryResult<Statement> stmts = con.getStatements(resURI,
+			// RDFS.LABEL, null, true);
+			//
+			// if (stmts.hasNext()) {
+			// Statement stmt = stmts.next();
+			// label = stmt.getObject().stringValue();
+			// } else {
+			// label = FacetEnvironment.DefaultValue.NO_LABEL;
+			// }
+			//
+			// con.close();
+			//				
+			// } catch (RepositoryException e) {
+			// e.printStackTrace();
+			// }
+
 			FacetDbUtils.store(s_cacheDB, "label_" + res, label,
 					s_stringBinding);
 
 		}
 
 		return label;
-	}
-
-	public String getMostSpecificClass(String clazz)
-			throws UnsupportedEncodingException, DatabaseException, IOException {
-
-		String mostSpecificClass = clazz;
-
-		if ((mostSpecificClass = FacetDbUtils.get(s_cacheDB,
-				"mostSpecificClass_" + clazz, s_stringBinding)) == null) {
-
-			mostSpecificClass = clazz;
-			String subClass;
-
-			while ((subClass = getSubClass(mostSpecificClass)) != null) {
-
-				if (!subClass.equals(mostSpecificClass)) {
-					mostSpecificClass = subClass;
-				}
-			}
-
-			FacetDbUtils.store(s_cacheDB, "mostSpecificClass_" + clazz,
-					mostSpecificClass, s_stringBinding);
-
-		}
-
-		return mostSpecificClass;
-	}
-
-	public Node getRange(Node property) throws DatabaseException, IOException {
-
-		String rangeClassLabel = null;
-
-		if ((rangeClassLabel = FacetDbUtils.get(s_cacheDB, "range_"
-				+ property.getValue(), s_stringBinding)) == null) {
-
-			try {
-
-				Table<String> triples = s_idxReader.getDataIndex().getTriples(
-						property.getValue(),
-						FacetEnvironment.RDFS.NAMESPACE
-								+ FacetEnvironment.RDFS.HAS_RANGE, null);
-
-				if (!triples.getRows().isEmpty()) {
-					rangeClassLabel = "Range: " + triples.getRow(0)[2];
-				} else {
-					rangeClassLabel = "null";
-				}
-			} catch (StorageException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (NullPointerException e) {
-				e.printStackTrace();
-			}
-
-			FacetDbUtils.store(s_cacheDB, "range_" + property.getValue(),
-					rangeClassLabel, s_stringBinding);
-
-		}
-
-		return rangeClassLabel.equals("null") ? null : new Node(
-				rangeClassLabel, NodeType.RANGE_ROOT, NodeContent.CLASS);
 	}
 
 	// public Node getSuperProperty(String property) throws IOException,
@@ -390,80 +446,173 @@ public class FacetIdxBuilderHelper {
 	// }
 	// }
 
-	public String getSubClass(String clazz) throws DatabaseException,
-			IOException {
+	public Node getRange(Node property) throws DatabaseException, IOException {
 
-		String subClass = null;
+		String propertyLabel = FacetUtils.cleanURI(property.getValue());
+		String rangeClassLabel = null;
 
-		if ((subClass = FacetDbUtils.get(s_cacheDB, "subClass_" + clazz,
-				s_stringBinding)) == null) {
+		if ((rangeClassLabel = FacetDbUtils.get(s_cacheDB, "range_"
+				+ property.getValue(), s_stringBinding)) == null) {
+
+			// try {
+			//
+			// Table<String> triples = s_idxReader.getDataIndex().getTriples(
+			// cleanURI(property.getValue()),
+			// FacetEnvironment.RDFS.NAMESPACE
+			// + FacetEnvironment.RDFS.HAS_RANGE, null);
+			//
+			// if (!triples.getRows().isEmpty()) {
+			// rangeClassLabel = cleanURI(triples.getRow(0)[2]);
+			// } else {
+			// rangeClassLabel = "null";
+			// }
+			// } catch (StorageException e) {
+			// e.printStackTrace();
+			// } catch (IOException e) {
+			// e.printStackTrace();
+			// } catch (NullPointerException e) {
+			// e.printStackTrace();
+			// }
 
 			try {
 
-				Table<String> triples = s_idxReader.getDataIndex().getTriples(
-						null,
-						FacetEnvironment.RDFS.NAMESPACE
-								+ FacetEnvironment.RDFS.SUBCLASS_OF, clazz);
+				ValueFactory valueFactory = s_schemaOnto.getValueFactory();
+				RepositoryConnection con = s_schemaOnto.getConnection();
 
-				if (!triples.getRows().isEmpty()) {
-					if (!triples.getRow(0)[0].equals(clazz)) {
-						subClass = triples.getRow(0)[0];
-					} else {
-						subClass = "null";
-					}
+				URI propertyURI = valueFactory.createURI(propertyLabel);
+				RepositoryResult<Statement> stmts = con.getStatements(
+						propertyURI, RDFS.RANGE, null, true);
+
+				if (stmts.hasNext()) {
+
+					Statement stmt = stmts.next();
+					rangeClassLabel = stmt.getObject().stringValue();
+
 				} else {
-					subClass = "null";
+
+					try {
+
+						Table<String> triples = s_idxReader
+								.getDataIndex()
+								.getTriples(
+										propertyLabel,
+										FacetEnvironment.RDFS.NAMESPACE
+												+ FacetEnvironment.RDFS.HAS_RANGE,
+										null);
+
+						if (!triples.getRows().isEmpty()) {
+							rangeClassLabel = FacetUtils.cleanURI(triples
+									.getRow(0)[2]);
+						} else {
+							rangeClassLabel = "null";
+						}
+					} catch (StorageException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (NullPointerException e) {
+						e.printStackTrace();
+					}
 				}
 
-			} catch (StorageException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (NullPointerException e) {
+				con.close();
+
+			} catch (RepositoryException e) {
 				e.printStackTrace();
 			}
 
-			FacetDbUtils.store(s_cacheDB, "subClass_" + clazz, subClass,
-					s_stringBinding);
+			FacetDbUtils.store(s_cacheDB, "range_" + property.getValue(),
+					rangeClassLabel, s_stringBinding);
+
 		}
 
-		if (subClass.equals("null")) {
-			return null;
-		} else {
-			return subClass;
-		}
+		return rangeClassLabel.equals("null") ? null : new Node(
+				rangeClassLabel, NodeType.RANGE_ROOT, NodeContent.CLASS);
 	}
 
 	public Node getSuperClass(String clazz) throws DatabaseException,
 			IOException {
 
+		clazz = FacetUtils.cleanURI(clazz);
 		String superClass = null;
 
 		if ((superClass = FacetDbUtils.get(s_cacheDB, "superClass_" + clazz,
 				s_stringBinding)) == null) {
 
+			// try {
+			//
+			// Table<String> triples = s_idxReader.getDataIndex().getTriples(
+			// cleanURI(clazz),
+			// FacetEnvironment.RDFS.NAMESPACE
+			// + FacetEnvironment.RDFS.SUBCLASS_OF, null);
+			//
+			// if (!triples.getRows().isEmpty()) {
+			// if (!cleanURI(triples.getRow(0)[2]).equals(clazz)) {
+			// superClass = cleanURI(triples.getRow(0)[2]);
+			// } else {
+			// superClass = "null";
+			// }
+			// } else {
+			// superClass = "null";
+			// }
+			//
+			// } catch (StorageException e) {
+			// e.printStackTrace();
+			// } catch (IOException e) {
+			// e.printStackTrace();
+			// } catch (NullPointerException e) {
+			// e.printStackTrace();
+			// }
+
 			try {
 
-				Table<String> triples = s_idxReader.getDataIndex().getTriples(
-						clazz,
-						FacetEnvironment.RDFS.NAMESPACE
-								+ FacetEnvironment.RDFS.SUBCLASS_OF, null);
+				ValueFactory valueFactory = s_schemaOnto.getValueFactory();
+				RepositoryConnection con = s_schemaOnto.getConnection();
 
-				if (!triples.getRows().isEmpty()) {
-					if (!triples.getRow(0)[2].equals(clazz)) {
-						superClass = triples.getRow(0)[2];
-					} else {
-						superClass = "null";
-					}
+				URI clazzURI = valueFactory.createURI(clazz);
+				RepositoryResult<Statement> stmts = con.getStatements(clazzURI,
+						RDFS.SUBCLASSOF, null, true);
+
+				if (stmts.hasNext()) {
+
+					Statement stmt = stmts.next();
+					superClass = stmt.getObject().stringValue();
+
 				} else {
-					superClass = "null";
+
+					try {
+
+						Table<String> triples = s_idxReader
+								.getDataIndex()
+								.getTriples(
+										clazz,
+										FacetEnvironment.RDFS.NAMESPACE
+												+ FacetEnvironment.RDFS.SUBCLASS_OF,
+										null);
+
+						if (!triples.getRows().isEmpty()) {
+							if (!FacetUtils.cleanURI(triples.getRow(0)[2])
+									.equals(clazz)) {
+								superClass = FacetUtils.cleanURI(triples
+										.getRow(0)[2]);
+							} else {
+								superClass = "null";
+							}
+						} else {
+							superClass = "null";
+						}
+					} catch (StorageException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (NullPointerException e) {
+						e.printStackTrace();
+					}
 				}
 
-			} catch (StorageException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (NullPointerException e) {
+				con.close();
+
+			} catch (RepositoryException e) {
 				e.printStackTrace();
 			}
 
@@ -490,7 +639,42 @@ public class FacetIdxBuilderHelper {
 
 	public boolean hasSubClass(String clazz) throws DatabaseException,
 			IOException {
-		return getSubClass(clazz) != null;
+
+		String hasSubClass = null;
+
+		if ((hasSubClass = FacetDbUtils.get(s_cacheDB, "subClass_" + clazz,
+				s_stringBinding)) == null) {
+
+			try {
+
+				ValueFactory valueFactory = s_schemaOnto.getValueFactory();
+				RepositoryConnection con;
+
+				con = s_schemaOnto.getConnection();
+
+				URI clazzURI = valueFactory.createURI(clazz);
+				RepositoryResult<Statement> stmts = con.getStatements(null,
+						RDFS.SUBCLASSOF, clazzURI, true);
+
+				if (stmts.hasNext()) {
+					hasSubClass = "1";
+				} else {
+					hasSubClass = "0";
+				}
+
+				con.close();
+
+			} catch (NullPointerException e) {
+				e.printStackTrace();
+			} catch (RepositoryException e) {
+				e.printStackTrace();
+			}
+
+			FacetDbUtils.store(s_cacheDB, "subClass_" + clazz, hasSubClass,
+					s_stringBinding);
+		}
+
+		return hasSubClass.equals("1");
 	}
 
 	private void initCache() throws EnvironmentLockedException,
@@ -615,49 +799,124 @@ public class FacetIdxBuilderHelper {
 			e.printStackTrace();
 		}
 	}
+	private void initProperties() {
 
-	public boolean isDataProperty(String prop) throws IOException,
-			DatabaseException {
+		// data-properties
 
-		String isDataProperty = null;
+		try {
 
-		if ((isDataProperty = FacetDbUtils.get(s_cacheDB, "isDataProperty_"
-				+ prop, s_stringBinding)) == null) {
+			FileInputStream fstream = new FileInputStream(
+					FacetedSearchLayerConfig.getGraphIndexDirStrg() + "/"
+							+ FacetEnvironment.FileName.DATA_PROPERTIES);
+
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			String strg;
+
+			while ((strg = br.readLine()) != null) {
+				s_dataProperties.add(strg);
+			}
+
+			in.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		// object-properties
+
+		try {
+
+			FileInputStream fstream = new FileInputStream(
+					FacetedSearchLayerConfig.getGraphIndexDirStrg() + "/"
+							+ FacetEnvironment.FileName.OBJECT_PROPERTIES);
+
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			String strg;
+
+			while ((strg = br.readLine()) != null) {
+				s_objectProperties.add(strg);
+			}
+
+			in.close();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void initSchemaOnto() {
+
+		try {
+
+			s_schemaOnto = new SailRepository(new MemoryStore());
+			s_schemaOnto.initialize();
+
+			File file = new File(FacetedSearchLayerConfig.getSchemaOntoPath());
 
 			try {
+				RepositoryConnection con = s_schemaOnto.getConnection();
 
-				Table<String> triples = s_idxReader
-						.getDataIndex()
-						.getTriples(
-								prop,
-								"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-								null);
-
-				if (!triples.getRows().isEmpty()) {
-
-					if (triples.getRow(0)[2]
-							.equals("http://www.w3.org/2002/07/owl#DatatypeProperty")) {
-						isDataProperty = "1";
-					} else {
-						isDataProperty = "0";
-					}
-				} else {
-					isDataProperty = "1";
+				try {
+					con.add(file, "http://dbpedia.org/ontology/",
+							RDFFormat.RDFXML);
+				} finally {
+					con.close();
 				}
-			} catch (StorageException e) {
+			} catch (OpenRDFException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
-			} catch (NullPointerException e) {
-				e.printStackTrace();
 			}
-
-			FacetDbUtils.store(s_cacheDB, "isDataProperty_" + prop,
-					isDataProperty, s_stringBinding);
-
+		} catch (RepositoryException e) {
+			e.printStackTrace();
 		}
 
-		return isDataProperty.equals("1");
+	}
+	public boolean isDataProperty(String prop) throws IOException,
+			DatabaseException {
+
+		return s_dataProperties.contains(prop);
+
+		// String isDataProperty = null;
+		//
+		// if ((isDataProperty = FacetDbUtils.get(s_cacheDB, "isDataProperty_"
+		// + prop, s_stringBinding)) == null) {
+		//
+		// try {
+		//
+		// Table<String> triples = s_idxReader
+		// .getDataIndex()
+		// .getTriples(
+		// prop,
+		// "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+		// null);
+		//
+		// if (!triples.getRows().isEmpty()) {
+		//
+		// if (triples.getRow(0)[2]
+		// .equals("http://www.w3.org/2002/07/owl#DatatypeProperty")) {
+		// isDataProperty = "1";
+		// } else {
+		// isDataProperty = "0";
+		// }
+		// } else {
+		// isDataProperty = "1";
+		// }
+		// } catch (StorageException e) {
+		// e.printStackTrace();
+		// } catch (IOException e) {
+		// e.printStackTrace();
+		// } catch (NullPointerException e) {
+		// e.printStackTrace();
+		// }
+		//
+		// FacetDbUtils.store(s_cacheDB, "isDataProperty_" + prop,
+		// isDataProperty, s_stringBinding);
+		//
+		// }
+		//
+		// return isDataProperty.equals("1");
 	}
 
 	public boolean isObjectProperty(String prop) throws IOException,
@@ -680,8 +939,8 @@ public class FacetIdxBuilderHelper {
 
 		String isSubClass = null;
 
-		if ((isSubClass = FacetDbUtils.get(s_cacheDB, "subClassOf_" + class1
-				+ "_" + class2, s_stringBinding)) == null) {
+		if ((isSubClass = FacetDbUtils.get(s_cacheDB, "subClassOf_"
+				+ class1.getValue() + "_" + class2.getValue(), s_stringBinding)) == null) {
 
 			isSubClass = "0";
 
@@ -695,6 +954,42 @@ public class FacetIdxBuilderHelper {
 				while ((superClass = getSuperClass(currentClass)) != null) {
 
 					if (superClass.hasSameValueAs(class2)) {
+						isSubClass = "1";
+						break;
+					} else {
+						currentClass = superClass.getValue();
+					}
+				}
+			}
+
+			FacetDbUtils.store(s_cacheDB, "subClassOf_" + class1.getValue()
+					+ "_" + class2.getValue(), isSubClass, s_stringBinding);
+
+		}
+
+		return !isSubClass.equals("0");
+	}
+
+	public boolean isSubClassOf(String class1, String class2)
+			throws DatabaseException, IOException {
+
+		String isSubClass = null;
+
+		if ((isSubClass = FacetDbUtils.get(s_cacheDB, "subClassOf1_" + class1
+				+ "_" + class2, s_stringBinding)) == null) {
+
+			isSubClass = "0";
+
+			if (class1.equals(class2)) {
+				isSubClass = "0";
+			} else {
+
+				String currentClass = class1;
+				Node superClass;
+
+				while ((superClass = getSuperClass(currentClass)) != null) {
+
+					if (superClass.getValue().equals(class2)) {
 
 						isSubClass = "1";
 						break;
@@ -704,9 +999,8 @@ public class FacetIdxBuilderHelper {
 				}
 			}
 
-			FacetDbUtils.store(s_cacheDB,
-					"subClassOf_" + class1 + "_" + class2, isSubClass,
-					s_stringBinding);
+			FacetDbUtils.store(s_cacheDB, "subClassOf1_" + class1 + "_"
+					+ class2, isSubClass, s_stringBinding);
 
 		}
 

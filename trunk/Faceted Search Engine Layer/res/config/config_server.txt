@@ -1,3 +1,6 @@
+schemaOntoPath=/local/users/swc/dbpedia-ontology.rdfs
+create.graphIdx=false
+create.facetIdx=true
 graphidx.dir=/local/users/swc/dtidx
 facetidx.dir=/local2_aifbleros/users/swc/fsl/idx/
 expressivity=owl

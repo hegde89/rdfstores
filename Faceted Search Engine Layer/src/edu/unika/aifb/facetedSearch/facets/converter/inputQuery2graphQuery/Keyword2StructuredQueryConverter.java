@@ -15,39 +15,36 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.algo.construction.clustering.impl;
+package edu.unika.aifb.facetedSearch.facets.converter.inputQuery2graphQuery;
 
-import java.util.Comparator;
-
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
  * @author andi
  * 
  */
-public class NumericalComparator
-		implements
-			Comparator<AbstractSingleFacetValue> {
+public class Keyword2StructuredQueryConverter {
 
-	public NumericalComparator() {
+	private static Keyword2StructuredQueryConverter s_instance;
+
+	public static Keyword2StructuredQueryConverter getInstance() {
+		return s_instance == null
+				? s_instance = new Keyword2StructuredQueryConverter()
+				: s_instance;
+	}
+
+	private Keyword2StructuredQueryConverter() {
 
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
-	 */
-	public int compare(AbstractSingleFacetValue o1, AbstractSingleFacetValue o2) {
+	public StructuredQuery keyword2StructuredQuery(String keywordQueryStrg) {
 
-		Double litValue1 = (Double) ((Literal) o1).getParsedLiteral();
-		Double litValue2 = (Double) ((Literal) o2).getParsedLiteral();
+		StructuredQuery sQuery = new StructuredQuery("");
+		sQuery.addEdge(FacetEnvironment.DefaultValue.VAR,
+				FacetEnvironment.DefaultValue.CONTAINS_KEYWORD_PREDICATE,
+				keywordQueryStrg);
 
-		return litValue1.compareTo(litValue2);
+		return sQuery;
 	}
-
-	// public double lit2Double(String lit) {
-	// return XMLDatatypeUtil.parseDouble(FacetUtils.getValueOfLiteral(lit));
-	// }
 }

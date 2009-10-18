@@ -317,5 +317,4 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 			m_helper.insertFacetValues(tree, epNode, lits);
 		}
 	}
-
 }

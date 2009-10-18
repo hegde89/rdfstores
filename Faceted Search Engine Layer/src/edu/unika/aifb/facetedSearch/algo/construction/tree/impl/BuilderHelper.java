@@ -21,6 +21,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -32,6 +33,7 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
@@ -64,9 +66,15 @@ public class BuilderHelper {
 	 */
 	private FacetIndex m_facetIndex;
 
+	/*
+	 * 
+	 */
+	private HashSet<String> m_parsedFacetValues;
+
 	public BuilderHelper(SearchSession session) {
 
 		m_session = session;
+		m_parsedFacetValues = new HashSet<String>();
 
 		try {
 
@@ -84,14 +92,14 @@ public class BuilderHelper {
 		}
 	}
 
-	public void insertFacetValues(FacetTree tree, StaticNode node,
-			Collection<? extends AbstractFacetValue> values) {
+	public void clearParsedFacetValues() {
+		m_parsedFacetValues.clear();
+	}
 
-		Iterator<? extends AbstractFacetValue> valueIter = values.iterator();
+	public void insertFacetValue(FacetTree tree, StaticNode node,
+			AbstractFacetValue fv) {
 
-		while (valueIter.hasNext()) {
-
-			AbstractFacetValue fv = valueIter.next();
+		if (!m_parsedFacetValues.contains(fv.getValue())) {
 
 			FacetValueNode fvNode = new FacetValueNode(fv.getValue());
 			fvNode.setContent(NodeContent.CLASS);
@@ -105,7 +113,21 @@ public class BuilderHelper {
 
 			Edge edge = tree.addEdge(node, fvNode);
 			edge.setType(EdgeType.CONTAINS);
+
+			m_parsedFacetValues.add(fv.getValue());
 		}
+	}
+
+	public void insertFacetValues(FacetTree tree, StaticNode node,
+			Collection<? extends AbstractFacetValue> values) {
+
+		Iterator<? extends AbstractFacetValue> valueIter = values.iterator();
+
+		while (valueIter.hasNext()) {
+			insertFacetValue(tree, node, valueIter.next());
+		}
+
+		clearParsedFacetValues();
 	}
 
 	public StaticNode insertPathAtNode(FacetTree newTree, Node leave,
@@ -155,6 +177,10 @@ public class BuilderHelper {
 					newNode.setSession(m_session);
 					newNode.setDepth(pos4insertion.getDepth() + 1);
 
+					if (node2copy.getFacet().getType() == FacetEnvironment.FacetType.RDF_PROPERTY_BASED) {
+						newNode.setTypeLeave(true);
+					}
+
 					String path = pathPrefix + pathDelta + newNode.getValue();
 					newNode.setPath(path);
 					paths.put(path.hashCode(), newNode);
@@ -197,7 +223,7 @@ public class BuilderHelper {
 			// walk to root
 
 			while (!reachedRangeRoot) {
-				
+
 				Iterator<Edge> incomingEdgesIter = tree.incomingEdgesOf(
 						currentNode).iterator();
 
@@ -216,8 +242,8 @@ public class BuilderHelper {
 
 					} else {
 
-						if ((tree.outgoingEdgesOf(father).size() == 1) &&
-								!leaves.contains(father)) {
+						if ((tree.outgoingEdgesOf(father).size() == 1)
+								&& !leaves.contains(father)) {
 
 							Edge edge2fathersfather = tree.incomingEdgesOf(
 									father).iterator().next();

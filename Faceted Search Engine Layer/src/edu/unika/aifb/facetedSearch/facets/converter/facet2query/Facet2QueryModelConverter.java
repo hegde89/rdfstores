@@ -32,6 +32,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
+import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
@@ -86,7 +87,9 @@ public class Facet2QueryModelConverter extends AbstractConverter {
 		Node tar;
 
 		String currentVar = node.getDomain();
-
+		sq.getQueryGraph().addVertex(new QNode(currentVar));
+		sq.setAsSelect(currentVar);
+		
 		while (!path.isEmpty()) {
 
 			edge = path.pop();
@@ -153,22 +156,29 @@ public class Facet2QueryModelConverter extends AbstractConverter {
 
 							currentObject = m_session.getCurrentQuery()
 									.getNextVar();
+							
+							if(!(tar instanceof FacetValueNode)) {
+								
+								if (!FacetUtils.isGenericNode(tar)) {
 
-							if (!FacetUtils.isGenericNode(tar)) {
+									sq.addEdge(currentObject,
+											FacetEnvironment.RDF.NAMESPACE
+													+ FacetEnvironment.RDF.TYPE,
+											tar.getValue());
+								}
 
-								sq.addEdge(currentObject,
-										FacetEnvironment.RDF.NAMESPACE
-												+ FacetEnvironment.RDF.TYPE,
+								sq.addEdge(currentSubject, currentProperty,
+										currentObject);
+							} else {
+								
+								sq.addEdge(currentSubject, currentProperty,
 										tar.getValue());
 							}
-
-							sq.addEdge(currentSubject, currentProperty,
-									currentObject);
 						}
 					} else {
 
 						src = edge.getSource();
-						
+
 						currentObject = m_session.getCurrentQuery()
 								.getNextVar();
 

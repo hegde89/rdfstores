@@ -41,6 +41,7 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -106,9 +107,12 @@ public class FacetTreeBuilder implements IBuilder {
 		Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 		Iterator<String[]> iter = results.iterator();
 
+		int count = 0;
+
 		while (iter.hasNext()) {
 
-			String resItem = iter.next()[column];
+			count++;
+			String resItem = FacetUtils.cleanURI(iter.next()[column]);
 
 			if (!m_parsedResources.contains(resItem)) {
 

@@ -38,6 +38,18 @@ public class FacetEnvironment {
 
 	}
 
+	public static class CalClusterDepth {
+
+		public static final int YEAR = 1;
+		public static final int MONTH = 2;
+		public static final int DAY = 3;
+		public static final int HOUR = 4;
+		public static final int MIN = 5;
+		public static final int SEC = 6;
+
+		public static final int NOT_SET = -1;
+	}
+
 	public static class DatabaseName {
 
 		/*
@@ -90,6 +102,9 @@ public class FacetEnvironment {
 
 	public static class DefaultValue {
 
+		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword/";
+		public static String VAR_PREFIX = "?";
+		public static String BASE_URI = "http://www.fluidops.com/";
 		public static String INDEX_DIRECTORY = "D:/Data/DA/idx";
 		public static double WEIGHT = -1.0;
 		public static boolean RANKING_ENABLED = false;
@@ -104,7 +119,7 @@ public class FacetEnvironment {
 		public static int LITERAL_CLUSTERER = LiteralClustererType.SIMPLE;
 		public static int SIMPLE_CACHE_SIZE = 5000;
 		public static String NO_LABEL = "no_label";
-		public static String VAR = "?q";
+		public static String VAR = "?x";
 	}
 
 	public static class EdgeType {
@@ -132,6 +147,13 @@ public class FacetEnvironment {
 		public static final int DATAPROPERTY_BASED = 1;
 		public static final int OBJECT_PROPERTY_BASED = 2;
 		public static final int RDF_PROPERTY_BASED = 3;
+	}
+
+	public static class FileName {
+
+		public static final String DATA_PROPERTIES = "data_properties";
+		public static final String OBJECT_PROPERTIES = "object_properties";
+
 	}
 
 	public static class Keys {
@@ -182,6 +204,7 @@ public class FacetEnvironment {
 
 	public static class Property {
 
+		public static final String SCHEMA_ONTO_PATH = "schemaOntoPath";
 		public static final String GRAPH_INDEX_DIR = "graphidx.dir";
 		public static final String RANKING_ENABLED = "ranking.enabled";
 		public static final String FACETS_ENABLED = "facets.enabled";
@@ -260,10 +283,6 @@ public class FacetEnvironment {
 	}
 
 	/*
-	 * keys for properties
-	 */
-
-	/*
 	 * abstract-object types
 	 */
 	public static class ResultItemType {
@@ -272,6 +291,10 @@ public class FacetEnvironment {
 		public static final String INDIVIDUAL = "individual";
 
 	}
+
+	/*
+	 * keys for properties
+	 */
 
 	public static class StoreAction {
 
@@ -329,6 +352,8 @@ public class FacetEnvironment {
 
 				}));
 	}
+
+	public static final String UTF8 = "UTF-8";
 
 	public static final String NEW_LINE = System.getProperty("line.separator");
 	public static final String DIVIDER = "--------------------------------------------";

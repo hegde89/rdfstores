@@ -19,6 +19,7 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.query.Query;
+import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
  * @author andi
@@ -26,6 +27,7 @@ import edu.unika.aifb.graphindex.query.Query;
  */
 public class InitFacetsRequest extends Query {
 
+	private StructuredQuery m_sQuery;
 	private Table<String> m_res;
 
 	public InitFacetsRequest(String name) {
@@ -37,8 +39,16 @@ public class InitFacetsRequest extends Query {
 		setRes(res);
 	}
 
+	public StructuredQuery getQuery() {
+		return m_sQuery;
+	}
+
 	public Table<String> getRes() {
 		return m_res;
+	}
+
+	public void setQuery(StructuredQuery sQuery) {
+		m_sQuery = sQuery;
 	}
 
 	public void setRes(Table<String> res) {

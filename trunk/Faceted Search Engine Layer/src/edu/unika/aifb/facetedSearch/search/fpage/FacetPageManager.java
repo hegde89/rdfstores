@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
 import com.sleepycat.bind.EntryBinding;
@@ -34,10 +33,10 @@ import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeContent;
 import edu.unika.aifb.facetedSearch.algo.ranking.NodeComparator;
 import edu.unika.aifb.facetedSearch.algo.ranking.RankingDelegator;
-import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelConverter;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractFacetValue;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
@@ -91,7 +90,6 @@ public class FacetPageManager {
 	 * 
 	 */
 	private Tree2FacetModelConverter m_tree2facetConverter;
-	private Facet2TreeModelConverter m_facet2treeConverter;
 
 	/*
 	 * stored map
@@ -108,6 +106,7 @@ public class FacetPageManager {
 	 * 
 	 */
 	private NodeComparator m_nodeComparator;
+	private FacetFacetValueListComparator m_ffvListComparator;
 
 	/*
 	 * 
@@ -133,31 +132,27 @@ public class FacetPageManager {
 		 */
 		m_tree2facetConverter = (Tree2FacetModelConverter) m_session
 				.getConverter(Converters.TREE2FACET);
-		m_facet2treeConverter = (Facet2TreeModelConverter) m_session
-				.getConverter(Converters.FACET2TREE);
 
 		/*
 		 * 
 		 */
 		m_nodeComparator = new NodeComparator();
+		m_ffvListComparator = new FacetFacetValueListComparator();
 
 		/*
 		 * 
 		 */
-		m_rankingEnabled = new Boolean(m_session.getProps().getProperty(
-				FacetEnvironment.Property.RANKING_ENABLED));
+		m_rankingEnabled = FacetedSearchLayerConfig.isRankingEnabled();
 
 		init();
 	}
 
-	public void clean() throws DatabaseException, CacheException {
-
-		m_cache.clean(SearchSessionCache.CleanType.FPAGE);
-		reOpen();
+	public void clean() {
+		m_facetPageMap.clear();
 	}
 
-	public void close() throws DatabaseException, CacheException {
-		m_cache.clean(SearchSessionCache.CleanType.FPAGE);
+	public void close() {
+		m_facetPageMap.clear();
 	}
 
 	public FacetPage getInitialFacetPage() {
@@ -211,19 +206,16 @@ public class FacetPageManager {
 						}
 					}
 
-					if (m_rankingEnabled) {
-
-						m_rankingDelegator.computeRanking(subFacets);
-						Collections.sort(subFacets, m_nodeComparator);
-
-						m_rankingDelegator.computeRanking(rangeChildren);
-						Collections.sort(rangeChildren, m_nodeComparator);
-					}
-
 					fvList.setFacetValueList(m_tree2facetConverter
 							.nodeList2facetValueList(rangeChildren));
 					fvList.setSubfacets(m_tree2facetConverter
 							.nodeList2facetList(subFacets));
+
+					if (m_rankingEnabled) {
+
+						Collections.sort(fvList.getFacetValueList());
+						Collections.sort(fvList.getSubfacetList());
+					}
 
 					fpage.put(domain, facet, fvList);
 
@@ -232,10 +224,14 @@ public class FacetPageManager {
 							+ m_treeDelegator.getTree(domain) + "'");
 				}
 			}
+
+			if (m_rankingEnabled) {
+				Collections.sort(fpage.getFacetFacetValueLists(domain),
+						m_ffvListComparator);
+			}
 		}
 
 		storeFacetPage(fpage);
-
 		return fpage;
 	}
 
@@ -246,14 +242,11 @@ public class FacetPageManager {
 
 		if (!selectedValue.isLeave()) {
 
-			Node selectedNode = m_facet2treeConverter
-					.facetValue2Node(selectedValue);
-
 			FacetFacetValueList fvList = fpage.getFacetFacetValuesList(domain,
 					facet.getUri());
 
 			// browsing in range
-			if (selectedNode.getContent() == NodeContent.CLASS) {
+			if (selectedValue.getContent() == NodeContent.CLASS) {
 
 				fvList.clean(CleanType.VALUES);
 				fvList.addBrowsingObject2History(selectedValue);
@@ -261,26 +254,24 @@ public class FacetPageManager {
 				List<Node> nodes = m_treeDelegator.getChildren(domain,
 						selectedValue.getNodeId());
 
-				if (m_rankingEnabled) {
-
-					m_rankingDelegator.computeRanking(nodes);
-					Collections.sort(nodes, m_nodeComparator);
-				}
-
 				fvList.setFacetValueList(m_tree2facetConverter
 						.nodeList2facetValueList(nodes));
 
+				if (m_rankingEnabled) {
+					Collections.sort(fvList.getFacetValueList());
+				}
+
 			}
 			// sub-facet
-			else if ((selectedNode.getContent() == NodeContent.DATA_PROPERTY)
-					|| (selectedNode.getContent() == NodeContent.OBJECT_PROPERTY)
-					|| (selectedNode.getContent() == NodeContent.TYPE_PROPERTY)) {
+			else if ((selectedValue.getContent() == NodeContent.DATA_PROPERTY)
+					|| (selectedValue.getContent() == NodeContent.OBJECT_PROPERTY)
+					|| (selectedValue.getContent() == NodeContent.TYPE_PROPERTY)) {
 
 				fvList.clean(CleanType.VALUES);
 				fvList.clean(CleanType.SUBFACETS);
 
 				fvList.addBrowsingObject2History(facet);
-				fvList.setFacet(m_tree2facetConverter.node2facet(selectedNode));
+				fvList.setFacet(facet);
 
 				Iterator<Node> nodesIter = m_treeDelegator.getChildren(domain,
 						selectedValue.getNodeId()).iterator();
@@ -296,14 +287,14 @@ public class FacetPageManager {
 
 						rangeChildren.add(node);
 
-					} else if ((selectedNode.getContent() == NodeContent.DATA_PROPERTY)
-							|| (selectedNode.getContent() == NodeContent.OBJECT_PROPERTY)) {
+					} else if ((selectedValue.getContent() == NodeContent.DATA_PROPERTY)
+							|| (selectedValue.getContent() == NodeContent.OBJECT_PROPERTY)) {
 
 						subFacets.add(node);
 
 					} else {
-						s_log.error("should not be here: node '" + selectedNode
-								+ "'");
+						s_log.error("should not be here: node '"
+								+ selectedValue + "'");
 					}
 				}
 
@@ -322,9 +313,10 @@ public class FacetPageManager {
 						.nodeList2facetList(subFacets));
 
 			} else {
-				s_log.error("should not be here: node '" + selectedNode + "'");
+				s_log.error("should not be here: node '" + selectedValue + "'");
 			}
 
+			fpage.put(domain, facet, fvList);
 			storeFacetPage(fpage);
 		}
 
@@ -360,16 +352,6 @@ public class FacetPageManager {
 
 	private FacetPage loadPreviousFacetPage() {
 		return m_facetPageMap.get(FACETPAGE_KEY);
-	}
-
-	public void reOpen() {
-
-		if (m_facetPageMap == null) {
-
-			m_facetPageMap = new StoredSortedMap<Integer, FacetPage>(m_cache
-					.getDB(FacetEnvironment.DatabaseName.FPAGE_CACHE),
-					m_intBinding, m_fpageBinding, true);
-		}
 	}
 
 	private boolean storeFacetPage(FacetPage fpage) {

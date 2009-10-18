@@ -25,11 +25,11 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
-import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -66,12 +66,17 @@ public class FacetedQuery implements Serializable {
 	/*
 	 * 
 	 */
+	private String m_keywordVar;
+	private String m_keywordQuery;
+
+	/*
+	 * 
+	 */
 	private Map<String, String> m_oldVar2newVarMap;
 
 	public FacetedQuery() {
 
 		m_qGraph = new QueryGraph();
-		m_qGraph.addVertex(new QNode(VAR_Q));
 		init();
 	}
 
@@ -83,6 +88,22 @@ public class FacetedQuery implements Serializable {
 
 	public void clearOldVar2newVarMap() {
 		m_oldVar2newVarMap.clear();
+	}
+
+	public boolean containsKeywordQuery() {
+		return m_keywordQuery != null;
+	}
+
+	public boolean containsKeywordVar() {
+		return m_keywordVar != null;
+	}
+
+	public String getKeywordQuery() {
+		return m_keywordQuery;
+	}
+
+	public String getKeywordVar() {
+		return m_keywordVar;
 	}
 
 	public String getNextVar() {
@@ -109,7 +130,17 @@ public class FacetedQuery implements Serializable {
 
 	public void mergeWithAdditionalQuery(String domain, StructuredQuery sq) {
 
-		QNode domainQNode = m_qGraph.getNodeByLabel(domain);
+		QNode domainQNode;
+
+		if (m_qGraph.vertexSet().size() == 0) {
+
+			domainQNode = new QNode(domain);
+			m_qGraph.addVertex(domainQNode);
+
+		} else {
+			domainQNode = m_qGraph.getNodeByLabel(domain);
+		}
+
 		QueryGraph queryGraph = sq.getQueryGraph();
 		QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
 
@@ -126,7 +157,7 @@ public class FacetedQuery implements Serializable {
 				srcLabel = m_oldVar2newVarMap.get(srcLabel);
 			}
 
-			if (Util.isVariable(tarLabel)) {
+			if (FacetUtils.isVariable(tarLabel)) {
 
 				m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), getNextVar());
 				m_oldVar2newVarMap.put(tarLabel, getNextVar());
@@ -174,5 +205,13 @@ public class FacetedQuery implements Serializable {
 		}
 
 		return success;
+	}
+
+	public void setKeywordQuery(String keywords) {
+		m_keywordQuery = keywords;
+	}
+
+	public void setKeywordVar(String keywordVar) {
+		m_keywordVar = keywordVar;
 	}
 }

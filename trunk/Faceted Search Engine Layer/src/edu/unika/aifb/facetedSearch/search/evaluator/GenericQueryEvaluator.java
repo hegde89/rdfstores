@@ -80,20 +80,10 @@ public class GenericQueryEvaluator {
 				FacetEnvironment.Property.FACETS_ENABLED));
 	}
 
-	private void constructResult(Table<String> resultTable, Query query) {
+	private Result constructResult(Table<String> resultTable) {
 
 		Result res = new Result();
 		res.setResultTable(resultTable);
-
-		FacetedQuery fquery;
-
-		if (query instanceof StructuredQuery) {
-			fquery = new FacetedQuery((StructuredQuery) query);
-		} else {
-			fquery = new FacetedQuery();
-		}
-
-		res.setQuery(fquery);
 
 		try {
 
@@ -113,6 +103,8 @@ public class GenericQueryEvaluator {
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
+
+		return res;
 	}
 
 	public Object evaluate(Query query) {
@@ -155,7 +147,7 @@ public class GenericQueryEvaluator {
 				eval = (VPEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
 				resultTable = eval.evaluate((StructuredQuery) query);
 
-				constructResult(resultTable, query);
+				constructResult(resultTable);
 				resultPage = getFirstResultPage();
 
 				FacetedQuery fquery = new FacetedQuery((StructuredQuery) query);
@@ -204,10 +196,10 @@ public class GenericQueryEvaluator {
 				try {
 
 					eval = (FacetRequestEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
-					resultPage = eval.evaluate(browseReq);
+					FacetPage fpage = (FacetPage) eval.evaluate(browseReq);
 
-					return resultPage.getFacetPage().getFacetFacetValuesList(
-							facet.getDomain(), facet.getUri());
+					return fpage.getFacetFacetValuesList(facet.getDomain(),
+							facet.getUri());
 
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -221,7 +213,7 @@ public class GenericQueryEvaluator {
 				try {
 
 					eval = (FacetRequestEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
-					resultPage = eval.evaluate((AbstractFacetRequest) query);
+					return eval.evaluate((AbstractFacetRequest) query);
 
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -246,15 +238,19 @@ public class GenericQueryEvaluator {
 			}
 		} else if (query instanceof InitFacetsRequest) {
 
-			InitFacetsRequest initReq = (InitFacetsRequest) query;
-
 			m_session.clean(SearchSession.CleanType.ALL);
-			constructResult(initReq.getRes(), query);
-			m_session.setCurrentQuery(new FacetedQuery());
 
+			InitFacetsRequest initReq = (InitFacetsRequest) query;
+			Result res = constructResult(initReq.getRes());
+
+			FacetedQuery fquery = new FacetedQuery(initReq.getQuery());
+			res.setQuery(fquery);
+			m_session.setCurrentQuery(fquery);
+		
 			try {
-
-				return m_session.getCache().getCurrentResult().getFacetPage();
+				
+				m_session.getCache().storeCurrentResult(res);
+				return m_session.getCache().getCurrentResult();
 
 			} catch (DatabaseException e) {
 				e.printStackTrace();

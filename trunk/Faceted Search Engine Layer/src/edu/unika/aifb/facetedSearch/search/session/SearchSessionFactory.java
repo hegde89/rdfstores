@@ -28,6 +28,7 @@ import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnection;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnectionProvider;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.CleanType;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -106,7 +107,10 @@ public class SearchSessionFactory {
 
 		FacetedSearchLayerConfig.setRefinementMode(Integer.parseInt((props
 				.getProperty(FacetEnvironment.Property.REFINEMENT_MODE))));
-
+		
+		FacetedSearchLayerConfig.setGraphIndexDirStrg((props
+				.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR)));
+		
 	}
 
 	public int acquire() throws InterruptedException {
@@ -135,6 +139,8 @@ public class SearchSessionFactory {
 	}
 
 	public void release(int id) {
+		
+		s_pool[id].clean(CleanType.ALL);		
 		s_locks[id].unlock();
 		s_sem.release();
 	}

@@ -19,7 +19,10 @@ package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
@@ -31,16 +34,18 @@ import com.sleepycat.je.DatabaseException;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
-import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
@@ -64,24 +69,31 @@ public class FacetRequestHelper {
 	 */
 	private FacetTreeDelegator m_treeDelegator;
 
+	/*
+	 * 
+	 */
+	private HashSet<String> m_parsedItems;
+
 	public FacetRequestHelper(SearchSession session) {
 
 		m_session = session;
+
 		m_treeDelegator = (FacetTreeDelegator) session
 				.getDelegator(Delegators.TREE);
+
+		m_parsedItems = new HashSet<String>();
 	}
 
+	@SuppressWarnings("unused")
 	private Table<String> getAdditionalTable(StaticNode node,
 			List<String> sources, StructuredQuery sQuery) {
 
+		String domain = node.getDomain();
+
 		ArrayList<String> columnNames = new ArrayList<String>();
+		columnNames.addAll(FacetUtils.getColumnsNames4Table(sQuery));
+
 		ArrayList<String[]> rows = new ArrayList<String[]>();
-
-		List<QNode> vars = sQuery.getVariables();
-
-		for (QNode var : vars) {
-			columnNames.add(var.getLabel());
-		}
 
 		Table<String> additionalTable = new Table<String>(columnNames);
 		Stack<Edge> path = m_treeDelegator.getPathFromRoot(node);
@@ -94,6 +106,9 @@ public class FacetRequestHelper {
 
 		for (String source : sources) {
 
+			Stack<Edge> pathCopy = new Stack<Edge>();
+			pathCopy.addAll(path);
+
 			int countColumn = 0;
 
 			ArrayList<String[]> newRows = new ArrayList<String[]>();
@@ -104,18 +119,18 @@ public class FacetRequestHelper {
 
 			countColumn++;
 
-			while (!path.isEmpty()) {
+			while (!pathCopy.isEmpty()) {
 
-				edge = path.pop();
+				edge = pathCopy.pop();
 				src = edge.getSource();
 
 				if (src.isSubTreeRoot()) {
 
 					while (edge.getType() != EdgeType.HAS_RANGE) {
-						edge = path.pop();
+						edge = pathCopy.pop();
 					}
 
-					if (path.isEmpty()) {
+					if (pathCopy.isEmpty()) {
 
 						tar = edge.getTarget();
 
@@ -124,18 +139,29 @@ public class FacetRequestHelper {
 
 						if (fvs.size() > 0) {
 
-							for (String[] row : newRows) {
+							for (AbstractSingleFacetValue fv : fvs) {
 
-								newRows.remove(row);
+								Collection<String> fvSources = m_session
+										.getCache().getSources4Object(domain,
+												fv.getValue());
 
-								for (AbstractSingleFacetValue fv : fvs) {
+								if (fvSources.contains(source)) {
 
-									String[] rowCopy = new String[colSize];
-									System.arraycopy(row, 0, rowCopy, 0,
-											colSize);
+									ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
 
-									rowCopy[countColumn] = fv.getValue();
-									newRows.add(rowCopy);
+									for (String[] row : newRows) {
+
+										String[] rowCopy = new String[colSize];
+										System.arraycopy(row, 0, rowCopy, 0,
+												colSize);
+
+										rowCopy[countColumn] = fv.getValue();
+										newRowsCopy.add(rowCopy);
+									}
+
+									newRows.clear();
+									newRows.addAll(newRowsCopy);
+
 								}
 							}
 
@@ -143,42 +169,114 @@ public class FacetRequestHelper {
 						}
 					} else {
 
-						edge = path.pop();
+						edge = pathCopy.pop();
 
-						while (!path.isEmpty()
+						while (!pathCopy.isEmpty()
 								&& (edge.getType() == EdgeType.SUBCLASS_OF)) {
-							edge = path.pop();
+							edge = pathCopy.pop();
 						}
 
-						if (path.isEmpty()) {
+						if (pathCopy.isEmpty()) {
 
 							tar = edge.getTarget();
 
-							Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
-									.getObjects();
+							if (tar instanceof FacetValueNode) {
 
-							if (fvs.size() > 0) {
+								String value = ((FacetValueNode) tar)
+										.getValue();
+
+								ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
 
 								for (String[] row : newRows) {
 
-									newRows.remove(row);
+									String[] rowCopy = new String[colSize];
+									System.arraycopy(row, 0, rowCopy, 0,
+											colSize);
+
+									rowCopy[countColumn] = value;
+									newRowsCopy.add(rowCopy);
+								}
+
+								newRows.clear();
+								newRows.addAll(newRowsCopy);
+
+								countColumn++;
+
+							} else if (tar instanceof DynamicNode) {
+
+								List<AbstractSingleFacetValue> lits = ((DynamicNode) tar)
+										.getLiterals();
+
+								if (lits.size() > 0) {
+
+									for (AbstractSingleFacetValue fv : lits) {
+
+										Collection<String> fvSources = m_session
+												.getCache().getSources4Object(
+														domain, fv.getValue());
+
+										if (fvSources.contains(source)) {
+
+											ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+
+											for (String[] row : newRows) {
+
+												String[] rowCopy = new String[colSize];
+												System.arraycopy(row, 0,
+														rowCopy, 0, colSize);
+
+												rowCopy[countColumn] = fv
+														.getValue();
+												newRowsCopy.add(rowCopy);
+											}
+
+											newRows.clear();
+											newRows.addAll(newRowsCopy);
+										}
+									}
+
+									countColumn++;
+								}
+
+							} else {
+
+								Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
+										.getObjects();
+
+								if (fvs.size() > 0) {
 
 									for (AbstractSingleFacetValue fv : fvs) {
 
-										String[] rowCopy = new String[colSize];
-										System.arraycopy(row, 0, rowCopy, 0,
-												colSize);
+										Collection<String> fvSources = m_session
+												.getCache().getSources4Object(
+														domain, fv.getValue());
 
-										rowCopy[countColumn] = fv.getValue();
-										newRows.add(rowCopy);
+										if (fvSources.contains(source)) {
+
+											ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+
+											for (String[] row : newRows) {
+
+												String[] rowCopy = new String[colSize];
+												System.arraycopy(row, 0,
+														rowCopy, 0, colSize);
+
+												rowCopy[countColumn] = fv
+														.getValue();
+												newRowsCopy.add(rowCopy);
+											}
+
+											newRows.clear();
+											newRows.addAll(newRowsCopy);
+										}
 									}
-								}
 
-								countColumn++;
+									countColumn++;
+								}
 							}
 						} else {
 
-							path.push(edge);
+							pathCopy.push(edge);
 						}
 					}
 				} else {
@@ -195,16 +293,40 @@ public class FacetRequestHelper {
 
 		return additionalTable;
 	}
-	public Table<String> refineResult(StaticNode node, List<String> sources,
-			StructuredQuery sQuery) throws DatabaseException, IOException {
+
+	public List<String> getSourcesList(Table<String> newTable, String domain) {
+
+		List<String> sources = new ArrayList<String>();
+
+		int column = newTable.getColumn(domain);
+		Iterator<String[]> rowIter = newTable.getRows().iterator();
+
+		while (rowIter.hasNext()) {
+
+			String rowItem = rowIter.next()[column];
+
+			if (!m_parsedItems.contains(rowItem)) {
+				sources.add(rowItem);
+				m_parsedItems.add(rowItem);
+			}
+		}
+
+		m_parsedItems.clear();
+		Collections.sort(sources);
+
+		return sources;
+	}
+
+	public Table<String> refineResult(String domain, List<String> sources)
+			throws DatabaseException, IOException {
 
 		Collections.sort(sources);
-		Table<String> addTable = getAdditionalTable(node, sources, sQuery);
+		// Table<String> addTable = getAdditionalTable(node, sources, sQuery);
 
 		Table<String> oldTable = m_session.getCache().getCurrentResultTable();
-		oldTable.sort(node.getDomain(), true);
+		oldTable.sort(domain, true);
 
-		return Tables.mergeJoin(oldTable, addTable, node.getDomain());
+		return FacetUtils.mergeJoin(oldTable, sources, domain);
 	}
 
 	public Result refineResult(Table<String> refinementTable, String domain) {

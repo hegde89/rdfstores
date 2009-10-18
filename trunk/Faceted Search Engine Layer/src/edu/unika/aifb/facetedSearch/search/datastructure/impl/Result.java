@@ -79,7 +79,7 @@ public class Result implements IResult, Serializable {
 	}
 
 	public boolean hasError() {
-		return m_error.equals(Result.NO_ERROR);
+		return !m_error.equals(Result.NO_ERROR);
 	}
 
 	public boolean hasFacetPage() {

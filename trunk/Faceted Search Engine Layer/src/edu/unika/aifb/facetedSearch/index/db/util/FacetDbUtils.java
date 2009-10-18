@@ -196,7 +196,8 @@ public class FacetDbUtils {
 		}
 	}
 
-	public static <T> void test(Database db, EntryBinding<T> binding) {
+	public static <T> void test(Database db, EntryBinding<T> bindingKey,
+			EntryBinding<T> bindingData) {
 
 		DatabaseEntry key = new DatabaseEntry();
 		DatabaseEntry out = new DatabaseEntry();
@@ -213,13 +214,20 @@ public class FacetDbUtils {
 
 				if (out.getData() != null) {
 
-					T object = binding.entryToObject(out);
+					T dataOut = bindingData.entryToObject(out);
+					T keyOut = bindingData.entryToObject(key);
 
-					System.out.println("key = " + key.getData() + " data= "
-							+ object.toString());
+					System.out.println("key = " + key + " data= "
+							+ dataOut.toString());
 
 				}
 			}
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			cursor.close();
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		}

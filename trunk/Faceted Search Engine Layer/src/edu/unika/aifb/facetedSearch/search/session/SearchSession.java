@@ -44,7 +44,7 @@ import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 public class SearchSession {
 
 	public enum CleanType {
-		ALL, REFINEMENT
+		ALL
 	}
 
 	public enum Converters {
@@ -132,6 +132,10 @@ public class SearchSession {
 		}
 	}
 
+	public void clean() {
+		clean(CleanType.ALL);
+	}
+	
 	public void clean(CleanType type) {
 
 		switch (type) {
@@ -149,29 +153,8 @@ public class SearchSession {
 				m_facetTreeDelegator.clean();
 				m_rankingDelegator.clean();
 				m_constructionDelegator.clean();
+				m_fpageManager.clean();
 
-				m_fpageManager.reOpen();
-
-				System.gc();
-				break;
-			}
-			case REFINEMENT : {
-
-				try {
-					m_cache.clean(SearchSessionCache.CleanType.REFINEMENT);
-				} catch (DatabaseException e) {
-					e.printStackTrace();
-				} catch (CacheException e) {
-					e.printStackTrace();
-				}
-
-				m_facetTreeDelegator.clean();
-				m_rankingDelegator.clean();
-				m_constructionDelegator.clean();
-
-				m_fpageManager.reOpen();
-
-				System.gc();
 				break;
 			}
 			default :
@@ -193,7 +176,6 @@ public class SearchSession {
 		m_rankingDelegator = null;
 		m_constructionDelegator = null;
 
-		System.gc();
 	}
 
 	public SearchSessionCache getCache() {

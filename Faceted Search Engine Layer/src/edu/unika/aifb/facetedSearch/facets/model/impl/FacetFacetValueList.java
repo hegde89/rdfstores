@@ -30,7 +30,11 @@ import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueList;
  * @author andi
  * 
  */
-public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
+public class FacetFacetValueList
+		implements
+			IFacetFacetValueList,
+			Serializable,
+			Comparable<FacetFacetValueList> {
 
 	public enum CleanType {
 		VALUES, HISTORY, ALL, SUBFACETS
@@ -82,13 +86,8 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 
 	public boolean addFacetValue(AbstractFacetValue fv) {
 
-		if (!m_nodeID2facetValueMap.containsKey(fv.getNodeId())) {
-
-			m_nodeID2facetValueMap.put(fv.getNodeId(), fv);
-			return m_facetValueList.add(fv);
-		} else {
-			return false;
-		}
+		m_nodeID2facetValueMap.put(fv.getNodeId(), fv);
+		return m_facetValueList.add(fv);
 	}
 
 	public void addSubFacet(Facet facet) {
@@ -103,6 +102,7 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 		switch (type) {
 			case ALL : {
 
+				m_nodeID2facetValueMap.clear();
 				m_facetValueList.clear();
 				m_subfacets.clear();
 				m_history.clear();
@@ -115,6 +115,7 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 			}
 			case VALUES : {
 
+				m_nodeID2facetValueMap.clear();
 				m_facetValueList.clear();
 				break;
 			}
@@ -125,6 +126,16 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 			}
 		}
 
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 */
+	@Override
+	public int compareTo(FacetFacetValueList o) {
+		return getFacet().compareTo(o.getFacet());
 	}
 
 	public Facet getFacet() {
@@ -158,10 +169,10 @@ public class FacetFacetValueList implements IFacetFacetValueList, Serializable {
 	public Iterator<AbstractFacetValue> getFacetValueIterator() {
 		return m_facetValueList.iterator();
 	}
-
 	public List<AbstractFacetValue> getFacetValueList() {
 		return m_facetValueList;
 	}
+
 	public Iterator<AbstractBrowsingObject> getHistoryIterator() {
 		return m_history.iterator();
 	}

@@ -17,6 +17,8 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree;
 
+import it.unimi.dsi.fastutil.doubles.Double2ObjectOpenHashMap;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,10 +75,11 @@ public class FacetTreeDelegator extends Delegator {
 	private SearchSession m_session;
 
 	/*
-	 * stored maps ...
+	 * maps ...
 	 */
 	private ArrayList<Map<? extends Object, ? extends Object>> m_maps;
 	private HashMap<String, FacetTree> m_domain2treeMap;
+	private Double2ObjectOpenHashMap<Stack<Edge>> m_node2pathMap;
 
 	private FacetTreeDelegator(SearchSession session) {
 
@@ -98,8 +101,6 @@ public class FacetTreeDelegator extends Delegator {
 		clean();
 		m_maps.clear();
 		m_maps = null;
-
-		System.gc();
 	}
 
 	public List<Node> getChildren(StaticNode father) {
@@ -110,7 +111,9 @@ public class FacetTreeDelegator extends Delegator {
 		if (!(father instanceof FacetValueNode)) {
 
 			if (!tree.hasChildren(father)) {
+
 				m_constructionDelegator.refine(tree, father);
+				m_domain2treeMap.put(father.getDomain(), tree);
 			}
 
 			children = tree.getChildren(father);
@@ -169,39 +172,44 @@ public class FacetTreeDelegator extends Delegator {
 
 		return m_domain2treeMap.get(domain).getVertex(nodeID);
 	}
-	
+
 	public Stack<Edge> getPathFromRoot(StaticNode toNode) {
 
 		FacetTree tree = m_domain2treeMap.get(toNode.getDomain());
 
-		Node currentNode = toNode;
-		Stack<Edge> path = new Stack<Edge>();
-		boolean reachedRoot = toNode.isRoot();
+		if (!m_node2pathMap.containsKey(toNode.getID())) {
 
-		while (reachedRoot) {
+			Node currentNode = toNode;
+			Stack<Edge> path = new Stack<Edge>();
+			boolean reachedRoot = toNode.isRoot();
 
-			Iterator<Edge> incomingEdgesIter = tree
-					.incomingEdgesOf(currentNode).iterator();
+			while (!reachedRoot) {
 
-			if (incomingEdgesIter.hasNext()) {
+				Iterator<Edge> incomingEdgesIter = tree.incomingEdgesOf(
+						currentNode).iterator();
 
-				Edge edge2father = incomingEdgesIter.next();
-				path.push(edge2father);
+				if (incomingEdgesIter.hasNext()) {
 
-				Node father = tree.getEdgeSource(edge2father);
+					Edge edge2father = incomingEdgesIter.next();
+					path.push(edge2father);
 
-				if (father.isRoot()) {
-					reachedRoot = true;
+					Node father = tree.getEdgeSource(edge2father);
+
+					if (father.isRoot()) {
+						reachedRoot = true;
+					} else {
+						currentNode = father;
+					}
 				} else {
-					currentNode = father;
+					s_log.error("tree structure is not correct " + this);
+					break;
 				}
-			} else {
-				s_log.error("tree structure is not correct " + this);
-				break;
 			}
+
+			m_node2pathMap.put(toNode.getID(), path);
 		}
 
-		return path;
+		return m_node2pathMap.get(toNode.getID());
 	}
 
 	public List<Double> getRangeLeaves(String domain, double nodeID) {
@@ -215,6 +223,10 @@ public class FacetTreeDelegator extends Delegator {
 			Set<Node> leaves = tree.getLeaves4SubtreeRoot(subTreeRoot.getID());
 
 			for (Node leave : leaves) {
+
+				if (!node.hasPath()) {
+					node.updatePath(tree);
+				}
 
 				if (leave.getPath().startsWith(node.getPath())) {
 					node.addLeave(leave.getID());
@@ -256,9 +268,12 @@ public class FacetTreeDelegator extends Delegator {
 
 	private void init() {
 
+		m_node2pathMap = new Double2ObjectOpenHashMap<Stack<Edge>>();
 		m_domain2treeMap = new HashMap<String, FacetTree>();
+
 		m_maps = new ArrayList<Map<? extends Object, ? extends Object>>();
 		m_maps.add(m_domain2treeMap);
+		m_maps.add(m_node2pathMap);
 	}
 
 	public void initTrees() {

@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.Queue;
 
 import org.apache.log4j.Logger;
+import org.openrdf.model.datatypes.XMLDatatypeUtil;
+import org.openrdf.model.vocabulary.RDF;
 
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.tuple.TupleBinding;
@@ -47,14 +49,13 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.index.db.binding.NodeBinding;
 import edu.unika.aifb.facetedSearch.index.db.binding.PathBinding;
-import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.Index;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -89,6 +90,7 @@ public class FacetIndex extends Index {
 	 */
 
 	private StoredMap<String, Node> m_leaveMap;
+	private StoredMap<String, Queue<Edge>> m_pathMap;
 
 	/*
 	 * Bindings
@@ -186,7 +188,43 @@ public class FacetIndex extends Index {
 		Collection<Node> leaves = m_leaveMap.duplicates(srcInd);
 
 		if ((leaves == null) || leaves.isEmpty()) {
-			s_log.error("no leaves found for individual '" + srcInd + "'");
+
+			// s_log.error("no leaves found for individual '" + srcInd + "'");
+			// TODO
+
+			try {
+
+				Table<String> resTriples = m_idxReader.getDataIndex()
+						.getTriples(srcInd, null, null);
+
+				Iterator<String[]> resTripleIter = resTriples.getRows()
+						.iterator();
+
+				if (resTripleIter.hasNext()) {
+
+					while (resTripleIter.hasNext()) {
+
+						String[] resTiple = resTripleIter.next();
+
+						if (!FacetEnvironment.PROPERTIES_TO_IGNORE
+								.contains(resTiple[1])
+								&& !resTiple[1]
+										.startsWith(FacetEnvironment.OWL.NAMESPACE)) {
+
+							System.out.println("ERROR: resTiple: "
+									+ resTiple[0] + ", " + resTiple[1] + ", "
+									+ resTiple[2]);
+						}
+					}
+				}
+
+				String ext = m_idxReader.getStructureIndex().getExtension(
+						srcInd);
+				System.out.println("ext: " + ext);
+
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
 		}
 
 		return leaves;
@@ -206,41 +244,113 @@ public class FacetIndex extends Index {
 			Iterator<String[]> objectsTriplesIter = objectsTriples.getRows()
 					.iterator();
 
-			while (objectsTriplesIter.hasNext()) {
+			if (leave.getFacet().isObjectPropertyBased()) {
 
-				String object = objectsTriplesIter.next()[2];
+				boolean foundType = false;
 
-				m_idxReader.getDataIndex().getTriples(subject,
-						leave.getFacet().getUri(), null);
+				while (objectsTriplesIter.hasNext()) {
 
-				AbstractSingleFacetValue fv;
+					foundType = false;
 
-				if (Util.isEntity(object)) {
+					String object = FacetUtils.cleanURI(objectsTriplesIter
+							.next()[2]);
 
-					fv = new Resource();
-					((Resource) fv).setValue(object);
-					((Resource) fv).setRangeExt("");
-					((Resource) fv).setSourceExt("");
-					((Resource) fv).setIsResource(true);
-					((Resource) fv)
-							.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+					Table<String> typeTriples = m_idxReader.getDataIndex()
+							.getTriples(object, RDF.TYPE.stringValue(), null);
 
-				} else {
+					Iterator<String[]> typeIter = typeTriples.getRows()
+							.iterator();
 
-					fv = new Literal();
-					((Literal) fv).setValue(object);
+					if (typeIter.hasNext()) {
+
+						while (typeIter.hasNext()) {
+
+							String type = FacetUtils
+									.cleanURI(typeIter.next()[2]);
+
+							if (type.equals(leave.getValue())) {
+								foundType = true;
+								break;
+							}
+						}
+
+						if (foundType) {
+
+							AbstractSingleFacetValue fv = new Resource();
+							((Resource) fv).setValue(object);
+							((Resource) fv).setRangeExt("");
+							((Resource) fv).setSourceExt("");
+							((Resource) fv).setIsResource(true);
+							((Resource) fv)
+									.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+
+							fvs.add(fv);
+						}
+					} else {
+
+						AbstractSingleFacetValue fv = new Resource();
+						((Resource) fv).setValue(object);
+						((Resource) fv).setRangeExt("");
+						((Resource) fv).setSourceExt("");
+						((Resource) fv).setIsResource(true);
+						((Resource) fv)
+								.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+
+						fvs.add(fv);
+					}
+				}
+			} else {
+
+				boolean valid = true;
+				int dataType = leave.getFacet().getDataType();
+
+				while (objectsTriplesIter.hasNext()) {
+
+					String lit = objectsTriplesIter.next()[2];
+					String litValue = FacetUtils.getLiteralValue(lit);
+
+					AbstractSingleFacetValue fv = new Literal();
+					((Literal) fv).setValue(lit);
 					((Literal) fv).setRangeExt("");
 					((Literal) fv).setSourceExt("");
 					((Literal) fv).setIsResource(false);
 					((Literal) fv)
 							.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+					((Literal) fv).setLiteralValue(litValue);
+
+					if (dataType == FacetEnvironment.DataType.DATE) {
+
+						try {
+
+							((Literal) fv).setParsedLiteral(XMLDatatypeUtil
+									.parseCalendar(FacetUtils
+											.getValueOfLiteral(litValue)));
+
+						} catch (IllegalArgumentException e) {
+							valid = false;
+							s_log.debug("literal '" + fv + "' not valid!");
+						}
+
+					} else if (dataType == FacetEnvironment.DataType.NUMERICAL) {
+
+						try {
+
+							((Literal) fv).setParsedLiteral(XMLDatatypeUtil
+									.parseDouble(FacetUtils
+											.getValueOfLiteral(litValue)));
+
+						} catch (IllegalArgumentException e) {
+							valid = false;
+							s_log.debug("literal '" + fv + "' not valid!");
+						}
+					}
+
+					if (valid) {
+						fvs.add(fv);
+					}
 				}
-
-				fvs.add(fv);
 			}
-
 		} catch (StorageException e) {
-
 			e.printStackTrace();
 		}
 
@@ -250,7 +360,7 @@ public class FacetIndex extends Index {
 	public Queue<Edge> getPath2Root(String path) throws DatabaseException,
 			IOException {
 
-		Queue<Edge> path2Root = FacetDbUtils.get(m_pathDB, path, m_pathBinding);
+		Queue<Edge> path2Root = m_pathMap.get(path);
 
 		if ((path2Root == null) || path2Root.isEmpty()) {
 			s_log.error("path to root is empty: " + path);
@@ -320,6 +430,9 @@ public class FacetIndex extends Index {
 		 */
 		m_leaveMap = new StoredMap<String, Node>(m_leaveDB, m_strgBinding,
 				m_nodeBinding, false);
+
+		m_pathMap = new StoredMap<String, Queue<Edge>>(m_pathDB, m_strgBinding,
+				m_pathBinding, false);
 
 		s_log.debug("got db connection!");
 	}

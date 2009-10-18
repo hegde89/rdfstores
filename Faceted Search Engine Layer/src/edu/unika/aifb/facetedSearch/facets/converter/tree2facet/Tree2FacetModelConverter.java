@@ -36,7 +36,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -125,6 +125,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Literal) fv).setCountS(fvn.getCountS());
 				((Literal) fv).setIsResource(false);
 				((Literal) fv).setContent(fvn.getContent());
+				((Literal) fv).setType(fvn.getType());
 
 			} else {
 
@@ -135,6 +136,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Resource) fv).setCountS(fvn.getCountS());
 				((Resource) fv).setContent(fvn.getContent());
 				((Resource) fv).setIsResource(true);
+				((Resource) fv).setType(fvn.getType());
 			}
 
 		} else if (node instanceof DynamicNode) {
@@ -147,8 +149,9 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setValue(dyn.getValue());
 			((FacetValueCluster) fv).setCountS(dyn.getCountS());
 			((FacetValueCluster) fv).setContent(dyn.getContent());
-			((FacetValueCluster) fv).setName(FacetUtils
-					.getName4DynamicNode(dyn));
+			((FacetValueCluster) fv).setType(dyn.getType());
+			((FacetValueCluster) fv).setHasCalChildren(dyn.hasCalChildren());
+			((FacetValueCluster) fv).setTypeLeave(false);
 
 		} else if (node instanceof StaticNode) {
 
@@ -160,6 +163,18 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setValue(stat.getValue());
 			((FacetValueCluster) fv).setCountS(stat.getCountS());
 			((FacetValueCluster) fv).setContent(stat.getContent());
+			((FacetValueCluster) fv).setType(stat.getType());
+			((FacetValueCluster) fv).setHasCalChildren(true);
+
+			if (stat.isRangeRoot()) {
+				((FacetValueCluster) fv).setName("Range: "
+						+ Util.truncateUri(stat.getValue()));
+			}
+			if (stat.isTypeLeave()) {
+				((FacetValueCluster) fv).setTypeLeave(true);
+			} else {
+				((FacetValueCluster) fv).setTypeLeave(false);
+			}
 
 		} else {
 			s_log.error("should not be here: node '" + node + "'!");

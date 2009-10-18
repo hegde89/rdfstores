@@ -88,19 +88,29 @@ public class Node implements INode, Serializable {
 	 */
 	private double m_id;
 	private List<Double> m_leaves;
-
+	
+	/*
+	 * 
+	 */
+	private boolean m_generic;
+	
 	public Node() {
+		
+		setGeneric(false);
+		
 		init();
 	}
 
 	public Node(String value) {
-
+		
+		setGeneric(false);
 		m_value = value;
 		init();
 	}
 
 	public Node(String value, int type, int content) {
 
+		setGeneric(false);
 		m_type = type;
 		m_value = value;
 		m_content = content;
@@ -108,6 +118,16 @@ public class Node implements INode, Serializable {
 		init();
 	}
 
+	public Node(String value, int type, int content, boolean generic) {
+
+		m_type = type;
+		m_value = value;
+		m_content = content;
+		setGeneric(generic);
+
+		init();
+	}
+	
 	public boolean addLeave(double leave) {
 
 		if (!m_leaves.contains(leave)) {
@@ -185,7 +205,7 @@ public class Node implements INode, Serializable {
 		return m_leaves;
 	}
 
-	public String getPath() {
+	public String getPath() {		
 		return m_path;
 	}
 
@@ -360,5 +380,13 @@ public class Node implements INode, Serializable {
 		path = path + getValue();
 
 		setPath(path);
+	}
+
+	public void setGeneric(boolean generic) {
+		m_generic = generic;
+	}
+
+	public boolean isGeneric() {
+		return m_generic;
 	}
 }

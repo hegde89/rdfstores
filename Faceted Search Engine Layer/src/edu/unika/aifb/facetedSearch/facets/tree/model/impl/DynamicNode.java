@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.sleepycat.je.DatabaseException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IDynamicNode;
 
@@ -23,12 +24,28 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 	private String m_leftBorder;
 	private String m_rightBorder;
 
+	/*
+	 * 
+	 */
+	private int m_calClusterDepth;
+
+	/*
+	 * 
+	 */
+	private boolean m_hasCalChildren;
+
 	public DynamicNode() {
 		super();
+		init();
 	}
 
 	public DynamicNode(String value, int type, int content) {
 		super(value, type, content);
+		init();
+	}
+
+	public int getCalClusterDepth() {
+		return m_calClusterDepth;
 	}
 
 	/*
@@ -69,6 +86,10 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 		return m_leftBorder;
 	}
 
+	public List<AbstractSingleFacetValue> getLiterals() {
+		return super.getCache().getLiterals4DynNode(this);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -81,10 +102,6 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 	public Set<AbstractSingleFacetValue> getObjects() {
 		return new HashSet<AbstractSingleFacetValue>(super.getCache()
 				.getLiterals4DynNode(this));
-	}
-
-	public List<AbstractSingleFacetValue> getLiterals() {
-		return super.getCache().getLiterals4DynNode(this);
 	}
 
 	public String getRightBorder() {
@@ -101,6 +118,23 @@ public class DynamicNode extends StaticNode implements IDynamicNode {
 	@Override
 	public Set<String> getSources() throws DatabaseException, IOException {
 		return super.getCache().getSources4DynNode(this);
+	}
+
+	public boolean hasCalChildren() {
+		return m_hasCalChildren;
+	}
+
+	private void init() {
+		m_calClusterDepth = FacetEnvironment.CalClusterDepth.NOT_SET;
+		m_hasCalChildren = true;
+	}
+
+	public void setCalClusterDepth(int calClusterDepth) {
+		m_calClusterDepth = calClusterDepth;
+	}
+
+	public void setHasCalChildren(boolean hasCalChildren) {
+		m_hasCalChildren = hasCalChildren;
 	}
 
 	public void setLeftBorder(String leftValue) {

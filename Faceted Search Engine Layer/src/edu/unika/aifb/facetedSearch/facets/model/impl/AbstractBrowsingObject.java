@@ -46,6 +46,7 @@ public abstract class AbstractBrowsingObject
 	private String m_value;
 	private int m_content;
 	private String m_label;
+	private int m_type;
 
 	public AbstractBrowsingObject() {
 		init();
@@ -65,9 +66,9 @@ public abstract class AbstractBrowsingObject
 	public int compareTo(AbstractBrowsingObject obj) {
 
 		if (obj.getCountS() < getCountS()) {
-			return 1;
-		} else if (obj.getCountS() > getCountS()) {
 			return -1;
+		} else if (obj.getCountS() > getCountS()) {
+			return 1;
 		} else {
 			return 0;
 		}
@@ -110,6 +111,10 @@ public abstract class AbstractBrowsingObject
 		return m_nodeId;
 	}
 
+	public int getType() {
+		return m_type;
+	}
+
 	public String getValue() {
 		return m_value;
 	}
@@ -122,6 +127,10 @@ public abstract class AbstractBrowsingObject
 	@Override
 	public int hashCode() {
 		return m_value.hashCode();
+	}
+
+	public boolean hasLabel() {
+		return !m_label.equals(FacetEnvironment.DefaultValue.NO_LABEL);
 	}
 
 	private void init() {
@@ -150,6 +159,10 @@ public abstract class AbstractBrowsingObject
 
 	public void setNodeId(double nodeId) {
 		m_nodeId = nodeId;
+	}
+
+	public void setType(int type) {
+		m_type = type;
 	}
 
 	public void setValue(String value) {

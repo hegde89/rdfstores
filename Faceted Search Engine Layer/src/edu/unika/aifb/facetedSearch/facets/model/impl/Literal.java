@@ -39,6 +39,11 @@ public class Literal extends AbstractSingleFacetValue implements ILiteral {
 	 */
 	private Object m_parsedLiteral;
 
+	/*
+	 * 
+	 */
+	private String m_literalValue;
+
 	public Literal() {
 
 	}
@@ -82,8 +87,21 @@ public class Literal extends AbstractSingleFacetValue implements ILiteral {
 		return 0;
 	}
 
+	public String getLiteralValue() {
+
+		if (m_literalValue == null) {
+			m_literalValue = FacetUtils.getValueOfLiteral(this.getValue());
+		}
+
+		return m_literalValue;
+	}
+
 	public Object getParsedLiteral() {
 		return m_parsedLiteral;
+	}
+
+	public void setLiteralValue(String literalValue) {
+		m_literalValue = literalValue;
 	}
 
 	public void setParsedLiteral(Object parsedLiteral) {

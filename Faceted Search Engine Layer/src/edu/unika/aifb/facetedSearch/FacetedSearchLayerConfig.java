@@ -57,21 +57,79 @@ public class FacetedSearchLayerConfig {
 	 */
 	private static boolean s_createGraphIdx;
 	private static boolean s_createFacetIdx;
-	
+
 	/*
 	 * 
 	 */
 	private static String s_cacheDirStrg;
 	private static File s_cacheDir;
 	private static Map<String, File> s_cacheSessionDirs;
-	
+
 	/*
 	 * 
 	 */
 	private static int s_refinementMode;
-	
+
+	/*
+	 * 
+	 */
+	private static String s_graphIndexDirStrg;
+
+	/*
+	 * 
+	 */
+	private static String s_schemaOntoPath;
+
+	public static boolean createFacetIdx() {
+		return s_createFacetIdx;
+	}
+
+	public static boolean createGraphIdx() {
+		return s_createGraphIdx;
+	}
+
+	public static File getCacheDir() {
+
+		if (s_cacheDir == null) {
+			s_cacheDir = new File(s_cacheDirStrg);
+		}
+
+		if (!s_cacheDir.exists()) {
+			s_cacheDir.mkdir();
+		}
+
+		return s_cacheDir;
+	}
+
+	public static File getCacheDir4Session(int sessionID) {
+
+		String key = s_cacheDirStrg + "/" + sessionID;
+
+		if (s_cacheSessionDirs == null) {
+			s_cacheSessionDirs = new HashMap<String, File>();
+		}
+
+		if (!s_cacheSessionDirs.containsKey(key)) {
+
+			File newCache = new File(s_cacheDirStrg + "/" + sessionID);
+			newCache.mkdir();
+
+			s_cacheSessionDirs.put(key, newCache);
+		}
+
+		return s_cacheSessionDirs.get(key);
+	}
+
+	public static String getCacheDirStrg() {
+		return s_cacheDirStrg;
+	}
+
 	public static String getExpressivity() {
 		return s_expressivity;
+	}
+
+	public static String getFacetIndexDirStrg() {
+		return s_facetIdxDirStrg;
 	}
 
 	public static File getFacetTempIdxDir() {
@@ -100,12 +158,16 @@ public class FacetedSearchLayerConfig {
 		return s_facetIdxTreeDir;
 	}
 
-	public static boolean createFacetIdx() {
-		return s_createFacetIdx;
+	public static String getGraphIndexDirStrg() {
+		return s_graphIndexDirStrg;
 	}
 
-	public static boolean createGraphIdx() {
-		return s_createGraphIdx;
+	public static int getRefinementMode() {
+		return s_refinementMode;
+	}
+
+	public static String getSchemaOntoPath() {
+		return s_schemaOntoPath;
 	}
 
 	public static boolean isFacetsEnabled() {
@@ -114,6 +176,14 @@ public class FacetedSearchLayerConfig {
 
 	public static boolean isRankingEnabled() {
 		return s_rankingEnabled;
+	}
+
+	public static void setCacheDir(File cacheDir) {
+		s_cacheDir = cacheDir;
+	}
+
+	public static void setCacheDirStrg(String cacheDirStrg) {
+		s_cacheDirStrg = cacheDirStrg;
 	}
 
 	public static void setCreateFacetIdx(boolean createFacetIdx) {
@@ -142,59 +212,19 @@ public class FacetedSearchLayerConfig {
 		s_facetsEnabled = facetsEnabled;
 	}
 
+	public static void setGraphIndexDirStrg(String graphIndexDirStrg) {
+		s_graphIndexDirStrg = graphIndexDirStrg;
+	}
+
 	public static void setRankingEnabled(boolean rankingEnabled) {
 		s_rankingEnabled = rankingEnabled;
-	}
-
-	public static void setCacheDirStrg(String cacheDirStrg) {
-		s_cacheDirStrg = cacheDirStrg;
-	}
-
-	public static String getCacheDirStrg() {
-		return s_cacheDirStrg;
-	}
-
-	public static void setCacheDir(File cacheDir) {
-		s_cacheDir = cacheDir;
-	}
-
-	public static File getCacheDir4Session(int sessionID) {
-		
-		String key = s_cacheDirStrg+"/"+sessionID;
-		
-		if(s_cacheSessionDirs == null) {
-			s_cacheSessionDirs = new HashMap<String, File>();
-		}
-		
-		if(!s_cacheSessionDirs.containsKey(key)) {
-			
-			File newCache = new File(s_cacheDirStrg+"/"+sessionID);
-			newCache.mkdir();
-			
-			s_cacheSessionDirs.put(key, newCache);
-		}
-		
-		return s_cacheSessionDirs.get(key);
-	}
-	
-	public static File getCacheDir() {
-		
-		if(s_cacheDir == null) {
-			s_cacheDir = new File(s_cacheDirStrg);
-		}
-		
-		if(!s_cacheDir.exists()) {
-			s_cacheDir.mkdir();
-		}
-		
-		return s_cacheDir;
 	}
 
 	public static void setRefinementMode(int refinementMode) {
 		s_refinementMode = refinementMode;
 	}
 
-	public static int getRefinementMode() {
-		return s_refinementMode;
+	public static void setSchemaOntoPath(String schemaOntoPath) {
+		s_schemaOntoPath = schemaOntoPath;
 	}
 }

@@ -38,9 +38,9 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
+import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -132,7 +132,7 @@ public class ConstructionDelegator extends Delegator {
 
 		for (String colName : results.getColumnNames()) {
 
-			if (Util.isVariable(colName)) {
+			if (FacetUtils.isVariable(colName)) {
 
 				s_log.debug("start building facet tree for column '" + colName
 						+ "'");

@@ -20,7 +20,6 @@ package edu.unika.aifb.facetedSearch.algo.construction.tree.impl;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -35,7 +34,6 @@ import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
@@ -70,6 +68,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 	/*
 	 * 
 	 */
+	@SuppressWarnings("unused")
 	private FacetIndex m_facetIndex;
 
 	/*
@@ -98,8 +97,9 @@ public class FacetSubTreeBuilder implements IBuilder {
 			Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 
 			if (!(node instanceof FacetValueNode)) {
-
+				
 				Iterator<String> subjIter = node.getSubjects().iterator();
+				m_helper.clearParsedFacetValues();
 
 				while (subjIter.hasNext()) {
 
@@ -110,13 +110,12 @@ public class FacetSubTreeBuilder implements IBuilder {
 						Iterator<AbstractSingleFacetValue> objIter = node
 								.getObjects(subject).iterator();
 
+						Iterator<String> sourcesIter = m_cache
+								.getSources4Object(domain, subject).iterator();
+
 						while (objIter.hasNext()) {
 
 							AbstractSingleFacetValue fv = objIter.next();
-
-							Iterator<String> sourcesIter = m_cache
-									.getSources4Object(domain, subject)
-									.iterator();
 
 							/*
 							 * update object -> source mapping
@@ -125,45 +124,51 @@ public class FacetSubTreeBuilder implements IBuilder {
 							if (sourcesIter.hasNext()) {
 
 								while (sourcesIter.hasNext()) {
-
 									m_cache.addObject2SourceMapping(domain, fv
 											.getValue(), sourcesIter.next());
-
 								}
 							} else {
-
 								m_cache.addObject2SourceMapping(domain, fv
 										.getValue(), subject);
 							}
 
-							/*
-							 * update tree
-							 */
+							// /*
+							// * update tree
+							// */
+							//
+							// Collection<Node> oldLeaves = m_facetIndex
+							// .getLeaves(fv);
+							//
+							// if (!oldLeaves.isEmpty()) {
+							//
+							// for (Node leave : oldLeaves) {
+							//
+							// StaticNode newLeave = m_helper
+							// .insertPathAtNode(tree, leave,
+							// node, m_paths);
+							// newLeaves.add(newLeave);
+							//
+							// m_cache.updateLeaveGroups(newLeave.getID(),
+							// fv.getValue());
+							// }
+							// } else {
 
-							Collection<Node> oldLeaves = m_facetIndex
-									.getLeaves(fv);
-
-							for (Node leave : oldLeaves) {
-
-								StaticNode newLeave = m_helper
-										.insertPathAtNode(tree, leave, node,
-												m_paths);
-								newLeaves.add(newLeave);
-
-								m_cache.updateLeaveGroups(newLeave.getID(), fv
-										.getValue());
-							}
+							m_helper.insertFacetValue(tree, node, fv);
+							// }
 						}
 
 						m_parsedSubjects.add(subject);
 					}
 				}
 
-				node.setIsSubTreeRoot(true);
-				tree.addLeaves2SubtreeRoot(node.getID(), newLeaves);
+				if (!newLeaves.isEmpty()) {
 
-				// prune ranges
-				tree = m_helper.pruneRanges(tree, newLeaves);
+					node.setIsSubTreeRoot(true);
+					tree.addLeaves2SubtreeRoot(node.getID(), newLeaves);
+
+					// prune ranges
+					// tree = m_helper.pruneRanges(tree, newLeaves);
+				}
 
 				long time2 = System.currentTimeMillis();
 

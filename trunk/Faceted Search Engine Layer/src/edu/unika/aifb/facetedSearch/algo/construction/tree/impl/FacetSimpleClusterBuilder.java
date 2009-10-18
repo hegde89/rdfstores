@@ -21,20 +21,27 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.xml.datatype.DatatypeConstants;
+import javax.xml.datatype.XMLGregorianCalendar;
+
 import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
+import org.openrdf.model.datatypes.XMLDatatypeUtil;
 
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.DataType;
 import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
+import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.algo.construction.clustering.impl.ComparatorPool;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
@@ -69,6 +76,11 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 	 */
 	private ComparatorPool m_compPool;
 
+	/*
+	 * 
+	 */
+	private HashSet<String> m_parsedFacetValues;
+
 	public FacetSimpleClusterBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
@@ -76,6 +88,7 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 		m_helper = helper;
 		m_compPool = ComparatorPool.getInstance();
+		m_parsedFacetValues = new HashSet<String>();
 	}
 
 	public boolean build(FacetTree tree, StaticNode node) {
@@ -142,7 +155,7 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 		List<AbstractSingleFacetValue> lits;
 
-		if (!(node instanceof FacetValueNode) && !(node instanceof DynamicNode)) {
+		if (!(node instanceof DynamicNode)) {
 
 			lits = new ArrayList<AbstractSingleFacetValue>();
 
@@ -192,53 +205,347 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 			lits = ((DynamicNode) node).getLiterals();
 		}
 
-		if (lits.size() > FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE) {
+		if (datatype == FacetEnvironment.DataType.DATE) {
 
-			int delta = lits.size()
-					/ FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE;
+			boolean hasCalChildren;
+			boolean valueChange;
 
-			int i = 0;
+			int currentCalValue;
+			int nextCalValue;
+			int leftBorderIdx;
+			int currentCalClusterDepth;
 
-			while (i < lits.size()) {
-
-				DynamicNode dynNode = new DynamicNode();
-				dynNode.setLeftBorder(lits.get(i).getValue());
-				dynNode.setContent(node.getContent());
-				dynNode.setDomain(node.getDomain());
-				dynNode.setSession(m_session);
-				dynNode.setFacet(node.getFacet());
-
-				if ((i + delta) >= lits.size()) {
-
-					dynNode
-							.setRightBorder(lits.get(lits.size() - 1)
-									.getValue());
-					dynNode.setValue(FacetUtils.getLiteralValue(dynNode
-							.getLeftBorder())
-							+ " - "
-							+ FacetUtils.getLiteralValue(dynNode
-									.getRightBorder()));
-					dynNode.setLiterals(lits.subList(i, lits.size()));
-
-				} else {
-
-					dynNode.setRightBorder(lits.get(i + delta).getValue());
-					dynNode.setValue(FacetUtils.getLiteralValue(dynNode.getLeftBorder()) + " - "
-							+ FacetUtils.getLiteralValue(dynNode.getRightBorder()));
-					dynNode.setLiterals(lits.subList(i, i + delta + 1));
-				}
-
-				tree.addVertex(dynNode);
-
-				Edge edge = tree.addEdge(node, dynNode);
-				edge.setType(EdgeType.CONTAINS);
-
-				i += delta;
+			if (node instanceof DynamicNode) {
+				currentCalClusterDepth = ((DynamicNode) node)
+						.getCalClusterDepth() + 1;
+			} else {
+				currentCalClusterDepth = FacetEnvironment.CalClusterDepth.YEAR;
 			}
 
+			if (currentCalClusterDepth != FacetEnvironment.CalClusterDepth.DAY) {
+
+				int i = 0;
+
+				while (i < lits.size()) {
+
+					hasCalChildren = false;
+					valueChange = false;
+
+					currentCalValue = getCalValue((Literal) lits.get(i),
+							currentCalClusterDepth);
+					leftBorderIdx = i;
+
+					if (currentCalValue != FacetEnvironment.CalClusterDepth.NOT_SET) {
+
+						DynamicNode dynNode = new DynamicNode();
+						dynNode.setLeftBorder(lits.get(i).getValue());
+						dynNode.setContent(node.getContent());
+						dynNode.setDomain(node.getDomain());
+						dynNode.setSession(m_session);
+						dynNode.setFacet(node.getFacet());
+						dynNode.setCalClusterDepth(currentCalClusterDepth);
+						dynNode.setHasCalChildren(false);
+
+						ArrayList<AbstractSingleFacetValue> lits4Node = new ArrayList<AbstractSingleFacetValue>();
+						lits4Node.add(lits.get(i));
+
+						if (!hasCalChildren
+								&& hasCalValue((Literal) lits.get(i),
+										currentCalClusterDepth + 1)) {
+
+							dynNode.setHasCalChildren(true);
+							hasCalChildren = true;
+						}
+
+						while (!valueChange && (i < lits.size() - 1)) {
+
+							i++;
+							nextCalValue = getCalValue((Literal) lits.get(i),
+									currentCalClusterDepth);
+
+							if (nextCalValue != FacetEnvironment.CalClusterDepth.NOT_SET) {
+
+								if ((currentCalValue != nextCalValue)) {
+
+									valueChange = true;
+
+									dynNode.setRightBorder(lits.get(i - 1)
+											.getValue());
+									dynNode
+											.setValue(getLabel4CurrentCalClusterDepth(
+													currentCalClusterDepth,
+													currentCalValue));
+									dynNode.setLiterals(lits4Node);
+								} else {
+
+									lits4Node.add(lits.get(i));
+
+									if (!hasCalChildren
+											&& hasCalValue((Literal) lits
+													.get(i),
+													currentCalClusterDepth + 1)) {
+
+										dynNode.setHasCalChildren(true);
+										hasCalChildren = true;
+									}
+								}
+							}
+						}
+
+						if (!valueChange) {
+
+							dynNode.setRightBorder(lits.get(Math.max(0, i - 1))
+									.getValue());
+							dynNode.setValue(getLabel4CurrentCalClusterDepth(
+									currentCalClusterDepth, currentCalValue));
+							dynNode.setLiterals(lits.subList(leftBorderIdx,
+									lits.size()));
+						}
+
+						tree.addVertex(dynNode);
+
+						Edge edge = tree.addEdge(node, dynNode);
+						edge.setType(EdgeType.CONTAINS);
+
+						if (i == lits.size() - 1) {
+							i++;
+						}
+
+					} else {
+						i++;
+					}
+				}
+			} else {
+
+				int i = 0;
+
+				while (i < lits.size()) {
+
+					currentCalValue = getCalValue((Literal) lits.get(i),
+							currentCalClusterDepth);
+
+					if (currentCalValue != FacetEnvironment.CalClusterDepth.NOT_SET) {
+
+						if (!m_parsedFacetValues.contains(lits.get(i)
+								.getValue())) {
+
+							FacetValueNode fvNode = new FacetValueNode(
+									((Literal) lits.get(i)).getLiteralValue());
+							fvNode.setContent(node.getContent());
+							fvNode.setFacet(node.getFacet());
+							fvNode.setType(NodeType.LEAVE);
+							fvNode.setDomain(node.getDomain());
+							fvNode.setSession(m_session);
+							fvNode.setDepth(node.getDepth() + 1);
+
+							tree.addVertex(fvNode);
+
+							Edge edge = tree.addEdge(node, fvNode);
+							edge.setType(EdgeType.CONTAINS);
+
+							m_parsedFacetValues.add(lits.get(i).getValue());
+						}
+					} else {
+						i++;
+					}
+				}
+
+				m_parsedFacetValues.clear();
+			}
 		} else {
 
-			m_helper.insertFacetValues(tree, node, lits);
+			if (lits.size() > FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE) {
+
+				int delta = lits.size()
+						/ FacetEnvironment.DefaultValue.NUM_OF_CHILDREN_PER_NODE;
+
+				int i = 0;
+
+				while (i < lits.size()) {
+
+					DynamicNode dynNode = new DynamicNode();
+					dynNode.setLeftBorder(lits.get(i).getValue());
+					dynNode.setContent(node.getContent());
+					dynNode.setDomain(node.getDomain());
+					dynNode.setSession(m_session);
+					dynNode.setFacet(node.getFacet());
+
+					if ((i + delta) >= lits.size()) {
+
+						dynNode.setRightBorder(lits.get(lits.size() - 1)
+								.getValue());
+						dynNode.setValue(FacetUtils.getLiteralValue(dynNode
+								.getLeftBorder())
+								+ " - "
+								+ FacetUtils.getLiteralValue(dynNode
+										.getRightBorder()));
+						dynNode.setLiterals(lits.subList(i, lits.size()));
+
+					} else {
+
+						dynNode.setRightBorder(lits.get(i + delta).getValue());
+						dynNode.setValue(FacetUtils.getLiteralValue(dynNode
+								.getLeftBorder())
+								+ " - "
+								+ FacetUtils.getLiteralValue(dynNode
+										.getRightBorder()));
+						dynNode.setLiterals(lits.subList(i, i + delta + 1));
+					}
+
+					tree.addVertex(dynNode);
+
+					Edge edge = tree.addEdge(node, dynNode);
+					edge.setType(EdgeType.CONTAINS);
+
+					i += delta;
+				}
+			} else {
+
+				m_helper.clearParsedFacetValues();
+				m_helper.insertFacetValues(tree, node, lits);
+			}
 		}
+	}
+
+	private int getCalValue(Literal lit, int currentDepth) {
+
+		XMLGregorianCalendar cal = (XMLGregorianCalendar) lit
+				.getParsedLiteral();
+
+		if (cal == null) {
+			cal = XMLDatatypeUtil.parseCalendar(lit.getLiteralValue());
+			lit.setParsedLiteral(cal);
+		}
+
+		switch (currentDepth) {
+			case FacetEnvironment.CalClusterDepth.YEAR : {
+
+				int year = cal.getYear();
+
+				if (year != DatatypeConstants.FIELD_UNDEFINED) {
+					return year;
+				} else {
+					return FacetEnvironment.CalClusterDepth.NOT_SET;
+				}
+			}
+			case FacetEnvironment.CalClusterDepth.MONTH : {
+
+				int month = cal.getMonth();
+
+				if (month != DatatypeConstants.FIELD_UNDEFINED) {
+					return month;
+				} else {
+					return FacetEnvironment.CalClusterDepth.NOT_SET;
+				}
+			}
+			case FacetEnvironment.CalClusterDepth.DAY : {
+
+				int day = cal.getDay();
+
+				if (day != DatatypeConstants.FIELD_UNDEFINED) {
+					return day;
+				} else {
+					return FacetEnvironment.CalClusterDepth.NOT_SET;
+				}
+			}
+		}
+
+		return FacetEnvironment.CalClusterDepth.NOT_SET;
+	}
+
+	private String getDay4Value(int value) {
+
+		switch (value) {
+
+			case 1 : {
+				return "Monday";
+			}
+			case 2 : {
+				return "Tuesday";
+			}
+			case 3 : {
+				return "Wednesday";
+			}
+			case 4 : {
+				return "Thursday";
+			}
+			case 5 : {
+				return "Friday";
+			}
+			case 6 : {
+				return "Saturday";
+			}
+			case 7 : {
+				return "Sunday";
+			}
+		}
+
+		return String.valueOf(value);
+	}
+
+	private String getLabel4CurrentCalClusterDepth(int currentDepth, int value) {
+
+		switch (currentDepth) {
+			case FacetEnvironment.CalClusterDepth.YEAR : {
+				return "Year: " + value;
+			}
+			case FacetEnvironment.CalClusterDepth.MONTH : {
+				return "Month: " + getMonth4Value(value);
+			}
+			case FacetEnvironment.CalClusterDepth.DAY : {
+				return "Day: " + getDay4Value(value);
+			}
+		}
+
+		return "";
+	}
+
+	private String getMonth4Value(int value) {
+
+		switch (value) {
+
+			case 1 : {
+				return "January";
+			}
+			case 2 : {
+				return "February";
+			}
+			case 3 : {
+				return "March";
+			}
+			case 4 : {
+				return "April";
+			}
+			case 5 : {
+				return "May";
+			}
+			case 6 : {
+				return "June";
+			}
+			case 7 : {
+				return "July";
+			}
+			case 8 : {
+				return "August";
+			}
+			case 9 : {
+				return "September";
+			}
+			case 10 : {
+				return "October";
+			}
+			case 11 : {
+				return "November";
+			}
+			case 12 : {
+				return "December";
+			}
+		}
+
+		return String.valueOf(value);
+	}
+
+	private boolean hasCalValue(Literal lit, int currentDepth) {
+		return getCalValue(lit, currentDepth) != FacetEnvironment.CalClusterDepth.NOT_SET;
 	}
 }

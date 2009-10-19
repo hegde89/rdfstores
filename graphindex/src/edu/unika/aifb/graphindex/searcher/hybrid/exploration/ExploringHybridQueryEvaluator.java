@@ -46,6 +46,7 @@ import edu.unika.aifb.graphindex.searcher.hybrid.HybridQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.keyword.KeywordSearcher;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+import edu.unika.aifb.graphindex.searcher.keyword.model.SQueryKeywordElement;
 import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.sig.EvaluationClass;
@@ -183,7 +184,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					for (QNode s : query.getStructuredQuery().getQueryGraph().vertexSet()) {
 						if (s.isVariable()) {
 							String ext = m_si.getExtension(row[structuredResults.getColumn(s.getLabel())]);
-							sqExts.add(ext);
+//							sqExts.add(ext);
+							elements.add(new SQueryKeywordElement(new Entity(ext), KeywordElement.ENTITY, 1.0, s.getLabel()));
 							extRow[queryIndexMatches.getColumn(s.getLabel())] = ext;
   							
 							// record for which variables an extension appears
@@ -201,18 +203,17 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 				}
 			}
 			
-			for (String ext : sqExts) {
-				KeywordElement element = new KeywordElement(new Entity(ext), KeywordElement.ENTITY, 1.0, null, null);
-				elements.add(element);
-//				elements.add(new NodeElement(ext));
-			}
+//			for (String ext : sqExts) {
+//				KeywordElement element = new SQueryKeywordElement(new Entity(ext), KeywordElement.ENTITY, 1.0, null, null);
+//				elements.add(element);
+//			}
 			
 			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
 		}
 		
 		if (k == 1)
 			k = 3;
-		matcher.setKeywords(segment2elements);
+		matcher.setKeywords(segment2elements, query);
 		matcher.setK(Math.min(k, MAX_INTERPRETATIONS));
 		matcher.match();
 		

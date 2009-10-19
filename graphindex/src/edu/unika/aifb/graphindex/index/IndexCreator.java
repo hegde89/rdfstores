@@ -18,11 +18,17 @@ package edu.unika.aifb.graphindex.index;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,7 +45,14 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.ho.yaml.Yaml;
+import org.openrdf.model.Statement;
+import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.rio.RDFHandler;
+import org.openrdf.rio.RDFHandlerException;
+import org.openrdf.rio.RDFParseException;
+import org.openrdf.rio.RDFParser.DatatypeHandling;
+import org.openrdf.rio.rdfxml.RDFXMLParser;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -87,13 +100,32 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author gla
  */
 public class IndexCreator implements TripleSink {
+	private class TypeHandler implements RDFHandler {
+		private List<String> types;
+		
+		public void endRDF() throws RDFHandlerException {}
+		public void handleComment(String arg0) throws RDFHandlerException {}
+		public void handleNamespace(String arg0, String arg1) throws RDFHandlerException {}
+		public void startRDF() throws RDFHandlerException {}
 
+		public void reset() {
+			types = new ArrayList<String>();
+		}
+		
+		@Override
+		public void handleStatement(Statement st) throws RDFHandlerException {
+			if (st.getPredicate().toString().equals(RDF.TYPE.toString()))
+				types.add(st.getObject().toString());
+		}
+	}
 	protected IndexDirectory m_idxDirectory;
 	protected IndexConfiguration m_idxConfig;
 	private Importer m_importer;
 	private int m_triplesImported = 0;
 	private Map<IndexDescription,IndexStorage> m_dataIndexes;
 	private Set<String> m_properties;
+	private RDFXMLParser m_parser;
+	private TypeHandler m_typeHandler;
 	
 	private final int TRIPLES_INTERVAL = 500000;
 	
@@ -111,6 +143,13 @@ public class IndexCreator implements TripleSink {
 		m_idxDirectory = indexDirectory;
 		m_idxConfig = new IndexConfiguration();
 		m_properties = new HashSet<String>();
+		
+		m_typeHandler = new TypeHandler();
+		m_parser = new RDFXMLParser();
+		m_parser.setDatatypeHandling(DatatypeHandling.VERIFY);
+		m_parser.setStopAtFirstError(false);
+		m_parser.setRDFHandler(m_typeHandler);
+		m_parser.setVerifyData(false);
 	}
 	
 	/**
@@ -300,6 +339,8 @@ public class IndexCreator implements TripleSink {
 	private void analyzeData() throws StorageException, IOException {
 		DataIndex dataIndex = new DataIndex(m_idxDirectory, m_idxConfig);
 
+		Set<String> properties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE));
+
 		Set<String> overrideObjectProperties = new HashSet<String>();
 		Set<String> overrideDataProperties = new HashSet<String>();
 		
@@ -311,23 +352,76 @@ public class IndexCreator implements TripleSink {
 		Set<String> objectProperties = new HashSet<String>();
 		Set<String> dataProperties = new HashSet<String>();
 
-		for (String property : Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.PROPERTIES_FILE))) {
-			if (overrideObjectProperties.contains(property))
-				objectProperties.add(property);
-			else if (overrideDataProperties.contains(property))
-				dataProperties.add(property);
-			else {
-				if (hasEntity(dataIndex, property))
-					objectProperties.add(property);
-				else
+		int typeAvailable = 0;
+		for (String property : properties) {
+			String type = checkType(property);
+			
+			if (type != null) {
+				typeAvailable++;
+				if (type.equals(OWL.DATATYPEPROPERTY.toString()))
 					dataProperties.add(property);
+				else if (type.equals(OWL.OBJECTPROPERTY.toString()))
+					objectProperties.add(property);
+				else {
+					log.warn("unknown property type: " + type);
+					type = null;
+				}
+			}
+			
+			if (type == null) {
+				if (overrideObjectProperties.contains(property))
+					objectProperties.add(property);
+				else if (overrideDataProperties.contains(property))
+					dataProperties.add(property);
+				else {
+					if (hasEntity(dataIndex, property))
+						objectProperties.add(property);
+					else
+						dataProperties.add(property);
+				}
 			}
 		}
 		
 		Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE), dataProperties);
 		Util.writeEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE), objectProperties);
 		
+		log.debug("type was available for " + typeAvailable + "/" + properties.size() + " properties");
 		log.debug("data properties: " + dataProperties.size() + ", object properties: " + objectProperties.size());
+	}
+	
+	private String checkType(String property) {
+		if (!property.contains("dbpedia.org/ontology"))
+			return null;
+		
+		try {
+			URL url = new URL(property.replaceFirst("ontology", "data3") + ".rdf");
+			
+			URLConnection conn = url.openConnection();
+			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			String input;
+			String content = "";
+			while ((input = in.readLine()) != null)
+				content += input;
+			in.close();
+		
+			m_typeHandler.reset();
+			
+			m_parser.parse(new StringReader(content), "");
+			
+			if (m_typeHandler.types.size() == 1)
+				return m_typeHandler.types.get(0);
+			
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (RDFParseException e) {
+			e.printStackTrace();
+		} catch (RDFHandlerException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 	
 	private void index() throws EnvironmentLockedException, DatabaseException, IOException, StorageException, InterruptedException {
@@ -601,17 +695,14 @@ public class IndexCreator implements TripleSink {
 				String p = t[1];
 				String o = t[2];
 
-				if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT)) {
+				entSet.add(s);
+				entSet.add(o);
+				
+				if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
 					conSet.add(s);
-				}
-				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)) {
-					entSet.add(s);
+				
+				if (property.equals(RDF.TYPE.toString()))
 					conSet.add(o);
-				}
-				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)) {
-					entSet.add(s);
-					entSet.add(o);
-				}
 				
 				triples++;
 				if (triples % 1000000 == 0)

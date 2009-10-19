@@ -160,11 +160,13 @@ public class KeywordSearcher {
 			}
 		}
 		
+		log.debug("retrieving extension info");
 		for (KeywordSegment ks : segmentsWithEntities.keySet()) {
 			Collection<KeywordElement> list = segmentsWithEntities.get(ks);
 			for (KeywordElement element : list)
 				element.setExtensionId(idxReader.getStructureIndex().getExtension(element.getUri()));
 		}
+		log.debug("...done");
 		
 		for(String keyword : conceptsAndRelations.keySet()) {
 			segmentsWithEntities.put(new KeywordSegment(keyword), conceptsAndRelations.get(keyword));
@@ -605,7 +607,7 @@ public class KeywordSearcher {
 //	    loadFieldNames.add(Constant.EXTENSION_FIELD);
 	    
 	    Set<String> lazyFieldNames = new HashSet<String>();
-	    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
+//	    lazyFieldNames.add(Constant.NEIGHBORHOOD_FIELD);
 	    lazyFieldNames.add(Constant.IN_PROPERTIES_FIELD);
 	    lazyFieldNames.add(Constant.OUT_PROPERTIES_FIELD);
 	    
@@ -740,8 +742,7 @@ public class KeywordSearcher {
 		TopDocCollector collector = new TopDocCollector(top);  
 		valueSearcher.search(q, collector);
 		docs = collector.topDocs().scoreDocs;
-		if (docs.length > 0)
-			log.debug(q + " " + docs.length);
+		log.debug(q + " " + docs.length);
 		return docs;
 	}
 

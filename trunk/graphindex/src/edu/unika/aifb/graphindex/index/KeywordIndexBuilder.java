@@ -246,21 +246,21 @@ public class KeywordIndexBuilder {
 		List<Field> fields = new ArrayList<Field>();
 		
 		// indexing type of the element
-		fields.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+		fields.add(new Field(Constant.TYPE_FIELD, TypeUtil.ENTITY, Field.Store.YES, Field.Index.NO));
 		
 		// indexing uri
 		fields.add(new Field(Constant.URI_FIELD, uri, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 		
 		// indexing extension id 
-		if (idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
-			String blockName = blockSearcher.getBlockName(uri);
-//			String blockName = structureIndex.getExtension(uri);
-			if (blockName == null) {
-				log.warn("no ext for " + uri);
-				return null;
-			}
-			fields.add(new Field(Constant.EXTENSION_FIELD, blockName, Field.Store.YES, Field.Index.NO));
-		}
+//		if (idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
+//			String blockName = blockSearcher.getBlockName(uri);
+////			String blockName = structureIndex.getExtension(uri);
+//			if (blockName == null) {
+//				log.warn("no ext for " + uri);
+//				return null;
+//			}
+//			fields.add(new Field(Constant.EXTENSION_FIELD, blockName, Field.Store.YES, Field.Index.NO));
+//		}
 		
 		// indexing concept of the entity element
 		Set<String> concepts = computeConcepts(uri);
@@ -368,6 +368,8 @@ public class KeywordIndexBuilder {
 		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 		valueWriter.addDocument(doc);
 		
+		String ext = blockSearcher.getBlockName(entityUri);
+		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)
 			return;
@@ -381,6 +383,7 @@ public class KeywordIndexBuilder {
 			doc = new Document();
 			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
 			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+			doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
 			
 			float boost = ENTITY_DESCRIPTIVE_BOOST;
 			if (predicate.equals(RDFS.LABEL.toString()))

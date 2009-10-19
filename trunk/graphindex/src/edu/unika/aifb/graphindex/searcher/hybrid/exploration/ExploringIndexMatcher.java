@@ -40,10 +40,12 @@ import edu.unika.aifb.graphindex.algorithm.graph.GraphIsomorphism;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+import edu.unika.aifb.graphindex.searcher.keyword.model.SQueryKeywordElement;
 import edu.unika.aifb.graphindex.searcher.structured.sig.AbstractIndexGraphMatcher;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -268,7 +270,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		return null;
 	}
 	
-	public void setKeywords(Map<KeywordSegment,List<KeywordElement>> keywords) throws StorageException, IOException {
+	public void setKeywords(Map<KeywordSegment,List<KeywordElement>> keywords, HybridQuery query) throws StorageException, IOException {
 		reset();
 //		log.debug(keywords);
 		for (KeywordSegment keyword : keywords.keySet()) {
@@ -289,8 +291,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 //					node.addFrom((NodeElement)ele); // don't forget to copy stuff
 					
-					if (keyword.getKeywords().contains("STRUCTURED"))
-						queue.add(new StructuredQueryCursor(keywordSet, node));
+					if (keyword.getKeywords().contains("STRUCTURED")) {
+						SQueryKeywordElement sqele = (SQueryKeywordElement)ele;
+						queue.add(new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode()));
+					}
 					else {
 //						for (String property : node.getAugmentedEdges().keySet()) {
 //							if (!node.getAugmentedEdges().get(property).contains(keyword))

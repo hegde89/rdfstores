@@ -84,9 +84,11 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		
 		Map<NodeElement,Set<String>> node2AllowedOutEdgeLabels = new HashMap<NodeElement,Set<String>>();
 		Map<NodeElement,Set<String>> node2AllowedInEdgeLabels = new HashMap<NodeElement,Set<String>>();
+
+		Set<NodeElement> keywordElementNodes = new HashSet<NodeElement>();
 		
 		for (Cursor c : cursors) {
-			if (c instanceof StructuredQueryCursor)
+			if (c.getStartCursor() instanceof StructuredQueryCursor)
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
 			else {
 				Cursor startCursor = c.getStartCursor();
@@ -151,6 +153,10 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				cur = cur.getParent().getParent();
 			}
 			
+			if (elementCursor != null)
+				keywordElementNodes.add((NodeElement)elementCursor.getGraphElement());
+			
+			// retrieve allowed incoming edge labels
 			if (elementCursor != null && elementCursor.getInProperties().size() > 0) {
 				Set<String> allowed = node2AllowedInEdgeLabels.get((NodeElement)elementCursor.getGraphElement());
 				if (allowed == null) {
@@ -160,6 +166,7 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				allowed.addAll(elementCursor.getInProperties());
 			}
 
+			// retrieve allowed outgoing edge labels
 			if (elementCursor != null && elementCursor.getOutProperties().size() > 0) {
 				Set<String> allowed = node2AllowedOutEdgeLabels.get((NodeElement)elementCursor.getGraphElement());
 				if (allowed == null) {
@@ -180,6 +187,13 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 //			if (c.getParent() == null) {
 //				addVertex((NodeElement)c.getGraphElement());
 //			}
+		}
+		
+		if (m_structuredNode != null) {
+			// subgraph is invalid if an entity edge and the structured part attach to the same node
+			for (NodeElement node : keywordElementNodes)
+				if (node.equals(m_structuredNode))
+					m_valid = false;
 		}
 		
 		Set<String> values = new HashSet<String>();

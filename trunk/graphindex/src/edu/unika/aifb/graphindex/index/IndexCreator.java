@@ -69,7 +69,6 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneExtendedIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
 import edu.unika.aifb.graphindex.storage.lucene.LuceneWarmer;
 import edu.unika.aifb.graphindex.util.StatisticsCollector;
@@ -487,10 +486,10 @@ public class IndexCreator implements TripleSink {
 		if (m_idxConfig.getBoolean(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES)) {
 			int rounds = 0;
 			int lastMovedEntities = 0;
-			while (rounds < 10) {
+			while (rounds < 20) {
 				int movedEntities = eliminateReflexiveEdges(dataIndex, bc);
-				if (movedEntities == lastMovedEntities)
-					break;
+//				if (movedEntities == lastMovedEntities)
+//					break;
 				lastMovedEntities = movedEntities;
 				rounds++;
 			}
@@ -611,6 +610,8 @@ public class IndexCreator implements TripleSink {
 		bc.close();
 	}
 	
+	private Set<String> reflexiveProperties = new HashSet<String>();
+	
 	private int eliminateReflexiveEdges(DataIndex dataIndex, BlockCache bc) throws StorageException, IOException {
 		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
 		Set<String> dataProperties =  Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
@@ -622,6 +623,9 @@ public class IndexCreator implements TripleSink {
 		
 		log.debug("eliminating reflexive edges");
 		for (String property : objectProperties) {
+			if (reflexiveProperties.size() > 0 && !reflexiveProperties.contains(property))
+				continue;
+			
 			for (Iterator<String[]> ti = dataIndex.iterator(property); ti.hasNext(); ) {
 				String[] triple = ti.next();
 				String s = triple[0];
@@ -638,7 +642,10 @@ public class IndexCreator implements TripleSink {
 						entity2newExt.put(o, splitExts.get(subExt));
 						
 						fixedNodes.add(s);
+						fixedNodes.add(o);
 					}
+					
+					reflexiveProperties.add(property);
 				}
 			}
 		}
@@ -694,15 +701,27 @@ public class IndexCreator implements TripleSink {
 				String s = t[0];
 				String p = t[1];
 				String o = t[2];
-
-				entSet.add(s);
-				entSet.add(o);
 				
-				if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
+				if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT)) {
 					conSet.add(s);
-				
-				if (property.equals(RDF.TYPE.toString()))
+				}
+				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.CONCEPT)) {
+					entSet.add(s);
 					conSet.add(o);
+				}
+				else if(TypeUtil.getSubjectType(p, o).equals(TypeUtil.ENTITY) && TypeUtil.getObjectType(p, o).equals(TypeUtil.ENTITY)) {
+					entSet.add(s);
+					entSet.add(o);
+				}
+
+//				entSet.add(s);
+//				entSet.add(o);
+//				
+//				if (TypeUtil.getPredicateType(p, o).equals(TypeUtil.TYPE) && TypeUtil.getSubjectType(p, o).equals(TypeUtil.CONCEPT))
+//					conSet.add(s);
+//				
+//				if (property.equals(RDF.TYPE.toString()))
+//					conSet.add(o);
 				
 				triples++;
 				if (triples % 1000000 == 0)

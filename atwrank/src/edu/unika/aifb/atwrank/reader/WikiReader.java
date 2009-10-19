@@ -6,9 +6,12 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
+import org.htmlparser.beans.StringBean;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -24,11 +27,9 @@ public class WikiReader {
 
 	
 	public String getRenderedText(String title) {
-
-		String inputcompl = getStringFromWiki(baseurl + "/index.php?title="
-				+ title + "&action=render");
-
-		return "text";
+		StringBean sb = new StringBean();
+		sb.setURL(baseurl + "/index.php?title=" + title + "&action=render");
+		return sb.getStrings();
 	}
 
 	public String getStats() {
@@ -57,7 +58,8 @@ public class WikiReader {
 		return numpages;
 	}
 
-	public ArrayList getAllPageTitles() {
+	@SuppressWarnings("unchecked")
+	public List<String> getAllPageTitles() {
 
 		// get number of pages
 		// http://semanticweb.org/api.php?action=query&meta=siteinfo&siprop=statistics
@@ -66,7 +68,7 @@ public class WikiReader {
 		// http://semanticweb.org/api.php?action=query&list=allpages&aplimit=500
 
 		// get all page titles
-		ArrayList titlelist = new ArrayList();
+		List<String> titlelist = new ArrayList<String>();
 
 		// http://semanticweb.org/api.php?action=query&list=allpages&aplimit=500&format=json
 
@@ -78,15 +80,16 @@ public class WikiReader {
 			JSONParser parser = new JSONParser();
 
 			Map json = (Map) parser.parse(inputcompl);
-			Object nextjsonobj = ((Map) ((Map) json.get("query-continue"))
-					.get("allpages")).get("apfrom");
+			Object nextjsonobj = ((Map) ((Map) json.get("query-continue")).get("allpages")).get("apfrom");
 			String apfrom = JSONValue.toJSONString(nextjsonobj);
 
 			do {
 				Object pages = ((Map) json.get("query")).get("allpages");
 				// System.out.println("pages" + pages);
 				JSONArray array = (JSONArray) pages;
-				titlelist.addAll(array);
+				for (Object page : array) {
+					titlelist.add((String)((JSONObject)page).get("title"));
+				}
 
 				inputcompl = getStringFromWiki(baseurl
 						+ "/api.php?action=query&list=allpages&aplimit=500&format=json&apfrom="
@@ -98,13 +101,15 @@ public class WikiReader {
 					nextjsonobj = ((Map) ((Map) json.get("query-continue"))
 							.get("allpages")).get("apfrom");
 				} else {
+					System.out.println(json);
 					break;
 				}
 
 				apfrom = JSONValue.toJSONString(nextjsonobj);
 				// System.out.println(apfrom);
-
-			} while ((apfrom != null));
+				System.out.println(apfrom);
+			} 
+			while ((apfrom != null));
 
 		} catch (ParseException pe) {
 			System.out.println(pe);
@@ -118,7 +123,7 @@ public class WikiReader {
 
 	protected String getStringFromWiki(String urlstr) {
 
-		String inputcompl = null;
+		String inputcompl = "";
 
 		try {
 
@@ -131,7 +136,7 @@ public class WikiReader {
 			String inputLine;
 
 			while ((inputLine = in.readLine()) != null) {
-				inputcompl = inputLine;
+				inputcompl += inputLine;
 			}
 			in.close();
 

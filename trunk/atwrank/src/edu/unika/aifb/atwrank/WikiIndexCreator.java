@@ -14,6 +14,7 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
+import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.index.KeywordIndexBuilder;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -30,8 +31,8 @@ public class WikiIndexCreator extends IndexCreator {
 			"This is an outdated testpage that should be deleted"
 		};
 		
-		public WikiKeywordIndexBuilder(IndexDirectory idxDirectory, IndexConfiguration idxConfig) throws IOException, StorageException {
-			super(idxDirectory, idxConfig);
+		public WikiKeywordIndexBuilder(IndexReader idxReader) throws IOException, StorageException {
+			super(idxReader, false);
 		}
 		
 		private boolean containsStopText(String content) {
@@ -90,10 +91,11 @@ public class WikiIndexCreator extends IndexCreator {
 	}
 
 	@Override
-	protected void createKWIndex() throws IOException, StorageException {
+	protected void createKWIndex(boolean resume) throws IOException, StorageException {
 		prepareKeywordIndex();
 		
-		WikiKeywordIndexBuilder ib = new WikiKeywordIndexBuilder(m_idxDirectory, m_idxConfig);
+		IndexReader reader = new IndexReader(m_idxDirectory);
+		WikiKeywordIndexBuilder ib = new WikiKeywordIndexBuilder(reader);
 		ib.indexKeywords();
 		
 		System.out.println("pages imported: " + ib.m_pagesImported + ", skipped: " + ib.m_pagesSkipped);

@@ -787,38 +787,41 @@ public class IndexCreator implements TripleSink {
 		Util.writeEdgeSet(relations, relSet);
 		Util.writeEdgeSet(attributes, attrSet);
 		
-		IndexStorage gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR), new StatisticsCollector());
-		gs.initialize(false, true);
+		Map<String,Double> extWeights = new HashMap<String,Double>();
 
-		IndexStorage is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR), new StatisticsCollector());
-		is.initialize(false, true);
-		
-		Map<String,Integer> sizes = new HashMap<String,Integer>();
-		max = 0.0;
-		int nodes = 0;
-		for (String property : objectProperties) {
-			for (Iterator<String[]> i = gs.iterator(IndexDescription.PSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, property); i.hasNext(); ) {
-				String[] row = i.next();
-				String s = row[0];
-				String o = row[1];
-				if (!sizes.containsKey(s)) {
-					sizes.put(s, is.getDataList(IndexDescription.EXTENT, DataField.ENT, s).size());
-					nodes += sizes.get(s);
-					max = Math.max(max, sizes.get(s));
-				}
-				if (!sizes.containsKey(o)) {
-					sizes.put(o, is.getDataList(IndexDescription.EXTENT, DataField.ENT, o).size());
-					nodes += sizes.get(o);
-					max = Math.max(max, sizes.get(o));
+		if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
+			IndexStorage gs = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_GRAPH_DIR), new StatisticsCollector());
+			gs.initialize(false, true);
+	
+			IndexStorage is = new LuceneIndexStorage(m_idxDirectory.getDirectory(IndexDirectory.SP_IDX_DIR), new StatisticsCollector());
+			is.initialize(false, true);
+			
+			Map<String,Integer> sizes = new HashMap<String,Integer>();
+			max = 0.0;
+			int nodes = 0;
+			for (String property : objectProperties) {
+				for (Iterator<String[]> i = gs.iterator(IndexDescription.PSO, new DataField[] { DataField.SUBJECT, DataField.OBJECT }, property); i.hasNext(); ) {
+					String[] row = i.next();
+					String s = row[0];
+					String o = row[1];
+					if (!sizes.containsKey(s)) {
+						sizes.put(s, is.getDataList(IndexDescription.EXTENT, DataField.ENT, s).size());
+						nodes += sizes.get(s);
+						max = Math.max(max, sizes.get(s));
+					}
+					if (!sizes.containsKey(o)) {
+						sizes.put(o, is.getDataList(IndexDescription.EXTENT, DataField.ENT, o).size());
+						nodes += sizes.get(o);
+						max = Math.max(max, sizes.get(o));
+					}
 				}
 			}
+			
+			factor = nodes / max;
+			
+			for (String ext : sizes.keySet())
+				extWeights.put(ext, (double)sizes.get(ext) / nodes * factor);
 		}
-		
-		factor = nodes /max;
-		
-		Map<String,Double> extWeights = new HashMap<String,Double>();
-		for (String ext : sizes.keySet())
-			extWeights.put(ext, (double)sizes.get(ext) / nodes * factor);
 		
 		Yaml.dump(extWeights, m_idxDirectory.getFile(IndexDirectory.EXT_WEIGHTS_FILE, true));
 	} 

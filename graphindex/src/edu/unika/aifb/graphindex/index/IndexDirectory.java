@@ -51,6 +51,7 @@ public class IndexDirectory {
 	public static final int OVERRIDE_DATA_PROPERTIES_FILE = addFile("override_data_properties");
 	public static final int PROPERTY_FREQ_FILE = addFile("property_frequencies");
 	public static final int EXT_WEIGHTS_FILE = addFile("extension_weights");
+	public static final int PROPERTY_RANGES_FILE = addFile("property_ranges");
 	
 	public static final int SP_IDX_DIR = addDirectory("sp_idx");
 	public static final int SP_GRAPH_DIR = addDirectory("sp_graph");

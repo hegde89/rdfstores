@@ -53,6 +53,7 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser.DatatypeHandling;
 import org.openrdf.rio.rdfxml.RDFXMLParser;
+import org.semanticweb.yars.nx.namespace.RDFS;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -101,6 +102,11 @@ import edu.unika.aifb.graphindex.util.Util;
 public class IndexCreator implements TripleSink {
 	private class TypeHandler implements RDFHandler {
 		private List<String> types;
+		private Map<String,String> propertyRanges;
+
+		private TypeHandler() {
+			 propertyRanges = new HashMap<String,String>();
+		}
 		
 		public void endRDF() throws RDFHandlerException {}
 		public void handleComment(String arg0) throws RDFHandlerException {}
@@ -111,10 +117,11 @@ public class IndexCreator implements TripleSink {
 			types = new ArrayList<String>();
 		}
 		
-		@Override
 		public void handleStatement(Statement st) throws RDFHandlerException {
 			if (st.getPredicate().toString().equals(RDF.TYPE.toString()))
 				types.add(st.getObject().toString());
+			if (st.getPredicate().toString().equals(RDFS.RANGE.toString()))
+				propertyRanges.put(st.getSubject().toString(), st.getObject().toString());
 		}
 	}
 	protected IndexDirectory m_idxDirectory;
@@ -386,6 +393,9 @@ public class IndexCreator implements TripleSink {
 		
 		log.debug("type was available for " + typeAvailable + "/" + properties.size() + " properties");
 		log.debug("data properties: " + dataProperties.size() + ", object properties: " + objectProperties.size());
+
+		Yaml.dump(m_typeHandler.propertyRanges, m_idxDirectory.getFile(IndexDirectory.PROPERTY_RANGES_FILE, true));
+		log.debug("property ranges: " + m_typeHandler.propertyRanges.size());
 	}
 	
 	private String checkType(String property) {
@@ -490,6 +500,8 @@ public class IndexCreator implements TripleSink {
 				int movedEntities = eliminateReflexiveEdges(dataIndex, bc);
 //				if (movedEntities == lastMovedEntities)
 //					break;
+				if (movedEntities == 0)
+					break;
 				lastMovedEntities = movedEntities;
 				rounds++;
 			}
@@ -611,17 +623,20 @@ public class IndexCreator implements TripleSink {
 	}
 	
 	private Set<String> reflexiveProperties = new HashSet<String>();
+	private int splitCounter = -1;
 	
 	private int eliminateReflexiveEdges(DataIndex dataIndex, BlockCache bc) throws StorageException, IOException {
 		Set<String> objectProperties = Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.OBJECT_PROPERTIES_FILE));
 		Set<String> dataProperties =  Util.readEdgeSet(m_idxDirectory.getFile(IndexDirectory.DATA_PROPERTIES_FILE));
 
-		int counter = -1;
 		Map<String,Integer> splitExts = new HashMap<String,Integer>(5000);
 		Map<String,Integer> entity2newExt = new HashMap<String,Integer>(5000);
 		Set<String> fixedNodes = new HashSet<String>(5000);
 		
-		log.debug("eliminating reflexive edges");
+		log.debug("eliminating reflexive edges (known reflexive: " + reflexiveProperties.size() + ")");
+
+		Set<String> stillReflexive = new HashSet<String>();
+		
 		for (String property : objectProperties) {
 			if (reflexiveProperties.size() > 0 && !reflexiveProperties.contains(property))
 				continue;
@@ -637,20 +652,24 @@ public class IndexCreator implements TripleSink {
 					
 					if (subExt.equals(objExt) && !fixedNodes.contains(o)) {
 						if (!splitExts.containsKey(subExt))
-							splitExts.put(subExt, --counter);
+							splitExts.put(subExt, --splitCounter);
 						
 						entity2newExt.put(o, splitExts.get(subExt));
 						
 						fixedNodes.add(s);
-						fixedNodes.add(o);
+//						fixedNodes.add(o);
+
 					}
-					
-					reflexiveProperties.add(property);
+
+					if (subExt.equals(objExt))
+						stillReflexive.add(property);
 				}
 			}
 		}
 
-		log.debug("exts split: " + splitExts.size());
+		reflexiveProperties = stillReflexive;
+		
+		log.debug("exts split: " + splitExts.size() + " " + splitExts);
 		log.debug("entities to move: " + entity2newExt.size());
 		
 		for (String entity : entity2newExt.keySet()) {

@@ -153,7 +153,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				if (source == null) {
 					source = new NodeElement(src);
 					source.setCost(1 - extensionWeights.get(src));
-//					m_indexGraph.addVertex(source);
+					source.setCost(1);
+					
 					m_nodes.put(src, source);
 					m_node2edges.put(source, new ArrayList<EdgeElement>(10));
 				}
@@ -162,7 +163,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				if (target == null) {
 					target = new NodeElement(trg);
 					target.setCost(1 - extensionWeights.get(trg));
-//					m_indexGraph.addVertex(target);
+					target.setCost(1);
+					
 					m_nodes.put(trg, target);
 					m_node2edges.put(target, new ArrayList<EdgeElement>(10));
 				}
@@ -250,6 +252,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		
 		EdgeElement edge = new EdgeElement(node, property, target);
 		edge.setCost(1 - m_propertyWeights.get(property));
+		edge.setCost(1);
 		
 		m_node2edges.get(node).add(edge);
 		
@@ -329,7 +332,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						start.setCost(start.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
 						start.setCost(start.getCost() / ele.getMatchingScore());
 						Cursor edgeCursor = new EdgeCursor(keywordSet, dataEdge, start);
-						Cursor nodeCursor = new NodeCursor(keywordSet, node, edgeCursor);
+						Cursor nodeCursor = new KeywordNodeCursor(keywordSet, node, edgeCursor);
 					
 						nodeCursor.addInProperties(ele.getInProperties());
 						nodeCursor.addOutProperties(ele.getOutProperties());

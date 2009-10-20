@@ -20,6 +20,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.semanticweb.yars.nx.namespace.RDF;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
@@ -48,6 +50,7 @@ import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.searcher.keyword.model.SQueryKeywordElement;
 import edu.unika.aifb.graphindex.searcher.structured.QueryExecution;
+import edu.unika.aifb.graphindex.searcher.structured.TranslatedQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.sig.EvaluationClass;
 import edu.unika.aifb.graphindex.searcher.structured.sig.SmallIndexMatchesValidator;
@@ -62,8 +65,9 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	private VPEvaluator m_eval;
 	private ExploringIndexMatcher m_matcher;
 	private KeywordSearcher m_searcher;
-	private SmallIndexMatchesValidator m_validator;
-	
+//	private SmallIndexMatchesValidator m_validator;
+	private TranslatedQueryEvaluator m_tqe;
+
 	private static final int MAX_INTERPRETATIONS = 10;
 
 	private static final Logger log = Logger.getLogger(ExploringHybridQueryEvaluator.class);
@@ -76,7 +80,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		m_matcher = new ExploringIndexMatcher(idxReader);
 		m_matcher.initialize();
 		m_searcher = new KeywordSearcher(idxReader);
-		m_validator = new SmallIndexMatchesValidator(idxReader);
+//		m_validator = new SmallIndexMatchesValidator(idxReader);
+		m_tqe = new TranslatedQueryEvaluator(idxReader);
 	}
 	
 	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) throws StorageException, IOException {
@@ -99,7 +104,28 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			Map<String,KeywordElement> extAttribute2Element = new HashMap<String,KeywordElement>();
 			
 			for (KeywordElement ele : entities.get(ks)) {
-				if (ele.getType() == KeywordElement.CONCEPT || ele.getType() == KeywordElement.ENTITY) {
+				if (ele.getType() == KeywordElement.CONCEPT) {
+					String ext = ele.getExtensionId();
+					
+					KeywordElement schemaElement = extAttribute2Element.get(ext + "__concept");
+					
+					if (schemaElement == null) {
+						schemaElement = new KeywordElement(new Entity(ext), KeywordElement.CONCEPT, ele.getMatchingScore(), null, ele.getNeighborhoodStorage());
+						schemaElement.addKeywords(ks.getKeywords());
+						
+						elements.add(schemaElement);
+						
+						extAttribute2Element.put(ext + "__concept", schemaElement);
+					}
+					else {
+						schemaElement.setMatchingScore(Math.max(schemaElement.getMatchingScore(), ele.getMatchingScore()));
+					}
+					
+					schemaElement.addInProperties(Arrays.asList(RDF.TYPE.toString()));
+
+					keywordNodeElements.add(ele);
+				}
+				else if (ele.getType() == KeywordElement.ENTITY) {
 					String ext = ele.getExtensionId();
 					
 					KeywordElement schemaElement = extAttribute2Element.get(ext + "__" + ele.getAttributeUri());
@@ -121,22 +147,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					schemaElement.addInProperties(ele.getInProperties());
 
 					keywordNodeElements.add(ele);
-//					NodeElement node = label2node.get(ext);
-//					if (node == null) {
-//						node = new NodeElement(ext);
-//						// add keywords as virtual edges to node
-////						node.addAugmentedEdge("???" + ++augmentedEdgeCount, ks);
-//						node.addAugmentedEdge(ele.getAttributeUri(), ks);
-//						label2node.put(ext, node);
-//						elements.add(node);
-//						node.setCost(ele.getMatchingScore());
-//					}
-//					
-//					node.addSegmentEntity(ks, ele.getUri());
-//					keywordNodeElements.add(ele);
 				}
 				else if (ele.getType() == KeywordElement.RELATION || ele.getType() == KeywordElement.ATTRIBUTE) {
-//					elements.add(new EdgeElement(null, ele.getUri(), null));
 					elements.add(ele);
 				}
 				else
@@ -220,21 +232,21 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		queries.addAll(matcher.indexMatches(query.getStructuredQuery(), ext2var));
 		log.debug("queries: " + queries.size());
 		
-		if (query.getStructuredQuery() != null) {
-			// join the index matches of the structured part to those of the keyword part
-			for (int i = 0; i < queries.size(); i++) {
-				TranslatedQuery q = queries.get(i);
-				Table<String> indexMatches = q.getIndexMatches();
-				
-				indexMatches.sort(q.getConnectingNode().getLabel());
-				queryIndexMatches.sort(q.getConnectingNode().getLabel(), true);
-				
-				indexMatches = Tables.mergeJoin(indexMatches, queryIndexMatches, q.getConnectingNode().getLabel());
-				q.setIndexMatches(indexMatches);
-				
-				q.addResult(structuredResults);
-			}
-		}
+//		if (query.getStructuredQuery() != null) {
+//			// join the index matches of the structured part to those of the keyword part
+//			for (int i = 0; i < queries.size(); i++) {
+//				TranslatedQuery q = queries.get(i);
+//				Table<String> indexMatches = q.getIndexMatches();
+//				
+//				indexMatches.sort(q.getConnectingNode().getLabel());
+//				queryIndexMatches.sort(q.getConnectingNode().getLabel(), true);
+//				
+//				indexMatches = Tables.mergeJoin(indexMatches, queryIndexMatches, q.getConnectingNode().getLabel());
+//				q.setIndexMatches(indexMatches);
+//				
+//				q.addResult(structuredResults);
+//			}
+//		}
 	}
 	
 	public Table<String> evaluate(HybridQuery query) throws StorageException, IOException {
@@ -287,45 +299,48 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 //			log.debug(translated);
 
 			if (i < queryResults) {
-				QueryExecution qe = new QueryExecution(translated, m_idxReader);
-	
-				qe.setIndexMatches(translated.getIndexMatches());
-				
-				List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
-				classes.add(new EvaluationClass(translated.getIndexMatches()));
-				
-				for (QNode var : translated.getSelectVariables()) {
-					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
-					for (EvaluationClass ec : classes) {
-						newClasses.addAll(ec.addMatch(var.getLabel(), false, null, null));
-					}
-					classes.addAll(newClasses);					
-				}
-				
-				log.debug("visited edges:");
-				for (QueryEdge edge : translated.getStructuredEdges()) {
-					qe.visited(edge);
-					log.debug(" " + edge);
-				}
-				for (QueryEdge edge : translated.getAttributeEdges()) {
-					qe.visited(edge);
-					log.debug(" " + edge);
-				}
-	
-				for (Iterator<EvaluationClass> j = classes.iterator(); j.hasNext(); ) {
-					EvaluationClass ec = j.next();
-					ec.getResults().addAll(translated.getResults());
-				}
-	
-				qe.setEvaluationClasses(classes);
-				m_validator.setQueryExecution(qe);
-				
-				if (classes.size() > 0)
-					m_validator.validateIndexMatches();
-
-				log.debug("result: " + qe.getResult());
-				if (qe.getResult() != null)
-					translated.setResult(qe.getResult());
+				Table<String> res = m_tqe.evaluate(translated);
+				if (res != null)
+					translated.setResult(res);
+//				QueryExecution qe = new QueryExecution(translated, m_idxReader);
+//	
+//				qe.setIndexMatches(translated.getIndexMatches());
+//				
+//				List<EvaluationClass> classes = new ArrayList<EvaluationClass>();
+//				classes.add(new EvaluationClass(translated.getIndexMatches()));
+//				
+//				for (QNode var : translated.getSelectVariables()) {
+//					List<EvaluationClass> newClasses = new ArrayList<EvaluationClass>();
+//					for (EvaluationClass ec : classes) {
+//						newClasses.addAll(ec.addMatch(var.getLabel(), false, null, null));
+//					}
+//					classes.addAll(newClasses);					
+//				}
+//				
+//				log.debug("visited edges:");
+//				for (QueryEdge edge : translated.getStructuredEdges()) {
+//					qe.visited(edge);
+//					log.debug(" " + edge);
+//				}
+//				for (QueryEdge edge : translated.getAttributeEdges()) {
+//					qe.visited(edge);
+//					log.debug(" " + edge);
+//				}
+//	
+//				for (Iterator<EvaluationClass> j = classes.iterator(); j.hasNext(); ) {
+//					EvaluationClass ec = j.next();
+//					ec.getResults().addAll(translated.getResults());
+//				}
+//	
+//				qe.setEvaluationClasses(classes);
+//				m_validator.setQueryExecution(qe);
+//				
+//				if (classes.size() > 0)
+//					m_validator.validateIndexMatches();
+//
+//				log.debug("result: " + qe.getResult());
+//				if (qe.getResult() != null)
+//					translated.setResult(qe.getResult());
 			}
 		}
 

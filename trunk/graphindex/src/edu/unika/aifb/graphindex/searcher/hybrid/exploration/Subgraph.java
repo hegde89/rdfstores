@@ -88,8 +88,14 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		Set<NodeElement> keywordElementNodes = new HashSet<NodeElement>();
 		
 		for (Cursor c : cursors) {
-			if (c.getStartCursor() instanceof StructuredQueryCursor)
+			if (c.getStartCursor() instanceof StructuredQueryCursor) {
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
+				for (EdgeElement edge : c.getStartCursor().getEdges()) {
+					m_label2var.put(edge.getSource().getLabel(), edge.getSource().getLabel());
+					m_label2var.put(edge.getTarget().getLabel(), edge.getTarget().getLabel());
+				}
+				m_label2var.remove(c.getStartCursor().getGraphElement().getLabel());
+			}
 			else {
 				Cursor startCursor = c.getStartCursor();
 				
@@ -231,6 +237,8 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		for (NodeElement node : vertexSet())
 			m_cost += node.getCost();
 
+		if (m_cost == 2.369080213401766)
+			log.debug(this);
 //		NodeElement start = null;
 //		for (NodeElement node : vertexSet()) {
 //			if (inDegreeOf(node) + outDegreeOf(node) == 1) {
@@ -369,14 +377,14 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		int x = 0;
 		for (EdgeElement edge : edgeSet()) {
 			String src = m_label2var.get(edge.getSource().getLabel());
-			if (src == null && !edge.getSource().equals(m_structuredNode)) {
-				src = "?x" + ++x;
+			if (src == null) { // && !edge.getSource().equals(m_structuredNode)) {
+				src = "?sx" + ++x;
 				m_label2var.put(edge.getSource().getLabel(), src);
 			}
 			
 			String trg = m_label2var.get(edge.getTarget().getLabel());
-			if (trg == null && !edge.getTarget().equals(m_structuredNode)) {
-				trg = "?x" + ++x;
+			if (trg == null) { // && !edge.getTarget().equals(m_structuredNode)) {
+				trg = "?sx" + ++x;
 				m_label2var.put(edge.getTarget().getLabel(), trg);
 			}
 		}
@@ -384,95 +392,97 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		// m_mappings contains ext->ext mappings from this subgraph to
 		// isomorphic subgraphs found during exploration
 		// create maps containing query var->extension mappings
-		List<String> columns = new ArrayList<String>();
-		for (String ext : m_label2var.keySet()) {
-			String v = m_label2var.get(ext);
-			if (Util.isVariable(v))
-				columns.add(v);
-		}
-		if (query != null) {
-			columns.add("?PLACEHOLDER");
-			m_label2var.put(m_structuredNode.getLabel(), "?PLACEHOLDER");
-		}
+//		List<String> columns = new ArrayList<String>();
+//		for (String ext : m_label2var.keySet()) {
+//			String v = m_label2var.get(ext);
+//			if (Util.isVariable(v))
+//				columns.add(v);
+//		}
+//		if (query != null) {
+//			columns.add("?PLACEHOLDER");
+//			m_label2var.put(m_structuredNode.getLabel(), "?PLACEHOLDER");
+//		}
 		
-		Table<String> indexMatches = new Table<String>(columns);
+//		Table<String> indexMatches = new Table<String>(columns);
 		
 		// don't forget this subgraph
-		String[] row = new String[indexMatches.columnCount()];
-		for (String ext : m_label2var.keySet()) {
-			String v = m_label2var.get(ext);
-			if (Util.isVariable(v))
-				row[indexMatches.getColumn(v)] = ext;
-		}
-		indexMatches.addRow(row);
-		
-		// from the isomorphic subgraphs
-		for (Map<NodeElement,NodeElement> extMap : m_mappings) {
-			row = new String[indexMatches.columnCount()];
-			for (NodeElement node : extMap.keySet()) {
-				String ext = node.getLabel();
-				String v = m_label2var.get(ext);
-				if (v != null && Util.isVariable(v)) // v is null if the node is the connecting node to a structured query
-					row[indexMatches.getColumn(v)] = extMap.get(node).getLabel();
-			}
-			indexMatches.addRow(row);
-		}
-		
+//		String[] row = new String[indexMatches.columnCount()];
+//		for (String ext : m_label2var.keySet()) {
+//			String v = m_label2var.get(ext);
+//			if (Util.isVariable(v))
+//				row[indexMatches.getColumn(v)] = ext;
+//		}
+//		indexMatches.addRow(row);
+//		
+//		// from the isomorphic subgraphs
+//		for (Map<NodeElement,NodeElement> extMap : m_mappings) {
+//			row = new String[indexMatches.columnCount()];
+//			for (NodeElement node : extMap.keySet()) {
+//				String ext = node.getLabel();
+//				String v = m_label2var.get(ext);
+//				if (v != null && Util.isVariable(v)) // v is null if the node is the connecting node to a structured query
+//					row[indexMatches.getColumn(v)] = extMap.get(node).getLabel();
+//			}
+//			indexMatches.addRow(row);
+//		}
+//		
 		// build a result table for each augmented edge
-		List<Table<String>> resultTables = new ArrayList<Table<String>>();
-		for (NodeElement augmentedNode : m_augmentedNodes) {
-			Set<KeywordSegment> kss = m_nodeSegments.get(augmentedNode);
-			assert kss.size() == 1;
-			for (KeywordSegment ks : kss) {
-				Table<String> table = new Table<String>(augmentedNode.getLabel(), ks.toString());
-				table.addRows(augmentedNode.getSegmentEntities(ks).getRows());
-				Set<String> alreadyAdded = new HashSet<String>();
-				for (Map<NodeElement,NodeElement> map : m_mappings)
-					if (alreadyAdded.add(map.get(augmentedNode).getLabel()))
-						table.addRows(map.get(augmentedNode).getSegmentEntities(ks).getRows());
-				resultTables.add(table);
-			}
-		}
+//		List<Table<String>> resultTables = new ArrayList<Table<String>>();
+//		for (NodeElement augmentedNode : m_augmentedNodes) {
+//			Set<KeywordSegment> kss = m_nodeSegments.get(augmentedNode);
+//			assert kss.size() == 1;
+//			for (KeywordSegment ks : kss) {
+//				Table<String> table = new Table<String>(augmentedNode.getLabel(), ks.toString());
+//				table.addRows(augmentedNode.getSegmentEntities(ks).getRows());
+//				Set<String> alreadyAdded = new HashSet<String>();
+//				for (Map<NodeElement,NodeElement> map : m_mappings)
+//					if (alreadyAdded.add(map.get(augmentedNode).getLabel()))
+//						table.addRows(map.get(augmentedNode).getSegmentEntities(ks).getRows());
+//				resultTables.add(table);
+//			}
+//		}
 
-		if (query != null) {
-			// in the results of the structured query, a single variable
-			// may be mapped to different extensions in different answers
-			// if these extensions occur in the current subgraph as nodes, we can
-			// attach the structured query at multiple points
-			for (QNode var : ext2vars.get(m_structuredNode.getLabel())) {
-				// deep copy extension mappings, which will be extended by attachQuery
-				Table<String> copy = new Table<String>(indexMatches, false);
-				for (String[] r : indexMatches)
-					copy.addRow(r.clone());
-				queries.add(attachQuery(query, var, copy, resultTables));
-			}
-		}
-		else {
+//		if (query != null) {
+//			// in the results of the structured query, a single variable
+//			// may be mapped to different extensions in different answers
+//			// if these extensions occur in the current subgraph as nodes, we can
+//			// attach the structured query at multiple points
+//			for (QNode var : ext2vars.get(m_structuredNode.getLabel())) {
+//				// deep copy extension mappings, which will be extended by attachQuery
+//				Table<String> copy = new Table<String>(indexMatches, false);
+//				for (String[] r : indexMatches)
+//					copy.addRow(r.clone());
+//				queries.add(attachQuery(query, var, copy, resultTables));
+//			}
+//		}
+//		else {
 			TranslatedQuery q = new TranslatedQuery("qt", null);
 			for (EdgeElement edge : edgeSet()) {
 				if (Util.isVariable(m_label2var.get(edge.getTarget().getLabel())))
 					q.addEdge(m_label2var.get(edge.getSource().getLabel()), edge.getLabel(), m_label2var.get(edge.getTarget().getLabel()));
 				else {
-					KeywordQNode qnode = m_keywordNodes.get(m_label2var.get(edge.getTarget().getLabel()));
+					QNode qnode = m_keywordNodes.get(m_label2var.get(edge.getTarget().getLabel()));
+					if (qnode == null)
+						qnode = new QNode(edge.getTarget().getLabel());
 					q.addAttributeEdge(new QNode(m_label2var.get(edge.getSource().getLabel())), edge.getLabel(), qnode);
 				}
 			}
 
-			q.setIndexMatches(indexMatches);
-			
-			for (Table<String> table : resultTables) {
-				Table<String> copy = new Table<String>(table, true);
-				copy.setColumnName(0, m_label2var.get(copy.getColumnName(0)));
-				q.addResult(copy);
-				q.setAsSelect(copy.getColumnName(0));
-			}
+//			q.setIndexMatches(indexMatches);
+//			
+//			for (Table<String> table : resultTables) {
+//				Table<String> copy = new Table<String>(table, true);
+//				copy.setColumnName(0, m_label2var.get(copy.getColumnName(0)));
+//				q.addResult(copy);
+//				q.setAsSelect(copy.getColumnName(0));
+//			}
 			
 			for (QNode qn : q.getQueryGraph().vertexSet())
 				if (qn.isVariable())
 					q.setAsSelect(qn.getLabel());
 			
 			queries.add(q);
-		}
+//		}
 		
 		return queries;
 	}

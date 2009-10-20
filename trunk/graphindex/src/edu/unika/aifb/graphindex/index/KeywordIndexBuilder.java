@@ -263,13 +263,13 @@ public class KeywordIndexBuilder {
 //		}
 		
 		// indexing concept of the entity element
-		Set<String> concepts = computeConcepts(uri);
-		if(concepts != null && concepts.size() != 0) {
-			for(String concept : concepts) {
-				Field field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.NO);
-				fields.add(field);
-			}
-		}
+//		Set<String> concepts = computeConcepts(uri);
+//		if(concepts != null && concepts.size() != 0) {
+//			for(String concept : concepts) {
+//				Field field = new Field(Constant.CONCEPT_FIELD, concept, Field.Store.YES, Field.Index.NO);
+//				fields.add(field);
+//			}
+//		}
 		
 		// indexing entity descriptions in value index
 		computeEntityDescriptions(uri);
@@ -360,15 +360,16 @@ public class KeywordIndexBuilder {
 	} 
 	
 	private void computeEntityDescriptions(String entityUri) throws IOException, StorageException {
+		String ext = blockSearcher.getBlockName(entityUri);
+
 		Document doc = new Document();
 		doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
+		doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
 		doc.add(new Field(Constant.ATTRIBUTE_FIELD, Constant.ATTRIBUTE_LOCALNAME, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 		Field f = new Field(Constant.CONTENT_FIELD, TypeUtil.getLocalName(entityUri).trim(), Field.Store.NO, Field.Index.ANALYZED);
 //		f.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 		valueWriter.addDocument(doc);
-		
-		String ext = blockSearcher.getBlockName(entityUri);
 		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)

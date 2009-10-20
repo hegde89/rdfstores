@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Fieldable;
 
 import edu.unika.aifb.graphindex.model.IResource;
 import edu.unika.aifb.graphindex.model.impl.Attribute;
@@ -48,6 +49,7 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	 */
 	private static final long serialVersionUID = 8594203186544962955L;
 	
+	// TODO make these subclasses, that's what they are there for
 	public static final int CONCEPT = 0;
 	public static final int RELATION = 1;
 	public static final int ENTITY = 2;
@@ -75,6 +77,16 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		this.ns = ns;
 	}
 	
+	public KeywordElement(IResource resource, int type, Document doc, double score, String keyword, NeighborhoodStorage ns) {
+		this.doc = doc;
+		this.resource = resource;
+		this.type = type;
+		this.matchingScore = score;
+		this.keywords = new HashSet<String>();
+		this.keywords.add(keyword);
+		this.ns = ns;
+	}
+
 	public KeywordElement(IResource resource, int type, double score, String keyword, NeighborhoodStorage ns) {
 		this.resource = resource;
 		this.type = type;
@@ -175,10 +187,13 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	public Set<String> getInProperties() {
 		if (m_inProperties == null) {
 			m_inProperties = new HashSet<String>();
-			String s = doc.getFieldable(Constant.IN_PROPERTIES_FIELD).stringValue();
-			StringSplitter splitter = new StringSplitter(s, "\n");
-			while ((s = splitter.next()) != null)
-				m_inProperties.add(s.trim());
+			Fieldable field = doc != null ? doc.getFieldable(Constant.IN_PROPERTIES_FIELD) : null;
+			if (field != null) {
+				String s = field.stringValue();
+				StringSplitter splitter = new StringSplitter(s, "\n");
+				while ((s = splitter.next()) != null)
+					m_inProperties.add(s.trim());
+			}
 		}
 		
 		return m_inProperties;
@@ -187,10 +202,13 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	public Set<String> getOutProperties() {
 		if (m_outProperties == null) {
 			m_outProperties = new HashSet<String>();
-			String s = doc.getFieldable(Constant.OUT_PROPERTIES_FIELD).stringValue();
-			StringSplitter splitter = new StringSplitter(s, "\n");
-			while ((s = splitter.next()) != null)
-				m_outProperties.add(s.trim());
+			Fieldable field = doc != null ? doc.getFieldable(Constant.OUT_PROPERTIES_FIELD) : null;
+			if (field != null) {
+				String s = field.stringValue();
+				StringSplitter splitter = new StringSplitter(s, "\n");
+				while ((s = splitter.next()) != null)
+					m_outProperties.add(s.trim());
+			}
 		}
 		
 		return m_outProperties;

@@ -83,7 +83,7 @@ public class KeywordSearcher {
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
 	public static final double SCHEMA_THRESHOLD = 0.5;
-	public static final int MAX_KEYWORDRESULT_SIZE = 800;
+	public static final int MAX_KEYWORDRESULT_SIZE = 500;
 	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	
@@ -164,7 +164,8 @@ public class KeywordSearcher {
 		for (KeywordSegment ks : segmentsWithEntities.keySet()) {
 			Collection<KeywordElement> list = segmentsWithEntities.get(ks);
 			for (KeywordElement element : list)
-				element.setExtensionId(idxReader.getStructureIndex().getExtension(element.getUri()));
+				if (element.getExtensionId() == null)
+					element.setExtensionId(idxReader.getStructureIndex().getExtension(element.getUri()));
 		}
 		log.debug("...done");
 		
@@ -466,7 +467,7 @@ public class KeywordSearcher {
 				KeywordElement ele = null;
 				if(type.equals(TypeUtil.CONCEPT)){
 					INamedConcept con = new NamedConcept(pruneString(doc.get(Constant.URI_FIELD)), doc.get(Constant.EXTENSION_FIELD));
-					ele = new KeywordElement(con, KeywordElement.CONCEPT, score, keyword, ns);
+					ele = new KeywordElement(con, KeywordElement.CONCEPT, doc, score, keyword, ns);
 				}
 				else if(type.equals(TypeUtil.RELATION)){
 					IRelation rel = new Relation(pruneString(doc.get(Constant.URI_FIELD)));
@@ -620,6 +621,7 @@ public class KeywordSearcher {
 	   		
 	   		String uri = valueDoc.getFieldable(Constant.URI_FIELD).stringValue();
 	   		attributeUri = valueDoc.getFieldable(Constant.ATTRIBUTE_FIELD).stringValue();
+	   		String ext = valueDoc.getFieldable(Constant.EXTENSION_FIELD).stringValue();
 	   		float score = docHits[i].score / maxScore;
 	   		
 //	   		Document doc = reader.document(docHits[i].doc, fieldSelector);
@@ -643,6 +645,7 @@ public class KeywordSearcher {
 //    			IEntity ent = new Entity(pruneString(uri), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
     			IEntity ent = new Entity(pruneString(uri), null);
     			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
+    			ele.setExtensionId(ext);
     			KeywordSegment ks = new KeywordSegment(segement.getKeywords());
     			
     			ele.setAttributeUri(attributeUri);

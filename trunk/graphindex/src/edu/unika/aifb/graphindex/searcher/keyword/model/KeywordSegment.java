@@ -136,8 +136,8 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 	public int compareTo(KeywordSegment ks) {
 		SortedSet<String> s1 = this.valueKeywords;
 		SortedSet<String> s2 = ks.valueKeywords;
-		int size1 = s1.size() + attributeKeyword == null ? 0 : 1;
-		int size2 = s2.size() + ks.attributeKeyword == null ? 0 : 1;
+		int size1 = s1.size() + (attributeKeyword == null ? 0 : 1);
+		int size2 = s2.size() + (ks.attributeKeyword == null ? 0 : 1);
 		if (size1 < size2) {
 			return 1;
 		} else if (size1 > size2) {

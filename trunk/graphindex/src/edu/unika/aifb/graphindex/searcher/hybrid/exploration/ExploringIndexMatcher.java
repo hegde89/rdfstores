@@ -303,7 +303,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 							nodeCursor.setCost(nodeCursor.getCost() / ele.getMatchingScore());
 
 							queue.add(nodeCursor);
-							log.debug(nodeCursor);
+//							log.debug(nodeCursor);
 						}
 					}
 				}
@@ -319,7 +319,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					if (keyword.getKeywords().contains("STRUCTURED")) {
 						SQueryKeywordElement sqele = (SQueryKeywordElement)ele;
 						Cursor c = new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode());
-						log.debug(c);
+//						log.debug(c);
 						queue.add(c);
 					}
 					else {
@@ -341,7 +341,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						nodeCursor.addOutProperties(ele.getOutProperties());
 						
 						queue.add(nodeCursor);
-						log.debug(nodeCursor + " " + dataEdge);
+//						log.debug(nodeCursor + " " + dataEdge);
 					}
 					
 					m_ksStartNodes.get(keyword).add(node);

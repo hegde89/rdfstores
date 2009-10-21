@@ -66,6 +66,7 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.index.IndexConfiguration.Option;
+import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
@@ -772,6 +773,7 @@ public class IndexCreator implements TripleSink {
 		double factor = triples / max;
 		
 		Map<String,Double> weight = new HashMap<String,Double>();
+		weight.put(Constant.ATTRIBUTE_LOCALNAME, 1.0);
 		for (String property : propertyInstances.keySet())
 			weight.put(property, (double)propertyInstances.get(property) / triples * factor);
 		

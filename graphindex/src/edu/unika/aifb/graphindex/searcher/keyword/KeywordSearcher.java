@@ -34,6 +34,9 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -45,6 +48,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
@@ -52,6 +56,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
+import org.apache.lucene.search.BooleanClause.Occur;
 
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.model.IAttribute;
@@ -62,6 +67,7 @@ import edu.unika.aifb.graphindex.model.impl.Attribute;
 import edu.unika.aifb.graphindex.model.impl.Entity;
 import edu.unika.aifb.graphindex.model.impl.NamedConcept;
 import edu.unika.aifb.graphindex.model.impl.Relation;
+import edu.unika.aifb.graphindex.query.KeywordQuery;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
@@ -104,14 +110,19 @@ public class KeywordSearcher {
 		}
 	}
 	
-	public Map<KeywordSegment,Collection<KeywordElement>> searchKeywordElements(List<String> queries) throws StorageException, IOException {
+	public Map<KeywordSegment, Collection<KeywordElement>> searchKeywordElements(
+			List<String> queries) throws StorageException, IOException {
+		
 		return searchKeywordElements(queries, true);
 	}
 	
-	public Map<KeywordSegment,Collection<KeywordElement>> searchKeywordElements(List<String> queries, boolean doOverlap) throws StorageException, IOException {
+	public Map<KeywordSegment, Collection<KeywordElement>> searchKeywordElements(List<String> queries, 
+			boolean doOverlap) throws StorageException, IOException {
+		
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
-//		Collection<Set<KeywordSegement>> partitions = new ArrayList<Set<KeywordSegement>>();
+		// Collection<Set<KeywordSegement>> partitions = new
+		// ArrayList<Set<KeywordSegement>>();
 		
 		SortedSet<KeywordSegment> segments;
 		try {
@@ -120,9 +131,9 @@ public class KeywordSearcher {
 			throw new StorageException(e);
 		}
 		
-		Map<String, Collection<KeywordElement>> keywordsWithEntities = new HashMap<String, Collection<KeywordElement>>();
-		Map<KeywordElement, KeywordSegment> entitiesWithSegement = new HashMap<KeywordElement, KeywordSegment>();
-		Map<KeywordSegment, Collection<KeywordElement>> segmentsWithEntities = new TreeMap<KeywordSegment, Collection<KeywordElement>>();
+		Map<String, Collection<KeywordElement>> keywords2Entities = new HashMap<String, Collection<KeywordElement>>();
+		Map<KeywordElement, KeywordSegment> entities2Segement = new HashMap<KeywordElement, KeywordSegment>();
+		Map<KeywordSegment, Collection<KeywordElement>> segments2Entities = new TreeMap<KeywordSegment, Collection<KeywordElement>>();
 		
 //		segments = new TreeSet<KeywordSegment>();
 //		for (String keyword : queries) {
@@ -132,37 +143,39 @@ public class KeywordSearcher {
 		log.debug("segments: " + segments);
 
 		try {
-			searchElementsByKeywords(segments, attributes, entitiesWithSegement, segmentsWithEntities, keywordsWithEntities);
+			searchElementsByKeywords(segments, attributes, entities2Segement, segments2Entities, keywords2Entities);
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
 		
 		int size = 0;
-		for(Collection<KeywordElement> coll : segmentsWithEntities.values()) {
+		for(Collection<KeywordElement> coll : segments2Entities.values()) {
 			size += coll.size();
 		}
-		log.debug("------------- Before NeighborhoodJoin ------------ "	+ "Size_of_segements:" + segmentsWithEntities.size() + "   Size_of_elements:" + size);	
-		for(KeywordSegment segement : segmentsWithEntities.keySet()) {
-			log.debug(segement + " " + segmentsWithEntities.get(segement).size());
+		log.debug("------------- Before NeighborhoodJoin ------------ "	+ 
+				"Size_of_segements:" + segments2Entities.size() + "   Size_of_elements:" + size);	
+		for(KeywordSegment segement : segments2Entities.keySet()) {
+			log.debug(segement + " " + segments2Entities.get(segement).size());
 		}
 		
 //		doOverlap = false;
 		if (doOverlap) {
-			overlapNeighborhoods(keywordsWithEntities, segmentsWithEntities);
+			overlapNeighborhoods(keywords2Entities, segments2Entities);
 	
 			size = 0;
-			for(Collection<KeywordElement> coll : segmentsWithEntities.values()) {
+			for(Collection<KeywordElement> coll : segments2Entities.values()) {
 				size += coll.size();
 			}
-			log.debug("------------- After NeighborhoodJoin ------------ " + "Size_of_segements:" + segmentsWithEntities.size()	+ "   Size_of_elements:" + size);
-			for(KeywordSegment segement : segmentsWithEntities.keySet()) {
-				log.debug(segement + " " + segmentsWithEntities.get(segement).size());
+			log.debug("------------- After NeighborhoodJoin ------------ " + 
+					"Size_of_segements:" + segments2Entities.size()	+ "   Size_of_elements:" + size);
+			for(KeywordSegment segement : segments2Entities.keySet()) {
+				log.debug(segement + " " + segments2Entities.get(segement).size());
 			}
 		}
 		
 		log.debug("retrieving extension info");
-		for (KeywordSegment ks : segmentsWithEntities.keySet()) {
-			Collection<KeywordElement> list = segmentsWithEntities.get(ks);
+		for (KeywordSegment ks : segments2Entities.keySet()) {
+			Collection<KeywordElement> list = segments2Entities.get(ks);
 			for (KeywordElement element : list)
 				if (element.getExtensionId() == null)
 					element.setExtensionId(idxReader.getStructureIndex().getExtension(element.getUri()));
@@ -170,20 +183,24 @@ public class KeywordSearcher {
 		log.debug("...done");
 		
 		for(String keyword : conceptsAndRelations.keySet()) {
-			segmentsWithEntities.put(new KeywordSegment(keyword), conceptsAndRelations.get(keyword));
+			segments2Entities.put(new KeywordSegment(keyword), conceptsAndRelations.get(keyword));
 		}
 
+//		attributes.keySet().removeAll(keywords2Entities.keySet());
 		for(String keyword : attributes.keySet()) {
-			segmentsWithEntities.put(new KeywordSegment(keyword), attributes.get(keyword));
+			segments2Entities.put(new KeywordSegment(keyword), attributes.get(keyword));
 		}
 
-		return segmentsWithEntities;
+		return segments2Entities;
 	}
 	
-	private Collection<Map<KeywordSegment,Collection<KeywordElement>>> decompose(Map<KeywordSegment,Collection<KeywordElement>> segementsWithEntities, 
-			Set<String> keywords, Map<String, Collection<KeywordElement>> conceptsAndRelations) {
+	private Collection<Map<KeywordSegment,Collection<KeywordElement>>> decompose(
+			Map<KeywordSegment,Collection<KeywordElement>> segmentsWithEntities, 
+			Set<String> keywords, Map<String, 
+			Collection<KeywordElement>> conceptsAndRelations) {
+		
 		Collection<Map<KeywordSegment,Collection<KeywordElement>>> partitions = new ArrayList<Map<KeywordSegment,Collection<KeywordElement>>>();
-		Set<KeywordSegment> allSegements = segementsWithEntities.keySet();
+		Set<KeywordSegment> allSegements = segmentsWithEntities.keySet();
 		
 		Iterator<Set<KeywordSegment>> iter = KeywordPartitioner.getPartitionIterator(allSegements, keywords);
 		
@@ -192,7 +209,7 @@ public class KeywordSearcher {
 		
 			Map<KeywordSegment,Collection<KeywordElement>> partition = new HashMap<KeywordSegment,Collection<KeywordElement>>();
 			for(KeywordSegment segement : segements) {
-				partition.put(segement, segementsWithEntities.get(segement));
+				partition.put(segement, segmentsWithEntities.get(segement));
 			}
 			
 			for(String keyword : conceptsAndRelations.keySet()) {
@@ -205,8 +222,10 @@ public class KeywordSearcher {
 		return partitions;
 	}
 	
-	private SortedSet<KeywordSegment> parseQueries(List<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations, 
+	private SortedSet<KeywordSegment> parseQueries(List<String> queries, 
+			Map<String, Collection<KeywordElement>> conceptsAndRelations, 
 			Map<String, Collection<KeywordElement>> attributes) throws IOException {
+		
 		Collection<List<String>> keywordCompounds = new ArrayList<List<String>>();  
 		Map<Integer, String> locationofSchemaKeyword = new TreeMap<Integer, String>();
 		
@@ -242,16 +261,16 @@ public class KeywordSearcher {
 		return segements;
 	}
 	
-	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> keywordsWithEntities,
-			Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities) {
+	private void overlapNeighborhoods(Map<String, Collection<KeywordElement>> keywords2Entities,
+			Map<KeywordSegment, Collection<KeywordElement>> segments2Entities) {
 		
-		Set<String> keywords = keywordsWithEntities.keySet();
-		for(String keyword : keywordsWithEntities.keySet()) {
-			for(KeywordElement ele : keywordsWithEntities.get(keyword)) {
+		Set<String> keywords = keywords2Entities.keySet();
+		for(String keyword : keywords2Entities.keySet()) {
+			for(KeywordElement ele : keywords2Entities.get(keyword)) {
 				Collection<String> containedkeywords = ele.getKeywords();
 				for(String joinKey : keywords) {
 					if(!containedkeywords.contains(joinKey)) {
-						Collection<KeywordElement> coll = keywordsWithEntities.get(joinKey);
+						Collection<KeywordElement> coll = keywords2Entities.get(joinKey);
 						Collection<KeywordElement> reachables = ele.getReachable(coll);	
 						if(reachables != null && reachables.size() != 0) {
 							for(KeywordElement reachable : reachables) {
@@ -266,9 +285,9 @@ public class KeywordSearcher {
 			}	
 		}
 		
-		Iterator<KeywordSegment> iterSeg = segementsWithEntities.keySet().iterator();
+		Iterator<KeywordSegment> iterSeg = segments2Entities.keySet().iterator();
 		while(iterSeg.hasNext()) {
-			Collection<KeywordElement> elements = segementsWithEntities.get(iterSeg.next());
+			Collection<KeywordElement> elements = segments2Entities.get(iterSeg.next());
 			Iterator<KeywordElement> iterEle = elements.iterator();
 			while(iterEle.hasNext()) {
 				if(!iterEle.next().getReachableKeywords().containsAll(keywords)) {
@@ -336,13 +355,16 @@ public class KeywordSearcher {
 //		}
 //	}
 	
-	private void searchElementsByKeywords(SortedSet<KeywordSegment> segements, Map<String, Collection<KeywordElement>> attributes, Map<KeywordElement, KeywordSegment> entitiesWithSegement, 
-			Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities,	Map<String, Collection<KeywordElement>> keywordsWithentities) throws IOException { 
+	private void searchElementsByKeywords(SortedSet<KeywordSegment> segements, 
+			Map<String, Collection<KeywordElement>> attributes, 
+			Map<KeywordElement, KeywordSegment> entities2Segement, 
+			Map<KeywordSegment, Collection<KeywordElement>> segments2Entities,	
+			Map<String, Collection<KeywordElement>> keywords2Entities) throws IOException { 
 		
 		if(attributes != null && attributes.size() != 0)
-			searchEntitiesByAttributesAndValues(segements, attributes, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
+			searchEntitiesByAttributesAndValues(segements, attributes, entities2Segement, segments2Entities, keywords2Entities);
 		
-		searchEntitiesByValues(segements, attributes, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
+		searchEntitiesByValues(segements, attributes, entities2Segement, segments2Entities, keywords2Entities);
 	}
 	
 //	public void searchElementsByKeywordCompounds(Map<String, Set<String>> queries, Map<KeywordElement, KeywordSegment> entitiesWithSegement, 
@@ -355,8 +377,10 @@ public class KeywordSearcher {
 //			searchEntitiesByCompounds(queries, attributesAndRelations, entitiesWithSegement, segementsWithEntities, keywordsWithentities);
 //	}
 	
-	private Collection<String> searchSchema(List<String> queries, Map<String, Collection<KeywordElement>> conceptsAndRelations, 
-			Map<String, Collection<KeywordElement>> attributes,	Map<Integer, String> locationofSchemaKeyword) throws IOException {
+	private Collection<String> searchSchema(List<String> queries, 
+			Map<String, Collection<KeywordElement>> conceptsAndRelations, 
+			Map<String, Collection<KeywordElement>> attributes,	
+			Map<Integer, String> locationofSchemaKeyword) throws IOException {
 
 		Map<String,Collection<KeywordElement>> keywordElements = getSchemaKeywordElements(queries);
 
@@ -393,7 +417,9 @@ public class KeywordSearcher {
 		return queriesWithResults;
 	}
 	
-	private void searchSchema(Collection<String> queries, Map<String, Collection<KeywordElement>> attributesAndRelations) throws IOException {
+	private void searchSchema(Collection<String> queries, 
+			Map<String, Collection<KeywordElement>> attributesAndRelations) throws IOException {
+		
 		Map<String,Collection<KeywordElement>> keywordElements = getSchemaKeywordElements(queries);
 		
 		for (String keyword : keywordElements.keySet()) {
@@ -488,81 +514,57 @@ public class KeywordSearcher {
 		return result;
 	}
 	
-	private void searchEntitiesByAttributesAndValues(SortedSet<KeywordSegment> segements, Map<String, Collection<KeywordElement>> attributes, 
-			Map<KeywordElement, KeywordSegment> entitiesWithSegement, Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> keywordsWithentities) throws IOException {
+	private void searchEntitiesByAttributesAndValues(SortedSet<KeywordSegment> segements, 
+			Map<String, Collection<KeywordElement>> attributes, 
+			Map<KeywordElement, KeywordSegment> entities2Segement, 
+			Map<KeywordSegment, Collection<KeywordElement>> segments2Entities,
+			Map<String, Collection<KeywordElement>> keywords2Entities) throws IOException {
 		
 		StandardAnalyzer analyzer = new StandardAnalyzer();
 
 		Set<KeywordSegment> segementsWithResults = new HashSet<KeywordSegment>();
 		for (String keywordForAttribute : attributes.keySet()) {
 			for (KeywordElement attribute : attributes.get(keywordForAttribute)) {
-				QueryParser parser = new QueryParser(attribute.getResource().getUri(), analyzer);
+				QueryParser parser = new QueryParser(Constant.CONTENT_FIELD, analyzer);
 				parser.setDefaultOperator(QueryParser.AND_OPERATOR);
 				
 				for (KeywordSegment segement : segements) {
-					Query q;
 					try {
-						q = parser.parse(segement.getQuery());
+						BooleanQuery q = new BooleanQuery();
+						Query valueQuery = parser.parse(segement.getQuery());
+						Query attributeQuery = new TermQuery(new Term(Constant.ATTRIBUTE_FIELD, attribute.getUri()));
+						q.add(valueQuery, Occur.MUST);
+						q.add(attributeQuery, Occur.MUST);
+						boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute,	
+								entities2Segement, segments2Entities, keywords2Entities);
+
+						if (hasResults)
+							segementsWithResults.add(segement);
 					} catch (ParseException e) {
 						e.printStackTrace();
 						continue;
 					}
-					
-					boolean hasResults = searchEntitiesWithClause(q, segement, keywordForAttribute, entitiesWithSegement, segementsWithEntities, keywordsWithentities, null);
-					
-					if(hasResults)
-						segementsWithResults.add(segement);
 				}
 			}
 		}
 	}
 	
-	private Map<String,Query> getFieldQueries(String query, Set<String> fields, Analyzer analyzer) throws ParseException {
-		 Map<String,Query> queries = new HashMap<String,Query>();
-		
-		for (String f : fields) {
-			QueryParser qp = new QueryParser(f, analyzer);
-			qp.setDefaultOperator(QueryParser.AND_OPERATOR);
-			queries.put(f, qp.parse(query));
-		}
-		
-		return queries;
-	}
-	
-	private void searchEntitiesByValues(SortedSet<KeywordSegment> segements, Map<String, Collection<KeywordElement>> attributes, 
-			Map<KeywordElement, KeywordSegment> entitiesWithSegement, Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> keywordsWithentities) throws IOException {
+	private void searchEntitiesByValues(SortedSet<KeywordSegment> segements, 
+			Map<String, Collection<KeywordElement>> attributes, 
+			Map<KeywordElement, KeywordSegment> entities2Segement, 
+			Map<KeywordSegment, Collection<KeywordElement>> segments2Entities,
+			Map<String, Collection<KeywordElement>> keywords2Entities) throws IOException {
 
 		StandardAnalyzer analyzer = new StandardAnalyzer();
 		
-//		Set<String> fields = new HashSet<String>();
-//		fields.addAll(allAttributes);
-//		
-//		if (attributes != null && attributes.size() != 0)
-//			for (Collection<KeywordElement> coll : attributes.values())
-//				for (KeywordElement ele : coll) 
-//					fields.remove(ele.getResource().getUri());
-		
-//		KeywordQueryParser parser = new KeywordQueryParser(fields.toArray(new String[fields.size()]), analyzer);
 		for (KeywordSegment segement : segements) {
 			try {
-				String queryString = "";
-				for (String keyword : segement.getKeywords()) {
-					queryString += "+" + Constant.CONTENT_FIELD + ":" + keyword + " ";
-				}
 				QueryParser qp = new QueryParser(Constant.CONTENT_FIELD, analyzer);
-				Query q = qp.parse(queryString);
-//				if (segement.getKeywords().size() > 1)
-//					continue;
+				qp.setDefaultOperator(QueryParser.AND_OPERATOR);
+				Query q = qp.parse(segement.getQuery());
 				
-				searchEntitiesWithClause(q, segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities, segement.toString());
+				searchEntitiesWithClause(q, segement, null, entities2Segement, segments2Entities, keywords2Entities);
 				
-//				Query q = parser.parse(segement.getQuery());
-//				Map<String,Query> queries = getFieldQueries(segement.getQuery(), fields, analyzer);
-//				log.debug(segement + " " + queries.size());
-//				for (String attributeUri : queries.keySet())
-//					searchEntitiesWithClause(queries.get(attributeUri), segement, null, entitiesWithSegement, segementsWithEntities, keywordsWithentities, attributeUri);
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}
@@ -595,9 +597,11 @@ public class KeywordSearcher {
 //	}
 		
 	private boolean searchEntitiesWithClause(Query clause, KeywordSegment segement, String additionalKeyword, 
-			Map<KeywordElement, KeywordSegment> entitiesWithSegment, Map<KeywordSegment, Collection<KeywordElement>> segementsWithEntities,
-			Map<String, Collection<KeywordElement>> keywordsWithEntities, String attributeUri) throws IOException {
+			Map<KeywordElement, KeywordSegment> entities2Segment, 
+			Map<KeywordSegment, Collection<KeywordElement>> segments2Entities,
+			Map<String, Collection<KeywordElement>> keywords2Entities) throws IOException {
 		
+		String attributeUri;
 	    ScoreDoc[] docHits = getTopValueDocuments(clause, MAX_KEYWORDRESULT_SIZE);
 	    if (docHits.length == 0 || docHits[0] == null)
 	    	return false;
@@ -631,51 +635,42 @@ public class KeywordSearcher {
 	   			continue;
 	   		Document doc = reader.document(td.doc(), fieldSelector); 
 
-//		   		if(score < ENTITY_THRESHOLD)
-//		   			break;
+//		   	if(score < ENTITY_THRESHOLD)
+//		   		break;
 	   		
-//	   		String type = doc.getFieldable(Constant.TYPE_FIELD).stringValue();
-//	   		if (type == null) {
-//	   			log.error("type is null!");
-//	   			continue;
-//	   		}
-//
-//    		if (type.equals(TypeUtil.ENTITY)) {
-//    			IEntity ent = new Entity(pruneString(doc.getFieldable(Constant.URI_FIELD).stringValue()), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-//    			IEntity ent = new Entity(pruneString(uri), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
-    			IEntity ent = new Entity(pruneString(uri), null);
-    			KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
-    			ele.setExtensionId(ext);
-    			KeywordSegment ks = new KeywordSegment(segement.getKeywords());
+//    		IEntity ent = new Entity(pruneString(uri), doc.getFieldable(Constant.EXTENSION_FIELD).stringValue());
+    		IEntity ent = new Entity(pruneString(uri), null);
+    		KeywordElement ele = new KeywordElement(ent, KeywordElement.ENTITY, doc, score, ns);
+    		ele.setExtensionId(ext);
+    		KeywordSegment ks = new KeywordSegment(segement.getKeywords());
+    		
+    		ele.setAttributeUri(attributeUri);
+    		
+    		if (additionalKeyword != null) 
+    			ks.addAttributeKeyword(additionalKeyword);
     			
-    			ele.setAttributeUri(attributeUri);
-    			
-    			if (additionalKeyword != null) 
-    				ks.addKeyword(additionalKeyword);
-    			
-    			KeywordSegment oks = entitiesWithSegment.get(ele);
-    			
-    			if (oks == null || oks.contains(ks)) {
-    				ele.setKeywords(ks.getKeywords());
-    				ele.addReachableKeywords(ks.getKeywords());
-    				entitiesWithSegment.put(ele, ks);
-    				Collection<KeywordElement> coll = segementsWithEntities.get(ks);
-    				if(coll == null) {
-    					coll = new HashSet<KeywordElement>();
-    					segementsWithEntities.put(ks, coll);
-    				}
-    				coll.add(ele);
-    				
-    				for(String keyword : ks.getKeywords()) {
-    					coll = keywordsWithEntities.get(keyword);
-    					if(coll == null) {
-	    					coll = new HashSet<KeywordElement>();
-	    					keywordsWithEntities.put(keyword, coll);
-	    				}
-	    				coll.add(ele);
-    				}
+    		KeywordSegment oks = entities2Segment.get(ele);
+    		
+    		if (oks == null || !oks.contains(ks)) {
+    			ele.setKeywords(ks.getAllKeywords());
+    			ele.addReachableKeywords(ks.getAllKeywords());
+    			entities2Segment.put(ele, ks);
+    			Collection<KeywordElement> coll = segments2Entities.get(ks);
+    			if(coll == null) {
+    				coll = new HashSet<KeywordElement>();
+    				segments2Entities.put(ks, coll);
     			}
-//    		}
+    			coll.add(ele);
+    			
+    			for(String keyword : ks.getAllKeywords()) {
+    				coll = keywords2Entities.get(keyword);
+    				if(coll == null) {
+	    				coll = new HashSet<KeywordElement>();
+	    				keywords2Entities.put(keyword, coll);
+	    			}
+	    			coll.add(ele);
+    			}
+    		}
     	}
 	   	
 		return true;
@@ -749,35 +744,38 @@ public class KeywordSearcher {
 		return docs;
 	}
 
-//	public static void main(String[] args) {
-//		KeywordSearcher searcher = new KeywordSearcher("D://QueryGenerator/BTC/index/aifb/keyword"); 
-//		
-//		System.out.println("******************** Input Example ********************");
-//		System.out.println("name:Thanh publication AIFB");
-//		System.out.println("******************** Input Example ********************");
-//		Scanner scanner = new Scanner(System.in);
-//		while (true) {
-//			System.out.println("Please input the keywords:");
-//			String line = scanner.nextLine();
-//			
-//			LinkedList<String> keywordList = getKeywordList(line);
-//			
-//			Collection<Map<KeywordSegement,Collection<KeywordElement>>> partitions = searcher.searchKeywordElements(keywordList);
-//			for(Map<KeywordSegement,Collection<KeywordElement>> partition : partitions) {
-//				System.out.println("---------------------------------------------------------------");
-//				System.out.println("keyword partition size: " + partition.keySet().size());
-//				for(KeywordSegement segement : partition.keySet()) {
-//					System.out.println(segement);
-//				}
-//				int size = 0;
-//				for(Collection<KeywordElement> coll : partition.values()) {
-//					size += coll.size();
-//				}
-//				System.out.println("keyword element size: " + size);
-//				System.out.println("---------------------------------------------------------------");
-//			}
-//		}
-//	} 
+	public static void main(String[] args) throws Exception {
+		OptionParser op = new OptionParser();
+		op.accepts("o", "output directory")
+			.withRequiredArg().ofType(String.class).describedAs("directory");
+
+		OptionSet os = op.parse(args);
+		
+		if (!os.has("o")) {
+			op.printHelpOn(System.out);
+			return;
+		}
+
+		String directory = (String)os.valueOf("o");
+		
+		Scanner scanner = new Scanner(System.in);
+		while (true) {
+			System.out.println("Please input the keywords:");
+			String line = scanner.nextLine();
+
+			// an index is accessed through an IndexReader object, which is
+			// passed
+			// to all evaluators and searchers
+			edu.unika.aifb.graphindex.index.IndexReader ir = new edu.unika.aifb.graphindex.index.IndexReader(new IndexDirectory(directory));
+
+			// a keyword query, DirectExploringQueryEvaluator is the only
+			// currently usable for keyword queries
+			KeywordQuery kq = new KeywordQuery("q1", line);
+			KeywordQueryEvaluator kwEval = new ExploringKeywordQueryEvaluator(ir);
+//			System.out.println(kwEval.evaluate(kq).toDataString());
+			kwEval.evaluate(kq);
+		}
+	} 
 	
 	 public static LinkedList<String> getKeywordList(String line) {
 		LinkedList<String> ll = new LinkedList<String>();

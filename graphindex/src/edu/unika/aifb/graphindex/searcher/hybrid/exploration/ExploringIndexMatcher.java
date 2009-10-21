@@ -279,7 +279,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		log.debug(keywords);
 		for (KeywordSegment keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
-			m_keywords.addAll(keyword.getKeywords());
+			m_keywords.addAll(keyword.getAllKeywords());
 			m_ksStartNodes.put(keyword, new HashSet<NodeElement>());
 			
 			for (KeywordElement ele : keywords.get(keyword)) {
@@ -297,7 +297,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						if (edge.getLabel().equals(RDF.TYPE.toString()) && edge.getTarget() == node) {
 							
 							Cursor start = new NodeCursor(keywordSet, node);
-							start.setCost(start.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
+							start.setCost(start.getCost() - 0.1 * (keyword.getAllKeywords().size() - 1));
 							start.setCost(start.getCost() / ele.getMatchingScore());
 							Cursor edgeCursor = new EdgeCursor(keywordSet, edge, start);
 							Cursor nodeCursor = new NodeCursor(keywordSet, edge.getSource(), edgeCursor);

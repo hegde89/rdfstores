@@ -111,7 +111,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					
 					if (schemaElement == null) {
 						schemaElement = new KeywordElement(new Entity(ext), KeywordElement.CONCEPT, ele.getMatchingScore(), null, ele.getNeighborhoodStorage());
-						schemaElement.addKeywords(ks.getKeywords());
+						schemaElement.addKeywords(ks.getAllKeywords());
 						
 						elements.add(schemaElement);
 						
@@ -132,7 +132,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					
 					if (schemaElement == null) {
 						schemaElement = new KeywordElement(new Entity(ext), KeywordElement.ENTITY, ele.getMatchingScore(), null, ele.getNeighborhoodStorage());
-						schemaElement.addKeywords(ks.getKeywords());
+						schemaElement.addKeywords(ks.getAllKeywords());
 						schemaElement.setAttributeUri(ele.getAttributeUri());
 						
 						elements.add(schemaElement);

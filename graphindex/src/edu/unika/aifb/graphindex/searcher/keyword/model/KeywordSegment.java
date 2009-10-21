@@ -26,11 +26,12 @@ import java.util.TreeSet;
 
 public class KeywordSegment implements Comparable<KeywordSegment> {
 	
-	private SortedSet<String> keywords;
+	private SortedSet<String> valueKeywords;
+	private String attributeKeyword;
 	private String query;
 	
 	public KeywordSegment() {
-		this.keywords = new TreeSet<String>(); 
+		this.valueKeywords = new TreeSet<String>(); 
 		this.query = "";
 	}
 	
@@ -47,7 +48,7 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 	
 	public void addKeyword(String keyword) {
 		keyword = keyword.trim();
-		boolean added = this.keywords.add(keyword);
+		boolean added = this.valueKeywords.add(keyword);
 		if(added)
 			this.query += keyword + " ";
 	}
@@ -58,17 +59,38 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 	}
 	
 	public Set<String> getKeywords() {
-		return this.keywords;
+		return this.valueKeywords;
 	} 
 	
 	public String getQuery() {
 		return this.query;
 	}
 	
+	public void addAttributeKeyword(String keyword) {
+		this.attributeKeyword = keyword;
+	} 
+	
+	public String getAttributeKeyword() {
+		return this.attributeKeyword;
+	} 
+	
+	public Set<String> getAllKeywords() {
+		Set<String> allKeywords = new TreeSet<String>(); 
+		allKeywords.addAll(valueKeywords);
+		if(attributeKeyword != null)
+			allKeywords.add(attributeKeyword);
+		return allKeywords; 
+	} 
+	
 	public boolean contains(KeywordSegment segement) {
-		if(keywords.containsAll(segement.keywords))
-			return true;
-		return false;
+		Iterator<String> iter = segement.valueKeywords.iterator();
+		while (iter.hasNext()) {
+			String keyword = iter.next();
+		    if (!valueKeywords.contains(keyword) && 
+		    		(attributeKeyword == null || !keyword.equals(attributeKeyword)))
+		    	return false;
+		}    
+		return true;
 	}
 	
 	public boolean equals(Object object){
@@ -77,27 +99,57 @@ public class KeywordSegment implements Comparable<KeywordSegment> {
 		if(!(object instanceof KeywordSegment)) return false;
 		
 		KeywordSegment ks = (KeywordSegment)object;
-		if(this.keywords.equals(ks.keywords))
+		if((attributeKeyword != null && ks.attributeKeyword == null) || 
+				(attributeKeyword == null && ks.attributeKeyword != null)) {
+			return false;
+		}
+		else if(!attributeKeyword.equals(ks.attributeKeyword)) {
+			return false;
+		}
+		if(this.valueKeywords.equals(ks.valueKeywords)) {
 			return true;
+		}
+			
 		return false;
 	}
 	
 	public int hashCode(){
-		return keywords.hashCode();
+		int h = valueKeywords.hashCode();
+		h = attributeKeyword == null ? h : h + 37*attributeKeyword.hashCode();  
+		return h;
 	}
 	
 	public String toString() {
-		return keywords.toString();
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+		sb.append(attributeKeyword == null ? "" : attributeKeyword + " | ");
+		Iterator<String> iter = valueKeywords.iterator();
+		for (;;) {
+		    String str = iter.next();
+		    sb.append(str);
+		    if (!iter.hasNext())
+			return sb.append(']').toString();
+		    sb.append(", ");
+		}
 	}
 
 	public int compareTo(KeywordSegment ks) {
-		SortedSet<String> s1 = this.keywords;
-		SortedSet<String> s2 = ks.keywords;
-		if (s1.size() < s2.size()) {
+		SortedSet<String> s1 = this.valueKeywords;
+		SortedSet<String> s2 = ks.valueKeywords;
+		int size1 = s1.size() + attributeKeyword == null ? 0 : 1;
+		int size2 = s2.size() + ks.attributeKeyword == null ? 0 : 1;
+		if (size1 < size2) {
 			return 1;
-		} else if (s1.size() > s2.size()) {
+		} else if (size1 > size2) {
 			return -1;
-		} else {
+		} else if(attributeKeyword == null && ks.attributeKeyword != null) {
+			return 1;
+		} else if(attributeKeyword != null && ks.attributeKeyword == null) {
+			return -1;
+		} else if(attributeKeyword != null && ks.attributeKeyword != null) {
+			return attributeKeyword.compareTo(ks.attributeKeyword);
+		} 
+		else {
 			Iterator<String> i1 = s1.iterator();
 			Iterator<String> i2 = s2.iterator();
 			int c = 0;

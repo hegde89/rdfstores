@@ -368,6 +368,7 @@ public class KeywordIndexBuilder {
 		doc.add(new Field(Constant.ATTRIBUTE_FIELD, Constant.ATTRIBUTE_LOCALNAME, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 		Field f = new Field(Constant.CONTENT_FIELD, TypeUtil.getLocalName(entityUri).trim(), Field.Store.NO, Field.Index.ANALYZED);
 //		f.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+		doc.add(f);
 		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
 		valueWriter.addDocument(doc);
 		

@@ -90,7 +90,7 @@ public class SearchSession {
 	 * 
 	 */
 	private int m_id;
-	private SearchSessionCache m_cache;
+	private SearchSessionCacheManager m_cacheManager;
 
 	/*
 	 * 
@@ -104,6 +104,7 @@ public class SearchSession {
 		m_store = store;
 		m_store.setSession(this);
 
+		initCache();
 		init();
 	}
 
@@ -135,7 +136,7 @@ public class SearchSession {
 	public void clean() {
 		clean(CleanType.ALL);
 	}
-	
+
 	public void clean(CleanType type) {
 
 		switch (type) {
@@ -143,7 +144,10 @@ public class SearchSession {
 			case ALL : {
 
 				try {
-					m_cache.clean(SearchSessionCache.CleanType.ALL);
+
+					m_cacheManager.get(m_id).clean(
+							SearchSessionCache.CleanType.ALL);
+
 				} catch (DatabaseException e) {
 					e.printStackTrace();
 				} catch (CacheException e) {
@@ -165,7 +169,7 @@ public class SearchSession {
 	public void close() {
 
 		try {
-			m_cache.close();
+			m_cacheManager.get(m_id).close();
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		} catch (CacheException e) {
@@ -179,12 +183,7 @@ public class SearchSession {
 	}
 
 	public SearchSessionCache getCache() {
-
-		if (m_cache == null) {
-			initCache();
-		}
-
-		return m_cache;
+		return m_cacheManager.get(m_id);
 	}
 
 	public AbstractConverter getConverter(Converters type) {
@@ -193,15 +192,15 @@ public class SearchSession {
 
 		switch (type) {
 			case FACET2TREE : {
-				converter = Facet2TreeModelConverter.getInstance(this);
+				converter = Facet2TreeModelConverter.getInstance();
 				break;
 			}
 			case TREE2FACET : {
-				converter = Tree2FacetModelConverter.getInstance(this);
+				converter = Tree2FacetModelConverter.getInstance();
 				break;
 			}
 			case FACET2QUERY : {
-				converter = Facet2QueryModelConverter.getInstance(this);
+				converter = Facet2QueryModelConverter.getInstance();
 				break;
 			}
 			default : {
@@ -312,39 +311,42 @@ public class SearchSession {
 	}
 
 	public GenericRdfStore getStore() {
-		return this.m_store;
+		return m_store;
 	}
 
 	private void init() {
 
-		m_facetTreeDelegator = FacetTreeDelegator.getInstance(this);
-		m_rankingDelegator = RankingDelegator.getInstance(this);
-		m_constructionDelegator = ConstructionDelegator.getInstance(this);
+		m_facetTreeDelegator = new FacetTreeDelegator(this);
+		m_rankingDelegator = new RankingDelegator(this);
+		m_constructionDelegator = new ConstructionDelegator(this);
 
 		m_facetTreeDelegator.setConstructionDelegator(m_constructionDelegator);
 		m_constructionDelegator.setTreeDelegator(m_facetTreeDelegator);
+		m_cacheManager.get(m_id).setTreeDelegator(m_facetTreeDelegator);
 
-		m_fpageManager = FacetPageManager.getInstance(this);
-
-		initCache();
+		m_fpageManager = new FacetPageManager(this);
 	}
 
 	private void initCache() {
+
+		m_cacheManager = SearchSessionCacheManager.getInstance();
 
 		try {
 
 			Properties cacheProps = new Properties();
 			cacheProps.load(new FileReader(m_props
 					.getProperty(FacetEnvironment.Property.CACHE_CONFIG)));
-			cacheProps.put("jcs.auxiliary.DC.attributes.DiskPath",
+			cacheProps.put(FacetEnvironment.CacheConfig.DISK_PATH,
 					FacetedSearchLayerConfig.getCacheDir() + "/" + m_id);
 
 			CompositeCacheManager compositeCacheManager = CompositeCacheManager
 					.getUnconfiguredInstance();
 			compositeCacheManager.configure(cacheProps);
 
-			m_cache = new SearchSessionCache(FacetedSearchLayerConfig
-					.getCacheDir4Session(m_id), this, compositeCacheManager);
+			SearchSessionCache cache = new SearchSessionCache(
+					FacetedSearchLayerConfig.getCacheDir4Session(m_id), this,
+					compositeCacheManager);
+			m_cacheManager.put(m_id, cache);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();

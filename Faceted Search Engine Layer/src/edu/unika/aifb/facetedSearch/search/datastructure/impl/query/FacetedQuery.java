@@ -25,7 +25,6 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import edu.unika.aifb.facetedSearch.util.FacetUtils;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
@@ -66,12 +65,6 @@ public class FacetedQuery implements Serializable {
 	/*
 	 * 
 	 */
-	private String m_keywordVar;
-	private String m_keywordQuery;
-
-	/*
-	 * 
-	 */
 	private Map<String, String> m_oldVar2newVarMap;
 
 	public FacetedQuery() {
@@ -88,22 +81,6 @@ public class FacetedQuery implements Serializable {
 
 	public void clearOldVar2newVarMap() {
 		m_oldVar2newVarMap.clear();
-	}
-
-	public boolean containsKeywordQuery() {
-		return m_keywordQuery != null;
-	}
-
-	public boolean containsKeywordVar() {
-		return m_keywordVar != null;
-	}
-
-	public String getKeywordQuery() {
-		return m_keywordQuery;
-	}
-
-	public String getKeywordVar() {
-		return m_keywordVar;
 	}
 
 	public String getNextVar() {
@@ -130,46 +107,83 @@ public class FacetedQuery implements Serializable {
 
 	public void mergeWithAdditionalQuery(String domain, StructuredQuery sq) {
 
-		QNode domainQNode;
-
-		if (m_qGraph.vertexSet().size() == 0) {
-
-			domainQNode = new QNode(domain);
-			m_qGraph.addVertex(domainQNode);
-
-		} else {
-			domainQNode = m_qGraph.getNodeByLabel(domain);
-		}
-
-		QueryGraph queryGraph = sq.getQueryGraph();
-		QNode startNode = queryGraph.getNodeByLabel(domainQNode.getLabel());
-
-		Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
-		todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
-
-		while (!todoStack.isEmpty()) {
-
-			QueryEdge oldEdge = todoStack.pop();
-			String srcLabel = oldEdge.getSource().getLabel();
-			String tarLabel = oldEdge.getTarget().getLabel();
-
-			if (m_oldVar2newVarMap.containsKey(srcLabel)) {
-				srcLabel = m_oldVar2newVarMap.get(srcLabel);
-			}
-
-			if (FacetUtils.isVariable(tarLabel)) {
-
-				m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), getNextVar());
-				m_oldVar2newVarMap.put(tarLabel, getNextVar());
-
-			} else {
-
-				m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), tarLabel);
-
-			}
-
-			todoStack.addAll(queryGraph.outgoingEdgesOf(oldEdge.getTarget()));
-		}
+		// QNode domainQNode;
+		//
+		// if (m_qGraph.vertexSet().size() == 0) {
+		//
+		// domainQNode = new QNode(domain);
+		// m_qGraph.addVertex(domainQNode);
+		//
+		// } else if
+		// (domain.equals(FacetEnvironment.DefaultValue.KEYWORD_DOMAIN)) {
+		//
+		// domainQNode = m_qGraph
+		// .getNodeByLabel(FacetEnvironment.DefaultValue.VAR);
+		// m_oldVar2newVarMap.put(domain, FacetEnvironment.DefaultValue.VAR);
+		//
+		// } else {
+		//
+		// domainQNode = m_qGraph.getNodeByLabel(domain);
+		//
+		// if (domainQNode == null) {
+		//
+		// Iterator<QNode> vertexIter = m_qGraph.vertexSet().iterator();
+		//
+		// while (vertexIter.hasNext()) {
+		//
+		// QNode nextNode = vertexIter.next();
+		//
+		// if (nextNode.getLabel().startsWith(
+		// FacetEnvironment.DefaultValue.VAR_PREFIX)) {
+		//
+		// domainQNode = nextNode;
+		// m_oldVar2newVarMap.put(domain, nextNode.getLabel());
+		// break;
+		// }
+		// }
+		// }
+		// }
+		//
+		// QueryGraph queryGraph = sq.getQueryGraph();
+		//
+		// String startLabel;
+		//
+		// if (m_oldVar2newVarMap.containsKey(domain)) {
+		// startLabel = domain;
+		// } else {
+		// startLabel = domainQNode.getLabel();
+		// }
+		//
+		// QNode startNode = queryGraph.getNodeByLabel(startLabel);
+		//
+		// Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+		// todoStack.addAll(queryGraph.outgoingEdgesOf(startNode));
+		//
+		// while (!todoStack.isEmpty()) {
+		//
+		// QueryEdge oldEdge = todoStack.pop();
+		// String srcLabel = oldEdge.getSource().getLabel();
+		// String tarLabel = oldEdge.getTarget().getLabel();
+		//
+		// if (m_oldVar2newVarMap.containsKey(srcLabel)) {
+		// srcLabel = m_oldVar2newVarMap.get(srcLabel);
+		// }
+		//
+		// if (FacetUtils.isVariable(tarLabel)) {
+		//
+		// m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), getNextVar());
+		// m_oldVar2newVarMap.put(tarLabel, getNextVar());
+		//
+		// } else {
+		//
+		// m_qGraph.addEdge(srcLabel, oldEdge.getProperty(), tarLabel);
+		//
+		// }
+		//
+		// todoStack.addAll(queryGraph.outgoingEdgesOf(oldEdge.getTarget()));
+		// }
+		//
+		// m_oldVar2newVarMap.clear();
 	}
 
 	public boolean removePath(QNode node) {
@@ -205,13 +219,5 @@ public class FacetedQuery implements Serializable {
 		}
 
 		return success;
-	}
-
-	public void setKeywordQuery(String keywords) {
-		m_keywordQuery = keywords;
-	}
-
-	public void setKeywordVar(String keywordVar) {
-		m_keywordVar = keywordVar;
 	}
 }

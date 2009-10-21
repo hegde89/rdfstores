@@ -43,10 +43,10 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList.CleanType;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
+import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 
@@ -66,19 +66,7 @@ public class FacetPageManager {
 	/*
 	 * 
 	 */
-	private static FacetPageManager s_instance;
-
-	public static FacetPageManager getInstance(SearchSession session) {
-		return s_instance == null
-				? s_instance = new FacetPageManager(session)
-				: s_instance;
-	}
-
-	/*
-	 * 
-	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -113,10 +101,9 @@ public class FacetPageManager {
 	 */
 	private boolean m_rankingEnabled;
 
-	private FacetPageManager(SearchSession session) {
+	public FacetPageManager(SearchSession session) {
 
 		m_session = session;
-		m_cache = session.getCache();
 
 		/*
 		 * 
@@ -165,70 +152,79 @@ public class FacetPageManager {
 		while (domainIter.hasNext()) {
 
 			String domain = domainIter.next();
-			Iterator<Node> facetIter = m_treeDelegator.getChildren(domain)
-					.iterator();
 
-			while (facetIter.hasNext()) {
+			FacetTree tree = m_treeDelegator.getTree(domain);
 
-				Node facetNode = facetIter.next();
+			if (!tree.isEmpty()) {
 
-				if (facetNode.containsDataProperty()
-						|| facetNode.containsObjectProperty()
-						|| facetNode.containsRdfProperty()) {
+				Iterator<Node> facetIter = m_treeDelegator.getChildren(domain)
+						.iterator();
 
-					Facet facet = m_tree2facetConverter.node2facet(facetNode);
+				while (facetIter.hasNext()) {
 
-					FacetFacetValueList fvList = new FacetFacetValueList();
-					fvList.setFacet(facet);
+					Node facetNode = facetIter.next();
 
-					List<Node> subFacets = new ArrayList<Node>();
-					List<Node> rangeChildren = new ArrayList<Node>();
+					if (facetNode.containsDataProperty()
+							|| facetNode.containsObjectProperty()
+							|| facetNode.containsRdfProperty()) {
 
-					Iterator<Node> childrenIter = m_treeDelegator.getChildren(
-							domain, facetNode.getID()).iterator();
+						Facet facet = m_tree2facetConverter
+								.node2facet(facetNode);
 
-					while (childrenIter.hasNext()) {
+						FacetFacetValueList fvList = new FacetFacetValueList();
+						fvList.setFacet(facet);
 
-						Node node = childrenIter.next();
+						List<Node> subFacets = new ArrayList<Node>();
+						List<Node> rangeChildren = new ArrayList<Node>();
 
-						if (node.getContent() == NodeContent.CLASS) {
+						Iterator<Node> childrenIter = m_treeDelegator
+								.getChildren(domain, facetNode.getID())
+								.iterator();
 
-							rangeChildren.add(node);
+						while (childrenIter.hasNext()) {
 
-						} else if ((node.getContent() == NodeContent.DATA_PROPERTY)
-								|| (node.getContent() == NodeContent.OBJECT_PROPERTY)) {
+							Node node = childrenIter.next();
 
-							subFacets.add(node);
+							if (node.getContent() == NodeContent.CLASS) {
 
-						} else {
-							s_log.error("should not be here: node '" + node
-									+ "'");
+								rangeChildren.add(node);
+
+							} else if ((node.getContent() == NodeContent.DATA_PROPERTY)
+									|| (node.getContent() == NodeContent.OBJECT_PROPERTY)) {
+
+								subFacets.add(node);
+
+							} else {
+								s_log.error("should not be here: node '" + node
+										+ "'");
+							}
 						}
+
+						fvList.setFacetValueList(m_tree2facetConverter
+								.nodeList2facetValueList(rangeChildren));
+						fvList.setSubfacets(m_tree2facetConverter
+								.nodeList2facetList(subFacets));
+
+						if (m_rankingEnabled) {
+
+							Collections.sort(fvList.getFacetValueList());
+							Collections.sort(fvList.getSubfacetList());
+						}
+
+						fpage.put(domain, facet, fvList);
+
+					} else {
+						s_log.error("tree structure is not valid! tree: '"
+								+ m_treeDelegator.getTree(domain) + "'");
 					}
+				}
 
-					fvList.setFacetValueList(m_tree2facetConverter
-							.nodeList2facetValueList(rangeChildren));
-					fvList.setSubfacets(m_tree2facetConverter
-							.nodeList2facetList(subFacets));
-
-					if (m_rankingEnabled) {
-
-						Collections.sort(fvList.getFacetValueList());
-						Collections.sort(fvList.getSubfacetList());
-					}
-
-					fpage.put(domain, facet, fvList);
-
-				} else {
-					s_log.error("tree structure is not valid! tree: '"
-							+ m_treeDelegator.getTree(domain) + "'");
+				if (m_rankingEnabled) {
+					Collections.sort(fpage.getFacetFacetValueLists(domain),
+							m_ffvListComparator);
 				}
 			}
 
-			if (m_rankingEnabled) {
-				Collections.sort(fpage.getFacetFacetValueLists(domain),
-						m_ffvListComparator);
-			}
 		}
 
 		storeFacetPage(fpage);
@@ -329,13 +325,14 @@ public class FacetPageManager {
 
 		try {
 
-			cata = new StoredClassCatalog(m_cache
-					.getDB(FacetEnvironment.DatabaseName.CLASS));
+			cata = new StoredClassCatalog(m_session.getCache().getDB(
+					FacetEnvironment.DatabaseName.CLASS));
 
 			m_fpageBinding = new SerialBinding<FacetPage>(cata, FacetPage.class);
 			m_intBinding = TupleBinding.getPrimitiveBinding(Integer.class);
 
-			m_facetPageMap = new StoredSortedMap<Integer, FacetPage>(m_cache
+			m_facetPageMap = new StoredSortedMap<Integer, FacetPage>(m_session
+					.getCache()
 					.getDB(FacetEnvironment.DatabaseName.FPAGE_CACHE),
 					m_intBinding, m_fpageBinding, true);
 

@@ -48,6 +48,7 @@
 
 package edu.unika.aifb.facetedSearch.util;
 
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -97,6 +98,26 @@ public class FacetUtils {
 			return cleanURI;
 		} else {
 			return dirtyURI;
+		}
+	}
+
+	public static String encodeLocalName(String url) {
+
+		try {
+
+			int endIdx = url.indexOf("#") > 0 ? url.indexOf("#") : url
+					.lastIndexOf("/");
+
+			String prefix = url.substring(0, endIdx + 1);
+			String localname = URLEncoder.encode(url.substring(endIdx + 1),
+					FacetEnvironment.UTF8);
+
+			return prefix + localname;
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			return url;
 		}
 	}
 
@@ -197,12 +218,28 @@ public class FacetUtils {
 		return name;
 	}
 
+	public static String getNiceName(String dirtyString) {
+
+//		dirtyString = dirtyString.replaceAll("\\/|:|\\.|#|\\?|&|\\+|-|~", "_");
+
+		if (dirtyString.length() > FacetEnvironment.DefaultValue.MAXLENGTH_STRING) {
+			dirtyString = dirtyString.substring(0,
+					FacetEnvironment.DefaultValue.MAXLENGTH_STRING - 1) + "...";
+		}
+
+		return dirtyString;
+	}
+
 	public static String getValueOfLiteral(String lit) {
 
 		StringTokenizer tokenizer = new StringTokenizer(lit,
 				FacetEnvironment.DefaultValue.LITERAL_DELIM);
 
 		return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : lit;
+	}
+
+	public static boolean hasDataTypeAttached(String lit) {
+		return lit.contains(FacetEnvironment.DefaultValue.LITERAL_DELIM);
 	}
 
 	public static boolean isDirty(String uri) {
@@ -248,12 +285,9 @@ public class FacetUtils {
 		}
 
 		List<String> resultColumns = new ArrayList<String>();
-		resultColumns.add(col);
 
 		for (String strg : left.getColumnNames()) {
-			if (!strg.equals(col)) {
-				resultColumns.add(strg);
-			}
+			resultColumns.add(strg);
 		}
 
 		int lc = left.getColumn(col);
@@ -294,6 +328,41 @@ public class FacetUtils {
 		result.setSortedColumn(lc);
 		return result;
 	}
+
+	// public static String getDataType4Facet(String facet) {
+	//
+	// String range = null;
+	//
+	// switch (type) {
+	//
+	// case FacetEnvironment.DataType.DATE : {
+	// range = XMLSchema.DATE.toString();
+	// break;
+	// }
+	// case FacetEnvironment.DataType.DATE_TIME : {
+	// range = XMLSchema.DATETIME.stringValue();
+	// break;
+	// }
+	// case FacetEnvironment.DataType.NUMERICAL : {
+	// range = "";
+	// break;
+	// }
+	// case FacetEnvironment.DataType.STRING : {
+	// range = XMLSchema.STRING.stringValue();
+	// break;
+	// }
+	// case FacetEnvironment.DataType.TIME : {
+	// range = XMLSchema.TIME.toString();
+	// break;
+	// }
+	// default : {
+	// range = "";
+	// break;
+	// }
+	// }
+	//
+	// return range;
+	// }
 
 	public static int range2DataType(String range) {
 

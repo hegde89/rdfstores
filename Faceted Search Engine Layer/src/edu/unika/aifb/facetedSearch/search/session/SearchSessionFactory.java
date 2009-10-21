@@ -20,8 +20,6 @@ package edu.unika.aifb.facetedSearch.search.session;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.Properties;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.ReentrantLock;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
@@ -43,9 +41,7 @@ public class SearchSessionFactory {
 
 	private static SearchSessionFactory s_instance;
 	private static SearchSession s_pool[] = new SearchSession[FacetEnvironment.DefaultValue.MAX_SESSIONS];
-	private static ReentrantLock[] s_locks = new ReentrantLock[FacetEnvironment.DefaultValue.MAX_SESSIONS];
-	private static Semaphore s_sem = new Semaphore(
-			FacetEnvironment.DefaultValue.MAX_SESSIONS);
+	private static int[] s_locks = new int[FacetEnvironment.DefaultValue.MAX_SESSIONS];
 
 	public static SearchSessionFactory getInstance(Properties props) {
 		return s_instance == null
@@ -73,13 +69,42 @@ public class SearchSessionFactory {
 		}
 
 		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
-			s_locks[i] = new ReentrantLock();
+
+			s_locks[i] = 0;
+
 			try {
 				s_pool[i] = new SearchSession(m_store, i, props);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public int acquire() throws InterruptedException {
+
+		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
+			if (s_locks[i] == 0) {
+				s_locks[i] = 1;
+				return i;
+			}
+		}
+
+		System.err.println("acquire: All the semplore is being used!");
+		return -1;
+	}
+
+	public void close() {
+		m_con.close();
+	}
+
+	public void closeSession(SearchSession session) {
+		session.clean(SearchSession.CleanType.ALL);
+		// session.close();
+		release(session.getId());
+	}
+
+	public SearchSession getSession(int id) {
+		return s_pool[id];
 	}
 
 	private void readProperties(Properties props) {
@@ -105,43 +130,19 @@ public class SearchSessionFactory {
 		FacetedSearchLayerConfig.setCacheDirStrg((props
 				.getProperty(FacetEnvironment.Property.CACHE_DIR)));
 
-		FacetedSearchLayerConfig.setRefinementMode(Integer.parseInt((props
-				.getProperty(FacetEnvironment.Property.REFINEMENT_MODE))));
-		
+		// FacetedSearchLayerConfig.setRefinementMode(Integer.parseInt((props
+		// .getProperty(FacetEnvironment.Property.REFINEMENT_MODE))));
+
 		FacetedSearchLayerConfig.setGraphIndexDirStrg((props
 				.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR)));
-		
-	}
 
-	public int acquire() throws InterruptedException {
-		s_sem.acquire();
-		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
-			if (s_locks[i].tryLock()) {
-				return i;
-			}
-		}
-		System.err.println("acquire: All the semplore is being used!");
-		return -1;
-	}
+		FacetedSearchLayerConfig.setPreloadMaxBytes(Long.parseLong(props
+				.getProperty(FacetEnvironment.Property.PRELOAD_MAX_BYTES)));
 
-	public void close() {
-		m_con.close();
-	}
-
-	public void closeSession(SearchSession session) {
-		session.clean(SearchSession.CleanType.ALL);
-		// session.close();
-		release(session.getId());
-	}
-
-	public SearchSession getSession(int id) {
-		return s_pool[id];
 	}
 
 	public void release(int id) {
-		
-		s_pool[id].clean(CleanType.ALL);		
-		s_locks[id].unlock();
-		s_sem.release();
+		s_pool[id].clean(CleanType.ALL);
+		s_locks[id] = 0;
 	}
 }

@@ -526,8 +526,8 @@ public class FacetIdxBuilderHelper {
 
 		}
 
-		return rangeClassLabel.equals("null") ? null : new Node(
-				rangeClassLabel, NodeType.RANGE_ROOT, NodeContent.CLASS);
+		return rangeClassLabel.equals("null") ? null : new Node(rangeClassLabel, NodeType.RANGE_ROOT,
+				NodeContent.CLASS);
 	}
 
 	public Node getSuperClass(String clazz) throws DatabaseException,

@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
+import org.openrdf.model.vocabulary.XMLSchema;
 
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.tuple.TupleBinding;
@@ -522,10 +523,21 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 		for (String individual : individuals) {
 
-			individual = FacetUtils.cleanURI(individual);
-
 			Table<String> triples = m_idxReader.getDataIndex().getTriples(
-					individual, null, null);
+					FacetUtils.cleanURI(individual), null, null);
+
+			if (triples.getRows().size() == 0) {
+				triples = m_idxReader.getDataIndex().getTriples(individual,
+						null, null);
+			}
+
+			if (triples.getRows().size() == 0) {
+				triples = m_idxReader.getDataIndex().getTriples(
+						FacetUtils.encodeLocalName(FacetUtils
+								.cleanURI(individual)), null, null);
+			}
+
+			individual = FacetUtils.cleanURI(individual);
 
 			Iterator<String[]> tripleIter = triples.getRows().iterator();
 
@@ -720,13 +732,23 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 					Stack<Edge> rangeEdges = new Stack<Edge>();
 					rangeEdges.addAll(facetTree.outgoingEdgesOf(rangeTop));
 
-					if (m_facetHelper.isSubClassOf(rangeTop, classPath.peek())) {
-						classPath = pruneClassPath(rangeTop, classPath);
-					}
+					// if (m_facetHelper.isSubClassOf(rangeTop,
+					// classPath.peek())) {
+					// classPath = pruneClassPath(rangeTop, classPath);
+					// }
+					//
+					// try {
 
 					if (rangeTop.hasSameValueAs(classPath.peek())) {
 						classPath.pop();
 					}
+
+					// } catch (Exception e) {
+					// e.printStackTrace();
+					// System.out.println("classPath: "+classPath);
+					// System.out.println("endpoint: "+endpoint);
+					// System.exit(1);
+					// }
 
 					if (classPath.isEmpty()) {
 						nodes2cache.add(rangeTop);
@@ -788,9 +810,14 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 			}
 			if (!foundRange) {
 
+				String genericRangeLabel = m_facetHelper
+						.isDataProperty(currentNode.getValue())
+						? XMLSchema.STRING.toString()
+						: "Thing";
+
 				Node rangeTop = m_facetHelper.hasRangeClass(currentNode)
 						? m_facetHelper.getRange(currentNode)
-						: new Node(currentNode.getValue(), NodeType.RANGE_ROOT,
+						: new Node(genericRangeLabel, NodeType.RANGE_ROOT,
 								NodeContent.CLASS, true);
 
 				Facet facet = new Facet(currentNode.getValue(), m_facetHelper
@@ -809,9 +836,9 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 				Edge edge = facetTree.addEdge(currentNode, rangeTop);
 				edge.setType(EdgeType.HAS_RANGE);
 
-				if (m_facetHelper.isSubClassOf(rangeTop, classPath.peek())) {
-					classPath = pruneClassPath(rangeTop, classPath);
-				}
+				// if (m_facetHelper.isSubClassOf(rangeTop, classPath.peek())) {
+				// classPath = pruneClassPath(rangeTop, classPath);
+				// }
 
 				if (rangeTop.hasSameValueAs(classPath.peek())) {
 					classPath.pop();
@@ -995,6 +1022,7 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private Stack<Node> pruneClassPath(Node rangeTop, Stack<Node> classPath)
 			throws DatabaseException, IOException {
 
@@ -1002,11 +1030,15 @@ public class FacetTreeIndexBuilder implements IFacetIndexBuilder {
 
 			Node pathTop = classPath.peek();
 
-			if (this.m_facetHelper.isSubClassOf(rangeTop, pathTop)) {
+			if (m_facetHelper.isSubClassOf(rangeTop, pathTop)) {
 				classPath.pop();
 			} else {
 				break;
 			}
+		}
+
+		if (classPath.isEmpty()) {
+			System.out.println("rangeTop: " + rangeTop);
 		}
 
 		return classPath;

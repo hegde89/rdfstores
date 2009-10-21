@@ -75,6 +75,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private long m_matchingStart;
 	private int m_dataEdges;
 	private Set<String> m_dataProperties;
+	private Set<EdgeElement> m_addedEdges;
+	private Set<NodeElement> m_addedNodes;
 	
 	private final long TIMEOUT = 4000;
 	
@@ -108,13 +110,26 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		m_ksStartNodes = new HashMap<KeywordSegment,Set<NodeElement>>();
 		m_keywordSegments = new HashMap<KeywordSegment,List<GraphElement>>();
 		
-		for (NodeElement node : m_node2edges.keySet()) {
-			node.reset();
-			for (Iterator<EdgeElement> i = m_node2edges.get(node).iterator(); i.hasNext(); )
-				if (m_dataProperties.contains(i.next().getLabel()))
-					i.remove();
+		if (m_addedEdges != null) {
+			int removed = 0;
+			for (NodeElement node : m_node2edges.keySet()) {
+				node.reset();
+				for (Iterator<EdgeElement> i = m_node2edges.get(node).iterator(); i.hasNext(); ) {
+					EdgeElement edge = i.next();
+					if (m_dataProperties.contains(edge.getLabel()) || m_addedEdges.contains(edge)) {
+						i.remove();
+						removed++;
+					}
+				}
+			}
+			for (NodeElement node : m_addedNodes)
+				m_node2edges.remove(node);
+			
+			log.debug("removed: " + removed);
 		}
 		
+		m_addedEdges = new HashSet<EdgeElement>();
+		m_addedNodes = new HashSet<NodeElement>();
 		m_dataEdges = 0;
 	}
 	
@@ -232,6 +247,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					
 					sourceEdges.add(edge);
 					
+					m_addedNodes.add(target);
+					m_addedEdges.add(edge);
 					m_dataEdges++;
 				}
 			}
@@ -261,6 +278,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		
 		m_node2edges.put(target, targetEdges);
 		
+		m_addedNodes.add(target);
+		m_addedEdges.add(edge);
 		m_dataEdges++;
 		
 		return edge;
@@ -276,7 +295,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	
 	public void setKeywords(Map<KeywordSegment,List<KeywordElement>> keywords, HybridQuery query) throws StorageException, IOException {
 		reset();
-//		log.debug(keywords);
+		log.debug(keywords.keySet());
 		for (KeywordSegment keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
 			m_keywords.addAll(keyword.getKeywords());

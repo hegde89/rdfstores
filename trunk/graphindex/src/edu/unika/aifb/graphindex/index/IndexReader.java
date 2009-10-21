@@ -71,7 +71,7 @@ public class IndexReader {
 		m_warmup = warmup;
 	}
 	
-	public DataIndex getDataIndex() throws IOException, StorageException {
+	public synchronized DataIndex getDataIndex() throws IOException, StorageException {
 		if (m_dataIndex == null) 
 			m_dataIndex = new DataIndex(m_idxDirectory, m_idxConfig, m_warmup);
 		return m_dataIndex;

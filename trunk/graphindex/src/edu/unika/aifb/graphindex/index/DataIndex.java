@@ -91,10 +91,13 @@ public class DataIndex extends Index {
 		return null;
 	}
 	
-	public IndexStorage getIndexStorage(IndexDescription index) throws StorageException {
+	public synchronized IndexStorage getIndexStorage(IndexDescription index) throws StorageException {
+		synchronized (m_indexes) {
+			
 		IndexStorage is = m_indexes.get(index);
 		if (is == null) {
 			try {
+				log.debug(Thread.currentThread().getName()  + " looking for " + index + ", creating...");
 				is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 //				is = new LuceneExtendedIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
 				is.initialize(false, true);
@@ -107,6 +110,7 @@ public class DataIndex extends Index {
 			}
 		}
 		return is;
+		}
 	}
 
 	public Table<String> getTriples(String s, String p, String o) throws StorageException {

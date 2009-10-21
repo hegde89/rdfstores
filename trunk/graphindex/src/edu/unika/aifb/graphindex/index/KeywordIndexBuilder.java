@@ -362,15 +362,14 @@ public class KeywordIndexBuilder {
 	private void computeEntityDescriptions(String entityUri) throws IOException, StorageException {
 		String ext = blockSearcher.getBlockName(entityUri);
 
-		Document doc = new Document();
-		doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
-		doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
-		doc.add(new Field(Constant.ATTRIBUTE_FIELD, Constant.ATTRIBUTE_LOCALNAME, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
-		Field f = new Field(Constant.CONTENT_FIELD, TypeUtil.getLocalName(entityUri).trim(), Field.Store.NO, Field.Index.ANALYZED);
-//		f.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
-		doc.add(f);
-		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
-		valueWriter.addDocument(doc);
+//		Document doc = new Document();
+//		doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
+//		doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
+//		doc.add(new Field(Constant.ATTRIBUTE_FIELD, Constant.ATTRIBUTE_LOCALNAME, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+//		Field f = new Field(Constant.CONTENT_FIELD, TypeUtil.getLocalName(entityUri).trim(), Field.Store.NO, Field.Index.ANALYZED);
+//		doc.add(f);
+//		doc.setBoost(ENTITY_DISCRIMINATIVE_BOOST);
+//		valueWriter.addDocument(doc);
 		
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
 		if (table.rowCount() == 0)
@@ -382,7 +381,7 @@ public class KeywordIndexBuilder {
 			if (!properties.contains(predicate) || relations.contains(predicate)) // TODO maybe index relations
 				continue;
 			
-			doc = new Document();
+			Document doc = new Document();
 			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES, Field.Index.NO));
 			doc.add(new Field(Constant.ATTRIBUTE_FIELD, predicate, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 			doc.add(new Field(Constant.EXTENSION_FIELD, ext, Field.Store.YES, Field.Index.NO));
@@ -397,14 +396,14 @@ public class KeywordIndexBuilder {
 			doc.setBoost(boost);
 			
 			if (attributes.contains(predicate)) {
-				f = new Field(Constant.CONTENT_FIELD, object, Field.Store.NO, Field.Index.ANALYZED);
+				Field f = new Field(Constant.CONTENT_FIELD, object, Field.Store.NO, Field.Index.ANALYZED);
 //				f.setBoost(boost);
 				doc.add(f);
 			}
 			else if (relations.contains(predicate)) {
 				String localname = TypeUtil.getLocalName(object).trim();
 				
-				f = new Field(Constant.CONTENT_FIELD, localname, Field.Store.NO, Field.Index.ANALYZED);
+				Field f = new Field(Constant.CONTENT_FIELD, localname, Field.Store.NO, Field.Index.ANALYZED);
 //				f.setBoost(boost);
 				doc.add(f);
 			} 

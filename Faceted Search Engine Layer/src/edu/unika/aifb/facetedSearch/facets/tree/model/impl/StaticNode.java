@@ -46,20 +46,22 @@ public class StaticNode extends Node implements IStaticNode {
 	/*
 	 * 
 	 */
-	@SuppressWarnings("unused")
 	private SearchSession m_session;
+
 	private SearchSessionCache m_cache;
 
 	/*
 	 * 
 	 */
 	protected int m_countFV;
+
 	protected int m_countS;
 	private int m_height;
 	private int m_depth;
 	private int m_size;
+	
 	private boolean m_isTypeLeave;
-
+	
 	public StaticNode() {
 		super();
 		init();
@@ -113,6 +115,10 @@ public class StaticNode extends Node implements IStaticNode {
 	public Set<AbstractSingleFacetValue> getObjects(String subject) {
 
 		return getCache().getObjects4StaticNode(this, subject);
+	}
+
+	public SearchSession getSession() {
+		return m_session;
 	}
 
 	public int getSize() {

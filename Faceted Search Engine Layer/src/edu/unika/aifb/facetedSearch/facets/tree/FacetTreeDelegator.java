@@ -56,17 +56,6 @@ public class FacetTreeDelegator extends Delegator {
 	/*
 	 * 
 	 */
-	private static FacetTreeDelegator s_instance;
-
-	public static FacetTreeDelegator getInstance(SearchSession session) {
-		return s_instance == null
-				? s_instance = new FacetTreeDelegator(session)
-				: s_instance;
-	}
-
-	/*
-	 * 
-	 */
 	private ConstructionDelegator m_constructionDelegator;
 
 	/*
@@ -81,7 +70,7 @@ public class FacetTreeDelegator extends Delegator {
 	private HashMap<String, FacetTree> m_domain2treeMap;
 	private Double2ObjectOpenHashMap<Stack<Edge>> m_node2pathMap;
 
-	private FacetTreeDelegator(SearchSession session) {
+	public FacetTreeDelegator(SearchSession session) {
 
 		m_session = session;
 		init();
@@ -169,7 +158,6 @@ public class FacetTreeDelegator extends Delegator {
 	}
 
 	public Node getNode(String domain, double nodeID) {
-
 		return m_domain2treeMap.get(domain).getVertex(nodeID);
 	}
 

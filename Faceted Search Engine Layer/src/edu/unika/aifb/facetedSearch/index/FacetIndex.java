@@ -168,12 +168,13 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		Collection<Node> leaves = m_leaveMap.duplicates(fv.getValue());
+		Collection<Node> leaves = m_leaveMap.duplicates(FacetUtils
+				.encodeLocalName(fv.getValue()));
 
-		if ((leaves == null) || leaves.isEmpty()) {
-			s_log.error("no leaves found for individual '" + fv.getValue()
-					+ "'");
-		}
+		// if ((leaves == null) || leaves.isEmpty()) {
+		// s_log.error("no leaves found for individual '" + fv.getValue()
+		// + "'");
+		// }
 
 		return leaves;
 	}
@@ -185,47 +186,55 @@ public class FacetIndex extends Index {
 			init();
 		}
 
-		Collection<Node> leaves = m_leaveMap.duplicates(srcInd);
+		Collection<Node> leaves = m_leaveMap.duplicates(FacetUtils
+				.encodeLocalName(srcInd));
 
-		if ((leaves == null) || leaves.isEmpty()) {
-
-			// s_log.error("no leaves found for individual '" + srcInd + "'");
-			// TODO
-
-			try {
-
-				Table<String> resTriples = m_idxReader.getDataIndex()
-						.getTriples(srcInd, null, null);
-
-				Iterator<String[]> resTripleIter = resTriples.getRows()
-						.iterator();
-
-				if (resTripleIter.hasNext()) {
-
-					while (resTripleIter.hasNext()) {
-
-						String[] resTiple = resTripleIter.next();
-
-						if (!FacetEnvironment.PROPERTIES_TO_IGNORE
-								.contains(resTiple[1])
-								&& !resTiple[1]
-										.startsWith(FacetEnvironment.OWL.NAMESPACE)) {
-
-							System.out.println("ERROR: resTiple: "
-									+ resTiple[0] + ", " + resTiple[1] + ", "
-									+ resTiple[2]);
-						}
-					}
-				}
-
-				String ext = m_idxReader.getStructureIndex().getExtension(
-						srcInd);
-				System.out.println("ext: " + ext);
-
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
-		}
+		// if ((leaves == null) || leaves.isEmpty()) {
+		//
+		// // s_log.error("no leaves found for individual '" + srcInd + "'");
+		// // TODO
+		//
+		// if ((leaves == null) || leaves.isEmpty()) {
+		//
+		// try {
+		//
+		// Table<String> resTriples = m_idxReader.getDataIndex()
+		// .getTriples(FacetUtils.encodeLocalName(srcInd),
+		// null, null);
+		//
+		// Iterator<String[]> resTripleIter = resTriples.getRows()
+		// .iterator();
+		//
+		// if (resTripleIter.hasNext()) {
+		//
+		// while (resTripleIter.hasNext()) {
+		//
+		// String[] resTiple = resTripleIter.next();
+		//
+		// if (!FacetEnvironment.PROPERTIES_TO_IGNORE
+		// .contains(resTiple[1])
+		// && !resTiple[1]
+		// .startsWith(FacetEnvironment.OWL.NAMESPACE)) {
+		//
+		// System.out.println("ERROR: resTiple: "
+		// + resTiple[0] + ", " + resTiple[1]
+		// + ", " + resTiple[2]);
+		// }
+		// }
+		// } else {
+		//
+		// System.out.println("No triples found for: "
+		// + (new URL(srcInd)).toString());
+		// String ext = m_idxReader.getStructureIndex()
+		// .getExtension((new URL(srcInd)).toString());
+		// System.out.println("ext: " + ext);
+		// }
+		//
+		// } catch (StorageException e) {
+		// e.printStackTrace();
+		// }
+		// }
+		// }
 
 		return leaves;
 	}
@@ -239,7 +248,8 @@ public class FacetIndex extends Index {
 		try {
 
 			Table<String> objectsTriples = m_idxReader.getDataIndex()
-					.getTriples(subject, leave.getFacet().getUri(), null);
+					.getTriples(FacetUtils.encodeLocalName(subject),
+							leave.getFacet().getUri(), null);
 
 			Iterator<String[]> objectsTriplesIter = objectsTriples.getRows()
 					.iterator();
@@ -362,9 +372,9 @@ public class FacetIndex extends Index {
 
 		Queue<Edge> path2Root = m_pathMap.get(path);
 
-		if ((path2Root == null) || path2Root.isEmpty()) {
-			s_log.error("path to root is empty: " + path);
-		}
+		// if ((path2Root == null) || path2Root.isEmpty()) {
+		// s_log.error("path to root is empty: " + path);
+		// }
 
 		return path2Root;
 	}
@@ -412,7 +422,7 @@ public class FacetIndex extends Index {
 		m_dbs.add(m_leaveDB);
 
 		PreloadConfig pc = new PreloadConfig();
-		pc.setMaxMillisecs(FacetEnvironment.DefaultValue.PRELOAD_TIME);
+		pc.setMaxBytes(FacetedSearchLayerConfig.getPreloadMaxBytes());
 
 		for (Database db : m_dbs) {
 			db.preload(pc);

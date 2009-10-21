@@ -61,7 +61,7 @@ public abstract class GraphElement {
 		boolean equalCursorPresent = false;
 		
 		for (KeywordSegment ks : c.getKeywordSegments()) {
-			for (String keyword : ks.getKeywords()) {
+			for (String keyword : ks.getAllKeywords()) {
 				List<Cursor> cursors = m_keywordCursors.get(keyword);
 				if (cursors == null) {
 					cursors = new ArrayList<Cursor>();

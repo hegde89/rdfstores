@@ -33,7 +33,7 @@ public class Constant {
 	public static final String OUT_PROPERTIES_FIELD = "out_properties";
 	public static final String IN_PROPERTIES_FIELD = "in_properties";
 	
-	public static final String ATTRIBUTE_LOCALNAME = "http://localname"; 
+	public static final String ATTRIBUTE_LOCALNAME = "http://www.example.org/localname"; 
 	
 	public static final String URI_PREFIX = "http://";
 	

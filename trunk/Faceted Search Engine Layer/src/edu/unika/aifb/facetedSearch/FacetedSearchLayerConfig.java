@@ -80,6 +80,11 @@ public class FacetedSearchLayerConfig {
 	 */
 	private static String s_schemaOntoPath;
 
+	/*
+	 * 
+	 */
+	private static long s_preloadMaxBytes;
+
 	public static boolean createFacetIdx() {
 		return s_createFacetIdx;
 	}
@@ -162,6 +167,10 @@ public class FacetedSearchLayerConfig {
 		return s_graphIndexDirStrg;
 	}
 
+	public static long getPreloadMaxBytes() {
+		return s_preloadMaxBytes;
+	}
+
 	public static int getRefinementMode() {
 		return s_refinementMode;
 	}
@@ -214,6 +223,10 @@ public class FacetedSearchLayerConfig {
 
 	public static void setGraphIndexDirStrg(String graphIndexDirStrg) {
 		s_graphIndexDirStrg = graphIndexDirStrg;
+	}
+
+	public static void setPreloadMaxBytes(long preloadMaxBytes) {
+		s_preloadMaxBytes = preloadMaxBytes;
 	}
 
 	public static void setRankingEnabled(boolean rankingEnabled) {

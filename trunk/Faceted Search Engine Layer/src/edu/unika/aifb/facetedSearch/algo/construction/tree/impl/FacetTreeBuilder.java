@@ -38,7 +38,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
@@ -57,7 +56,6 @@ public class FacetTreeBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -88,7 +86,6 @@ public class FacetTreeBuilder implements IBuilder {
 
 		m_session = session;
 		m_helper = helper;
-		m_cache = session.getCache();
 
 		init();
 	}
@@ -124,7 +121,8 @@ public class FacetTreeBuilder implements IBuilder {
 							leave, m_paths);
 					newLeaves.add(newLeave);
 
-					m_cache.updateLeaveGroups(newLeave.getID(), resItem);
+					m_session.getCache().updateLeaveGroups(newLeave.getID(),
+							resItem);
 				}
 
 				m_parsedResources.add(resItem);

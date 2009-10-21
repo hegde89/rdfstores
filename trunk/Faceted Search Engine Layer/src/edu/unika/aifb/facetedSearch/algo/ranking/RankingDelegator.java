@@ -34,17 +34,6 @@ import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 public class RankingDelegator extends Delegator {
 
 	/*
-	 * 
-	 */
-	private static RankingDelegator s_instance;
-
-	public static RankingDelegator getInstance(SearchSession session) {
-		return s_instance == null
-				? s_instance = new RankingDelegator(session)
-				: s_instance;
-	}
-
-	/*
 	 * delegate
 	 */
 	private IRankingMetric m_metric;
@@ -60,7 +49,7 @@ public class RankingDelegator extends Delegator {
 	@SuppressWarnings("unused")
 	private SearchSession m_session;
 
-	private RankingDelegator(SearchSession session) {
+	public RankingDelegator(SearchSession session) {
 		m_session = session;
 		m_metricPool = RankingMetricPool.getInstance();
 	}

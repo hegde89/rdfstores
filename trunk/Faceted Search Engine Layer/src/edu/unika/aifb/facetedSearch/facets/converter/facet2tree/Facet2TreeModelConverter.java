@@ -33,33 +33,25 @@ public class Facet2TreeModelConverter extends AbstractConverter {
 
 	private static Facet2TreeModelConverter s_instance;
 
-	public static Facet2TreeModelConverter getInstance(SearchSession session) {
-		return s_instance == null ? s_instance = new Facet2TreeModelConverter(
-				session) : s_instance;
+	public static Facet2TreeModelConverter getInstance() {
+		return s_instance == null
+				? s_instance = new Facet2TreeModelConverter()
+				: s_instance;
 	}
 
-	private SearchSession m_session;
-	private FacetTreeDelegator m_treeDelegator;
-
-	private Facet2TreeModelConverter(SearchSession session) {
-		m_session = session;
-		init();
+	private Facet2TreeModelConverter() {
 	}
 
-	public Node facet2Node(Facet facet) {
-		return getNode(facet.getDomain(), facet.getNodeId());
+	public Node facet2Node(SearchSession session, Facet facet) {
+		return getNode(session, facet.getDomain(), facet.getNodeId());
 	}
 
-	public Node facetValue2Node(AbstractFacetValue fv) {
-		return getNode(fv.getDomain(), fv.getNodeId());
+	public Node facetValue2Node(SearchSession session, AbstractFacetValue fv) {
+		return getNode(session, fv.getDomain(), fv.getNodeId());
 	}
 
-	private Node getNode(String domain, double nodeID) {
-		return m_treeDelegator.getNode(domain, nodeID);
-	}
-
-	private void init() {
-		m_treeDelegator = (FacetTreeDelegator) m_session
-				.getDelegator(Delegators.TREE);
+	private Node getNode(SearchSession session, String domain, double nodeID) {
+		return ((FacetTreeDelegator) session.getDelegator(Delegators.TREE))
+				.getNode(domain, nodeID);
 	}
 }

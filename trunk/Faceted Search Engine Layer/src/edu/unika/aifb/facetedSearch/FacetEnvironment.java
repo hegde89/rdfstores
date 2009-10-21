@@ -19,6 +19,7 @@
 package edu.unika.aifb.facetedSearch;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.openrdf.model.vocabulary.XMLSchema;
@@ -28,6 +29,10 @@ import org.openrdf.model.vocabulary.XMLSchema;
  * 
  */
 public class FacetEnvironment {
+
+	public static class CacheConfig {
+		public static final String DISK_PATH = "jcs.auxiliary.DC.attributes.DiskPath";
+	}
 
 	public static class CacheName {
 
@@ -102,6 +107,7 @@ public class FacetEnvironment {
 
 	public static class DefaultValue {
 
+		public static String KEYWORD_DOMAIN = "?Name of Entity";
 		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword/";
 		public static String VAR_PREFIX = "?";
 		public static String BASE_URI = "http://www.fluidops.com/";
@@ -110,7 +116,7 @@ public class FacetEnvironment {
 		public static boolean RANKING_ENABLED = false;
 		public static int DEPTH_K = 3;
 		public static String LITERAL_DELIM = Character.toString((char) 94);
-		public static int MAX_SESSIONS = 1;
+		public static int MAX_SESSIONS = 10;
 		public static int MAXLENGTH_STRING = 15;
 		public static int NUM_OF_RESITEMS_PER_PAGE = 20;
 		public static long PRELOAD_TIME = 4000;
@@ -225,6 +231,7 @@ public class FacetEnvironment {
 		public static final String CREATE_FACET_IDX = "create.facetIdx";
 		public static final String CACHE_DIR = "cache.dir";
 		public static final String REFINEMENT_MODE = "refine.mode";
+		public static final String PRELOAD_MAX_BYTES = "preloadBytes";
 
 	}
 
@@ -382,8 +389,40 @@ public class FacetEnvironment {
 					RDF.NAMESPACE + RDF.PREDICATE, RDF.NAMESPACE + RDF.OBJECT,
 					RDF.NAMESPACE + RDFS.FIRST, RDF.NAMESPACE + RDFS.REST,
 
-					"http://dbpedia.org/property/abstract"
+					"http://dbpedia.org/property/abstract",
+					"http://dbpedia.org/ontology/coordinates"
 
 			}));
 
+	public static final HashMap<String, String> PREFIX2NAMESPACE_MAP;
+
+	static {
+
+		PREFIX2NAMESPACE_MAP = new HashMap<String, String>();
+		PREFIX2NAMESPACE_MAP.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+				"rdf");
+		PREFIX2NAMESPACE_MAP.put("http://www.w3.org/2002/07/owl#", "owl");
+		PREFIX2NAMESPACE_MAP.put("http://www.w3.org/2000/01/rdf-schema#",
+				"rdfs");
+		PREFIX2NAMESPACE_MAP.put("http://www.w3.org/2001/XMLSchema#", "xsd");
+
+		PREFIX2NAMESPACE_MAP.put("http://xmlns.com/foaf/0.1/", "foaf");
+		PREFIX2NAMESPACE_MAP
+				.put("http://www.w3.org/2004/02/skos/core#", "skos");
+
+		PREFIX2NAMESPACE_MAP.put("http://dbpedia.org/property/", "dbpprop");
+		PREFIX2NAMESPACE_MAP.put("http://dbpedia.org/ontology/", "dbpedia-owl");
+		PREFIX2NAMESPACE_MAP.put("http://dbpedia.org/resource/", "dbpedia");
+
+		PREFIX2NAMESPACE_MAP
+				.put("http://dbpedia.org/class/yago/", "yago-class");
+		PREFIX2NAMESPACE_MAP.put("http://mpii.de/yago/resource/", "yago");
+
+		PREFIX2NAMESPACE_MAP.put("http://rdf.freebase.com/ns/", "fbase");
+
+		PREFIX2NAMESPACE_MAP.put("http://www.w3.org/2003/01/geo/wgs84_pos#",
+				"geo");
+		PREFIX2NAMESPACE_MAP.put("http://www.georss.org/georss/point", "point");
+
+	}
 }

@@ -50,7 +50,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
  * @author andi
@@ -65,7 +64,6 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -81,8 +79,6 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 			BuilderHelper helper) {
 
 		m_session = session;
-		m_cache = session.getCache();
-
 		m_helper = helper;
 		m_compPool = ComparatorPool.getInstance();
 	}
@@ -188,12 +184,13 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 					Literal current_right = (Literal) litIter.next();
 					ClusterDistance clusterDistance;
 
-					if ((clusterDistance = m_cache.getDistance(current_left
-							.getValue(), current_right.getValue(), ext)) == null) {
+					if ((clusterDistance = m_session.getCache().getDistance(
+							current_left.getValue(), current_right.getValue(),
+							ext)) == null) {
 
-						current_leftSources.addAll(m_cache.getSources4Object(
-								current_left.getDomain(), current_left
-										.getValue()));
+						current_leftSources.addAll(m_session.getCache()
+								.getSources4Object(current_left.getDomain(),
+										current_left.getValue()));
 						current_leftCountS = current_leftSources.size();
 						current_leftCountFV += 1;
 
@@ -209,7 +206,8 @@ public class FacetSingleLinkageClusterBuilder implements IBuilder {
 						clusterDistance.setLeftCountFV(current_leftCountFV);
 						clusterDistance.setLeftCountS(current_leftCountS);
 
-						m_cache.addDistance(current_left.getValue(),
+						m_session.getCache().addDistance(
+								current_left.getValue(),
 								current_right.getValue(), ext, clusterDistance);
 
 					}

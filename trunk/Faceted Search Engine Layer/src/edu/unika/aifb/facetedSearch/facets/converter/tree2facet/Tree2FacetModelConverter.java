@@ -52,9 +52,8 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 	 */
 	private static Tree2FacetModelConverter s_instance;
 
-	public static Tree2FacetModelConverter getInstance(SearchSession session) {
-		return s_instance == null ? s_instance = new Tree2FacetModelConverter(
-				session) : s_instance;
+	public static Tree2FacetModelConverter getInstance() {
+		return s_instance == null ? s_instance = new Tree2FacetModelConverter() : s_instance;
 	}
 
 	/*
@@ -63,8 +62,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 	@SuppressWarnings("unused")
 	private SearchSession m_session;
 
-	private Tree2FacetModelConverter(SearchSession session) {
-		m_session = session;
+	private Tree2FacetModelConverter() {
 	}
 
 	public AbstractBrowsingObject node2browsingObject(Node node) {
@@ -171,7 +169,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 						+ Util.truncateUri(stat.getValue()));
 			}
 			if (stat.isTypeLeave()) {
-				((FacetValueCluster) fv).setTypeLeave(true);
+				((FacetValueCluster) fv).setTypeLeave(false);
 			} else {
 				((FacetValueCluster) fv).setTypeLeave(false);
 			}

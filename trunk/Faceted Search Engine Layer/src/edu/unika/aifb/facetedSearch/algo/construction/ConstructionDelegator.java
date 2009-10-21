@@ -53,17 +53,6 @@ public class ConstructionDelegator extends Delegator {
 	/*
 	 * 
 	 */
-	private static ConstructionDelegator s_instance;
-
-	public static ConstructionDelegator getInstance(SearchSession session) {
-
-		return s_instance == null ? s_instance = new ConstructionDelegator(
-				session) : s_instance;
-	}
-
-	/*
-	 * 
-	 */
 	private SearchSession m_session;
 
 	/*
@@ -83,7 +72,7 @@ public class ConstructionDelegator extends Delegator {
 	private IBuilder m_subTreeBuilder;
 	private IBuilder m_clusterBuilder;
 
-	private ConstructionDelegator(SearchSession session) {
+	public ConstructionDelegator(SearchSession session) {
 
 		m_session = session;
 

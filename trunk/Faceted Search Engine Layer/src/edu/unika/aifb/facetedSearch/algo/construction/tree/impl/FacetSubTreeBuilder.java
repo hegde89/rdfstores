@@ -37,7 +37,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -53,7 +52,6 @@ public class FacetSubTreeBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -79,7 +77,6 @@ public class FacetSubTreeBuilder implements IBuilder {
 	public FacetSubTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
-		m_cache = session.getCache();
 		m_helper = helper;
 
 		init();
@@ -97,7 +94,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 			Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 
 			if (!(node instanceof FacetValueNode)) {
-				
+
 				Iterator<String> subjIter = node.getSubjects().iterator();
 				m_helper.clearParsedFacetValues();
 
@@ -110,7 +107,7 @@ public class FacetSubTreeBuilder implements IBuilder {
 						Iterator<AbstractSingleFacetValue> objIter = node
 								.getObjects(subject).iterator();
 
-						Iterator<String> sourcesIter = m_cache
+						Iterator<String> sourcesIter = m_session.getCache()
 								.getSources4Object(domain, subject).iterator();
 
 						while (objIter.hasNext()) {
@@ -124,12 +121,14 @@ public class FacetSubTreeBuilder implements IBuilder {
 							if (sourcesIter.hasNext()) {
 
 								while (sourcesIter.hasNext()) {
-									m_cache.addObject2SourceMapping(domain, fv
-											.getValue(), sourcesIter.next());
+									m_session.getCache()
+											.addObject2SourceMapping(domain,
+													fv.getValue(),
+													sourcesIter.next());
 								}
 							} else {
-								m_cache.addObject2SourceMapping(domain, fv
-										.getValue(), subject);
+								m_session.getCache().addObject2SourceMapping(
+										domain, fv.getValue(), subject);
 							}
 
 							// /*

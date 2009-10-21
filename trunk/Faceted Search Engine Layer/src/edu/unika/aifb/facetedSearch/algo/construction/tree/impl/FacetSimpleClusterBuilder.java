@@ -48,7 +48,6 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
 /**
@@ -64,7 +63,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 	 * 
 	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -84,8 +82,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 	public FacetSimpleClusterBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
-		m_cache = session.getCache();
-
 		m_helper = helper;
 		m_compPool = ComparatorPool.getInstance();
 		m_parsedFacetValues = new HashSet<String>();
@@ -173,21 +169,21 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 					AbstractSingleFacetValue fv = objIter.next();
 
-					Iterator<String> sourcesIter = m_cache.getSources4Object(
-							domain, subject).iterator();
+					Iterator<String> sourcesIter = m_session.getCache()
+							.getSources4Object(domain, subject).iterator();
 
 					if (sourcesIter.hasNext()) {
 
 						while (sourcesIter.hasNext()) {
 
-							m_cache.addObject2SourceMapping(domain, fv
-									.getValue(), sourcesIter.next());
+							m_session.getCache().addObject2SourceMapping(
+									domain, fv.getValue(), sourcesIter.next());
 
 						}
 					} else {
 
-						m_cache.addObject2SourceMapping(domain, fv.getValue(),
-								subject);
+						m_session.getCache().addObject2SourceMapping(domain,
+								fv.getValue(), subject);
 					}
 
 					if (!lits.contains(fv)) {
@@ -345,9 +341,9 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 							m_parsedFacetValues.add(lits.get(i).getValue());
 						}
-					} else {
-						i++;
-					}
+					} 
+					
+					i++;
 				}
 
 				m_parsedFacetValues.clear();
@@ -374,21 +370,27 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 						dynNode.setRightBorder(lits.get(lits.size() - 1)
 								.getValue());
-						dynNode.setValue(FacetUtils.getLiteralValue(dynNode
-								.getLeftBorder())
+						dynNode.setValue("["
+								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
+										.getLeftBorder()))
+								+ "]"
 								+ " - "
-								+ FacetUtils.getLiteralValue(dynNode
-										.getRightBorder()));
+								+ "["
+								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
+										.getRightBorder())) + "]");
 						dynNode.setLiterals(lits.subList(i, lits.size()));
 
 					} else {
 
 						dynNode.setRightBorder(lits.get(i + delta).getValue());
-						dynNode.setValue(FacetUtils.getLiteralValue(dynNode
-								.getLeftBorder())
+						dynNode.setValue("["
+								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
+										.getLeftBorder()))
+								+ "]"
 								+ " - "
-								+ FacetUtils.getLiteralValue(dynNode
-										.getRightBorder()));
+								+ "["
+								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
+										.getRightBorder())) + "]");
 						dynNode.setLiterals(lits.subList(i, i + delta + 1));
 					}
 
@@ -397,7 +399,7 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 					Edge edge = tree.addEdge(node, dynNode);
 					edge.setType(EdgeType.CONTAINS);
 
-					i += delta;
+					i += delta + 1;
 				}
 			} else {
 
@@ -453,36 +455,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 		return FacetEnvironment.CalClusterDepth.NOT_SET;
 	}
 
-	private String getDay4Value(int value) {
-
-		switch (value) {
-
-			case 1 : {
-				return "Monday";
-			}
-			case 2 : {
-				return "Tuesday";
-			}
-			case 3 : {
-				return "Wednesday";
-			}
-			case 4 : {
-				return "Thursday";
-			}
-			case 5 : {
-				return "Friday";
-			}
-			case 6 : {
-				return "Saturday";
-			}
-			case 7 : {
-				return "Sunday";
-			}
-		}
-
-		return String.valueOf(value);
-	}
-
 	private String getLabel4CurrentCalClusterDepth(int currentDepth, int value) {
 
 		switch (currentDepth) {
@@ -493,7 +465,7 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 				return "Month: " + getMonth4Value(value);
 			}
 			case FacetEnvironment.CalClusterDepth.DAY : {
-				return "Day: " + getDay4Value(value);
+				return "Day: " + String.valueOf(value);
 			}
 		}
 

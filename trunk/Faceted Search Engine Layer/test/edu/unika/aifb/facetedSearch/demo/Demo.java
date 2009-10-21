@@ -81,13 +81,12 @@ public class Demo {
 			SearchSession session = searchSessionFactory
 					.getSession(searchSessionFactory.acquire());
 
-			GenericQueryEvaluator eval = session.getStore().getEvaluator();
+			GenericQueryEvaluator eval = session.getStore().getEvaluator(
+					session);
 
 			StructuredQuery sq = new StructuredQuery("q1");
-			sq
-					.addEdge("?x",
-							"http://dbpedia.org/ontology/largestCity",
-							"http://dbpedia.org/resource/Cheyenne%2C_Wyoming");
+			sq.addEdge("?x", "http://dbpedia.org/ontology/largestCity",
+					"http://dbpedia.org/resource/Cheyenne%2C_Wyoming");
 
 			ResultPage resPage = (ResultPage) eval.evaluate(sq);
 			FacetPage fpage = resPage.getFacetPage();

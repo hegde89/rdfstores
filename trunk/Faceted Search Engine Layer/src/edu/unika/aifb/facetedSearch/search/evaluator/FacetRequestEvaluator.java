@@ -45,7 +45,6 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.FacetValue
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.KeywordRefinementRequest;
 import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.CleanType;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
@@ -72,7 +71,6 @@ public class FacetRequestEvaluator extends Searcher {
 	 * 
 	 */
 	private SearchSession m_session;
-	private SearchSessionCache m_cache;
 
 	/*
 	 * 
@@ -100,7 +98,6 @@ public class FacetRequestEvaluator extends Searcher {
 		super(idxReader);
 
 		m_session = session;
-		m_cache = session.getCache();
 
 		m_facet2TreeModelConverter = (Facet2TreeModelConverter) session
 				.getConverter(Converters.FACET2TREE);
@@ -153,12 +150,12 @@ public class FacetRequestEvaluator extends Searcher {
 					/*
 					 * store result
 					 */
-					m_cache.storeCurrentResult(res);
+					m_session.getCache().storeCurrentResult(res);
 
 					/*
 					 * store result
 					 */
-					m_cache.storeCurrentResult(res);
+					m_session.getCache().storeCurrentResult(res);
 
 					/*
 					 * set facet page
@@ -169,7 +166,7 @@ public class FacetRequestEvaluator extends Searcher {
 					/*
 					 * store result
 					 */
-					m_cache.storeCurrentResult(res);
+					m_session.getCache().storeCurrentResult(res);
 
 					// /*
 					// * set res page
@@ -192,7 +189,7 @@ public class FacetRequestEvaluator extends Searcher {
 					s_log.error("could not remove node and subtree for node'"
 							+ expansionReq.getQNode() + "' not found!");
 
-					return m_cache.getCurrentResult();
+					return m_session.getCache().getCurrentResult();
 
 					// resPage = m_cache.getCurrentResultPage(m_session
 					// .getCurrentPageNum());
@@ -260,7 +257,8 @@ public class FacetRequestEvaluator extends Searcher {
 				try {
 
 					StaticNode node = (StaticNode) m_facet2TreeModelConverter
-							.facetValue2Node(newTuple.getFacetValue());
+							.facetValue2Node(m_session, newTuple
+									.getFacetValue());
 
 					StructuredQuery sQuery = m_facet2QueryModelConverter
 							.node2facetFacetValuePath(node);
@@ -295,7 +293,7 @@ public class FacetRequestEvaluator extends Searcher {
 					/*
 					 * store result
 					 */
-					m_cache.storeCurrentResult(res);
+					m_session.getCache().storeCurrentResult(res);
 
 					/*
 					 * set facet page
@@ -306,7 +304,7 @@ public class FacetRequestEvaluator extends Searcher {
 					/*
 					 * store result
 					 */
-					m_cache.storeCurrentResult(res);
+					m_session.getCache().storeCurrentResult(res);
 
 					return res;
 					//
@@ -336,7 +334,7 @@ public class FacetRequestEvaluator extends Searcher {
 
 						VPEvaluator structuredQueryEvaluator = (VPEvaluator) m_session
 								.getStore()
-								.getEvaluator()
+								.getEvaluator(m_session)
 								.getEvaluator(
 										FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
 
@@ -372,7 +370,7 @@ public class FacetRequestEvaluator extends Searcher {
 							/*
 							 * store result
 							 */
-							m_cache.storeCurrentResult(res);
+							m_session.getCache().storeCurrentResult(res);
 
 							/*
 							 * set facet page
@@ -384,7 +382,7 @@ public class FacetRequestEvaluator extends Searcher {
 							/*
 							 * store result
 							 */
-							m_cache.storeCurrentResult(res);
+							m_session.getCache().storeCurrentResult(res);
 
 							return res;
 
@@ -395,7 +393,11 @@ public class FacetRequestEvaluator extends Searcher {
 
 							s_log.debug("no results found for query: " + sq);
 
-							return m_cache.getCurrentResult();
+							Result res = m_session.getCache()
+									.getCurrentResult();
+							res.setError("no results found for query: " + sq);
+
+							return res;
 
 							// resPage = m_cache.getCurrentResultPage(m_session
 							// .getCurrentPageNum());
@@ -426,11 +428,11 @@ public class FacetRequestEvaluator extends Searcher {
 						KeywordQuery kwq = new KeywordQuery("kwq", keyRefReq
 								.getKeywords());
 
-						HybridQuery hq = new HybridQuery("hq", sq, kwq);
+						HybridQuery hq = new HybridQuery("hq", sq, kwq, "?tmp");
 
 						ExploringHybridQueryEvaluator hybridQueryEvaluator = (ExploringHybridQueryEvaluator) m_session
 								.getStore()
-								.getEvaluator()
+								.getEvaluator(m_session)
 								.getEvaluator(
 										FacetEnvironment.EvaluatorType.HybridQueryEvaluator);
 
@@ -470,7 +472,7 @@ public class FacetRequestEvaluator extends Searcher {
 										.refineResult(keyRefReq.getDomain(),
 												sources);
 								Result res = new Result(refinedTable);
-								
+
 								/*
 								 * clean
 								 */
@@ -479,7 +481,7 @@ public class FacetRequestEvaluator extends Searcher {
 								/*
 								 * store result
 								 */
-								m_cache.storeCurrentResult(res);
+								m_session.getCache().storeCurrentResult(res);
 
 								/*
 								 * set facet page
@@ -499,7 +501,12 @@ public class FacetRequestEvaluator extends Searcher {
 										.debug("no results found for query: "
 												+ hq);
 
-								return m_cache.getCurrentResult();
+								Result res = m_session.getCache()
+										.getCurrentResult();
+								res.setError("no results found for query: "
+										+ hq);
+
+								return res;
 
 								// resPage = m_cache
 								// .getCurrentResultPage(m_session
@@ -517,7 +524,12 @@ public class FacetRequestEvaluator extends Searcher {
 							s_log.debug("no translations found for query: "
 									+ hq);
 
-							return m_cache.getCurrentResult();
+							Result res = m_session.getCache()
+									.getCurrentResult();
+							res.setError("no translations found for query: "
+									+ hq);
+
+							return res;
 
 							// resPage
 							// .setError("no translations found for query: "

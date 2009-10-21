@@ -33,6 +33,7 @@ import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
 import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
+import edu.unika.aifb.facetedSearch.search.session.GenericQueryEvaluatorPool;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.IStore;
 import edu.unika.aifb.graphindex.importer.Importer;
@@ -56,6 +57,9 @@ public class GenericRdfStore implements IStore {
 		FACET_INDEX, STRUCTURE_INDEX
 	}
 
+	/*
+	 * 
+	 */
 	private SearchSession m_session;
 
 	// IndexReader & IndexDir
@@ -65,7 +69,11 @@ public class GenericRdfStore implements IStore {
 	// Indices
 	private FacetIndex m_facetIndex;
 	private StructureIndex m_structureIndex;
-	private GenericQueryEvaluator m_eval;
+
+	/*
+	 * 
+	 */
+	private GenericQueryEvaluatorPool m_evalPool;
 
 	public GenericRdfStore(Properties props, String action) throws IOException,
 			StorageException, InterruptedException {
@@ -76,10 +84,12 @@ public class GenericRdfStore implements IStore {
 			loadStore(props
 					.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR));
 		}
+
+		m_evalPool = GenericQueryEvaluatorPool.getInstance();
 	}
 
 	public void createFacetIndex() throws IOException {
-		
+
 		// create facet indices
 		if (FacetedSearchLayerConfig.isFacetsEnabled()) {
 
@@ -181,9 +191,14 @@ public class GenericRdfStore implements IStore {
 		m_idxReader = new IndexReader(m_idxDir);
 	}
 
-	public GenericQueryEvaluator getEvaluator() {
-		return m_eval == null ? m_eval = new GenericQueryEvaluator(m_session,
-				m_idxReader) : m_eval;
+	public GenericQueryEvaluator getEvaluator(SearchSession session) {
+
+		if (m_evalPool.get(session.getId()) == null) {
+			m_evalPool.put(session.getId(), new GenericQueryEvaluator(session,
+					m_idxReader));
+		}
+
+		return m_evalPool.get(session.getId());
 	}
 
 	/**

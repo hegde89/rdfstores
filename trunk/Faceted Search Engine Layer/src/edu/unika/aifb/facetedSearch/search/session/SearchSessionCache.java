@@ -58,7 +58,6 @@ import edu.unika.aifb.facetedSearch.index.db.binding.LiteralListBinding;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.ResultPage;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -160,8 +159,6 @@ public class SearchSessionCache {
 			throws EnvironmentLockedException, DatabaseException {
 
 		m_session = session;
-		m_treeDelegator = (FacetTreeDelegator) session
-				.getDelegator(Delegators.TREE);
 		m_dir = dir;
 		m_compositeCacheManager = compositeCacheManager;
 
@@ -613,11 +610,11 @@ public class SearchSessionCache {
 
 		return sources;
 	}
+
 	public Collection<String> getSources4Object(String domain, String object) {
 
 		return m_object2sourceMap.duplicates(domain + object);
 	}
-
 	@SuppressWarnings("unchecked")
 	public Set<String> getSources4StaticNode(StaticNode node) {
 
@@ -696,13 +693,17 @@ public class SearchSessionCache {
 		 * JCS caches
 		 */
 		m_sources4NodeCache = m_compositeCacheManager
-				.getCache(FacetEnvironment.CacheName.SOURCES);
+				.getCache(FacetEnvironment.CacheName.SOURCES
+						+ m_session.getId());
 		m_distanceCache = m_compositeCacheManager
-				.getCache(FacetEnvironment.CacheName.DISTANCE);
+				.getCache(FacetEnvironment.CacheName.DISTANCE
+						+ m_session.getId());
 		m_subjects4NodeCache = m_compositeCacheManager
-				.getCache(FacetEnvironment.CacheName.SUBJECTS);
+				.getCache(FacetEnvironment.CacheName.SUBJECTS
+						+ m_session.getId());
 		m_objects4NodeCache = m_compositeCacheManager
-				.getCache(FacetEnvironment.CacheName.OBJECTS);
+				.getCache(FacetEnvironment.CacheName.OBJECTS
+						+ m_session.getId());
 
 		m_sources4NodeCacheAccess = new CacheAccess(m_sources4NodeCache);
 		m_distanceCacheAccess = new CacheAccess(m_distanceCache);
@@ -793,6 +794,10 @@ public class SearchSessionCache {
 		}
 
 		return isOpen;
+	}
+
+	public void setTreeDelegator(FacetTreeDelegator treeDelegator) {
+		m_treeDelegator = treeDelegator;
 	}
 
 	public void storeCurrentResult(Result res)

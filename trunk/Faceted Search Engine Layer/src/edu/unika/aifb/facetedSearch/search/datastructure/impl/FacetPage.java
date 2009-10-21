@@ -49,11 +49,10 @@ public class FacetPage implements IFacetPage, Serializable {
 	private HashMap<String, List<FacetFacetValueList>> m_domain2FacetValuesLists;
 
 	public FacetPage() {
-
 		m_domain2FacetValuesLists = new HashMap<String, List<FacetFacetValueList>>();
 	}
 
-	public void addDomain(String domain) {
+	private void addDomain(String domain) {
 
 		if (!m_domain2FacetValuesLists.containsKey(domain)) {
 
@@ -105,6 +104,26 @@ public class FacetPage implements IFacetPage, Serializable {
 
 	public boolean hasDomain(String domain) {
 		return m_domain2FacetValuesLists.containsKey(domain);
+	}
+
+	public boolean isEmpty() {
+
+		boolean empty = true;
+
+		Iterator<Entry<String, List<FacetFacetValueList>>> domainEntryIter = getDomainEntryIterator();
+
+		while (domainEntryIter.hasNext()) {
+
+			Entry<String, List<FacetFacetValueList>> domainEntry = domainEntryIter
+					.next();
+
+			if (!domainEntry.getValue().isEmpty()) {
+				empty = false;
+				break;
+			}
+		}
+
+		return empty;
 	}
 
 	public boolean put(String domain, Facet facet, FacetFacetValueList list) {

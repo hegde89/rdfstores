@@ -77,10 +77,8 @@ public class FacetRequestHelper {
 	public FacetRequestHelper(SearchSession session) {
 
 		m_session = session;
-
 		m_treeDelegator = (FacetTreeDelegator) session
 				.getDelegator(Delegators.TREE);
-
 		m_parsedItems = new HashSet<String>();
 	}
 

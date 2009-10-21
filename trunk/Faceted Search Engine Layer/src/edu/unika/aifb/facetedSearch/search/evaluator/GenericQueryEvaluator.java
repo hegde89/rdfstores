@@ -243,7 +243,7 @@ public class GenericQueryEvaluator {
 			InitFacetsRequest initReq = (InitFacetsRequest) query;
 			Result res = constructResult(initReq.getRes());
 
-			FacetedQuery fquery = new FacetedQuery(initReq.getQuery());
+			FacetedQuery fquery = new FacetedQuery();
 			res.setQuery(fquery);
 			m_session.setCurrentQuery(fquery);
 		

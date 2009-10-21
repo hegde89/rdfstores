@@ -497,7 +497,7 @@ public class IndexCreator implements TripleSink {
 		if (m_idxConfig.getBoolean(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES)) {
 			int rounds = 0;
 			int lastMovedEntities = 0;
-			while (rounds < 20) {
+			while (rounds < 25) {
 				int movedEntities = eliminateReflexiveEdges(dataIndex, bc);
 //				if (movedEntities == lastMovedEntities)
 //					break;

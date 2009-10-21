@@ -76,7 +76,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private int m_dataEdges;
 	private Set<String> m_dataProperties;
 	
-	private final long TIMEOUT = 3000;
+	private final long TIMEOUT = 4000;
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
 	
@@ -248,11 +248,11 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		}
 		
 		NodeElement target = new NodeElement("dbe" + m_dataEdges);
-		target.setCost(1);
+		target.setCost(0);
 		
 		EdgeElement edge = new EdgeElement(node, property, target);
 		edge.setCost(1 - m_propertyWeights.get(property));
-		edge.setCost(1);
+		edge.setCost(0);
 		
 		m_node2edges.get(node).add(edge);
 		
@@ -279,7 +279,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		log.debug(keywords);
 		for (KeywordSegment keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
-			m_keywords.addAll(keyword.getAllKeywords());
+			m_keywords.addAll(keyword.getKeywords());
 			m_ksStartNodes.put(keyword, new HashSet<NodeElement>());
 			
 			for (KeywordElement ele : keywords.get(keyword)) {
@@ -297,12 +297,13 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						if (edge.getLabel().equals(RDF.TYPE.toString()) && edge.getTarget() == node) {
 							
 							Cursor start = new NodeCursor(keywordSet, node);
-							start.setCost(start.getCost() - 0.1 * (keyword.getAllKeywords().size() - 1));
-							start.setCost(start.getCost() / ele.getMatchingScore());
 							Cursor edgeCursor = new EdgeCursor(keywordSet, edge, start);
 							Cursor nodeCursor = new NodeCursor(keywordSet, edge.getSource(), edgeCursor);
+							nodeCursor.setCost(nodeCursor.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
+							nodeCursor.setCost(nodeCursor.getCost() / ele.getMatchingScore());
 
 							queue.add(nodeCursor);
+							log.debug(nodeCursor);
 						}
 					}
 				}
@@ -317,7 +318,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					
 					if (keyword.getKeywords().contains("STRUCTURED")) {
 						SQueryKeywordElement sqele = (SQueryKeywordElement)ele;
-						queue.add(new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode()));
+						Cursor c = new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode());
+						log.debug(c);
+						queue.add(c);
 					}
 					else {
 						String property = ele.getAttributeUri();
@@ -329,15 +332,16 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						}
 
 						Cursor start = new NodeCursor(keywordSet, dataEdge.getTarget());
-						start.setCost(start.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
-						start.setCost(start.getCost() / ele.getMatchingScore());
 						Cursor edgeCursor = new EdgeCursor(keywordSet, dataEdge, start);
 						Cursor nodeCursor = new KeywordNodeCursor(keywordSet, node, edgeCursor);
+						nodeCursor.setCost(nodeCursor.getCost() - 0.1 * (keyword.getKeywords().size() - 1));
+						nodeCursor.setCost(nodeCursor.getCost() / ele.getMatchingScore());
 					
 						nodeCursor.addInProperties(ele.getInProperties());
 						nodeCursor.addOutProperties(ele.getOutProperties());
 						
 						queue.add(nodeCursor);
+						log.debug(nodeCursor + " " + dataEdge);
 					}
 					
 					m_ksStartNodes.get(keyword).add(node);
@@ -404,6 +408,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //		m_keywordSegments = keywords;
 		
 		setMaxDistance(nodeKeywords.size() * 2);
+		log.debug("nodeKeywords: " + nodeKeywords);
 		log.debug("max distance: " + m_maxDistance);
 		log.debug("data edges added: " + m_dataEdges);
 	}
@@ -463,6 +468,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		
 		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT * 1.2) {
 			Collections.sort(m_subgraphs);
+			if (m_subgraphs.size() >= m_k)
+				for (int i = m_subgraphs.size() - 1; i >= m_k; i--)
+					m_subgraphs.remove(i);
 			return true;
 		}
 		

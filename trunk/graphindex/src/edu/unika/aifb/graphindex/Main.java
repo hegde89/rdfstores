@@ -116,7 +116,7 @@ public class Main {
 		ic.setSICreateDataExtensions(os.has("sd"));
 		ic.setOption(IndexConfiguration.TRIPLES_ONLY, triplesOnly);
 		ic.setOption(IndexConfiguration.SP_BACKWARD_ONLY, backwardOnly);
-		ic.setOption(IndexConfiguration.SP_FORWARD_ONLY, backwardOnly);
+		ic.setOption(IndexConfiguration.SP_FORWARD_ONLY, forwardOnly);
 		ic.setOption(IndexConfiguration.SP_ELIMINATE_REFLEXIVE_EDGES, eliminateRE);
 		
 		ic.create(startFrom);

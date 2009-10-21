@@ -772,8 +772,7 @@ public class KeywordSearcher {
 			// currently usable for keyword queries
 			KeywordQuery kq = new KeywordQuery("q1", line);
 			KeywordQueryEvaluator kwEval = new ExploringKeywordQueryEvaluator(ir);
-//			System.out.println(kwEval.evaluate(kq).toDataString());
-			kwEval.evaluate(kq);
+			System.out.println(kwEval.evaluate(kq).toDataString());
 		}
 	} 
 	

@@ -51,13 +51,13 @@ public class MappingIndexCreator implements TripleSink{
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
-	public MappingIndexCreator(String indexDirectory, String s, String d) throws IOException {
+	/*public MappingIndexCreator(String indexDirectory, String s, String d) throws IOException {
 		m_idxDirectory = new IndexDirectory(indexDirectory);
 		m_MappingIndexConfig = new IndexConfiguration();
 		m_root_dir = indexDirectory;
 		m_ds_source = s;
 		m_ds_destination = d;
-	}
+	}*/
 	
 	public MappingIndexCreator(String indexDirectory, List<Mapping> maps) throws IOException {
 		m_idxDirectory = new IndexDirectory(indexDirectory);
@@ -66,10 +66,14 @@ public class MappingIndexCreator implements TripleSink{
 		mappings = maps;
 	}
 	
-	public void setImporter(Importer importer) {
+	/*public void setImporter(Importer importer) {
 		m_importer = importer;
-	}
+	}*/
 	
+	/**
+	 * Adds the given IndexDescription to the IndexConfiguration.
+	 * @param idx IndexDescription to add
+	 */
 	private void addMappingIndex(IndexDescription idx) {
 		m_MappingIndexConfig.addIndex(IndexConfiguration.DI_INDEXES, idx);
 	}

@@ -138,7 +138,7 @@ public class IndexConfiguration {
 		Map map = new HashMap();
 		
 		for (Option o : m_options) {
-			if (o.equals(SP_INDEXES) || o.equals(DI_INDEXES)) {
+			if (o.value != null && (o.equals(SP_INDEXES) || o.equals(DI_INDEXES))) {
 				List<Map> maps = new ArrayList<Map>();
 				for (IndexDescription index : (List<IndexDescription>)o.value) {
 					maps.add(index.asMap());

@@ -7,10 +7,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.graphindex.importer.Importer;
+import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
 import edu.unika.aifb.graphindex.index.*;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -35,7 +37,7 @@ public class MappingIndexCreator implements TripleSink{
 	// Target data source
 	private String m_ds_destination;
 	// Mapping Directory
-	private String m_mapping_dir;
+	//private String m_mapping_dir;
 	// Output Directory
 	private String m_root_dir;
 	
@@ -45,6 +47,7 @@ public class MappingIndexCreator implements TripleSink{
 	private StructureIndex s_idx;
 	
 	Set<String> indexEdges;
+	List<Mapping> mappings;
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
@@ -56,6 +59,13 @@ public class MappingIndexCreator implements TripleSink{
 		m_ds_destination = d;
 	}
 	
+	public MappingIndexCreator(String indexDirectory, List<Mapping> maps) throws IOException {
+		m_idxDirectory = new IndexDirectory(indexDirectory);
+		m_MappingIndexConfig = new IndexConfiguration();
+		m_root_dir = indexDirectory;
+		mappings = maps;
+	}
+	
 	public void setImporter(Importer importer) {
 		m_importer = importer;
 	}
@@ -65,22 +75,49 @@ public class MappingIndexCreator implements TripleSink{
 	}
 	
 	private void importData() throws IOException, StorageException {
-		m_importer.setTripleSink(this);
+		//m_importer.setTripleSink(this);
 		
 		m_mappingIndexes = new HashMap<IndexDescription,IndexStorage>();
 		for (IndexDescription idx : m_MappingIndexConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			System.out.println(idx.getIndexFieldName());
 			//IndexStorage is = new LuceneIndexStorage(new File(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
-			IndexStorage is = new LuceneIndexStorage(new File(getDirectory(m_mapping_dir, true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
+			IndexStorage is = new LuceneIndexStorage(new File(getDirectory("mp", true).getAbsolutePath() + "/" + idx.getIndexFieldName()), new StatisticsCollector());
 			is.initialize(true, false);
 			m_mappingIndexes.put(idx, is);
 		}
+		
+		for (Iterator<Mapping> mp = mappings.listIterator(); mp.hasNext(); ) {
+			Mapping m = mp.next();
+			// Open index of target entity
+			m_ds_destination = m.ds2;
+			m_ds_source = m.ds1;
+			
+			IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
+			o_idx = o_IndexReader.getStructureIndex();
+			
+			// Open index of source entity
+			IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
+			s_idx = s_IndexReader.getStructureIndex();
+			
+			//m_MappingIndexConfig.load(m_idxDirectory);
+			Importer importer = new NxImporter();
+			
+			importer.addImport(m.file);
+			m_importer = importer;
+			m_importer.setTripleSink(this);
+			
+			// Import triples from mapping file
+			m_importer.doImport();
+			
+			o_idx.close();
+			s_idx.close();
+		}
 
-		m_importer.doImport();
+		//m_importer.doImport();
 
 		for (IndexDescription idx : m_MappingIndexConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
-			m_mappingIndexes.get(idx).mergeSingleIndex(idx);
+			//m_mappingIndexes.get(idx).mergeSingleIndex(idx);
 			m_mappingIndexes.get(idx).close();
 		}
 	}
@@ -120,9 +157,15 @@ public class MappingIndexCreator implements TripleSink{
 		// Create directory for indices
 		m_idxDirectory.create();
 		
-		// Get directory name for this mapping out of the name of both data sources
-		m_mapping_dir = m_ds_source.replaceAll("[_[^\\w\\d]]", "") + "_" + m_ds_destination.replaceAll("[_[^\\w\\d]]", "");
-		//System.out.println(m_mapping_dir);
+		// Open index of target entity
+		//IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
+		//o_idx = o_IndexReader.getStructureIndex();
+		
+		// Open index of source entity
+		//IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
+		//s_idx = s_IndexReader.getStructureIndex();
+		
+		//m_MappingIndexConfig = new IndexConfiguration();
 		
 		// ds1,ds2,e1->e2
 		addMappingIndex(IndexDescription.DSDTESET);
@@ -133,23 +176,14 @@ public class MappingIndexCreator implements TripleSink{
 		// ds1,ds2,e2_ext -> e1_ext
 		addMappingIndex(IndexDescription.DSDTETXESX);
 		
-		// TODO: IndexReader überschreibt die IndexConfig des MappingIndexes
-		
-		// Open index of target entity
-		//IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
-		//o_idx = o_IndexReader.getStructureIndex();
-		
-		// Open index of source entity
-		//IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
-		//s_idx = s_IndexReader.getStructureIndex();
-		
-		//m_MappingIndexConfig.load(m_idxDirectory);
-		
 		// Set to check for duplicates
 		indexEdges = new HashSet<String>();
 		
 		// Import triples from mapping file
-		//importData();
+		importData();
+			
+		/*o_idx.close();
+		s_idx.close();*/
 		
 		m_MappingIndexConfig.store(m_idxDirectory);
 		
@@ -159,13 +193,12 @@ public class MappingIndexCreator implements TripleSink{
 	private void testMappingIndex() {
 		// TODO Auto-generated method stub
 		try {
-			MappingIndex midx = new MappingIndex(m_root_dir, new IndexReader(m_idxDirectory).getIndexConfiguration(), m_ds_source, m_ds_destination);
+			MappingIndex midx = new MappingIndex(m_root_dir, new IndexReader(m_idxDirectory).getIndexConfiguration());
 			midx.getIndexStorage(IndexDescription.DSDTESET);
 			String entity = "http://dbpedia.org/resource/Albania";
-			for (Iterator<String[]> ti = midx.iterator(entity); ti.hasNext(); ) {
-				String[] triple = ti.next();
-				System.out.println(triple.toString());
-			}
+			
+			Set<String> mset = midx.getStoTMapping(m_ds_source, m_ds_destination, entity);
+			System.out.println(mset.size());
 				
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -188,28 +221,28 @@ public class MappingIndexCreator implements TripleSink{
 
 		try {
 			// Get object extension
-			//String objExt = o_idx.getExtension(o);
+			String objExt = o_idx.getExtension(o);
 			
 			// Get subject extension
-			//String subExt = s_idx.getExtension(s);
-			String subExt = "b39";
+			String subExt = s_idx.getExtension(s);
+			//String subExt = "b39";
 			
 			// Entity mapping index
 			m_mappingIndexes.get(IndexDescription.DSDTESET).addData(IndexDescription.DSDTESET, new String[] { m_ds_source, m_ds_destination, s}, o);
 			m_mappingIndexes.get(IndexDescription.DSDTETES).addData(IndexDescription.DSDTETES, new String[] { m_ds_source, m_ds_destination, o}, s);	
 			
 			// Ensure no duplicated subExt<->objExt tuples
-			/*String indexEdge = new StringBuilder().append(subExt).append("__").append(objExt).toString();
-			if (indexEdges.add(indexEdge)) {
+			String indexEdge = new StringBuilder().append(subExt).append("__").append(objExt).toString();
+			if (indexEdges.add(indexEdge) && subExt != null && objExt != null) {
 				// Extension mapping index
 				m_mappingIndexes.get(IndexDescription.DSDTESXETX).addData(IndexDescription.DSDTESXETX, new String[] { m_ds_source, m_ds_destination, subExt}, objExt);
 				m_mappingIndexes.get(IndexDescription.DSDTETXESX).addData(IndexDescription.DSDTETXESX, new String[] { m_ds_source, m_ds_destination, objExt}, subExt);
-			}*/
+			}
 			
 		} catch (StorageException e) {
 			e.printStackTrace();
-		/*} catch (IOException e) {
-			e.printStackTrace();*/
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		
 		// Count imported triples	

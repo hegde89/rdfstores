@@ -1,10 +1,10 @@
 package edu.unika.aifb.MappingIndex;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
-
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
@@ -44,13 +44,17 @@ public class Main {
 			
 			// Get filename
 			List<String> files = os.nonOptionArguments();
-
-			Importer importer = new NxImporter();
-			importer.addImports(files);
-
-			MappingIndexCreator mic = new MappingIndexCreator(directory, source, destination);
+			//Importer importer = new NxImporter();
+			//importer.addImports(files);
 			
-			mic.setImporter(importer);
+			List<Mapping> maps = new LinkedList();
+			Mapping m = new Mapping(source, destination, files.get(0));
+			maps.add(m);
+			
+			//MappingIndexCreator mic = new MappingIndexCreator(directory, source, destination);
+			MappingIndexCreator mic = new MappingIndexCreator(directory, maps);
+			
+			//mic.setImporter(importer);
 			mic.create();
 	}
 

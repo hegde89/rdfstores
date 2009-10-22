@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import edu.unika.aifb.graphindex.index.*;
 import edu.unika.aifb.graphindex.storage.DataField;
@@ -20,21 +21,21 @@ public class MappingIndex extends Index {
 	private Map<IndexDescription,IndexStorage> m_indexes;
 	
 	// Source data source
-	private String m_ds_source;
+	//private String m_ds_source;
 	// Target data source
-	private String m_ds_destination;
+	//private String m_ds_destination;
 	// Mapping Directory
-	private String m_mapping_dir;
+	//private String m_mapping_dir;
 	// Output Directory
 	private String m_root_dir;
 
-	public MappingIndex(String idxDirectory, IndexConfiguration idxConfig, String source, String target) throws IOException, StorageException {
+	public MappingIndex(String idxDirectory, IndexConfiguration idxConfig) throws IOException, StorageException {
 		super(new IndexDirectory(idxDirectory), idxConfig);
 		m_indexes = new HashMap<IndexDescription, IndexStorage>();
-		m_ds_source = source;
-		m_ds_destination = target;
+		//m_ds_source = source;
+		//m_ds_destination = target;
 		m_root_dir = idxDirectory;
-		//openAllIndexes();
+		openAllIndexes();
 	}
 	
 	public void close() throws StorageException {
@@ -51,48 +52,41 @@ public class MappingIndex extends Index {
 	public IndexStorage getIndexStorage(IndexDescription index) throws StorageException {
 		IndexStorage is = m_indexes.get(index);
 		if (is == null) {
-			try {
+			//try {
 				// Get directory name for this mapping out of the name of both data sources
-				m_mapping_dir = m_ds_source.replaceAll("[_[^\\w\\d]]", "") + "_" + m_ds_destination.replaceAll("[_[^\\w\\d]]", "");
+				//m_mapping_dir = m_ds_source.replaceAll("[_[^\\w\\d]]", "") + "_" + m_ds_destination.replaceAll("[_[^\\w\\d]]", "");
 				
-				is = new LuceneIndexStorage(new File(getDirectory(m_mapping_dir, false).getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
-				is.initialize(false, true);
-				//((LuceneIndexStorage)is).warmup(index, Util.readEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR).getAbsolutePath() + "/" + index.getIndexFieldName() + "_warmup", false));
+				is = new LuceneIndexStorage(new File(new File(m_root_dir + "/mp").getAbsolutePath() + "/" + index.getIndexFieldName()), m_idxReader != null ? m_idxReader.getCollector() : new StatisticsCollector());
+				is.initialize(false, true);				
 				m_indexes.put(index, is);
-			} catch (IOException e) {
-				throw new StorageException(e);
-			}
+			//} catch (IOException e) {
+			//	throw new StorageException(e);
+			//}
 		}
 		return is;
 	}
 	
-	public Iterator<String[]> iterator(String valueField) throws StorageException {
-		//IndexDescription index = getSuitableIndex(DataField.PROPERTY);
+	public Set<String> getStoTMapping(String ds_source, String ds_target, String e_source) throws StorageException {
 		IndexDescription index = IndexDescription.DSDTESET;
-		return getIndexStorage(index).iterator(index, new DataField[] { DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_SOURCE, DataField.E_TARGET }, valueField);
+		return  getIndexStorage(index).getDataSet(index, DataField.E_TARGET, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_SOURCE, e_source));
 	}
 	
-	private File getDirectory(String dir, boolean empty) throws IOException {
-		String directory = m_root_dir + "/" + dir;
-		
-		if (empty) {
-			File f = new File(directory);
-			if (!f.exists())
-				f.mkdirs();
-			else
-				emptyDirectory(f);
-		}
-		
-		return new File(directory);
+	public Set<String> getTtoSMapping(String ds_source, String ds_target, String e_target) throws StorageException {
+		IndexDescription index = IndexDescription.DSDTETES;
+		return  getIndexStorage(index).getDataSet(index, DataField.E_SOURCE, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_TARGET, e_target));
 	}
 	
-	private void emptyDirectory(File dir) {
-		for (File f : dir.listFiles()) {
-			if (f.isDirectory())
-				emptyDirectory(f);
-			else
-				f.delete();
-		}
+	public Set<String> getStoTExtMapping(String ds_source, String ds_target, String ext_source) throws StorageException {
+		IndexDescription index = IndexDescription.DSDTESXETX;
+		return  getIndexStorage(index).getDataSet(index, DataField.E_TARGET_EXT, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_SOURCE_EXT, ext_source));
 	}
 	
+	public Set<String> getTtoSExtMapping(String ds_source, String ds_target, String ext_target) throws StorageException {
+		IndexDescription index = IndexDescription.DSDTETXESX;
+		return  getIndexStorage(index).getDataSet(index, DataField.E_SOURCE_EXT, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_TARGET_EXT, ext_target));
+	}
 }

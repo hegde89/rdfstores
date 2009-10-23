@@ -3,10 +3,12 @@ package edu.unika.aifb.graphindex.algorithm.graph;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -15,6 +17,7 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.EdgeElement;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.NodeElement;
+import edu.unika.aifb.graphindex.util.Statistics;
 
 public class GraphIsomorphism {
 	
@@ -36,15 +39,24 @@ public class GraphIsomorphism {
 	public List<Map<String,String>> getIsomorphicMappings(DirectedMultigraph<NodeElement,EdgeElement> g1, DirectedMultigraph<NodeElement,EdgeElement> g2) {
 		List<Map<String,String>> maps = new ArrayList<Map<String,String>>();
 
+		Statistics.inc(this, Statistics.Counter.ISO_ALL);
+		
 		if (g1.edgeSet().size() != g2.edgeSet().size() || g1.vertexSet().size() != g2.vertexSet().size())
 			return maps;
 		
-		Map<String,Table<String>> g1tables = getEdgeTables(g1);
+		
+//		Map<String,Table<String>> g1tables = getEdgeTables(g1);
+		Set<String> g1labels = new HashSet<String>(10);
+		for (EdgeElement edge : g1.edgeSet())
+			g1labels.add(edge.getLabel());
+		
 		Map<String,Table<String>> g2tables = getEdgeTables(g2);
 
-		if (!g1tables.keySet().equals(g2tables.keySet()))
+		if (!g1labels.equals(g2tables.keySet()))
 			return maps;
 
+		Statistics.inc(this, Statistics.Counter.ISO_CHECK);
+		
 		List<Table<String>> resultTables = new ArrayList<Table<String>>();
 		Queue<EdgeElement> toVisit = new LinkedList<EdgeElement>(g1.edgeSet()); 
 		
@@ -121,6 +133,8 @@ public class GraphIsomorphism {
 				map.put(result.getColumnName(i), row[i]);
 			maps.add(map);
 		}
+		
+		Statistics.inc(this, Statistics.Counter.ISO_END);
 		
 		return maps;
 	}

@@ -82,25 +82,68 @@ public abstract class GraphElement {
 			c.setFinished(true);
 	}
 	
-	public List<List<Cursor>> getCursorCombinations() {
-		List<List<Cursor>> list = new ArrayList<List<Cursor>>();
+	public Set<List<Cursor>> getCursorCombinations(Set<String> completeKeywords) {
+		Set<List<Cursor>> list = new HashSet<List<Cursor>>();
 		
 		int[] idx = new int [m_keywordCursors.size()];
 		int[] guard = new int [m_keywordCursors.size()];
 		List<String> keywords = new ArrayList<String>(m_keywordCursors.keySet());
 		
 		for (int i = 0; i < keywords.size(); i++) {
+			idx[i] = -1;
 			guard[i] = m_keywordCursors.get(keywords.get(i)).size();
 		}
 		
 		boolean carry = true;
 		do {
 			List<Cursor> combination = new ArrayList<Cursor>();
-			for (int i = 0; i < keywords.size(); i++)
-				combination.add(m_keywordCursors.get(keywords.get(i)).get(idx[i]));
+			Set<String> startLabels = new HashSet<String>();
+			boolean invalid = false;
+			for (int i = 0; i < keywords.size(); i++) {
+				if (idx[i] == -1)
+					continue;
+				
+				Cursor c = m_keywordCursors.get(keywords.get(i)).get(idx[i]);
+				Cursor startCursor = c.getStartCursor();
+				if (!startLabels.add(startCursor.getGraphElement().getLabel())) {
+					invalid = true;
+					break;
+				}
+				
+				combination.add(c);
+			}
 			
-			list.add(combination);
-
+			if (!invalid) {
+				Set<String> combinationKeywords = new HashSet<String>();
+				Set<String> keywordElements = new HashSet<String>();
+				for (Cursor c : combination) {
+					for (KeywordSegment ks : c.getKeywordSegments())
+						combinationKeywords.addAll(ks.getKeywords());
+					
+					// find the first edge in the cursor chain
+					Cursor cur = c.getParent();
+					EdgeElement last = null;
+					while (cur != null) {
+						last = (EdgeElement)cur.getGraphElement();
+						cur = cur.getParent().getParent();
+					}
+					
+					if (!keywordElements.add(last.getSource().getLabel())) {
+						invalid = true;
+						break;
+					}
+				}
+				
+				if (!completeKeywords.equals(combinationKeywords))
+					invalid = true;
+			}
+			
+			if (!invalid && combination.size() > 0)
+				list.add(combination);
+			
+//			if (combination.size() == 1 && !invalid)
+//				System.out.println(combination);
+			
 			carry = true;
 			for (int i = 0; i < keywords.size(); i++) {
 				if (carry) {

@@ -58,6 +58,7 @@ import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
 import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.Statistics;
 import edu.unika.aifb.graphindex.util.Timings;
 
 public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
@@ -276,16 +277,16 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		log.info("evaluating...");
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
-		timings.start(Timings.STEP_KWSEARCH);
+		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
 		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, timings);
-		timings.end(Timings.STEP_KWSEARCH);
+		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
 
 		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();
 
-		timings.start(Timings.STEP_EXPLORE);
+		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
 		explore(query, numberOfQueries, decomposition, m_matcher, queries, timings, counters);
-		timings.end(Timings.STEP_EXPLORE);
-		
+		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
+
 		timings.start(Timings.STEP_IQA);
 		
 		counters.set(Counters.QT_QUERIES, queries.size());
@@ -347,7 +348,10 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		timings.end(Timings.STEP_IQA);
 		
 		timings.end(Timings.TOTAL_QUERY_EVAL);
-		
+
+		Statistics.print();
+		Statistics.reset();
+
 		return queries;
 	}
 }

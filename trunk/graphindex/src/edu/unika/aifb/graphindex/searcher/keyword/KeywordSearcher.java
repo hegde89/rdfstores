@@ -89,7 +89,7 @@ public class KeywordSearcher {
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
 	public static final double SCHEMA_THRESHOLD = 0.5;
-	public static int MAX_KEYWORDRESULT_SIZE = 200;
+	public static int MAX_KEYWORDRESULT_SIZE = 100;
 	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	

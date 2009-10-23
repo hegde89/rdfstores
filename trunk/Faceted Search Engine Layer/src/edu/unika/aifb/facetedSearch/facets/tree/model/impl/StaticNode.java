@@ -17,24 +17,13 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Set;
-
 import org.apache.log4j.Logger;
-
-import com.sleepycat.je.DatabaseException;
-
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
-import edu.unika.aifb.facetedSearch.facets.tree.model.IStaticNode;
-import edu.unika.aifb.facetedSearch.search.session.SearchSession;
-import edu.unika.aifb.facetedSearch.search.session.SearchSessionCache;
 
 /**
  * @author andi
  * 
  */
-public class StaticNode extends Node implements IStaticNode {
+public class StaticNode extends Node {
 
 	/**
 	 * 
@@ -46,22 +35,15 @@ public class StaticNode extends Node implements IStaticNode {
 	/*
 	 * 
 	 */
-	private SearchSession m_session;
-
-	private SearchSessionCache m_cache;
-
-	/*
-	 * 
-	 */
 	protected int m_countFV;
 
 	protected int m_countS;
 	private int m_height;
 	private int m_depth;
 	private int m_size;
-	
+
 	private boolean m_isTypeLeave;
-	
+
 	public StaticNode() {
 		super();
 		init();
@@ -77,28 +59,6 @@ public class StaticNode extends Node implements IStaticNode {
 		init();
 	}
 
-	public SearchSessionCache getCache() {
-		return m_cache;
-	}
-
-	public int getCountFV() {
-
-		if (m_countFV == -1) {
-			m_countFV = getCache().getCountFV4StaticNode(this);
-		}
-
-		return m_countFV;
-	}
-
-	public int getCountS() {
-
-		if (m_countS == -1) {
-			m_countS = getCache().getCountS4StaticNode(this);
-		}
-
-		return m_countS;
-	}
-
 	public int getDepth() {
 		return m_depth;
 	}
@@ -107,33 +67,8 @@ public class StaticNode extends Node implements IStaticNode {
 		return m_height;
 	}
 
-	public Set<AbstractSingleFacetValue> getObjects() {
-
-		return getCache().getObjects4StaticNode(this);
-	}
-
-	public Set<AbstractSingleFacetValue> getObjects(String subject) {
-
-		return getCache().getObjects4StaticNode(this, subject);
-	}
-
-	public SearchSession getSession() {
-		return m_session;
-	}
-
 	public int getSize() {
 		return m_size;
-	}
-
-	public Set<String> getSources() throws DatabaseException, IOException {
-
-		return getCache().getSources4StaticNode(this);
-	}
-
-	public Collection<String> getSubjects() throws DatabaseException,
-			IOException {
-
-		return getCache().getSubjects4Node(this);
 	}
 
 	private void init() {
@@ -147,10 +82,6 @@ public class StaticNode extends Node implements IStaticNode {
 
 	public boolean isTypeLeave() {
 		return m_isTypeLeave;
-	}
-
-	public void setCache(SearchSessionCache cache) {
-		m_cache = cache;
 	}
 
 	public void setCountFV(int countFV) {
@@ -167,12 +98,6 @@ public class StaticNode extends Node implements IStaticNode {
 
 	public void setHeight(int height) {
 		m_height = height;
-	}
-
-	public void setSession(SearchSession session) {
-
-		m_session = session;
-		setCache(session.getCache());
 	}
 
 	public void setSize(int size) {

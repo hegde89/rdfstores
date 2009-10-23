@@ -19,12 +19,20 @@ package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
 import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
  * 
  */
 public class BrowseAbilityMetric implements IRankingMetric {
+
+	@SuppressWarnings("unused")
+	private SearchSession m_session;
+
+	public BrowseAbilityMetric(SearchSession session) {
+		m_session = session;
+	}
 
 	/*
 	 * (non-Javadoc)

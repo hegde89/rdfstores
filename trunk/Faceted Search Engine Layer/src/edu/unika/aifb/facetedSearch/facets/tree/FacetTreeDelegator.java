@@ -21,7 +21,6 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectOpenHashMap;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -31,9 +30,15 @@ import java.util.Stack;
 import org.apache.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
+import com.sleepycat.bind.EntryBinding;
+import com.sleepycat.bind.serial.SerialBinding;
+import com.sleepycat.bind.serial.StoredClassCatalog;
+import com.sleepycat.bind.tuple.TupleBinding;
+import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.ConstructionDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
@@ -67,8 +72,14 @@ public class FacetTreeDelegator extends Delegator {
 	 * maps ...
 	 */
 	private ArrayList<Map<? extends Object, ? extends Object>> m_maps;
-	private HashMap<String, FacetTree> m_domain2treeMap;
+	private StoredMap<String, FacetTree> m_domain2treeMap;
 	private Double2ObjectOpenHashMap<Stack<Edge>> m_node2pathMap;
+
+	/*
+	 * bindings
+	 */
+	private EntryBinding<FacetTree> m_treeBinding;
+	private EntryBinding<String> m_strgBinding;
 
 	public FacetTreeDelegator(SearchSession session) {
 
@@ -257,7 +268,37 @@ public class FacetTreeDelegator extends Delegator {
 	private void init() {
 
 		m_node2pathMap = new Double2ObjectOpenHashMap<Stack<Edge>>();
-		m_domain2treeMap = new HashMap<String, FacetTree>();
+
+		try {
+
+			StoredClassCatalog cata = new StoredClassCatalog(m_session
+					.getCache().getDB(FacetEnvironment.DatabaseName.CLASS));
+
+			m_treeBinding = new SerialBinding<FacetTree>(cata, FacetTree.class);
+			m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
+
+			/*
+			 * stored maps
+			 */
+
+			m_domain2treeMap = new StoredMap<String, FacetTree>(m_session
+					.getCache()
+					.getDB(FacetEnvironment.DatabaseName.FTREE_CACHE),
+					m_strgBinding, m_treeBinding, true);
+
+			/*
+			 * 
+			 */
+
+			m_maps = new ArrayList<Map<? extends Object, ? extends Object>>();
+			m_maps.add(m_domain2treeMap);
+
+		} catch (IllegalArgumentException e) {
+
+			e.printStackTrace();
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
 
 		m_maps = new ArrayList<Map<? extends Object, ? extends Object>>();
 		m_maps.add(m_domain2treeMap);

@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
 import it.unimi.dsi.fastutil.doubles.Double2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -215,7 +216,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 			while (!reachedSubTreeRoot) {
 
 				if ((node = getFather(node)).isSubTreeRoot()) {
-					
+
 					subTreeRoot = node;
 					reachedSubTreeRoot = true;
 				}
@@ -227,6 +228,24 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 
 	public Node getVertex(double nodeID) {
 		return m_nodeMap.get(nodeID);
+	}
+
+	public Node getVertex(String nodeValue) {
+
+		Node node = null;
+		ObjectIterator<Node> valueIter = m_nodeMap.values().iterator();
+
+		while (valueIter.hasNext()) {
+
+			Node nextNode = valueIter.next();
+
+			if (nextNode.getValue().equals(nodeValue)) {
+				node = nextNode;
+				break;
+			}
+		}
+
+		return node;
 	}
 
 	public Set<Node> getVertices(int type) {
@@ -347,7 +366,7 @@ public class FacetTree extends DefaultDirectedGraph<Node, Edge>
 		m_root.setIsSubTreeRoot(true);
 		m_root.setFacet(Facet.NULL);
 		m_root.setContent(NodeContent.CLASS);
-		
+
 		addVertex(m_root);
 	}
 

@@ -126,6 +126,9 @@ public class FacetEnvironment {
 		public static int SIMPLE_CACHE_SIZE = 5000;
 		public static String NO_LABEL = "no_label";
 		public static String VAR = "?x";
+		public static String NAMESPACE = "http://dbpedia.org/ontology/";
+		public static long MAX_SESSION_LENGTH = 600000;
+
 	}
 
 	public static class EdgeType {
@@ -232,6 +235,7 @@ public class FacetEnvironment {
 		public static final String CACHE_DIR = "cache.dir";
 		public static final String REFINEMENT_MODE = "refine.mode";
 		public static final String PRELOAD_MAX_BYTES = "preloadBytes";
+		public static final String MAX_SEARCH_SESSIONS = "maxSearchSessions";
 
 	}
 

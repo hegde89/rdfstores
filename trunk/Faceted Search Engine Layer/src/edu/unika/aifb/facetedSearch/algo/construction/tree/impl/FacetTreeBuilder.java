@@ -131,7 +131,6 @@ public class FacetTreeBuilder implements IBuilder {
 
 		// prune ranges
 		newTree = m_helper.pruneRanges(newTree, newLeaves);
-
 		// add leaves for this subtree
 		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
 
@@ -142,6 +141,8 @@ public class FacetTreeBuilder implements IBuilder {
 				+ " ms!");
 
 		m_treeDelegator.storeTree(results.getColumnName(column), newTree);
+		m_parsedResources.clear();
+
 		return true;
 	}
 

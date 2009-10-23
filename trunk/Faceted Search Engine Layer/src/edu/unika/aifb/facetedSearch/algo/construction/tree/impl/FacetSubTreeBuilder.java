@@ -95,7 +95,8 @@ public class FacetSubTreeBuilder implements IBuilder {
 
 			if (!(node instanceof FacetValueNode)) {
 
-				Iterator<String> subjIter = node.getSubjects().iterator();
+				Iterator<String> subjIter = m_session.getCache()
+						.getSubjects4Node(node).iterator();
 				m_helper.clearParsedFacetValues();
 
 				while (subjIter.hasNext()) {
@@ -104,8 +105,9 @@ public class FacetSubTreeBuilder implements IBuilder {
 
 					if (!m_parsedSubjects.contains(subject)) {
 
-						Iterator<AbstractSingleFacetValue> objIter = node
-								.getObjects(subject).iterator();
+						Iterator<AbstractSingleFacetValue> objIter = m_session
+								.getCache().getObjects4StaticNode(node, subject)
+								.iterator();
 
 						Iterator<String> sourcesIter = m_session.getCache()
 								.getSources4Object(domain, subject).iterator();

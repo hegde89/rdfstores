@@ -51,7 +51,7 @@ public class RankingDelegator extends Delegator {
 
 	public RankingDelegator(SearchSession session) {
 		m_session = session;
-		m_metricPool = RankingMetricPool.getInstance();
+		m_metricPool = new RankingMetricPool(session);
 	}
 
 	@Override

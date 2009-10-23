@@ -156,14 +156,16 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 			lits = new ArrayList<AbstractSingleFacetValue>();
 
 			String domain = node.getDomain();
-			Iterator<String> subjIter = node.getSubjects().iterator();
+			Iterator<String> subjIter = m_session.getCache().getSubjects4Node(
+					node).iterator();
 
 			while (subjIter.hasNext()) {
 
 				String subject = subjIter.next();
 
-				Iterator<AbstractSingleFacetValue> objIter = node.getObjects(
-						subject).iterator();
+				Iterator<AbstractSingleFacetValue> objIter = m_session
+						.getCache().getObjects4StaticNode(node, subject)
+						.iterator();
 
 				while (objIter.hasNext()) {
 
@@ -198,7 +200,7 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 			Collections.sort(lits, m_compPool.getComparator(datatype));
 
 		} else {
-			lits = ((DynamicNode) node).getLiterals();
+			lits = m_session.getCache().getLiterals4DynNode((DynamicNode) node);
 		}
 
 		if (datatype == FacetEnvironment.DataType.DATE) {
@@ -237,7 +239,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 						dynNode.setLeftBorder(lits.get(i).getValue());
 						dynNode.setContent(node.getContent());
 						dynNode.setDomain(node.getDomain());
-						dynNode.setSession(m_session);
 						dynNode.setFacet(node.getFacet());
 						dynNode.setCalClusterDepth(currentCalClusterDepth);
 						dynNode.setHasCalChildren(false);
@@ -271,7 +272,10 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 											.setValue(getLabel4CurrentCalClusterDepth(
 													currentCalClusterDepth,
 													currentCalValue));
-									dynNode.setLiterals(lits4Node);
+
+									m_session.getCache().storeLiterals(dynNode,
+											lits4Node);
+
 								} else {
 
 									lits4Node.add(lits.get(i));
@@ -294,8 +298,14 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 									.getValue());
 							dynNode.setValue(getLabel4CurrentCalClusterDepth(
 									currentCalClusterDepth, currentCalValue));
-							dynNode.setLiterals(lits.subList(leftBorderIdx,
-									lits.size()));
+
+							/*
+							 * store literals for this dynamic node
+							 */
+
+							m_session.getCache().storeLiterals(dynNode,
+									lits.subList(leftBorderIdx, lits.size()));
+
 						}
 
 						tree.addVertex(dynNode);
@@ -331,7 +341,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 							fvNode.setFacet(node.getFacet());
 							fvNode.setType(NodeType.LEAVE);
 							fvNode.setDomain(node.getDomain());
-							fvNode.setSession(m_session);
 							fvNode.setDepth(node.getDepth() + 1);
 
 							tree.addVertex(fvNode);
@@ -341,8 +350,8 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 							m_parsedFacetValues.add(lits.get(i).getValue());
 						}
-					} 
-					
+					}
+
 					i++;
 				}
 
@@ -363,7 +372,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 					dynNode.setLeftBorder(lits.get(i).getValue());
 					dynNode.setContent(node.getContent());
 					dynNode.setDomain(node.getDomain());
-					dynNode.setSession(m_session);
 					dynNode.setFacet(node.getFacet());
 
 					if ((i + delta) >= lits.size()) {
@@ -371,27 +379,35 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 						dynNode.setRightBorder(lits.get(lits.size() - 1)
 								.getValue());
 						dynNode.setValue("["
-								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
-										.getLeftBorder()))
+								+ FacetUtils.getNiceName(FacetUtils
+										.getLiteralValue(dynNode
+												.getLeftBorder()))
 								+ "]"
 								+ " - "
 								+ "["
-								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
-										.getRightBorder())) + "]");
-						dynNode.setLiterals(lits.subList(i, lits.size()));
+								+ FacetUtils.getNiceName(FacetUtils
+										.getLiteralValue(dynNode
+												.getRightBorder())) + "]");
+
+						m_session.getCache().storeLiterals(dynNode,
+								lits.subList(i, lits.size()));
 
 					} else {
 
 						dynNode.setRightBorder(lits.get(i + delta).getValue());
 						dynNode.setValue("["
-								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
-										.getLeftBorder()))
+								+ FacetUtils.getNiceName(FacetUtils
+										.getLiteralValue(dynNode
+												.getLeftBorder()))
 								+ "]"
 								+ " - "
 								+ "["
-								+ FacetUtils.getNiceName(FacetUtils.getLiteralValue(dynNode
-										.getRightBorder())) + "]");
-						dynNode.setLiterals(lits.subList(i, i + delta + 1));
+								+ FacetUtils.getNiceName(FacetUtils
+										.getLiteralValue(dynNode
+												.getRightBorder())) + "]");
+
+						m_session.getCache().storeLiterals(dynNode,
+								lits.subList(i, i + delta + 1));
 					}
 
 					tree.addVertex(dynNode);

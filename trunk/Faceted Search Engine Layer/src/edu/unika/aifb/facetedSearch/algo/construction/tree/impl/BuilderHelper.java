@@ -59,11 +59,6 @@ public class BuilderHelper {
 	/*
 	 * 
 	 */
-	private SearchSession m_session;
-
-	/*
-	 * 
-	 */
 	private FacetIndex m_facetIndex;
 
 	/*
@@ -73,7 +68,6 @@ public class BuilderHelper {
 
 	public BuilderHelper(SearchSession session) {
 
-		m_session = session;
 		m_parsedFacetValues = new HashSet<String>();
 
 		try {
@@ -106,7 +100,6 @@ public class BuilderHelper {
 			fvNode.setFacet(node.getFacet());
 			fvNode.setType(NodeType.LEAVE);
 			fvNode.setDomain(node.getDomain());
-			fvNode.setSession(m_session);
 			fvNode.setDepth(node.getDepth() + 1);
 
 			tree.addVertex(fvNode);
@@ -174,7 +167,6 @@ public class BuilderHelper {
 					newNode.setValue(node2copy.getValue());
 					newNode.setType(node2copy.getType());
 					newNode.setDomain(newTree.getDomain());
-					newNode.setSession(m_session);
 					newNode.setDepth(pos4insertion.getDepth() + 1);
 
 					if (node2copy.getFacet().getType() == FacetEnvironment.FacetType.RDF_PROPERTY_BASED) {

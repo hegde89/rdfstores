@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
 import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueTuple;
+import edu.unika.aifb.graphindex.util.Util;
 
 /**
  * @author andi
@@ -39,7 +40,7 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 		m_facet = facet;
 		m_abstractFacetValue = value;
 		m_domain = m_abstractFacetValue.getDomain();
-		
+
 		updateID();
 	}
 
@@ -97,6 +98,17 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	@Deprecated
 	public void setId(double id) {
 		m_id = id;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return Util.truncateUri(m_facet.getUri() + ": "
+				+ Util.truncateUri(m_abstractFacetValue.getValue()));
 	}
 
 	private void updateID() {

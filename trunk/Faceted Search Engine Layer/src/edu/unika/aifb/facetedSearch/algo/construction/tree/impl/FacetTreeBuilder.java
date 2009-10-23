@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
@@ -82,6 +83,12 @@ public class FacetTreeBuilder implements IBuilder {
 	 */
 	private HashSet<String> m_parsedResources;
 
+	/*
+	 * 
+	 */
+	private long m_time1;
+	private long m_time2;
+
 	public FacetTreeBuilder(SearchSession session, BuilderHelper helper) {
 
 		m_session = session;
@@ -94,7 +101,7 @@ public class FacetTreeBuilder implements IBuilder {
 			throws StorageException, IOException, DatabaseException,
 			CacheException {
 
-		long time1 = System.currentTimeMillis();
+		m_time1 = System.currentTimeMillis();
 
 		String domain = results.getColumnName(column);
 
@@ -104,11 +111,12 @@ public class FacetTreeBuilder implements IBuilder {
 		Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 		Iterator<String[]> iter = results.iterator();
 
-		int count = 0;
-
 		while (iter.hasNext()) {
 
-			count++;
+			if (timeOut()) {
+				break;
+			}
+
 			String resItem = FacetUtils.cleanURI(iter.next()[column]);
 
 			if (!m_parsedResources.contains(resItem)) {
@@ -134,10 +142,10 @@ public class FacetTreeBuilder implements IBuilder {
 		// add leaves for this subtree
 		newTree.addLeaves2SubtreeRoot(newTree.getRoot().getID(), newLeaves);
 
-		long time2 = System.currentTimeMillis();
+		m_time2 = System.currentTimeMillis();
 
 		s_log.debug("constructed tree for domain '"
-				+ results.getColumnName(column) + "' in " + (time2 - time1)
+				+ results.getColumnName(column) + "' in " + (m_time2 - m_time1)
 				+ " ms!");
 
 		m_treeDelegator.storeTree(results.getColumnName(column), newTree);
@@ -186,5 +194,9 @@ public class FacetTreeBuilder implements IBuilder {
 		} catch (StorageException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private boolean timeOut() {
+		return (System.currentTimeMillis() - m_time1) > FacetEnvironment.DefaultValue.MAX_COMPUTATION_TIME;
 	}
 }

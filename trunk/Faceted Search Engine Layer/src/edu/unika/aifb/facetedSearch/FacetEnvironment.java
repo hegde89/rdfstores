@@ -107,6 +107,7 @@ public class FacetEnvironment {
 
 	public static class DefaultValue {
 
+		public static String CLEANER_ID = "cleaner";
 		public static String KEYWORD_DOMAIN = "?Name of Entity";
 		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword/";
 		public static String VAR_PREFIX = "?";
@@ -127,7 +128,9 @@ public class FacetEnvironment {
 		public static String NO_LABEL = "no_label";
 		public static String VAR = "?x";
 		public static String NAMESPACE = "http://dbpedia.org/ontology/";
-		public static long MAX_SESSION_LENGTH = 600000;
+		public static long MAX_COMPUTATION_TIME = 60000;
+		public static String CLEANER_NAME = "SearchSessionCleaner";
+		public static String INIT_QUERY_NAME = "initQuery";
 
 	}
 
@@ -236,6 +239,8 @@ public class FacetEnvironment {
 		public static final String REFINEMENT_MODE = "refine.mode";
 		public static final String PRELOAD_MAX_BYTES = "preloadBytes";
 		public static final String MAX_SEARCH_SESSIONS = "maxSearchSessions";
+		public static final String MAX_SEARCH_LENGTH = "maxSearchSessionLength";
+		public static final String CLEANING_INTERVAL = "cleaningInterval";
 
 	}
 

@@ -1,6 +1,7 @@
+preloadBytes=10000
 create.graphIdx=false
 create.facetIdx=false
-graphidx.dir=D:/Data/DA/big/dtidx
+graphidx.dir=D:/Data/DA/big/output
 facetidx.dir=D:/Data/DA/big/idx/
 ranking.enabled=true
 facets.enabled=true

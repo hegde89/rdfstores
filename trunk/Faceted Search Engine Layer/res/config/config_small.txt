@@ -1,3 +1,4 @@
+preloadBytes=10000
 schemaOntoPath=D:/UNI/workspace/DA/Faceted Search Engine Layer/res/ontos/dbpedia-ontology.rdfs
 create.graphIdx=false
 create.facetIdx=true

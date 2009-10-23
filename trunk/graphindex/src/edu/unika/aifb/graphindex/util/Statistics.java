@@ -67,13 +67,18 @@ public class Statistics {
 		m_stats.add(c);
 		return c;
 	}
-
+	
 	private static double[] m_consolidated = new double[m_stats.size()];
 	private static Map<Object,double[]> m_statValues = new HashMap<Object,double[]>();
 	private static Map<Object,double[]> m_running = new HashMap<Object,double[]>();
 	
 	private static final Logger log = Logger.getLogger(Statistics.class);
 	
+	static {
+		Counter c = new Counter("", -1);
+		Timing t = new Timing("", -1);
+	}
+
 	public static void start(Object object, Timing timing) {
 		synchronized (object) {
 			double[] running = m_running.get(object);

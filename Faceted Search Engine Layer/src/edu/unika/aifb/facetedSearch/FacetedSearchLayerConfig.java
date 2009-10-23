@@ -98,6 +98,12 @@ public class FacetedSearchLayerConfig {
 	/*
 	 * 
 	 */
+	private static long s_maxSearchSessionLength;
+
+	/*
+	 * 
+	 */
+	private static long s_cleaningInterval;
 
 	public static boolean createFacetIdx() {
 		return s_createFacetIdx;
@@ -147,6 +153,10 @@ public class FacetedSearchLayerConfig {
 		return s_cacheDirStrg;
 	}
 
+	public static long getCleaningInterval() {
+		return s_cleaningInterval;
+	}
+
 	public static String getExpressivity() {
 		return s_expressivity;
 	}
@@ -183,6 +193,10 @@ public class FacetedSearchLayerConfig {
 
 	public static String getGraphIndexDirStrg() {
 		return s_graphIndexDirStrg;
+	}
+
+	public static long getMaxSearchSessionLength() {
+		return s_maxSearchSessionLength;
 	}
 
 	public static int getMaxSearchSessions() {
@@ -223,6 +237,10 @@ public class FacetedSearchLayerConfig {
 		s_cacheDirStrg = cacheDirStrg;
 	}
 
+	public static void setCleaningInterval(long cleaningInterval) {
+		s_cleaningInterval = cleaningInterval;
+	}
+
 	public static void setCreateFacetIdx(boolean createFacetIdx) {
 		s_createFacetIdx = createFacetIdx;
 	}
@@ -251,6 +269,10 @@ public class FacetedSearchLayerConfig {
 
 	public static void setGraphIndexDirStrg(String graphIndexDirStrg) {
 		s_graphIndexDirStrg = graphIndexDirStrg;
+	}
+
+	public static void setMaxSearchSessionLength(long maxSearchSessionLength) {
+		s_maxSearchSessionLength = maxSearchSessionLength;
 	}
 
 	public static void setMaxSearchSessions(int maxSearchSessions) {

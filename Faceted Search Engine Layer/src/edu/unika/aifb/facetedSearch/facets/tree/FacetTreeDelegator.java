@@ -268,7 +268,7 @@ public class FacetTreeDelegator extends Delegator {
 	private void init() {
 
 		m_node2pathMap = new Double2ObjectOpenHashMap<Stack<Edge>>();
-
+		
 		try {
 
 			StoredClassCatalog cata = new StoredClassCatalog(m_session
@@ -285,13 +285,6 @@ public class FacetTreeDelegator extends Delegator {
 					.getCache()
 					.getDB(FacetEnvironment.DatabaseName.FTREE_CACHE),
 					m_strgBinding, m_treeBinding, true);
-
-			/*
-			 * 
-			 */
-
-			m_maps = new ArrayList<Map<? extends Object, ? extends Object>>();
-			m_maps.add(m_domain2treeMap);
 
 		} catch (IllegalArgumentException e) {
 

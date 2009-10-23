@@ -19,12 +19,19 @@ package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
 import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
  * 
  */
 public class CountSMetric implements IRankingMetric {
+
+	private SearchSession m_session;
+
+	public CountSMetric(SearchSession session) {
+		m_session = session;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -34,6 +41,6 @@ public class CountSMetric implements IRankingMetric {
 	 * (edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode)
 	 */
 	public void computeScore(StaticNode node) {
-		node.setWeight(node.getCountS());
+		node.setWeight(m_session.getCache().getCountS(node));
 	}
 }

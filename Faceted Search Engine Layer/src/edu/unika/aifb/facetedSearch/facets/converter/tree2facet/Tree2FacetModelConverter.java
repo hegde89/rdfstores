@@ -50,19 +50,10 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 	/*
 	 * 
 	 */
-	private static Tree2FacetModelConverter s_instance;
-
-	public static Tree2FacetModelConverter getInstance() {
-		return s_instance == null ? s_instance = new Tree2FacetModelConverter() : s_instance;
-	}
-
-	/*
-	 * 
-	 */
-	@SuppressWarnings("unused")
 	private SearchSession m_session;
 
-	private Tree2FacetModelConverter() {
+	public Tree2FacetModelConverter(SearchSession session) {
+		m_session = session;
 	}
 
 	public AbstractBrowsingObject node2browsingObject(Node node) {
@@ -91,7 +82,7 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 		if (node instanceof StaticNode) {
 
 			StaticNode stat = (StaticNode) node;
-			facet.setCountS(stat.getCountS());
+			facet.setCountS(m_session.getCache().getCountS(stat));
 		}
 
 		return facet;
@@ -120,7 +111,8 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Literal) fv).setDomain(fvn.getDomain());
 				((Literal) fv).setNodeId(fvn.getID());
 				((Literal) fv).setValue(fvn.getValue());
-				((Literal) fv).setCountS(fvn.getCountS());
+				((Literal) fv).setCountS(m_session.getCache()
+						.getCountS4FacetValueNode(fvn));
 				((Literal) fv).setIsResource(false);
 				((Literal) fv).setContent(fvn.getContent());
 				((Literal) fv).setType(fvn.getType());
@@ -131,7 +123,8 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 				((Resource) fv).setDomain(fvn.getDomain());
 				((Resource) fv).setNodeId(fvn.getID());
 				((Resource) fv).setValue(fvn.getValue());
-				((Resource) fv).setCountS(fvn.getCountS());
+				((Resource) fv).setCountS(m_session.getCache()
+						.getCountS4FacetValueNode(fvn));
 				((Resource) fv).setContent(fvn.getContent());
 				((Resource) fv).setIsResource(true);
 				((Resource) fv).setType(fvn.getType());
@@ -145,7 +138,8 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setDomain(dyn.getDomain());
 			((FacetValueCluster) fv).setNodeId(dyn.getID());
 			((FacetValueCluster) fv).setValue(dyn.getValue());
-			((FacetValueCluster) fv).setCountS(dyn.getCountS());
+			((FacetValueCluster) fv).setCountS(m_session.getCache()
+					.getCountS4DynNode(dyn));
 			((FacetValueCluster) fv).setContent(dyn.getContent());
 			((FacetValueCluster) fv).setType(dyn.getType());
 			((FacetValueCluster) fv).setHasCalChildren(dyn.hasCalChildren());
@@ -159,7 +153,8 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 			((FacetValueCluster) fv).setDomain(stat.getDomain());
 			((FacetValueCluster) fv).setNodeId(stat.getID());
 			((FacetValueCluster) fv).setValue(stat.getValue());
-			((FacetValueCluster) fv).setCountS(stat.getCountS());
+			((FacetValueCluster) fv).setCountS(m_session.getCache()
+					.getCountS4StaticNode(stat));
 			((FacetValueCluster) fv).setContent(stat.getContent());
 			((FacetValueCluster) fv).setType(stat.getType());
 			((FacetValueCluster) fv).setHasCalChildren(true);
@@ -180,7 +175,6 @@ public class Tree2FacetModelConverter extends AbstractConverter {
 
 		return fv;
 	}
-
 	public List<Facet> nodeList2facetList(List<Node> nodeList) {
 
 		List<Facet> facetList = new ArrayList<Facet>();

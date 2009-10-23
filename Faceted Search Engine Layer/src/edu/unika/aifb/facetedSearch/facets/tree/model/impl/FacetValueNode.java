@@ -17,12 +17,8 @@
  */
 package edu.unika.aifb.facetedSearch.facets.tree.model.impl;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
-
-import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.NodeType;
 import edu.unika.aifb.facetedSearch.facets.tree.model.IFacetValueNode;
@@ -43,24 +39,6 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 		super.setType(NodeType.LEAVE);
 	}
 
-	@Override
-	public int getCountFV() {
-		return 1;
-	}
-
-	/* (non-Javadoc)
-	 * @see edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode#getCountS()
-	 */
-	@Override
-	public int getCountS() {
-		
-		if (m_countS == -1) {
-			m_countS = super.getCache().getCountS4FacetValueNode(this);
-		}
-
-		return m_countS;
-	}
-	
 	public String getRangeExtension() {
 
 		String ext = null;
@@ -109,18 +87,6 @@ public class FacetValueNode extends StaticNode implements IFacetValueNode {
 	@Deprecated
 	public HashSet<String> getSourceExtensions() {
 		return super.getSourceExtensions();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode#getSources
-	 * ()
-	 */
-	@Override
-	public Set<String> getSources() throws DatabaseException, IOException {
-		return super.getCache().getSources4FacetValueNode(this);
 	}
 
 	@Override

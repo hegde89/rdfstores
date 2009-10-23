@@ -19,6 +19,7 @@ package edu.unika.aifb.facetedSearch.algo.ranking.metric.impl;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment.RankingMetricType;
 import edu.unika.aifb.facetedSearch.algo.ranking.metric.IRankingMetric;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
@@ -29,22 +30,17 @@ public class RankingMetricPool {
 	/*
 	 * 
 	 */
-	private static RankingMetricPool s_instance;
-
-	public static RankingMetricPool getInstance() {
-		return s_instance == null
-				? s_instance = new RankingMetricPool()
-				: s_instance;
-	}
-
-	/*
-	 * 
-	 */
 	private IRankingMetric m_countS;
 	private IRankingMetric m_countFV;
 	private IRankingMetric m_browseAbility;
 
-	private RankingMetricPool() {
+	/*
+	 * 
+	 */
+	private SearchSession m_session;
+
+	public RankingMetricPool(SearchSession session) {
+		m_session = session;
 		init();
 	}
 
@@ -70,8 +66,8 @@ public class RankingMetricPool {
 
 	private void init() {
 
-		m_countS = new CountSMetric();
-		m_countFV = new CountFVMetric();
-		m_browseAbility = new BrowseAbilityMetric();
+		m_countS = new CountSMetric(m_session);
+		m_countFV = new CountFVMetric(m_session);
+		m_browseAbility = new BrowseAbilityMetric(m_session);
 	}
 }

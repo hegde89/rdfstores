@@ -32,17 +32,14 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
 import org.apache.log4j.Logger;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.SetBasedFieldSelector;
-import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
@@ -73,9 +70,7 @@ import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
 import edu.unika.aifb.graphindex.util.TypeUtil;
-import edu.unika.aifb.graphindex.util.Util;
 
 public class KeywordSearcher {
 
@@ -86,6 +81,8 @@ public class KeywordSearcher {
 	private IndexSearcher valueSearcher;
 	private NeighborhoodStorage ns;
 	private Set<String> allAttributes;
+	
+	private double maxScore = 1.0;
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
 	public static final double SCHEMA_THRESHOLD = 0.5;
@@ -102,6 +99,17 @@ public class KeywordSearcher {
 
 			valueReader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.VALUE_DIR));
 			valueSearcher = new IndexSearcher(valueReader);
+			
+//			valueSearcher.setSimilarity(new SimilarityDelegator(valueSearcher.getSimilarity()) {
+//				public float idf(int docFreq, int numDocs) {
+//					return (float) (Math.sqrt(Math.log(numDocs / (double) (docFreq + 1)) + 1.0));
+//				}
+//
+//				public float queryNorm(float sumOfSquaredWeights) {
+//					return (float) 1.0f;
+//				}
+//			});
+			
 			searchAllAttributes(allAttributes);
 			ns = idxReader.getNeighborhoodStorage();
 		} catch (IOException e) {
@@ -123,10 +131,10 @@ public class KeywordSearcher {
 	public Map<KeywordSegment, Collection<KeywordElement>> searchKeywordElements(List<String> queries, 
 			boolean doOverlap) throws StorageException, IOException {
 		
+		resetMaxScore();
 		Map<String, Collection<KeywordElement>> conceptsAndRelations = new HashMap<String, Collection<KeywordElement>>();
 		Map<String, Collection<KeywordElement>> attributes = new HashMap<String, Collection<KeywordElement>>();
-		// Collection<Set<KeywordSegement>> partitions = new
-		// ArrayList<Set<KeywordSegement>>();
+		// Collection<Set<KeywordSegement>> partitions = new ArrayList<Set<KeywordSegement>>();
 		
 		SortedSet<KeywordSegment> segments;
 		try {
@@ -180,9 +188,11 @@ public class KeywordSearcher {
 		log.debug("retrieving extension info");
 		for (KeywordSegment ks : segments2Entities.keySet()) {
 			Collection<KeywordElement> list = segments2Entities.get(ks);
-			for (KeywordElement element : list)
+			for (KeywordElement element : list) {
+				element.setMatchingScore(element.getMatchingScore()/maxScore);
 				if (element.getExtensionId() == null)
 					element.setExtensionId(idxReader.getStructureIndex().getExtension(element.getUri()));
+			}	
 		}
 		log.debug("...done");
 		
@@ -289,14 +299,19 @@ public class KeywordSearcher {
 			}	
 		}
 		
+		maxScore = 1.0f;
 		Iterator<KeywordSegment> iterSeg = segments2Entities.keySet().iterator();
 		while(iterSeg.hasNext()) {
 			Collection<KeywordElement> elements = segments2Entities.get(iterSeg.next());
 			Iterator<KeywordElement> iterEle = elements.iterator();
 			while(iterEle.hasNext()) {
-				if(!iterEle.next().getReachableKeywords().containsAll(keywords)) {
+				KeywordElement ele = iterEle.next();
+				if(!ele.getReachableKeywords().containsAll(keywords)) {
 					iterEle.remove();
 				}	
+				else {
+					maxScore = Math.max(maxScore, ele.getMatchingScore());
+				}
 			}
 			if(elements.size() == 0)
 				iterSeg.remove();
@@ -622,7 +637,8 @@ public class KeywordSearcher {
 	    
 	    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
 
-	    float maxScore = docHits[0].score;
+//	    float maxScore = docHits[0].score;
+	    maxScore = Math.max(maxScore, docHits[0].score);
 	    	
 	   	for (int i = 0; i < docHits.length; i++) {
 	   		Document valueDoc = valueReader.document(docHits[i].doc);
@@ -630,7 +646,8 @@ public class KeywordSearcher {
 	   		String uri = valueDoc.getFieldable(Constant.URI_FIELD).stringValue();
 	   		attributeUri = valueDoc.getFieldable(Constant.ATTRIBUTE_FIELD).stringValue();
 	   		String ext = valueDoc.getFieldable(Constant.EXTENSION_FIELD).stringValue();
-	   		float score = docHits[i].score / maxScore;
+//	   		float score = docHits[i].score / maxScore;
+	   		float score = docHits[i].score;
 	   		
 //	   		Document doc = reader.document(docHits[i].doc, fieldSelector);
 
@@ -747,7 +764,11 @@ public class KeywordSearcher {
 		log.debug(q + " " + docs.length);
 		return docs;
 	}
-
+	
+	private void resetMaxScore() {
+		maxScore = 1.0;
+	}
+	
 	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
 		op.accepts("o", "output directory")
@@ -774,9 +795,20 @@ public class KeywordSearcher {
 
 			// a keyword query, DirectExploringQueryEvaluator is the only
 			// currently usable for keyword queries
-			KeywordQuery kq = new KeywordQuery("q1", line);
-			KeywordQueryEvaluator kwEval = new ExploringKeywordQueryEvaluator(ir);
-			System.out.println(kwEval.evaluate(kq).toDataString());
+//			KeywordQuery kq = new KeywordQuery("q1", line);
+//			KeywordQueryEvaluator kwEval = new ExploringKeywordQueryEvaluator(ir);
+//			System.out.println(kwEval.evaluate(kq).toDataString());
+			
+			KeywordSearcher searcher = new KeywordSearcher(ir);
+			Map<KeywordSegment, Collection<KeywordElement>> results = searcher.searchKeywordElements(getKeywordList(line));
+			int i = 0;
+			for(KeywordSegment ks : results.keySet()) {
+				System.out.println(++i + ": " + ks);
+				for(KeywordElement ke : results.get(ks)) {
+					System.out.println(ke.getUri() + " | " + ke.getMatchingScore());
+				}
+				System.out.println();
+			} 
 		}
 	} 
 	

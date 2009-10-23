@@ -68,7 +68,7 @@ public class FacetedSearchLayerConfig {
 	/*
 	 * 
 	 */
-	private static int s_refinementMode;
+	private static int s_refinementMode = Integer.MIN_VALUE;
 
 	/*
 	 * 
@@ -85,12 +85,30 @@ public class FacetedSearchLayerConfig {
 	 */
 	private static long s_preloadMaxBytes;
 
+	/*
+	 * 
+	 */
+	private static String s_cacheConfigDirStrg;
+
+	/*
+	 * 
+	 */
+	private static int s_maxSearchSessions = Integer.MIN_VALUE;
+
+	/*
+	 * 
+	 */
+
 	public static boolean createFacetIdx() {
 		return s_createFacetIdx;
 	}
 
 	public static boolean createGraphIdx() {
 		return s_createGraphIdx;
+	}
+
+	public static String getCacheConfigDirStrg() {
+		return s_cacheConfigDirStrg;
 	}
 
 	public static File getCacheDir() {
@@ -167,6 +185,12 @@ public class FacetedSearchLayerConfig {
 		return s_graphIndexDirStrg;
 	}
 
+	public static int getMaxSearchSessions() {
+		return s_maxSearchSessions == Integer.MIN_VALUE
+				? FacetEnvironment.DefaultValue.MAX_SESSIONS
+				: s_maxSearchSessions;
+	}
+
 	public static long getPreloadMaxBytes() {
 		return s_preloadMaxBytes;
 	}
@@ -185,6 +209,10 @@ public class FacetedSearchLayerConfig {
 
 	public static boolean isRankingEnabled() {
 		return s_rankingEnabled;
+	}
+
+	public static void setCacheConfigDirStrg(String cacheConfigDirStrg) {
+		s_cacheConfigDirStrg = cacheConfigDirStrg;
 	}
 
 	public static void setCacheDir(File cacheDir) {
@@ -223,6 +251,10 @@ public class FacetedSearchLayerConfig {
 
 	public static void setGraphIndexDirStrg(String graphIndexDirStrg) {
 		s_graphIndexDirStrg = graphIndexDirStrg;
+	}
+
+	public static void setMaxSearchSessions(int maxSearchSessions) {
+		s_maxSearchSessions = maxSearchSessions;
 	}
 
 	public static void setPreloadMaxBytes(long preloadMaxBytes) {

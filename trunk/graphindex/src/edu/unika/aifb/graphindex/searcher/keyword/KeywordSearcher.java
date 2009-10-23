@@ -81,7 +81,6 @@ public class KeywordSearcher {
 	private IndexSearcher searcher;
 	private IndexSearcher valueSearcher;
 	private NeighborhoodStorage ns;
-	private Set<String> allAttributes;
 	
 	private double maxScore = 1.0;
 	
@@ -93,7 +92,6 @@ public class KeywordSearcher {
 	
 	public KeywordSearcher(edu.unika.aifb.graphindex.index.IndexReader idxReader) throws StorageException {
 		this.idxReader = idxReader;
-		this.allAttributes = new HashSet<String>();
 		try {
 			reader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.KEYWORD_DIR));
 			searcher = new IndexSearcher(reader);
@@ -112,7 +110,6 @@ public class KeywordSearcher {
 				}
 			});
 			
-			searchAllAttributes(allAttributes);
 			ns = idxReader.getNeighborhoodStorage();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -438,25 +435,6 @@ public class KeywordSearcher {
 		return queriesWithResults;
 	}
 	
-	private void searchSchema(Collection<String> queries, 
-			Map<String, Collection<KeywordElement>> attributesAndRelations) throws IOException {
-		
-		Map<String,Collection<KeywordElement>> keywordElements = getSchemaKeywordElements(queries);
-		
-		for (String keyword : keywordElements.keySet()) {
-			for(KeywordElement resource : keywordElements.get(keyword)) {
-				if(resource.getType() == KeywordElement.ATTRIBUTE || resource.getType() == KeywordElement.RELATION) {
-					Collection<KeywordElement> coll = attributesAndRelations.get(keyword);
-					if(coll == null) {
-						coll = new HashSet<KeywordElement>(); 
-						attributesAndRelations.put(keyword, coll);
-					} 
-					coll.add(resource);
-				}
-			}
-		}
-	}
-	
 	private Map<String,Collection<KeywordElement>> getSchemaKeywordElements(Collection<String> queries) throws IOException {
 		StandardAnalyzer analyzer = new StandardAnalyzer();
 		QueryParser parser = new QueryParser(Constant.SCHEMA_FIELD, analyzer);
@@ -697,40 +675,6 @@ public class KeywordSearcher {
     	}
 	   	
 		return true;
-	}
-	
-	private void searchAllAttributes(Set<String> allAttributes) {
-		 Term term = new Term(Constant.TYPE_FIELD, TypeUtil.ATTRIBUTE);
-		 Query query = new TermQuery(term);
-		 try {
-			Hits hits = searcher.search(query);
-			if (hits != null || hits.length() != 0)
-			for (int i = 0; i < hits.length(); i++) {
-				Document doc = hits.doc(i);
-				allAttributes.add(doc.get(Constant.URI_FIELD));
-			}
-//			allAttributes.add(Constant.LOCALNAME_FIELD);
-//			allAttributes.add(Constant.LABEL_FIELD);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	private void searchAllRelations(Set<String> allRelations) {
-		Term term = new Term(Constant.TYPE_FIELD, TypeUtil.RELATION);
-		Query query = new TermQuery(term);
-		try {
-			Hits hits = searcher.search(query);
-			if (hits != null || hits.length() != 0)
-				for (int i = 0; i < hits.length(); i++) {
-					Document doc = hits.doc(i);
-					allRelations.add(doc.get(Constant.URI_FIELD));
-				}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 	
 	private String pruneString(String str) {

@@ -89,7 +89,7 @@ public class KeywordSearcher {
 	
 	public static final double ENTITY_THRESHOLD = 0.8;
 	public static final double SCHEMA_THRESHOLD = 0.5;
-	public static final int MAX_KEYWORDRESULT_SIZE = 500;
+	public static int MAX_KEYWORDRESULT_SIZE = 200;
 	
 	private static final Logger log = Logger.getLogger(KeywordSearcher.class);
 	
@@ -108,6 +108,10 @@ public class KeywordSearcher {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public static void setCutoff(int cutoff) {
+		MAX_KEYWORDRESULT_SIZE = cutoff;
 	}
 	
 	public Map<KeywordSegment, Collection<KeywordElement>> searchKeywordElements(

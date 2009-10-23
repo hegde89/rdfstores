@@ -79,7 +79,7 @@ public class Demo {
 		try {
 
 			SearchSession session = searchSessionFactory
-					.getSession(searchSessionFactory.acquire());
+					.getSession(searchSessionFactory.acquire(""));
 
 			GenericQueryEvaluator eval = session.getStore().getEvaluator(
 					session);

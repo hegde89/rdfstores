@@ -33,7 +33,7 @@ import edu.unika.aifb.facetedSearch.exception.ExceptionHelper;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
 import edu.unika.aifb.facetedSearch.index.FacetIndexCreator;
 import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
-import edu.unika.aifb.facetedSearch.search.session.GenericQueryEvaluatorPool;
+import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluatorPool;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.IStore;
 import edu.unika.aifb.graphindex.importer.Importer;
@@ -193,12 +193,12 @@ public class GenericRdfStore implements IStore {
 
 	public GenericQueryEvaluator getEvaluator(SearchSession session) {
 
-		if (m_evalPool.get(session.getId()) == null) {
-			m_evalPool.put(session.getId(), new GenericQueryEvaluator(session,
+		if (m_evalPool.get(session.getSearchSessionId()) == null) {
+			m_evalPool.put(session.getSearchSessionId(), new GenericQueryEvaluator(session,
 					m_idxReader));
 		}
 
-		return m_evalPool.get(session.getId());
+		return m_evalPool.get(session.getSearchSessionId());
 	}
 
 	/**

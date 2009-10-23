@@ -48,6 +48,7 @@
 
 package edu.unika.aifb.facetedSearch.util;
 
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,6 +111,26 @@ public class FacetUtils {
 
 			String prefix = url.substring(0, endIdx + 1);
 			String localname = URLEncoder.encode(url.substring(endIdx + 1),
+					FacetEnvironment.UTF8);
+
+			return prefix + localname;
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			return url;
+		}
+	}
+	
+	public static String decodeLocalName(String url) {
+
+		try {
+
+			int endIdx = url.indexOf("#") > 0 ? url.indexOf("#") : url
+					.lastIndexOf("/");
+
+			String prefix = url.substring(0, endIdx + 1);
+			String localname = URLDecoder.decode(url.substring(endIdx + 1),
 					FacetEnvironment.UTF8);
 
 			return prefix + localname;

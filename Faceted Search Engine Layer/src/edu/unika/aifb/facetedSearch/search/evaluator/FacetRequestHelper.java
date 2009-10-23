@@ -25,19 +25,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment.EdgeType;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.DynamicNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
-import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
@@ -52,6 +46,7 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
  * @author andi
  * 
  */
+@SuppressWarnings("unused")
 public class FacetRequestHelper {
 
 	/*
@@ -82,7 +77,6 @@ public class FacetRequestHelper {
 		m_parsedItems = new HashSet<String>();
 	}
 
-	@SuppressWarnings("unused")
 	private Table<String> getAdditionalTable(StaticNode node,
 			List<String> sources, StructuredQuery sQuery) {
 
@@ -94,202 +88,220 @@ public class FacetRequestHelper {
 		ArrayList<String[]> rows = new ArrayList<String[]>();
 
 		Table<String> additionalTable = new Table<String>(columnNames);
-		Stack<Edge> path = m_treeDelegator.getPathFromRoot(node);
+		// Stack<Edge> path = m_treeDelegator.getPathFromRoot(node);
+		//
+		// Edge edge;
+		// Node src;
+		// Node tar;
+		//
+		// int colSize = columnNames.size();
+		//
+		// for (String source : sources) {
+		//
+		// Stack<Edge> pathCopy = new Stack<Edge>();
+		// pathCopy.addAll(path);
+		//
+		// int countColumn = 0;
+		//
+		// ArrayList<String[]> newRows = new ArrayList<String[]>();
+		// String[] newRow = new String[colSize];
+		//
+		// newRow[countColumn] = source;
+		// newRows.add(newRow);
+		//
+		// countColumn++;
+		//
+		// while (!pathCopy.isEmpty()) {
+		//
+		// edge = pathCopy.pop();
+		// src = edge.getSource();
+		//
+		// if (src.isSubTreeRoot()) {
+		//
+		// while (edge.getType() != EdgeType.HAS_RANGE) {
+		// edge = pathCopy.pop();
+		// }
+		//
+		// if (pathCopy.isEmpty()) {
+		//
+		// tar = edge.getTarget();
+		//
+		// Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
+		// .getObjects();
+		//
+		// if (fvs.size() > 0) {
+		//
+		// for (AbstractSingleFacetValue fv : fvs) {
+		//
+		// Collection<String> fvSources = m_session
+		// .getCache().getSources4Object(domain,
+		// fv.getValue());
+		//
+		// if (fvSources.contains(source)) {
+		//
+		// ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+		//
+		// for (String[] row : newRows) {
+		//
+		// String[] rowCopy = new String[colSize];
+		// System.arraycopy(row, 0, rowCopy, 0,
+		// colSize);
+		//
+		// rowCopy[countColumn] = fv.getValue();
+		// newRowsCopy.add(rowCopy);
+		// }
+		//
+		// newRows.clear();
+		// newRows.addAll(newRowsCopy);
+		//
+		// }
+		// }
+		//
+		// countColumn++;
+		// }
+		// } else {
+		//
+		// edge = pathCopy.pop();
+		//
+		// while (!pathCopy.isEmpty()
+		// && (edge.getType() == EdgeType.SUBCLASS_OF)) {
+		// edge = pathCopy.pop();
+		// }
+		//
+		// if (pathCopy.isEmpty()) {
+		//
+		// tar = edge.getTarget();
+		//
+		// if (tar instanceof FacetValueNode) {
+		//
+		// String value = ((FacetValueNode) tar)
+		// .getValue();
+		//
+		// ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+		//
+		// for (String[] row : newRows) {
+		//
+		// String[] rowCopy = new String[colSize];
+		// System.arraycopy(row, 0, rowCopy, 0,
+		// colSize);
+		//
+		// rowCopy[countColumn] = value;
+		// newRowsCopy.add(rowCopy);
+		// }
+		//
+		// newRows.clear();
+		// newRows.addAll(newRowsCopy);
+		//
+		// countColumn++;
+		//
+		// } else if (tar instanceof DynamicNode) {
+		//
+		// List<AbstractSingleFacetValue> lits = ((DynamicNode) tar)
+		// .getLiterals();
+		//
+		// if (lits.size() > 0) {
+		//
+		// for (AbstractSingleFacetValue fv : lits) {
+		//
+		// Collection<String> fvSources = m_session
+		// .getCache().getSources4Object(
+		// domain, fv.getValue());
+		//
+		// if (fvSources.contains(source)) {
+		//
+		// ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+		//
+		// for (String[] row : newRows) {
+		//
+		// String[] rowCopy = new String[colSize];
+		// System.arraycopy(row, 0,
+		// rowCopy, 0, colSize);
+		//
+		// rowCopy[countColumn] = fv
+		// .getValue();
+		// newRowsCopy.add(rowCopy);
+		// }
+		//
+		// newRows.clear();
+		// newRows.addAll(newRowsCopy);
+		// }
+		// }
+		//
+		// countColumn++;
+		// }
+		//
+		// } else {
+		//
+		// Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
+		// .getObjects();
+		//
+		// if (fvs.size() > 0) {
+		//
+		// for (AbstractSingleFacetValue fv : fvs) {
+		//
+		// Collection<String> fvSources = m_session
+		// .getCache().getSources4Object(
+		// domain, fv.getValue());
+		//
+		// if (fvSources.contains(source)) {
+		//
+		// ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
+		//
+		// for (String[] row : newRows) {
+		//
+		// String[] rowCopy = new String[colSize];
+		// System.arraycopy(row, 0,
+		// rowCopy, 0, colSize);
+		//
+		// rowCopy[countColumn] = fv
+		// .getValue();
+		// newRowsCopy.add(rowCopy);
+		// }
+		//
+		// newRows.clear();
+		// newRows.addAll(newRowsCopy);
+		// }
+		// }
+		//
+		// countColumn++;
+		// }
+		// }
+		// } else {
+		//
+		// pathCopy.push(edge);
+		// }
+		// }
+		// } else {
+		// s_log.error("structure not correct for tree :"
+		// + m_treeDelegator.getTree(node.getDomain()));
+		// }
+		// }
+		//
+		// rows.addAll(newRows);
+		// }
+		//
+		// additionalTable.setRows(rows);
+		// additionalTable.setSortedColumn(0);
 
-		Edge edge;
-		Node src;
-		Node tar;
+		return additionalTable;
+	}
+	
+	public List<String> getCleanCollection(Collection<String> sources) {
 
-		int colSize = columnNames.size();
+		List<String> cleanSources = new ArrayList<String>();
 
 		for (String source : sources) {
 
-			Stack<Edge> pathCopy = new Stack<Edge>();
-			pathCopy.addAll(path);
+			if (!m_parsedItems.contains(source)) {
 
-			int countColumn = 0;
-
-			ArrayList<String[]> newRows = new ArrayList<String[]>();
-			String[] newRow = new String[colSize];
-
-			newRow[countColumn] = source;
-			newRows.add(newRow);
-
-			countColumn++;
-
-			while (!pathCopy.isEmpty()) {
-
-				edge = pathCopy.pop();
-				src = edge.getSource();
-
-				if (src.isSubTreeRoot()) {
-
-					while (edge.getType() != EdgeType.HAS_RANGE) {
-						edge = pathCopy.pop();
-					}
-
-					if (pathCopy.isEmpty()) {
-
-						tar = edge.getTarget();
-
-						Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
-								.getObjects();
-
-						if (fvs.size() > 0) {
-
-							for (AbstractSingleFacetValue fv : fvs) {
-
-								Collection<String> fvSources = m_session
-										.getCache().getSources4Object(domain,
-												fv.getValue());
-
-								if (fvSources.contains(source)) {
-
-									ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
-
-									for (String[] row : newRows) {
-
-										String[] rowCopy = new String[colSize];
-										System.arraycopy(row, 0, rowCopy, 0,
-												colSize);
-
-										rowCopy[countColumn] = fv.getValue();
-										newRowsCopy.add(rowCopy);
-									}
-
-									newRows.clear();
-									newRows.addAll(newRowsCopy);
-
-								}
-							}
-
-							countColumn++;
-						}
-					} else {
-
-						edge = pathCopy.pop();
-
-						while (!pathCopy.isEmpty()
-								&& (edge.getType() == EdgeType.SUBCLASS_OF)) {
-							edge = pathCopy.pop();
-						}
-
-						if (pathCopy.isEmpty()) {
-
-							tar = edge.getTarget();
-
-							if (tar instanceof FacetValueNode) {
-
-								String value = ((FacetValueNode) tar)
-										.getValue();
-
-								ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
-
-								for (String[] row : newRows) {
-
-									String[] rowCopy = new String[colSize];
-									System.arraycopy(row, 0, rowCopy, 0,
-											colSize);
-
-									rowCopy[countColumn] = value;
-									newRowsCopy.add(rowCopy);
-								}
-
-								newRows.clear();
-								newRows.addAll(newRowsCopy);
-
-								countColumn++;
-
-							} else if (tar instanceof DynamicNode) {
-
-								List<AbstractSingleFacetValue> lits = ((DynamicNode) tar)
-										.getLiterals();
-
-								if (lits.size() > 0) {
-
-									for (AbstractSingleFacetValue fv : lits) {
-
-										Collection<String> fvSources = m_session
-												.getCache().getSources4Object(
-														domain, fv.getValue());
-
-										if (fvSources.contains(source)) {
-
-											ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
-
-											for (String[] row : newRows) {
-
-												String[] rowCopy = new String[colSize];
-												System.arraycopy(row, 0,
-														rowCopy, 0, colSize);
-
-												rowCopy[countColumn] = fv
-														.getValue();
-												newRowsCopy.add(rowCopy);
-											}
-
-											newRows.clear();
-											newRows.addAll(newRowsCopy);
-										}
-									}
-
-									countColumn++;
-								}
-
-							} else {
-
-								Set<AbstractSingleFacetValue> fvs = ((StaticNode) tar)
-										.getObjects();
-
-								if (fvs.size() > 0) {
-
-									for (AbstractSingleFacetValue fv : fvs) {
-
-										Collection<String> fvSources = m_session
-												.getCache().getSources4Object(
-														domain, fv.getValue());
-
-										if (fvSources.contains(source)) {
-
-											ArrayList<String[]> newRowsCopy = new ArrayList<String[]>();
-
-											for (String[] row : newRows) {
-
-												String[] rowCopy = new String[colSize];
-												System.arraycopy(row, 0,
-														rowCopy, 0, colSize);
-
-												rowCopy[countColumn] = fv
-														.getValue();
-												newRowsCopy.add(rowCopy);
-											}
-
-											newRows.clear();
-											newRows.addAll(newRowsCopy);
-										}
-									}
-
-									countColumn++;
-								}
-							}
-						} else {
-
-							pathCopy.push(edge);
-						}
-					}
-				} else {
-					s_log.error("structure not correct for tree :"
-							+ m_treeDelegator.getTree(node.getDomain()));
-				}
+				cleanSources.add(FacetUtils.decodeLocalName(source));
+				m_parsedItems.add(source);
 			}
-
-			rows.addAll(newRows);
 		}
 
-		additionalTable.setRows(rows);
-		additionalTable.setSortedColumn(0);
+		m_parsedItems.clear();
 
-		return additionalTable;
+		return cleanSources;
 	}
 
 	public List<String> getSourcesList(Table<String> newTable, String domain) {
@@ -304,17 +316,17 @@ public class FacetRequestHelper {
 			String rowItem = rowIter.next()[column];
 
 			if (!m_parsedItems.contains(rowItem)) {
-				sources.add(rowItem);
+
+				sources.add(FacetUtils.decodeLocalName(rowItem));
 				m_parsedItems.add(rowItem);
 			}
 		}
 
 		m_parsedItems.clear();
-		Collections.sort(sources);
 
 		return sources;
 	}
-
+	
 	public Table<String> refineResult(String domain, List<String> sources)
 			throws DatabaseException, IOException {
 

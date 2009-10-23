@@ -117,6 +117,7 @@ public class SearchSessionCache {
 	 * delegator caches
 	 */
 	private Database m_fpageCache;
+	private Database m_treeCache;
 
 	/*
 	 * other
@@ -154,7 +155,7 @@ public class SearchSessionCache {
 	 */
 	private FacetIndex m_facetIdx;
 
-	public SearchSessionCache(File dir, SearchSession session,
+	protected SearchSessionCache(File dir, SearchSession session,
 			CompositeCacheManager compositeCacheManager)
 			throws EnvironmentLockedException, DatabaseException {
 
@@ -416,6 +417,10 @@ public class SearchSessionCache {
 
 			return m_fpageCache;
 
+		} else if (name.equals(FacetEnvironment.DatabaseName.FTREE_CACHE)) {
+
+			return m_fpageCache;
+
 		} else {
 
 			s_log.error("db with name '" + name + "' not specified!");
@@ -611,6 +616,31 @@ public class SearchSessionCache {
 		return sources;
 	}
 
+	public Set<String> getSources4Node(Node node) {
+
+		Set<String> sources;
+
+		if (node instanceof DynamicNode) {
+
+			sources = getSources4DynNode((DynamicNode) node);
+
+		} else if (node instanceof FacetValueNode) {
+
+			sources = getSources4FacetValueNode((FacetValueNode) node);
+
+		} else if (node instanceof StaticNode) {
+
+			sources = getSources4StaticNode((StaticNode) node);
+
+		} else {
+
+			sources = new HashSet<String>();
+
+		}
+
+		return sources;
+	}
+
 	public Collection<String> getSources4Object(String domain, String object) {
 
 		return m_object2sourceMap.duplicates(domain + object);
@@ -694,16 +724,16 @@ public class SearchSessionCache {
 		 */
 		m_sources4NodeCache = m_compositeCacheManager
 				.getCache(FacetEnvironment.CacheName.SOURCES
-						+ m_session.getId());
+						+ m_session.getSearchSessionId());
 		m_distanceCache = m_compositeCacheManager
 				.getCache(FacetEnvironment.CacheName.DISTANCE
-						+ m_session.getId());
+						+ m_session.getSearchSessionId());
 		m_subjects4NodeCache = m_compositeCacheManager
 				.getCache(FacetEnvironment.CacheName.SUBJECTS
-						+ m_session.getId());
+						+ m_session.getSearchSessionId());
 		m_objects4NodeCache = m_compositeCacheManager
 				.getCache(FacetEnvironment.CacheName.OBJECTS
-						+ m_session.getId());
+						+ m_session.getSearchSessionId());
 
 		m_sources4NodeCacheAccess = new CacheAccess(m_sources4NodeCache);
 		m_distanceCacheAccess = new CacheAccess(m_distanceCache);
@@ -737,6 +767,9 @@ public class SearchSessionCache {
 		m_litCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
 
+		m_treeCache = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
+
 		// Databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
 		m_dbConfig2.setTransactional(false);
@@ -752,6 +785,7 @@ public class SearchSessionCache {
 		m_dbs.add(m_sourceCache);
 		m_dbs.add(m_fpageCache);
 		m_dbs.add(m_litCache);
+		m_dbs.add(m_treeCache);
 
 		/*
 		 * Create the bindings

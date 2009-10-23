@@ -15,10 +15,9 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.search.session;
+package edu.unika.aifb.facetedSearch.search.evaluator;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.search.evaluator.GenericQueryEvaluator;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 
 /**
  * @author andi
@@ -37,7 +36,8 @@ public class GenericQueryEvaluatorPool {
 	private GenericQueryEvaluator[] m_evals;
 
 	private GenericQueryEvaluatorPool() {
-		m_evals = new GenericQueryEvaluator[FacetEnvironment.DefaultValue.MAX_SESSIONS];
+		m_evals = new GenericQueryEvaluator[FacetedSearchLayerConfig
+				.getMaxSearchSessions()];
 	}
 
 	public GenericQueryEvaluator get(int sessionID) {

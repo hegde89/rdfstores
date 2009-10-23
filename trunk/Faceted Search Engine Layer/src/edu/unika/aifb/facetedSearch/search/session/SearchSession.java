@@ -63,6 +63,10 @@ public class SearchSession {
 		INDEX_DIRECTORY, RANKING_ENABLED, FACETS_ENABLED, ACTION, FILES, CREATE_DATA_INDEX, IGNORE_DATATYPES, CREATE_STRUCTURE_INDEX, CREATE_KEYWORD_INDEX, NEIGHBORHOOD_SIZE, STRUCTURE_INDEX_PATH_LENGTH, STRUCTURE_BASED_DATA_PARTIONING, CREATE_DATA_EXTENSIONS, ONTO_LANGUAGE
 	}
 
+	public enum SessionStatus {
+		FREE, BUSY, CLOSED
+	}
+
 	/*
 	 * store
 	 */
@@ -82,14 +86,14 @@ public class SearchSession {
 	private FacetedQuery m_currentQuery;
 
 	/*
-	 * properties
+	 * IDs
 	 */
-	private Properties m_props;
+	private int m_searchSessionId;
+	private String m_httpSessionId;
 
 	/*
 	 * 
 	 */
-	private int m_id;
 	private SearchSessionCacheManager m_cacheManager;
 
 	/*
@@ -97,18 +101,31 @@ public class SearchSession {
 	 */
 	private FacetPageManager m_fpageManager;
 
-	protected SearchSession(GenericRdfStore store, int id, Properties props) {
+	/*
+	 * 
+	 */
+	private SessionStatus m_sessionStatus;
 
-		m_id = id;
-		m_props = props;
+	/*
+	 * 
+	 */
+	private long m_timeStamp;
+
+	protected SearchSession(GenericRdfStore store, int id) {
+
+		m_searchSessionId = id;
 		m_store = store;
 		m_store.setSession(this);
 
 		initCache();
 		init();
+
+		updateTimeStamp();
 	}
 
 	public void changeDefaultValue(DefaultValues name, int value) {
+
+		updateTimeStamp();
 
 		switch (name) {
 
@@ -139,13 +156,15 @@ public class SearchSession {
 
 	public void clean(CleanType type) {
 
+		updateTimeStamp();
+
 		switch (type) {
 
 			case ALL : {
 
 				try {
 
-					m_cacheManager.get(m_id).clean(
+					m_cacheManager.get(m_searchSessionId).clean(
 							SearchSessionCache.CleanType.ALL);
 
 				} catch (DatabaseException e) {
@@ -168,8 +187,10 @@ public class SearchSession {
 
 	public void close() {
 
+		clean();
+
 		try {
-			m_cacheManager.get(m_id).close();
+			m_cacheManager.get(m_searchSessionId).close();
 		} catch (DatabaseException e) {
 			e.printStackTrace();
 		} catch (CacheException e) {
@@ -180,13 +201,18 @@ public class SearchSession {
 		m_rankingDelegator = null;
 		m_constructionDelegator = null;
 
+		setStatus(SessionStatus.CLOSED);
 	}
 
 	public SearchSessionCache getCache() {
-		return m_cacheManager.get(m_id);
+
+		updateTimeStamp();
+		return m_cacheManager.get(m_searchSessionId);
 	}
 
 	public AbstractConverter getConverter(Converters type) {
+
+		updateTimeStamp();
 
 		AbstractConverter converter;
 
@@ -196,7 +222,7 @@ public class SearchSession {
 				break;
 			}
 			case TREE2FACET : {
-				converter = Tree2FacetModelConverter.getInstance();
+				converter = new Tree2FacetModelConverter(this);
 				break;
 			}
 			case FACET2QUERY : {
@@ -213,14 +239,20 @@ public class SearchSession {
 	}
 
 	public int getCurrentPageNum() {
+
+		updateTimeStamp();
 		return m_currentPageNum;
 	}
 
 	public FacetedQuery getCurrentQuery() {
+
+		updateTimeStamp();
 		return m_currentQuery;
 	}
 
 	public Delegator getDelegator(Delegators name) {
+
+		updateTimeStamp();
 
 		switch (name) {
 
@@ -239,79 +271,33 @@ public class SearchSession {
 	}
 
 	public FacetPageManager getFacetPageManager() {
+
+		updateTimeStamp();
 		return m_fpageManager;
 	}
 
-	public int getId() {
-		return m_id;
+	public String getHttpSessionId() {
+		return m_httpSessionId;
 	}
 
-	public Properties getProps() {
-		return this.m_props;
-	}
+	public int getSearchSessionId() {
 
-	public String getPropValue(Property key) {
-
-		switch (key) {
-
-			case CREATE_DATA_EXTENSIONS : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.CREATE_DATA_EXTENSIONS);
-			}
-			case CREATE_DATA_INDEX : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.CREATE_DATA_INDEX);
-			}
-			case CREATE_KEYWORD_INDEX : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.CREATE_KEYWORD_INDEX);
-			}
-			case CREATE_STRUCTURE_INDEX : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.CREATE_STRUCTURE_INDEX);
-			}
-			case FACETS_ENABLED : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.FACETS_ENABLED);
-			}
-			case FILES : {
-				return m_props.getProperty(FacetEnvironment.Property.FILES);
-			}
-			case IGNORE_DATATYPES : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.IGNORE_DATATYPES);
-			}
-			case INDEX_DIRECTORY : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR);
-			}
-			case NEIGHBORHOOD_SIZE : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.NEIGHBORHOOD_SIZE);
-			}
-			case ONTO_LANGUAGE : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.ONTO_LANGUAGE);
-			}
-			case RANKING_ENABLED : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.RANKING_ENABLED);
-			}
-			case STRUCTURE_BASED_DATA_PARTIONING : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.STRUCTURE_BASED_DATA_PARTIONING);
-			}
-			case STRUCTURE_INDEX_PATH_LENGTH : {
-				return m_props
-						.getProperty(FacetEnvironment.Property.STRUCTURE_INDEX_PATH_LENGTH);
-			}
-			default :
-				return null;
-		}
+		updateTimeStamp();
+		return m_searchSessionId;
 	}
 
 	public GenericRdfStore getStore() {
+
+		updateTimeStamp();
 		return m_store;
+	}
+
+	protected long getTimeStamp() {
+		return m_timeStamp;
+	}
+
+	public boolean hasHttpSessionId() {
+		return m_httpSessionId != null;
 	}
 
 	private void init() {
@@ -322,9 +308,12 @@ public class SearchSession {
 
 		m_facetTreeDelegator.setConstructionDelegator(m_constructionDelegator);
 		m_constructionDelegator.setTreeDelegator(m_facetTreeDelegator);
-		m_cacheManager.get(m_id).setTreeDelegator(m_facetTreeDelegator);
+		m_cacheManager.get(m_searchSessionId).setTreeDelegator(
+				m_facetTreeDelegator);
 
 		m_fpageManager = new FacetPageManager(this);
+
+		setStatus(SessionStatus.FREE);
 	}
 
 	private void initCache() {
@@ -334,19 +323,22 @@ public class SearchSession {
 		try {
 
 			Properties cacheProps = new Properties();
-			cacheProps.load(new FileReader(m_props
-					.getProperty(FacetEnvironment.Property.CACHE_CONFIG)));
+			cacheProps.load(new FileReader(FacetedSearchLayerConfig
+					.getCacheConfigDirStrg()));
 			cacheProps.put(FacetEnvironment.CacheConfig.DISK_PATH,
-					FacetedSearchLayerConfig.getCacheDir() + "/" + m_id);
+					FacetedSearchLayerConfig.getCacheDir() + "/"
+							+ m_searchSessionId);
 
 			CompositeCacheManager compositeCacheManager = CompositeCacheManager
 					.getUnconfiguredInstance();
 			compositeCacheManager.configure(cacheProps);
 
 			SearchSessionCache cache = new SearchSessionCache(
-					FacetedSearchLayerConfig.getCacheDir4Session(m_id), this,
+					FacetedSearchLayerConfig
+							.getCacheDir4Session(m_searchSessionId), this,
 					compositeCacheManager);
-			m_cacheManager.put(m_id, cache);
+
+			m_cacheManager.put(m_searchSessionId, cache);
 
 		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();
@@ -357,11 +349,51 @@ public class SearchSession {
 		}
 	}
 
+	public boolean isClosed() {
+
+		updateTimeStamp();
+		return m_sessionStatus.equals(SessionStatus.CLOSED);
+	}
+
+	public boolean isFree() {
+
+		updateTimeStamp();
+		return m_sessionStatus.equals(SessionStatus.FREE);
+	}
+
+	public boolean isMySession(String httpSessionId) {
+
+		return (m_httpSessionId != null)
+				&& m_httpSessionId.equals(httpSessionId);
+	}
+
 	public void setCurrentPage(int currentPage) {
+
+		updateTimeStamp();
 		m_currentPageNum = currentPage;
 	}
 
 	public void setCurrentQuery(FacetedQuery currentQuery) {
+
+		updateTimeStamp();
 		m_currentQuery = currentQuery;
+	}
+
+	protected void setHttpSessionId(String httpSessionId) {
+		m_httpSessionId = httpSessionId;
+	}
+
+	public void setStatus(SessionStatus sessionStatus) {
+
+		updateTimeStamp();
+		m_sessionStatus = sessionStatus;
+	}
+
+	public void touch() {
+		updateTimeStamp();
+	}
+
+	protected void updateTimeStamp() {
+		m_timeStamp = System.currentTimeMillis();
 	}
 }

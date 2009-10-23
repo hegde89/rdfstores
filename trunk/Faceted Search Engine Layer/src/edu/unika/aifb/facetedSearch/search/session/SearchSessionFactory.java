@@ -27,6 +27,7 @@ import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnection;
 import edu.unika.aifb.facetedSearch.connection.impl.RdfStoreConnectionProvider;
 import edu.unika.aifb.facetedSearch.exception.MissingParameterException;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.CleanType;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.SessionStatus;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -36,12 +37,16 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class SearchSessionFactory {
 
-	private GenericRdfStore m_store;
-	private RdfStoreConnection m_con;
+	/*
+	 * 
+	 */
+	private static SearchSession s_pool[];
+	private static int[] s_locks;
 
+	/*
+	 * 
+	 */
 	private static SearchSessionFactory s_instance;
-	private static SearchSession s_pool[] = new SearchSession[FacetEnvironment.DefaultValue.MAX_SESSIONS];
-	private static int[] s_locks = new int[FacetEnvironment.DefaultValue.MAX_SESSIONS];
 
 	public static SearchSessionFactory getInstance(Properties props) {
 		return s_instance == null
@@ -49,13 +54,23 @@ public class SearchSessionFactory {
 				: s_instance;
 	}
 
+	/*
+	 * 
+	 */
+	private GenericRdfStore m_store;
+	private RdfStoreConnection m_con;
+
 	private SearchSessionFactory(Properties props) {
 
-		m_con = RdfStoreConnectionProvider.getInstance(props).getConnection();
 		readProperties(props);
+		init();
+
+		m_con = RdfStoreConnectionProvider.getInstance(props).getConnection();
 
 		try {
+
 			m_store = m_con.loadOrCreateStore();
+
 		} catch (InvalidParameterException e1) {
 			e1.printStackTrace();
 		} catch (MissingParameterException e1) {
@@ -68,28 +83,42 @@ public class SearchSessionFactory {
 			e1.printStackTrace();
 		}
 
-		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetedSearchLayerConfig.getMaxSearchSessions(); i++) {
 
 			s_locks[i] = 0;
 
 			try {
-				s_pool[i] = new SearchSession(m_store, i, props);
+				s_pool[i] = new SearchSession(m_store, i);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
 
-	public int acquire() throws InterruptedException {
+	public int acquire(String httpSessionId) throws InterruptedException {
 
-		for (int i = 0; i < FacetEnvironment.DefaultValue.MAX_SESSIONS; i++) {
+		for (int i = 0; i < FacetedSearchLayerConfig.getMaxSearchSessions(); i++) {
+
 			if (s_locks[i] == 0) {
+
 				s_locks[i] = 1;
+				s_pool[i].setHttpSessionId(httpSessionId);
 				return i;
 			}
 		}
 
-		System.err.println("acquire: All the semplore is being used!");
+		for (int i = 0; i < FacetedSearchLayerConfig.getMaxSearchSessions(); i++) {
+
+			if (isExpired(i)) {
+
+				s_locks[i] = 1;
+				s_pool[i].setHttpSessionId(httpSessionId);
+				s_pool[i].updateTimeStamp();
+				return i;
+			}
+		}
+
+		System.err.println("acquire: all the fsl is being used!");
 		return -1;
 	}
 
@@ -99,12 +128,25 @@ public class SearchSessionFactory {
 
 	public void closeSession(SearchSession session) {
 		session.clean(SearchSession.CleanType.ALL);
-		// session.close();
-		release(session.getId());
+		release(session.getSearchSessionId());
+	}
+	public SearchSession getSession(int id) {
+
+		if (id != -1) {
+			return s_pool[id];
+		} else {
+			return null;
+		}
 	}
 
-	public SearchSession getSession(int id) {
-		return s_pool[id];
+	private void init() {
+		s_pool = new SearchSession[FacetedSearchLayerConfig
+				.getMaxSearchSessions()];
+		s_locks = new int[FacetedSearchLayerConfig.getMaxSearchSessions()];
+	}
+
+	private boolean isExpired(int sessionId) {
+		return (System.currentTimeMillis() - s_pool[sessionId].getTimeStamp()) > FacetEnvironment.DefaultValue.MAX_SESSION_LENGTH;
 	}
 
 	private void readProperties(Properties props) {
@@ -130,19 +172,25 @@ public class SearchSessionFactory {
 		FacetedSearchLayerConfig.setCacheDirStrg((props
 				.getProperty(FacetEnvironment.Property.CACHE_DIR)));
 
-		// FacetedSearchLayerConfig.setRefinementMode(Integer.parseInt((props
-		// .getProperty(FacetEnvironment.Property.REFINEMENT_MODE))));
-
 		FacetedSearchLayerConfig.setGraphIndexDirStrg((props
 				.getProperty(FacetEnvironment.Property.GRAPH_INDEX_DIR)));
 
 		FacetedSearchLayerConfig.setPreloadMaxBytes(Long.parseLong(props
 				.getProperty(FacetEnvironment.Property.PRELOAD_MAX_BYTES)));
 
+		FacetedSearchLayerConfig.setCacheConfigDirStrg(props
+				.getProperty(FacetEnvironment.Property.CACHE_CONFIG));
+
+		FacetedSearchLayerConfig.setMaxSearchSessions(Integer.parseInt(props
+				.getProperty(FacetEnvironment.Property.MAX_SEARCH_SESSIONS)));
+
 	}
 
 	public void release(int id) {
+
 		s_pool[id].clean(CleanType.ALL);
+		s_pool[id].setStatus(SessionStatus.FREE);
+		s_pool[id].setHttpSessionId(null);
 		s_locks[id] = 0;
 	}
 }

@@ -24,6 +24,7 @@ import java.security.InvalidParameterException;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
@@ -34,6 +35,7 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.BrowseRequ
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePageRequest;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.InitFacetsRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
+import edu.unika.aifb.facetedSearch.search.session.SearchSession.SessionStatus;
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
@@ -76,8 +78,7 @@ public class GenericQueryEvaluator {
 		m_session = session;
 		m_idxReader = idxReader;
 
-		m_facetsEnabled = new Boolean(m_session.getProps().getProperty(
-				FacetEnvironment.Property.FACETS_ENABLED));
+		m_facetsEnabled = FacetedSearchLayerConfig.isFacetsEnabled();
 	}
 
 	private Result constructResult(Table<String> resultTable) {
@@ -185,6 +186,8 @@ public class GenericQueryEvaluator {
 			// }
 
 		} else if (query instanceof AbstractFacetRequest) {
+			
+			m_session.setStatus(SessionStatus.BUSY);
 
 			if (query instanceof BrowseRequest) {
 
@@ -198,13 +201,21 @@ public class GenericQueryEvaluator {
 					eval = (FacetRequestEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.FacetQueryEvaluator);
 					FacetPage fpage = (FacetPage) eval.evaluate(browseReq);
 
+					m_session.setStatus(SessionStatus.FREE);
+
 					return fpage.getFacetFacetValuesList(facet.getDomain(),
 							facet.getUri());
 
 				} catch (IOException e) {
+
 					e.printStackTrace();
+					m_session.setStatus(SessionStatus.FREE);
+
 				} catch (StorageException e) {
+
 					e.printStackTrace();
+					m_session.setStatus(SessionStatus.FREE);
+
 				}
 			} else {
 
@@ -221,7 +232,6 @@ public class GenericQueryEvaluator {
 					e.printStackTrace();
 				}
 			}
-
 		} else if (query instanceof ChangePageRequest) {
 
 			ChangePageEvaluator eval = null;
@@ -239,6 +249,7 @@ public class GenericQueryEvaluator {
 		} else if (query instanceof InitFacetsRequest) {
 
 			m_session.clean(SearchSession.CleanType.ALL);
+			m_session.setStatus(SessionStatus.BUSY);
 
 			InitFacetsRequest initReq = (InitFacetsRequest) query;
 			Result res = constructResult(initReq.getRes());
@@ -246,16 +257,24 @@ public class GenericQueryEvaluator {
 			FacetedQuery fquery = new FacetedQuery();
 			res.setQuery(fquery);
 			m_session.setCurrentQuery(fquery);
-		
+
 			try {
-				
+
 				m_session.getCache().storeCurrentResult(res);
+				m_session.setStatus(SessionStatus.FREE);
+
 				return m_session.getCache().getCurrentResult();
 
 			} catch (DatabaseException e) {
+
 				e.printStackTrace();
+				m_session.setStatus(SessionStatus.FREE);
+
 			} catch (IOException e) {
+
 				e.printStackTrace();
+				m_session.setStatus(SessionStatus.FREE);
+
 			}
 		}
 

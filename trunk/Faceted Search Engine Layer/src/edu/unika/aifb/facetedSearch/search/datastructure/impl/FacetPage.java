@@ -55,7 +55,6 @@ public class FacetPage implements IFacetPage, Serializable {
 	private void addDomain(String domain) {
 
 		if (!m_domain2FacetValuesLists.containsKey(domain)) {
-
 			m_domain2FacetValuesLists.put(domain,
 					new ArrayList<FacetFacetValueList>());
 		}

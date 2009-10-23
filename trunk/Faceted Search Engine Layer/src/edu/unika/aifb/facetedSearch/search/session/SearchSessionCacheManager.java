@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.search.session;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 
 /**
  * @author andi
@@ -36,7 +37,8 @@ public class SearchSessionCacheManager {
 	private SearchSessionCache[] m_caches;
 
 	private SearchSessionCacheManager() {
-		m_caches = new SearchSessionCache[FacetEnvironment.DefaultValue.MAX_SESSIONS];
+		m_caches = new SearchSessionCache[FacetedSearchLayerConfig
+				.getMaxSearchSessions()];
 	}
 
 	public SearchSessionCache get(int sessionID) {

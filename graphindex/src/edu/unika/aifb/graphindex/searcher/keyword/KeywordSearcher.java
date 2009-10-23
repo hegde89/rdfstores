@@ -51,6 +51,7 @@ import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.SimilarityDelegator;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocCollector;
 import org.apache.lucene.search.BooleanClause.Occur;
@@ -100,15 +101,16 @@ public class KeywordSearcher {
 			valueReader = IndexReader.open(idxReader.getIndexDirectory().getDirectory(IndexDirectory.VALUE_DIR));
 			valueSearcher = new IndexSearcher(valueReader);
 			
-//			valueSearcher.setSimilarity(new SimilarityDelegator(valueSearcher.getSimilarity()) {
-//				public float idf(int docFreq, int numDocs) {
-//					return (float) (Math.sqrt(Math.log(numDocs / (double) (docFreq + 1)) + 1.0));
-//				}
-//
-//				public float queryNorm(float sumOfSquaredWeights) {
-//					return (float) 1.0f;
-//				}
-//			});
+			// change the default scoring model in Lucene by removing queryWeight 
+			valueSearcher.setSimilarity(new SimilarityDelegator(valueSearcher.getSimilarity()) {
+				public float idf(int docFreq, int numDocs) {
+					return (float) (Math.sqrt(Math.log(numDocs / (double) (docFreq + 1)) + 1.0));
+				}
+
+				public float queryNorm(float sumOfSquaredWeights) {
+					return (float) 1.0f;
+				}
+			});
 			
 			searchAllAttributes(allAttributes);
 			ns = idxReader.getNeighborhoodStorage();

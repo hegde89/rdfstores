@@ -37,6 +37,16 @@ import edu.unika.aifb.graphindex.storage.StorageException;
  */
 public class SearchSessionFactory {
 
+	protected static class SearchSessionFactoryUtils {
+
+		protected static boolean isExpired(int sessionId) {
+
+			return (System.currentTimeMillis() - s_pool[sessionId]
+					.getTimeStamp()) > FacetedSearchLayerConfig
+					.getMaxSearchSessionLength();
+		}
+
+	}
 	/*
 	 * 
 	 */
@@ -48,16 +58,27 @@ public class SearchSessionFactory {
 	 */
 	private static SearchSessionFactory s_instance;
 
+	private static Thread s_sessionCleaningThread;
+
 	public static SearchSessionFactory getInstance(Properties props) {
 		return s_instance == null
 				? s_instance = new SearchSessionFactory(props)
 				: s_instance;
 	}
 
+	protected static int[] getLocks() {
+		return s_locks;
+	}
+
+	protected static SearchSession[] getPool() {
+		return s_pool;
+	}
+
 	/*
 	 * 
 	 */
 	private GenericRdfStore m_store;
+
 	private RdfStoreConnection m_con;
 
 	private SearchSessionFactory(Properties props) {
@@ -93,6 +114,9 @@ public class SearchSessionFactory {
 				e.printStackTrace();
 			}
 		}
+
+		s_sessionCleaningThread = new SearchSessionCleaningThread();
+		s_sessionCleaningThread.start();
 	}
 
 	public int acquire(String httpSessionId) throws InterruptedException {
@@ -109,11 +133,11 @@ public class SearchSessionFactory {
 
 		for (int i = 0; i < FacetedSearchLayerConfig.getMaxSearchSessions(); i++) {
 
-			if (isExpired(i)) {
+			if (SearchSessionFactoryUtils.isExpired(i)) {
 
 				s_locks[i] = 1;
 				s_pool[i].setHttpSessionId(httpSessionId);
-				s_pool[i].updateTimeStamp();
+				s_pool[i].touch();
 				return i;
 			}
 		}
@@ -123,13 +147,13 @@ public class SearchSessionFactory {
 	}
 
 	public void close() {
+
 		m_con.close();
+		releaseAndCloseAll();
+		s_sessionCleaningThread.interrupt();
+		
 	}
 
-	public void closeSession(SearchSession session) {
-		session.clean(SearchSession.CleanType.ALL);
-		release(session.getSearchSessionId());
-	}
 	public SearchSession getSession(int id) {
 
 		if (id != -1) {
@@ -143,10 +167,6 @@ public class SearchSessionFactory {
 		s_pool = new SearchSession[FacetedSearchLayerConfig
 				.getMaxSearchSessions()];
 		s_locks = new int[FacetedSearchLayerConfig.getMaxSearchSessions()];
-	}
-
-	private boolean isExpired(int sessionId) {
-		return (System.currentTimeMillis() - s_pool[sessionId].getTimeStamp()) > FacetEnvironment.DefaultValue.MAX_SESSION_LENGTH;
 	}
 
 	private void readProperties(Properties props) {
@@ -184,13 +204,62 @@ public class SearchSessionFactory {
 		FacetedSearchLayerConfig.setMaxSearchSessions(Integer.parseInt(props
 				.getProperty(FacetEnvironment.Property.MAX_SEARCH_SESSIONS)));
 
+		FacetedSearchLayerConfig.setMaxSearchSessionLength(Long.parseLong(props
+				.getProperty(FacetEnvironment.Property.MAX_SEARCH_LENGTH)));
+
+		FacetedSearchLayerConfig.setCleaningInterval(Long.parseLong(props
+				.getProperty(FacetEnvironment.Property.CLEANING_INTERVAL)));
+
 	}
 
 	public void release(int id) {
 
-		s_pool[id].clean(CleanType.ALL);
-		s_pool[id].setStatus(SessionStatus.FREE);
-		s_pool[id].setHttpSessionId(null);
-		s_locks[id] = 0;
+		if (id != -1) {
+
+			s_pool[id].clean(CleanType.ALL);
+			s_pool[id].setStatus(SessionStatus.FREE);
+			s_pool[id].setHttpSessionId(null);
+			s_locks[id] = 0;
+		}
+	}
+
+	public void release(int id, String httpSessionId) {
+
+		if (s_pool[id].getHttpSessionId() != null) {
+
+			if (s_pool[id].getHttpSessionId().equals(httpSessionId)) {
+
+				if (id != -1) {
+
+					s_pool[id].clean(CleanType.ALL);
+					s_pool[id].setStatus(SessionStatus.FREE);
+					s_pool[id].setHttpSessionId(null);
+					s_locks[id] = 0;
+				}
+			}
+		} else {
+
+			if (id != -1) {
+
+				s_pool[id].clean(CleanType.ALL);
+				s_pool[id].setStatus(SessionStatus.FREE);
+				s_pool[id].setHttpSessionId(null);
+				s_locks[id] = 0;
+			}
+		}
+	}
+
+	private void releaseAndCloseAll() {
+
+		for (int i = 0; i < FacetedSearchLayerConfig.getMaxSearchSessions(); i++) {
+
+			if (SearchSessionFactoryUtils.isExpired(i)) {
+
+				s_pool[i].close();
+				s_pool[i].setStatus(SessionStatus.FREE);
+				s_pool[i].setHttpSessionId(null);
+				s_locks[i] = 0;
+			}
+		}
 	}
 }

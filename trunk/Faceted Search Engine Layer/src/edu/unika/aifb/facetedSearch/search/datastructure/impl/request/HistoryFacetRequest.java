@@ -17,45 +17,24 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-import edu.unika.aifb.graphindex.data.Table;
-import edu.unika.aifb.graphindex.query.Query;
-import edu.unika.aifb.graphindex.query.StructuredQuery;
 
 /**
  * @author andi
  * 
  */
-public class InitFacetsRequest extends Query {
+public class HistoryFacetRequest extends AbstractFacetRequest {
 
-	private StructuredQuery m_sQuery;
-	private Table<String> m_res;
+	private String m_abstractQuery;
 
-	public InitFacetsRequest(String name) {
-		super(name);
+	public HistoryFacetRequest() {
+		super("historyFacetRequest");
 	}
 
-	public InitFacetsRequest(Table<String> res) {
-		super("InitFacetsRequest");
-		setRes(res);
+	public String getAbstractQuery() {
+		return m_abstractQuery;
 	}
 
-	public StructuredQuery getQuery() {
-		return m_sQuery;
-	}
-
-	public Table<String> getRes() {
-		return m_res;
-	}
-
-	public boolean hasQuery() {
-		return m_sQuery != null;
-	}
-
-	public void setQuery(StructuredQuery sQuery) {
-		m_sQuery = sQuery;
-	}
-
-	public void setRes(Table<String> res) {
-		m_res = res;
+	public void setAbstractQuery(String abstractQuery) {
+		m_abstractQuery = abstractQuery;
 	}
 }

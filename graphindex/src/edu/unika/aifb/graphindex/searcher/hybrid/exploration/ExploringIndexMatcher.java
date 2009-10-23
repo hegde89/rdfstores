@@ -53,6 +53,7 @@ import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.graphindex.util.Counters;
+import edu.unika.aifb.graphindex.util.Statistics;
 import edu.unika.aifb.graphindex.util.Util;
 
 public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
@@ -78,7 +79,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private Set<EdgeElement> m_addedEdges;
 	private Set<NodeElement> m_addedNodes;
 	
-	private final long TIMEOUT = 4000;
+	private final long TIMEOUT = 2000;
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
 	
@@ -449,17 +450,25 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		if (currentElement.getKeywords().size() == m_keywords.size()) {
 			// current element is a connecting element
 //			log.debug(m_subgraphs.size());
-			List<List<Cursor>> combinations = currentElement.getCursorCombinations();
+			Statistics.start(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
+			Set<List<Cursor>> combinations = currentElement.getCursorCombinations(m_keywords);
+			Statistics.end(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
+			
+			Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
 			for (List<Cursor> combination : combinations) {
+				Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
 				Subgraph sg = new Subgraph(new HashSet<Cursor>(combination));
+				Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
 
-				if (!m_subgraphs.contains(sg) && sg.isValid()) {// && !sg.hasDanglingEdge()) {
+				if (sg.isValid() && !m_subgraphs.contains(sg)) {// && !sg.hasDanglingEdge()) {
 					boolean found = false;
 					for (Iterator<Subgraph> i = m_subgraphs.iterator(); i.hasNext(); ) {
 //					for (Subgraph existing : m_subgraphs) {
 						Subgraph existing = i.next();
 						try {
+							Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
 							List<Map<String,String>> maps = m_iso.getIsomorphicMappings(existing, sg);
+							Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
 
 							if (maps.size() > 0) {
 								found = true;
@@ -478,11 +487,16 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						}
 					}
 					
-					if (!found)
+					if (!found) {
 						m_subgraphs.add(sg);
+						Collections.sort(m_subgraphs);
+						for (int i = m_subgraphs.size() - 1; i >= m_k; i--)
+							m_subgraphs.remove(i);
+					}
 				}
 			}
 //			log.debug(m_subgraphs.size());
+			Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
 		}
 		
 		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT * 1.2) {
@@ -544,7 +558,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						break;
 					}
 					
+					Statistics.start(this, Statistics.Timing.EX_NEIGHBORS);
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor);
+					Statistics.end(this, Statistics.Timing.EX_NEIGHBORS);
 //					int size = neighbors.size();
 //					long start = System.currentTimeMillis();
 //					Map<String,List<GraphElement>> labels = new HashMap<String,List<GraphElement>>();
@@ -574,7 +590,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //					log.debug(size + " " + neighbors.size() + " " + labels.size() + " " + (System.currentTimeMillis() - start));
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
+							Statistics.start(this, Statistics.Timing.EX_NEXTCURSOR);
 							Cursor c = minCursor.getNextCursor(neighbor);
+							Statistics.end(this, Statistics.Timing.EX_NEXTCURSOR);
 							
 							if (c == null)
 								continue;
@@ -626,6 +644,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		}
 		
 		log.debug("expansions: " + expansions);
+		
 	}
 	
 	public List<TranslatedQuery> indexMatches(StructuredQuery sq, Map<String,Set<QNode>> ext2var) {

@@ -40,6 +40,7 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.hybrid.exploration.StructuredMatchElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordQNode;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
+import edu.unika.aifb.graphindex.util.Statistics;
 import edu.unika.aifb.graphindex.util.Util;
 
 import org.jgrapht.experimental.isomorphism.AdaptiveIsomorphismInspectorFactory;;
@@ -87,6 +88,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 
 		Set<NodeElement> keywordElementNodes = new HashSet<NodeElement>();
 		
+		Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_CREATED);
+		
+		Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 		for (Cursor c : cursors) {
 			if (c.getStartCursor() instanceof StructuredQueryCursor) {
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
@@ -105,9 +109,13 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				else {
 					name += "," + startCursor.getKeywordSegments().toString();
 					m_valid = false;
+					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID1);
+					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+					return;
 				}
 				
 				m_rename.put(startCursor.getGraphElement().getLabel(), name);
+				
 				if (!m_keywordNodes.containsKey(name)) {
 					KeywordQNode qnode = new KeywordQNode(name);
 					for (KeywordSegment ks : startCursor.getKeywordSegments())
@@ -115,14 +123,6 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 							qnode.addKeyword(keyword);
 					m_keywordNodes.put(name, qnode);
 				}
-
-//				NodeElement startNode = (NodeElement)startCursor.getGraphElement();
-//				Set<KeywordSegment> kss = m_nodeSegments.get(startNode);
-//				if (kss == null) {
-//					kss = new HashSet<KeywordSegment>();
-//					m_nodeSegments.put(startNode, kss);
-//				}
-//				kss.addAll(startCursor.getKeywordSegments());
 			}
 			
 			// find the first edge in the cursor chain
@@ -142,8 +142,12 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				}
 				edges.add(last);
 				
-				if (edges.size() > 1)
+				if (edges.size() > 1) {
 					m_valid = false;
+					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID2);
+					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+					return;
+				}
 			}
 			
 			// find the second node cursor from the beginning (which is the keyword element cursor)
@@ -182,6 +186,7 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				allowed.addAll(elementCursor.getOutProperties());
 			}
 
+			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add(e);
 				
@@ -189,30 +194,36 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				addVertex(((EdgeElement)e).getTarget());
 				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
 			}
-			
-//			if (c.getParent() == null) {
-//				addVertex((NodeElement)c.getGraphElement());
-//			}
+			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 		}
+		Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 		
 		if (m_structuredNode != null) {
 			// subgraph is invalid if an entity edge and the structured part attach to the same node
 			for (NodeElement node : keywordElementNodes)
-				if (node.equals(m_structuredNode))
+				if (node.equals(m_structuredNode)) {
 					m_valid = false;
+					return;
+				}
 		}
 		
-		Set<String> values = new HashSet<String>();
+		Set<String> values = new HashSet<String>(m_rename.values().size() + 5);
 		values.addAll(m_rename.values());
-		if (values.size() < m_rename.size())
+		if (values.size() < m_rename.size()) {
 			m_valid = false;
+			Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID3);
+			return;
+		}
 		
 		if (m_valid) {
+			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 			for (NodeElement node : node2AllowedInEdgeLabels.keySet()) {
 				Set<String> allowedEdgeLabels = node2AllowedInEdgeLabels.get(node);
 				for (EdgeElement edge : edgesOf(node)) {
 					if (edge.getTarget().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
 						m_valid = false;
+						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
 						break;
 					}
 				}
@@ -223,12 +234,13 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				for (EdgeElement edge : edgesOf(node)) {
 					if (edge.getSource().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
 						m_valid = false;
+						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
 						break;
 					}
 				}
 			}
-//			if (!m_valid)
-//				log.debug("invalid " + this);
+			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 		}
 
 		m_cost = 0;
@@ -237,8 +249,6 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		for (NodeElement node : vertexSet())
 			m_cost += node.getCost();
 
-		if (m_cost == 2.369080213401766)
-			log.debug(this);
 //		NodeElement start = null;
 //		for (NodeElement node : vertexSet()) {
 //			if (inDegreeOf(node) + outDegreeOf(node) == 1) {

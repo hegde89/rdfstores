@@ -1,3 +1,4 @@
+preloadBytes=10000
 idx.dir=D:/Data/DA/idx
 ranking.enabled=false
 files=D:/UNI/workspace/DA/Faceted Search Engine Layer/res/ontos/fiatOverall_merged.rdf

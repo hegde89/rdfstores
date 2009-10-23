@@ -120,6 +120,11 @@ public class SearchSessionCache {
 	private Database m_treeCache;
 
 	/*
+	 * history
+	 */
+	private Database m_historyCache;
+
+	/*
 	 * other
 	 */
 	private Database m_classDB;
@@ -260,6 +265,11 @@ public class SearchSessionCache {
 
 			m_fpageCache.close();
 			m_fpageCache = null;
+		}
+		if (m_historyCache != null) {
+
+			m_historyCache.close();
+			m_historyCache = null;
 		}
 		if (m_sources4NodeCacheAccess != null) {
 			m_sources4NodeCacheAccess.clear();
@@ -420,6 +430,10 @@ public class SearchSessionCache {
 		} else if (name.equals(FacetEnvironment.DatabaseName.FTREE_CACHE)) {
 
 			return m_fpageCache;
+
+		} else if (name.equals(FacetEnvironment.DatabaseName.FHIST_CACHE)) {
+
+			return m_historyCache;
 
 		} else {
 
@@ -756,7 +770,7 @@ public class SearchSessionCache {
 		m_dbConfig.setTransactional(false);
 		m_dbConfig.setAllowCreate(true);
 		m_dbConfig.setSortedDuplicates(false);
-		m_dbConfig.setTemporary(true);
+		m_dbConfig.setDeferredWrite(true);
 
 		m_resCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FRES_CACHE, m_dbConfig);
@@ -770,12 +784,15 @@ public class SearchSessionCache {
 		m_treeCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
 
+		m_historyCache = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.FHIST_CACHE, m_dbConfig);
+
 		// Databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
 		m_dbConfig2.setTransactional(false);
 		m_dbConfig2.setAllowCreate(true);
 		m_dbConfig2.setSortedDuplicates(true);
-		m_dbConfig2.setTemporary(true);
+		m_dbConfig2.setDeferredWrite(true);
 
 		m_sourceCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FS_CACHE, m_dbConfig2);
@@ -786,6 +803,7 @@ public class SearchSessionCache {
 		m_dbs.add(m_fpageCache);
 		m_dbs.add(m_litCache);
 		m_dbs.add(m_treeCache);
+		m_dbs.add(m_historyCache);
 
 		/*
 		 * Create the bindings

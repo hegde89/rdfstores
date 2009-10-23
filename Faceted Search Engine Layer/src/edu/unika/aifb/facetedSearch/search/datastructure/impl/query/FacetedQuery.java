@@ -18,8 +18,10 @@
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.query;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
@@ -45,6 +47,7 @@ public class FacetedQuery implements Serializable {
 	 * 
 	 */
 	private static final String VAR_Q = "?q";
+	private static final String QUERY = "Query";
 
 	/*
 	 * 
@@ -56,6 +59,7 @@ public class FacetedQuery implements Serializable {
 	 * 
 	 */
 	private int m_varCount;
+	private int m_queryCount;
 
 	/*
 	 * 
@@ -65,7 +69,18 @@ public class FacetedQuery implements Serializable {
 	/*
 	 * 
 	 */
+	private StructuredQuery m_initialQuery;
+
+	/*
+	 * 
+	 */
 	private Map<String, String> m_oldVar2newVarMap;
+	private List<Map<String, String>> m_facetFacetValue2QueryMapList;
+
+	/*
+	 * 
+	 */
+	private ArrayList<Map<? extends Object, ? extends Object>> m_maps;
 
 	public FacetedQuery() {
 
@@ -79,16 +94,50 @@ public class FacetedQuery implements Serializable {
 		init();
 	}
 
+	public String addFacetFacetValueTupleStrg(String ffvTupleString) {
+
+		Map<String, String> facetFacetValue2Query = new HashMap<String, String>();
+		facetFacetValue2Query.put(ffvTupleString, getNextAbstractQuery());
+		m_facetFacetValue2QueryMapList.add(facetFacetValue2Query);
+
+		return facetFacetValue2Query.get(ffvTupleString);
+	}
+
+	public void clean() {
+
+		for (Map<? extends Object, ? extends Object> map : m_maps) {
+			map.clear();
+		}
+
+		m_facetFacetValue2QueryMapList.clear();
+	}
+
 	public void clearOldVar2newVarMap() {
 		m_oldVar2newVarMap.clear();
 	}
 
-	public String getNextVar() {
+	public Iterator<Map<String, String>> getFacetFacetValueTuple2QueryIterator() {
+		return m_facetFacetValue2QueryMapList.iterator();
+	}
 
-		String nextVar = VAR_Q + m_varCount;
+	public StructuredQuery getInitialQuery() {
+		return m_initialQuery;
+	}
+
+	public String getNextAbstractQuery() {
+
 		m_varCount++;
+		String nextVar = VAR_Q + m_varCount;
 
 		return nextVar;
+	}
+
+	public String getNextVar() {
+
+		m_queryCount++;
+		String nextQuery = QUERY + m_queryCount;
+
+		return nextQuery;
 	}
 
 	public Map<String, String> getOldVar2newVarMap() {
@@ -101,8 +150,23 @@ public class FacetedQuery implements Serializable {
 
 	private void init() {
 
+		/*
+		 * 
+		 */
 		m_oldVar2newVarMap = new HashMap<String, String>();
+		m_facetFacetValue2QueryMapList = new ArrayList<Map<String, String>>();
+
+		/*
+		 * 
+		 */
+		m_maps = new ArrayList<Map<? extends Object, ? extends Object>>();
+		m_maps.add(m_oldVar2newVarMap);
+
+		/*
+		 * 
+		 */
 		m_varCount = 0;
+		m_queryCount = 0;
 	}
 
 	public void mergeWithAdditionalQuery(String domain, StructuredQuery sq) {
@@ -219,5 +283,9 @@ public class FacetedQuery implements Serializable {
 		}
 
 		return success;
+	}
+
+	public void setInitialQuery(StructuredQuery initialQuery) {
+		m_initialQuery = initialQuery;
 	}
 }

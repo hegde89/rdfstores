@@ -186,7 +186,22 @@ public class GenericQueryEvaluator {
 			// }
 
 		} else if (query instanceof AbstractFacetRequest) {
-			
+
+			AbstractFacetRequest abstractRequest = (AbstractFacetRequest) query;
+
+			if ((abstractRequest.getUserID() == null)
+					|| !m_session.getHttpSessionId().equals(
+							abstractRequest.getUserID())
+					|| m_session.getHttpSessionId().equals(
+							FacetEnvironment.DefaultValue.CLEANER_ID)) {
+
+				Result res = new Result();
+				res.setFacetPage(new FacetPage());
+				res.setError("expired");
+
+				return res;
+			}
+
 			m_session.setStatus(SessionStatus.BUSY);
 
 			if (query instanceof BrowseRequest) {
@@ -248,15 +263,36 @@ public class GenericQueryEvaluator {
 			}
 		} else if (query instanceof InitFacetsRequest) {
 
+			/*
+			 * 
+			 */
 			m_session.clean(SearchSession.CleanType.ALL);
 			m_session.setStatus(SessionStatus.BUSY);
 
+			/*
+			 * 
+			 */
+			FacetedQuery fquery = new FacetedQuery();
 			InitFacetsRequest initReq = (InitFacetsRequest) query;
+
+			/*
+			 * 
+			 */
 			Result res = constructResult(initReq.getRes());
 
-			FacetedQuery fquery = new FacetedQuery();
+			/*
+			 * 
+			 */
+			StructuredQuery sQuery = initReq.getQuery();
+			fquery.setInitialQuery(sQuery);
 			res.setQuery(fquery);
 			m_session.setCurrentQuery(fquery);
+
+			/*
+			 * 
+			 */
+			m_session.getHistoryManager().putResult(
+					FacetEnvironment.DefaultValue.INIT_QUERY_NAME, res);
 
 			try {
 
@@ -274,7 +310,6 @@ public class GenericQueryEvaluator {
 
 				e.printStackTrace();
 				m_session.setStatus(SessionStatus.FREE);
-
 			}
 		}
 

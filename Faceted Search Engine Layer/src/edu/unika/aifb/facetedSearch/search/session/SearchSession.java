@@ -39,6 +39,7 @@ import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelC
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
+import edu.unika.aifb.facetedSearch.search.history.HistoryManager;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 
 public class SearchSession {
@@ -94,12 +95,10 @@ public class SearchSession {
 	/*
 	 * 
 	 */
-	private SearchSessionCacheManager m_cacheManager;
 
-	/*
-	 * 
-	 */
 	private FacetPageManager m_fpageManager;
+	private SearchSessionCacheManager m_cacheManager;
+	private HistoryManager m_historyManager;
 
 	/*
 	 * 
@@ -120,12 +119,12 @@ public class SearchSession {
 		initCache();
 		init();
 
-		updateTimeStamp();
+		touch();
 	}
 
 	public void changeDefaultValue(DefaultValues name, int value) {
 
-		updateTimeStamp();
+		touch();
 
 		switch (name) {
 
@@ -156,7 +155,7 @@ public class SearchSession {
 
 	public void clean(CleanType type) {
 
-		updateTimeStamp();
+		touch();
 
 		switch (type) {
 
@@ -176,7 +175,12 @@ public class SearchSession {
 				m_facetTreeDelegator.clean();
 				m_rankingDelegator.clean();
 				m_constructionDelegator.clean();
+
 				m_fpageManager.clean();
+				m_historyManager.clean();
+
+				m_currentQuery.clean();
+				m_currentPageNum = 1;
 
 				break;
 			}
@@ -201,18 +205,21 @@ public class SearchSession {
 		m_rankingDelegator = null;
 		m_constructionDelegator = null;
 
+		m_fpageManager = null;
+		m_historyManager = null;
+
 		setStatus(SessionStatus.CLOSED);
 	}
 
 	public SearchSessionCache getCache() {
 
-		updateTimeStamp();
+		touch();
 		return m_cacheManager.get(m_searchSessionId);
 	}
 
 	public AbstractConverter getConverter(Converters type) {
 
-		updateTimeStamp();
+		touch();
 
 		AbstractConverter converter;
 
@@ -240,19 +247,19 @@ public class SearchSession {
 
 	public int getCurrentPageNum() {
 
-		updateTimeStamp();
+		touch();
 		return m_currentPageNum;
 	}
 
 	public FacetedQuery getCurrentQuery() {
 
-		updateTimeStamp();
+		touch();
 		return m_currentQuery;
 	}
 
 	public Delegator getDelegator(Delegators name) {
 
-		updateTimeStamp();
+		touch();
 
 		switch (name) {
 
@@ -272,23 +279,31 @@ public class SearchSession {
 
 	public FacetPageManager getFacetPageManager() {
 
-		updateTimeStamp();
+		touch();
 		return m_fpageManager;
 	}
 
+	public HistoryManager getHistoryManager() {
+
+		touch();
+		return m_historyManager;
+	}
+
 	public String getHttpSessionId() {
+
+		touch();
 		return m_httpSessionId;
 	}
 
 	public int getSearchSessionId() {
 
-		updateTimeStamp();
+		touch();
 		return m_searchSessionId;
 	}
 
 	public GenericRdfStore getStore() {
 
-		updateTimeStamp();
+		touch();
 		return m_store;
 	}
 
@@ -312,6 +327,7 @@ public class SearchSession {
 				m_facetTreeDelegator);
 
 		m_fpageManager = new FacetPageManager(this);
+		m_historyManager = new HistoryManager(this);
 
 		setStatus(SessionStatus.FREE);
 	}
@@ -351,49 +367,41 @@ public class SearchSession {
 
 	public boolean isClosed() {
 
-		updateTimeStamp();
+		touch();
 		return m_sessionStatus.equals(SessionStatus.CLOSED);
 	}
 
 	public boolean isFree() {
 
-		updateTimeStamp();
+		touch();
 		return m_sessionStatus.equals(SessionStatus.FREE);
-	}
-
-	public boolean isMySession(String httpSessionId) {
-
-		return (m_httpSessionId != null)
-				&& m_httpSessionId.equals(httpSessionId);
 	}
 
 	public void setCurrentPage(int currentPage) {
 
-		updateTimeStamp();
+		touch();
 		m_currentPageNum = currentPage;
 	}
 
 	public void setCurrentQuery(FacetedQuery currentQuery) {
 
-		updateTimeStamp();
+		touch();
 		m_currentQuery = currentQuery;
 	}
 
 	protected void setHttpSessionId(String httpSessionId) {
+
+		touch();
 		m_httpSessionId = httpSessionId;
 	}
 
 	public void setStatus(SessionStatus sessionStatus) {
 
-		updateTimeStamp();
+		touch();
 		m_sessionStatus = sessionStatus;
 	}
 
 	public void touch() {
-		updateTimeStamp();
-	}
-
-	protected void updateTimeStamp() {
 		m_timeStamp = System.currentTimeMillis();
 	}
 }

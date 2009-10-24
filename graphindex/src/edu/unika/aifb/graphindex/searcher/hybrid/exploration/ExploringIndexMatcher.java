@@ -79,7 +79,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private Set<EdgeElement> m_addedEdges;
 	private Set<NodeElement> m_addedNodes;
 	
-	private final long TIMEOUT = 2000;
+	private final long TIMEOUT = 3000;
 	
 	private static final Logger log = Logger.getLogger(ExploringIndexMatcher.class);
 	
@@ -359,6 +359,10 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					
 						nodeCursor.addInProperties(ele.getInProperties());
 						nodeCursor.addOutProperties(ele.getOutProperties());
+						
+						log.debug(nodeCursor);
+//						log.debug(" " + ele.getInProperties());
+//						log.debug(" " + ele.getOutProperties());
 						
 						queue.add(nodeCursor);
 //						log.debug(nodeCursor + " " + dataEdge);

@@ -23,6 +23,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.store.FSDirectory;
 import org.semanticweb.yars.nx.namespace.RDF;
+import org.semanticweb.yars.nx.namespace.RDFS;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
@@ -115,7 +116,15 @@ public class TranslatedQueryEvaluator extends StructuredQueryEvaluator {
 			BooleanClause clause = new BooleanClause(new TermQuery(new Term(Constant.CONTENT_FIELD, keyword)), Occur.MUST);
 			query.add(clause);
 		}
-		query.add(new BooleanClause(new TermQuery(new Term(Constant.ATTRIBUTE_FIELD, edge.getLabel())), Occur.MUST));
+		if (edge.getLabel().equals("http://xmlns.com/foaf/0.1/name") || edge.getLabel().equals(RDFS.LABEL.toString())) {
+			BooleanQuery subQuery = new BooleanQuery();
+			subQuery.add(new BooleanClause(new TermQuery(new Term(Constant.ATTRIBUTE_FIELD, RDFS.LABEL.toString())), Occur.SHOULD));
+			subQuery.add(new BooleanClause(new TermQuery(new Term(Constant.ATTRIBUTE_FIELD, "http://xmlns.com/foaf/0.1/name")), Occur.SHOULD));
+			
+			query.add(new BooleanClause(subQuery, Occur.MUST));
+		}
+		else
+			query.add(new BooleanClause(new TermQuery(new Term(Constant.ATTRIBUTE_FIELD, edge.getLabel())), Occur.MUST));
 		
 		final List<Integer> docIds = new ArrayList<Integer>();
 		m_searcher.search(query, new HitCollector() {

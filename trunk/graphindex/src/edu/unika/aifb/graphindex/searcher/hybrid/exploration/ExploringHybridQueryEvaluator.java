@@ -70,6 +70,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	private KeywordSearcher m_searcher;
 //	private SmallIndexMatchesValidator m_validator;
 	private TranslatedQueryEvaluator m_tqe;
+	private boolean m_doOverlap = false;
 
 	private static final int MAX_INTERPRETATIONS = 10;
 
@@ -87,10 +88,10 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		m_tqe = new TranslatedQueryEvaluator(idxReader);
 	}
 	
-	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, Timings timings) throws StorageException, IOException {
+	protected Map<KeywordSegment,Collection<KeywordElement>> search(String query, KeywordSearcher searcher, boolean doOverlap, Timings timings) throws StorageException, IOException {
 		List<String> list = KeywordSearcher.getKeywordList(query);
 //		log.debug("keyword list: " + list);
-		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list);
+		Map<KeywordSegment,Collection<KeywordElement>> res = searcher.searchKeywordElements(list, doOverlap);
 		return res;
 	}
 	
@@ -322,6 +323,10 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		Collections.sort(keywords);
 		return keywords.toString();
 	}
+	
+	public void setDoNeighborhoodJoin(boolean enable) {
+		m_doOverlap  = enable;
+	}
 
 	@Override
 	public List<TranslatedQuery> evaluate(HybridQuery query, int numberOfQueries, int queryResults) throws StorageException, IOException {
@@ -337,7 +342,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
 		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
-		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, timings);
+		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, m_doOverlap, timings);
 		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
 
 		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();

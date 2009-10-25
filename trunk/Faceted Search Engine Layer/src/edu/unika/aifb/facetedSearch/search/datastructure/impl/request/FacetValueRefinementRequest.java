@@ -25,6 +25,11 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
  */
 public class FacetValueRefinementRequest extends AbstractRefinementRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4414789706313171726L;
+	
 	private FacetFacetValueTuple m_tuple;
 
 	public FacetValueRefinementRequest() {

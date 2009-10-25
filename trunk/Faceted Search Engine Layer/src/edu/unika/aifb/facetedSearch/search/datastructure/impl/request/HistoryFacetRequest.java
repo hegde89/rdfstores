@@ -24,6 +24,11 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
  */
 public class HistoryFacetRequest extends AbstractFacetRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1429646577907551098L;
+	
 	private String m_abstractQuery;
 
 	public HistoryFacetRequest() {

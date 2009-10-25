@@ -26,6 +26,11 @@ import edu.unika.aifb.graphindex.query.QNode;
  */
 public class ExpansionRequest extends AbstractFacetRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 6622448083241709767L;
+	
 	private QNode m_qNode;
 
 	public ExpansionRequest() {

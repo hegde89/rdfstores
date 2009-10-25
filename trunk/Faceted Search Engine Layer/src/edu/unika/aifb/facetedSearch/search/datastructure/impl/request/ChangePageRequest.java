@@ -25,6 +25,11 @@ import edu.unika.aifb.graphindex.query.Query;
  */
 public class ChangePageRequest extends Query {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8445107798876907674L;
+	
 	private int m_page;
 
 	public ChangePageRequest() {

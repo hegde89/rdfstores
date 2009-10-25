@@ -43,7 +43,8 @@ public class Keyword2StructuredQueryConverter {
 		StructuredQuery sQuery = new StructuredQuery("");
 		sQuery.addEdge(FacetEnvironment.DefaultValue.VAR,
 				FacetEnvironment.DefaultValue.CONTAINS_KEYWORD_PREDICATE,
-				keywordQueryStrg);
+				keywordQueryStrg);		
+		sQuery.setAsSelect(FacetEnvironment.DefaultValue.VAR);
 
 		return sQuery;
 	}

@@ -17,7 +17,6 @@
  */
 package edu.unika.aifb.facetedSearch.search.session;
 
-import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 
 /**

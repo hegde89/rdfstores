@@ -120,12 +120,30 @@ public class FacetRequestEvaluator extends Searcher {
 			
 			if(histReq.getAbstractQuery() != null && m_session.getHistoryManager().hasResult(histReq.getAbstractQuery())) {
 			
+				m_session.clean(CleanType.REFINEMENT);
+				
 				String historyQuery = histReq.getAbstractQuery();				
 				Result res = m_session.getHistoryManager().getResult(historyQuery);
+				
+				FacetedQuery fQuery = res.getQuery();
+//				fQuery.updateFacetFacetValueTuple(historyQuery);
+				
+				res.setQuery(fQuery);
+				m_session.setCurrentQuery(fQuery);
 				
 				try {
 					
 					m_session.getCache().storeCurrentResult(res);
+					
+					/*
+					 * set facet page
+					 */
+					FacetPage fpage = m_fpageManager.getInitialFacetPage();
+					res.setFacetPage(fpage);
+					
+					m_session.getCache().storeCurrentResult(res);
+					m_session.setStatus(SessionStatus.FREE);
+					
 					return res;
 					
 				} catch (UnsupportedEncodingException e) {
@@ -136,7 +154,6 @@ public class FacetRequestEvaluator extends Searcher {
 				
 				res = new Result();
 				res.setFacetPage(new FacetPage());
-				res.setError("no history entry found!");
 				m_session.setStatus(SessionStatus.FREE);
 
 				return res;	
@@ -145,7 +162,6 @@ public class FacetRequestEvaluator extends Searcher {
 				
 				Result res = new Result();
 				res.setFacetPage(new FacetPage());
-				res.setError("no history entry found!");
 				m_session.setStatus(SessionStatus.FREE);
 
 				return res;				
@@ -329,7 +345,7 @@ public class FacetRequestEvaluator extends Searcher {
 					 * clean
 					 */
 
-					m_session.clean(CleanType.ALL);
+					m_session.clean(CleanType.REFINEMENT);
 
 					/*
 					 * store result
@@ -436,7 +452,7 @@ public class FacetRequestEvaluator extends Searcher {
 							 * clean
 							 */
 
-							m_session.clean(CleanType.ALL);
+							m_session.clean(CleanType.REFINEMENT);
 
 							/*
 							 * store result
@@ -557,7 +573,7 @@ public class FacetRequestEvaluator extends Searcher {
 								 * clean
 								 */
 
-								m_session.clean(CleanType.ALL);
+								m_session.clean(CleanType.REFINEMENT);
 
 								/*
 								 * store result
@@ -690,7 +706,7 @@ public class FacetRequestEvaluator extends Searcher {
 								 * clean
 								 */
 
-								m_session.clean(CleanType.ALL);
+								m_session.clean(CleanType.REFINEMENT);
 
 								/*
 								 * store result
@@ -795,7 +811,7 @@ public class FacetRequestEvaluator extends Searcher {
 							 * clean
 							 */
 
-							m_session.clean(CleanType.ALL);
+							m_session.clean(CleanType.REFINEMENT);
 
 							/*
 							 * store result
@@ -928,7 +944,7 @@ public class FacetRequestEvaluator extends Searcher {
 								/*
 								 * clean
 								 */
-								m_session.clean(CleanType.ALL);
+								m_session.clean(CleanType.REFINEMENT);
 
 								/*
 								 * store result

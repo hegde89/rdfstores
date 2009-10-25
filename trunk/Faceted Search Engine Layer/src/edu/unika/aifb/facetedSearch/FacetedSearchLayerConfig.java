@@ -34,6 +34,8 @@ public class FacetedSearchLayerConfig {
 
 	}
 
+	private static final int INT_NOT_SET = -1;
+
 	/*
 	 * 
 	 */
@@ -64,11 +66,12 @@ public class FacetedSearchLayerConfig {
 	private static String s_cacheDirStrg;
 	private static File s_cacheDir;
 	private static Map<String, File> s_cacheSessionDirs;
+	private static File s_sharedCacheDir;
 
 	/*
 	 * 
 	 */
-	private static int s_refinementMode = Integer.MIN_VALUE;
+	private static int s_refinementMode = FacetedSearchLayerConfig.INT_NOT_SET;
 
 	/*
 	 * 
@@ -93,12 +96,12 @@ public class FacetedSearchLayerConfig {
 	/*
 	 * 
 	 */
-	private static int s_maxSearchSessions = Integer.MIN_VALUE;
+	private static int s_maxSearchSessions = FacetedSearchLayerConfig.INT_NOT_SET;
 
 	/*
 	 * 
 	 */
-	private static long s_maxSearchSessionLength;
+	private static long s_maxSearchSessionLength = FacetedSearchLayerConfig.INT_NOT_SET;
 
 	/*
 	 * 
@@ -196,11 +199,14 @@ public class FacetedSearchLayerConfig {
 	}
 
 	public static long getMaxSearchSessionLength() {
-		return s_maxSearchSessionLength;
+
+		return s_maxSearchSessionLength == FacetedSearchLayerConfig.INT_NOT_SET
+				? FacetEnvironment.DefaultValue.MAX_SESSION_LENGTH
+				: s_maxSearchSessionLength;
 	}
 
 	public static int getMaxSearchSessions() {
-		return s_maxSearchSessions == Integer.MIN_VALUE
+		return s_maxSearchSessions == FacetedSearchLayerConfig.INT_NOT_SET
 				? FacetEnvironment.DefaultValue.MAX_SESSIONS
 				: s_maxSearchSessions;
 	}
@@ -215,6 +221,20 @@ public class FacetedSearchLayerConfig {
 
 	public static String getSchemaOntoPath() {
 		return s_schemaOntoPath;
+	}
+
+	public static File getSharedCacheDir() {
+
+		if (s_sharedCacheDir == null) {
+			s_sharedCacheDir = new File(s_cacheDirStrg + "/"
+					+ FacetEnvironment.DefaultValue.SHARED_CACHE_NAME);
+		}
+
+		if (!s_sharedCacheDir.exists()) {
+			s_sharedCacheDir.mkdir();
+		}
+
+		return s_sharedCacheDir;
 	}
 
 	public static boolean isFacetsEnabled() {
@@ -293,5 +313,10 @@ public class FacetedSearchLayerConfig {
 
 	public static void setSchemaOntoPath(String schemaOntoPath) {
 		s_schemaOntoPath = schemaOntoPath;
+	}
+
+	@Deprecated
+	public static void setSharedCacheDir(File sharedCacheDir) {
+		s_sharedCacheDir = sharedCacheDir;
 	}
 }

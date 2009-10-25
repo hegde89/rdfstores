@@ -23,6 +23,11 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
  */
 public class AbstractRefinementRequest extends AbstractFacetRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2695106849376622855L;
+
 	public AbstractRefinementRequest() {
 		super("abstractRefinementRequest");
 	}

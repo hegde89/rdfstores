@@ -21,7 +21,6 @@ package edu.unika.aifb.facetedSearch.index;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Queue;
 
@@ -30,6 +29,8 @@ import org.openrdf.model.datatypes.XMLDatatypeUtil;
 import org.openrdf.model.vocabulary.RDF;
 
 import com.sleepycat.bind.EntryBinding;
+import com.sleepycat.bind.serial.SerialBinding;
+import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.Database;
@@ -72,7 +73,8 @@ public class FacetIndex extends Index {
 	/*
 	 * 
 	 */
-	private Environment m_env;
+	private Environment m_envIdx;
+	private Environment m_envCache;
 
 	/*
 	 * 
@@ -86,9 +88,15 @@ public class FacetIndex extends Index {
 	private Database m_leaveDB;
 
 	/*
+	 * 
+	 */
+	private Database m_sharedCache;
+	private Database m_classDB;
+
+	/*
 	 * Maps ...
 	 */
-
+	private StoredMap<String, AbstractSingleFacetValue> m_sharedCacheMap;
 	private StoredMap<String, Node> m_leaveMap;
 	private StoredMap<String, Queue<Edge>> m_pathMap;
 
@@ -98,6 +106,7 @@ public class FacetIndex extends Index {
 	private EntryBinding<Queue<Edge>> m_pathBinding;
 	private EntryBinding<Node> m_nodeBinding;
 	private EntryBinding<String> m_strgBinding;
+	private EntryBinding<AbstractSingleFacetValue> m_abstractSingleFacetValueBinding;
 
 	/*
 	 * 
@@ -116,6 +125,8 @@ public class FacetIndex extends Index {
 	@Override
 	public void close() {
 
+		m_sharedCacheMap.clear();
+
 		for (Database db : m_dbs) {
 			try {
 				db.close();
@@ -124,10 +135,19 @@ public class FacetIndex extends Index {
 			}
 		}
 
-		if (m_env != null) {
+		if (m_envIdx != null) {
 
 			try {
-				m_env.close();
+				m_envIdx.close();
+			} catch (DatabaseException e) {
+				e.printStackTrace();
+			}
+		}
+
+		if (m_envCache != null) {
+
+			try {
+				m_envCache.close();
 			} catch (DatabaseException e) {
 				e.printStackTrace();
 			}
@@ -243,48 +263,63 @@ public class FacetIndex extends Index {
 			String subject) throws EnvironmentLockedException,
 			DatabaseException, IOException {
 
-		HashSet<AbstractSingleFacetValue> fvs = new HashSet<AbstractSingleFacetValue>();
+		String key = leave.getFacet().getUri() + leave.getValue() + subject;
+		
+		if (m_sharedCacheMap.duplicates(key).isEmpty()) {
 
-		try {
+			try {
 
-			Table<String> objectsTriples = m_idxReader.getDataIndex()
-					.getTriples(FacetUtils.encodeLocalName(subject),
-							leave.getFacet().getUri(), null);
+				Table<String> objectsTriples = m_idxReader.getDataIndex()
+						.getTriples(FacetUtils.encodeLocalName(subject),
+								leave.getFacet().getUri(), null);
 
-			Iterator<String[]> objectsTriplesIter = objectsTriples.getRows()
-					.iterator();
+				Iterator<String[]> objectsTriplesIter = objectsTriples
+						.getRows().iterator();
 
-			if (leave.getFacet().isObjectPropertyBased()) {
+				if (leave.getFacet().isObjectPropertyBased()) {
 
-				boolean foundType = false;
+					boolean foundType = false;
 
-				while (objectsTriplesIter.hasNext()) {
+					while (objectsTriplesIter.hasNext()) {
 
-					foundType = false;
+						foundType = false;
 
-					String object = FacetUtils.cleanURI(objectsTriplesIter
-							.next()[2]);
+						String object = FacetUtils.cleanURI(objectsTriplesIter
+								.next()[2]);
 
-					Table<String> typeTriples = m_idxReader.getDataIndex()
-							.getTriples(object, RDF.TYPE.stringValue(), null);
+						Table<String> typeTriples = m_idxReader.getDataIndex()
+								.getTriples(object, RDF.TYPE.stringValue(),
+										null);
 
-					Iterator<String[]> typeIter = typeTriples.getRows()
-							.iterator();
+						Iterator<String[]> typeIter = typeTriples.getRows()
+								.iterator();
 
-					if (typeIter.hasNext()) {
+						if (typeIter.hasNext()) {
 
-						while (typeIter.hasNext()) {
+							while (typeIter.hasNext()) {
 
-							String type = FacetUtils
-									.cleanURI(typeIter.next()[2]);
+								String type = FacetUtils.cleanURI(typeIter
+										.next()[2]);
 
-							if (type.equals(leave.getValue())) {
-								foundType = true;
-								break;
+								if (type.equals(leave.getValue())) {
+									foundType = true;
+									break;
+								}
 							}
-						}
 
-						if (foundType) {
+							if (foundType) {
+
+								AbstractSingleFacetValue fv = new Resource();
+								((Resource) fv).setValue(object);
+								((Resource) fv).setRangeExt("");
+								((Resource) fv).setSourceExt("");
+								((Resource) fv).setIsResource(true);
+								((Resource) fv)
+										.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+
+								m_sharedCacheMap.put(key, fv);
+							}
+						} else {
 
 							AbstractSingleFacetValue fv = new Resource();
 							((Resource) fv).setValue(object);
@@ -294,77 +329,66 @@ public class FacetIndex extends Index {
 							((Resource) fv)
 									.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
 
-							fvs.add(fv);
+							m_sharedCacheMap.put(key, fv);
 						}
-					} else {
+					}
+				} else {
 
-						AbstractSingleFacetValue fv = new Resource();
-						((Resource) fv).setValue(object);
-						((Resource) fv).setRangeExt("");
-						((Resource) fv).setSourceExt("");
-						((Resource) fv).setIsResource(true);
-						((Resource) fv)
+					boolean valid = true;
+					int dataType = leave.getFacet().getDataType();
+
+					while (objectsTriplesIter.hasNext()) {
+
+						String lit = objectsTriplesIter.next()[2];
+						String litValue = FacetUtils.getLiteralValue(lit);
+
+						AbstractSingleFacetValue fv = new Literal();
+						((Literal) fv).setValue(lit);
+						((Literal) fv).setRangeExt("");
+						((Literal) fv).setSourceExt("");
+						((Literal) fv).setIsResource(false);
+						((Literal) fv)
 								.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
+						((Literal) fv).setLiteralValue(litValue);
 
-						fvs.add(fv);
-					}
-				}
-			} else {
+						if (dataType == FacetEnvironment.DataType.DATE) {
 
-				boolean valid = true;
-				int dataType = leave.getFacet().getDataType();
+							try {
 
-				while (objectsTriplesIter.hasNext()) {
+								((Literal) fv).setParsedLiteral(XMLDatatypeUtil
+										.parseCalendar(FacetUtils
+												.getValueOfLiteral(litValue)));
 
-					String lit = objectsTriplesIter.next()[2];
-					String litValue = FacetUtils.getLiteralValue(lit);
+							} catch (IllegalArgumentException e) {
+								valid = false;
+								s_log.debug("literal '" + fv + "' not valid!");
+							}
 
-					AbstractSingleFacetValue fv = new Literal();
-					((Literal) fv).setValue(lit);
-					((Literal) fv).setRangeExt("");
-					((Literal) fv).setSourceExt("");
-					((Literal) fv).setIsResource(false);
-					((Literal) fv)
-							.setLabel(FacetEnvironment.DefaultValue.NO_LABEL);
-					((Literal) fv).setLiteralValue(litValue);
+						} else if (dataType == FacetEnvironment.DataType.NUMERICAL) {
 
-					if (dataType == FacetEnvironment.DataType.DATE) {
+							try {
 
-						try {
+								((Literal) fv).setParsedLiteral(XMLDatatypeUtil
+										.parseDouble(FacetUtils
+												.getValueOfLiteral(litValue)));
 
-							((Literal) fv).setParsedLiteral(XMLDatatypeUtil
-									.parseCalendar(FacetUtils
-											.getValueOfLiteral(litValue)));
-
-						} catch (IllegalArgumentException e) {
-							valid = false;
-							s_log.debug("literal '" + fv + "' not valid!");
+							} catch (IllegalArgumentException e) {
+								valid = false;
+								s_log.debug("literal '" + fv + "' not valid!");
+							}
 						}
 
-					} else if (dataType == FacetEnvironment.DataType.NUMERICAL) {
-
-						try {
-
-							((Literal) fv).setParsedLiteral(XMLDatatypeUtil
-									.parseDouble(FacetUtils
-											.getValueOfLiteral(litValue)));
-
-						} catch (IllegalArgumentException e) {
-							valid = false;
-							s_log.debug("literal '" + fv + "' not valid!");
+						if (valid) {
+							m_sharedCacheMap.put(key, fv);
 						}
 					}
-
-					if (valid) {
-						fvs.add(fv);
-					}
 				}
+			} catch (StorageException e) {
+				e.printStackTrace();
 			}
-		} catch (StorageException e) {
-			e.printStackTrace();
 		}
 
-		return fvs;
+		return m_sharedCacheMap.duplicates(key);
 	}
 
 	public Queue<Edge> getPath2Root(String path) throws DatabaseException,
@@ -382,17 +406,29 @@ public class FacetIndex extends Index {
 	private void init() throws EnvironmentLockedException, DatabaseException,
 			IOException {
 
-		s_log.debug("get db connection ...");
+		/*
+		 * no creation allowed
+		 */
 
 		EnvironmentConfig envConfig = new EnvironmentConfig();
 		envConfig.setTransactional(false);
 		envConfig.setAllowCreate(false);
 
-		m_env = new Environment(FacetedSearchLayerConfig.getFacetTreeIdxDir(),
-				envConfig);
+		/*
+		 * creation allowed
+		 */
+		EnvironmentConfig envConfig2 = new EnvironmentConfig();
+		envConfig2.setTransactional(false);
+		envConfig2.setAllowCreate(true);
+
+		m_envIdx = new Environment(FacetedSearchLayerConfig
+				.getFacetTreeIdxDir(), envConfig);
+
+		m_envCache = new Environment(FacetedSearchLayerConfig
+				.getSharedCacheDir(), envConfig2);
 
 		/*
-		 * Databases without duplicates
+		 * Databases without duplicates, read-only
 		 */
 		DatabaseConfig dbConfig = new DatabaseConfig();
 		dbConfig.setTransactional(false);
@@ -401,11 +437,8 @@ public class FacetIndex extends Index {
 		dbConfig.setDeferredWrite(true);
 		dbConfig.setReadOnly(true);
 
-		m_pathDB = m_env.openDatabase(null, FacetEnvironment.DatabaseName.PATH,
-				dbConfig);
-
 		/*
-		 * Databases with duplicates
+		 * Databases with duplicates, read-only
 		 */
 		DatabaseConfig dbConfig2 = new DatabaseConfig();
 		dbConfig2.setTransactional(false);
@@ -414,19 +447,23 @@ public class FacetIndex extends Index {
 		dbConfig2.setDeferredWrite(true);
 		dbConfig2.setReadOnly(true);
 
-		m_leaveDB = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.LEAVE, dbConfig2);
+		/*
+		 * Databases without duplicates, read & write, allow create
+		 */
+		DatabaseConfig dbConfig3 = new DatabaseConfig();
+		dbConfig3.setTransactional(false);
+		dbConfig3.setAllowCreate(true);
+		dbConfig3.setSortedDuplicates(false);
+		dbConfig3.setDeferredWrite(true);
 
-		m_dbs = new ArrayList<Database>();
-		m_dbs.add(m_pathDB);
-		m_dbs.add(m_leaveDB);
-
-		PreloadConfig pc = new PreloadConfig();
-		pc.setMaxBytes(FacetedSearchLayerConfig.getPreloadMaxBytes());
-
-		for (Database db : m_dbs) {
-			db.preload(pc);
-		}
+		/*
+		 * Databases with duplicates, read & write, allow create
+		 */
+		DatabaseConfig dbConfig4 = new DatabaseConfig();
+		dbConfig4.setTransactional(false);
+		dbConfig4.setAllowCreate(true);
+		dbConfig4.setSortedDuplicates(false);
+		dbConfig4.setDeferredWrite(true);
 
 		/*
 		 * Create the bindings
@@ -434,6 +471,45 @@ public class FacetIndex extends Index {
 		m_pathBinding = new PathBinding();
 		m_nodeBinding = new NodeBinding();
 		m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
+
+		m_classDB = m_envCache.openDatabase(null,
+				FacetEnvironment.DatabaseName.CLASS, dbConfig3);
+
+		try {
+
+			StoredClassCatalog cata = new StoredClassCatalog(m_classDB);
+			m_abstractSingleFacetValueBinding = new SerialBinding<AbstractSingleFacetValue>(
+					cata, AbstractSingleFacetValue.class);
+
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+
+		/*
+		 * 
+		 */
+		s_log.debug("create shared cache ...");
+
+		m_sharedCache = m_envCache.openDatabase(null,
+				FacetEnvironment.DatabaseName.SHARED_CACHE, dbConfig4);
+
+		m_sharedCacheMap = new StoredMap<String, AbstractSingleFacetValue>(
+				m_sharedCache, m_strgBinding,
+				m_abstractSingleFacetValueBinding, true);
+
+		s_log.debug("shared cache ready!");
+
+		/*
+		 * 
+		 */
+		s_log.debug("get db connection ...");
+
+		m_pathDB = m_envIdx.openDatabase(null,
+				FacetEnvironment.DatabaseName.PATH, dbConfig);
+		m_leaveDB = m_envIdx.openDatabase(null,
+				FacetEnvironment.DatabaseName.LEAVE, dbConfig2);
 
 		/*
 		 * Create maps on top of dbs ...
@@ -445,6 +521,21 @@ public class FacetIndex extends Index {
 				m_pathBinding, false);
 
 		s_log.debug("got db connection!");
+
+		/*
+		 * 
+		 */
+		m_dbs = new ArrayList<Database>();
+		m_dbs.add(m_pathDB);
+		m_dbs.add(m_leaveDB);
+		m_dbs.add(m_sharedCache);
+
+		PreloadConfig pc = new PreloadConfig();
+		pc.setMaxBytes(FacetedSearchLayerConfig.getPreloadMaxBytes());
+
+		for (Database db : m_dbs) {
+			db.preload(pc);
+		}
 	}
 
 	public boolean isOpen() {

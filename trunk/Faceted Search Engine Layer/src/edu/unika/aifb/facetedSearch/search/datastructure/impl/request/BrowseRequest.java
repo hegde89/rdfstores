@@ -25,6 +25,11 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
  */
 public class BrowseRequest extends AbstractFacetRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6660170927473469242L;
+	
 	private FacetFacetValueTuple m_tuple;
 
 	public BrowseRequest() {

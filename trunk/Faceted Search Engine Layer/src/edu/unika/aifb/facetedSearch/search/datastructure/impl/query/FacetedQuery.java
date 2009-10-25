@@ -103,13 +103,35 @@ public class FacetedQuery implements Serializable {
 		return facetFacetValue2Query.get(ffvTupleString);
 	}
 
+	public void updateFacetFacetValueTuple(String historyQuery) {
+
+//		Iterator<Map<String, String>> mapIter = m_facetFacetValue2QueryMapList.iterator();
+//		Stack<Map<String, String>> mapStack = new Stack<Map<String,String>>();
+//		
+//		while(mapIter.hasNext()){			
+//			mapStack.push(mapIter.next());
+//		}
+//		
+//		while(!mapStack.isEmpty()) {
+//			
+//			Map<String, String> facetFacetValue2Query = mapStack.pop();
+//			String currentQuery = facetFacetValue2Query.values().iterator().next();
+//			
+//			if(!currentQuery.equals(historyQuery)) {				
+//				m_facetFacetValue2QueryMapList.remove(facetFacetValue2Query);
+//			} else {
+//				break;
+//			}
+//		}
+	}
+	
 	public void clean() {
 
 		for (Map<? extends Object, ? extends Object> map : m_maps) {
 			map.clear();
 		}
 
-		m_facetFacetValue2QueryMapList.clear();
+//		m_facetFacetValue2QueryMapList.clear();
 	}
 
 	public void clearOldVar2newVarMap() {

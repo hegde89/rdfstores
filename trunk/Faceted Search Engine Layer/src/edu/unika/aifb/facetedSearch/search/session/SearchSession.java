@@ -45,7 +45,7 @@ import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 public class SearchSession {
 
 	public enum CleanType {
-		ALL
+		ALL, REFINEMENT
 	}
 
 	public enum Converters {
@@ -181,9 +181,33 @@ public class SearchSession {
 
 				m_currentQuery.clean();
 				m_currentPageNum = 1;
+				
+				break;
+			}
+			case REFINEMENT : {
+
+				try {
+
+					m_cacheManager.get(m_searchSessionId).clean(
+							SearchSessionCache.CleanType.ALL);
+
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (CacheException e) {
+					e.printStackTrace();
+				}
+
+				m_rankingDelegator.clean();
+				m_constructionDelegator.clean();
+
+				m_fpageManager.clean();
+
+				m_currentQuery.clean();
+				m_currentPageNum = 1;
 
 				break;
 			}
+			
 			default :
 				break;
 		}
@@ -329,6 +353,8 @@ public class SearchSession {
 		m_fpageManager = new FacetPageManager(this);
 		m_historyManager = new HistoryManager(this);
 
+		m_currentQuery = new FacetedQuery();
+		
 		setStatus(SessionStatus.FREE);
 	}
 

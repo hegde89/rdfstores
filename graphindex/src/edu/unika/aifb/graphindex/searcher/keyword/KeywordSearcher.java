@@ -168,8 +168,7 @@ public class KeywordSearcher {
 		for(KeywordSegment segement : segments2Entities.keySet()) {
 			log.debug(segement + " " + segments2Entities.get(segement).size());
 		}
-		
-//		doOverlap = false;
+
 		if (doOverlap) {
 			overlapNeighborhoods(keywords2Entities, segments2Entities);
 	

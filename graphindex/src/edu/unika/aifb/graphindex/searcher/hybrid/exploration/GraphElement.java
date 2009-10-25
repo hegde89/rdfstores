@@ -92,7 +92,7 @@ public abstract class GraphElement {
 		
 		for (int i = 0; i < keywords.size(); i++) {
 			idx[i] = -1;
-			guard[i] = m_keywordCursors.get(keywords.get(i)).size();
+			guard[i] = m_keywordCursors.get(keywords.get(i)).size() + 1;
 		}
 		
 		boolean carry = true;
@@ -101,7 +101,7 @@ public abstract class GraphElement {
 			Set<String> startLabels = new HashSet<String>();
 			boolean invalid = false;
 			for (int i = 0; i < keywords.size(); i++) {
-				if (idx[i] == -1)
+				if (idx[i] == -1 || idx[i] >= m_keywordCursors.get(keywords.get(i)).size())
 					continue;
 				
 				Cursor c = m_keywordCursors.get(keywords.get(i)).get(idx[i]);
@@ -135,7 +135,6 @@ public abstract class GraphElement {
 						if (knownEdge.equals(RDF.TYPE.toString()))
 							keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
 						else if (last.getLabel().equals(RDF.TYPE.toString())) {
-							System.out.println("okay");
 						}
 						else if (!last.getLabel().equals(RDF.TYPE.toString())) {
 							invalid = true;

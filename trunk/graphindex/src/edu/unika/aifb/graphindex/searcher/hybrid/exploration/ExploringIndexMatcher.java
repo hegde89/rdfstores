@@ -245,6 +245,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					target.setCost(1);
 					EdgeElement edge = new EdgeElement(node, res[0], target);
 					edge.setCost(1 - m_propertyWeights.get(res[0]));
+					if (edge.getCost() == 0.0)
+						edge.setCost(0.0001);
 
 					List<EdgeElement> targetEdges = new ArrayList<EdgeElement>();
 					targetEdges.add(edge);
@@ -274,6 +276,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		
 		EdgeElement edge = new EdgeElement(node, property, target);
 		edge.setCost(1 - m_propertyWeights.get(property));
+		if (edge.getCost() == 0)
+			edge.setCost(0.0001);
 //		edge.setCost(0);
 //		edge.setCost(1);
 		
@@ -312,7 +316,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				keywordSet.add(keyword);
 				
 				if (ele.getType() == KeywordElement.CONCEPT) {
-					TIMEOUT = 5000;
+					TIMEOUT = 4500;
 					
 					NodeElement node = m_nodes.get(ele.getUri());
 					if (node == null) {

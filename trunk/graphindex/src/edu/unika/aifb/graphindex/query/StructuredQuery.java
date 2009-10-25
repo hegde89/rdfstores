@@ -18,6 +18,7 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,6 +31,11 @@ import org.jgrapht.graph.DirectedMultigraph;
 
 
 public class StructuredQuery extends Query {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6927192354178849431L;
+	
 	protected QueryGraph m_queryGraph;
 	protected List<QNode> m_selectVariables;
 	protected List<QNode> m_variables;

@@ -18,9 +18,17 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.Serializable;
+
 import edu.unika.aifb.graphindex.util.Util;
 
-public class QNode implements Comparable<QNode>,Cloneable {
+public class QNode implements Comparable<QNode>,Cloneable, Serializable {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8160044007993636653L;
+	
 	private String m_label;
 	private boolean m_isSelectVariable;
 	

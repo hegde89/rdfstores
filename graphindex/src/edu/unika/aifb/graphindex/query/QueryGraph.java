@@ -18,13 +18,18 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
 
-public class QueryGraph extends DirectedMultigraph<QNode,QueryEdge> {
-	private static final long serialVersionUID = -6174083887964946008L;
+public class QueryGraph extends DirectedMultigraph<QNode,QueryEdge> implements Serializable {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1356274835706353638L;
 
 	public QueryGraph() {
 		super(QueryEdge.class);

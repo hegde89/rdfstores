@@ -1,5 +1,7 @@
 package edu.unika.aifb.graphindex.query;
 
+import java.io.Serializable;
+
 /**
  * Copyright (C) 2009 GŸnter Ladwig (gla at aifb.uni-karlsruhe.de)
  * 
@@ -18,7 +20,13 @@ package edu.unika.aifb.graphindex.query;
  * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public abstract class Query {
+public abstract class Query implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2461899379153262822L;
+	
 	protected String m_name;
 	
 	protected Query(String name) {

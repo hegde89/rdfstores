@@ -23,6 +23,11 @@ package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
  */
 public class KeywordRefinementRequest extends AbstractRefinementRequest {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2325203826167881765L;
+	
 	private String m_domain;
 	private double m_facetID;
 	private String m_keywords;

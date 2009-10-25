@@ -70,6 +70,11 @@ public class FacetEnvironment {
 		public static final String OBJECT = "object_db";
 
 		/*
+		 * shared Cache -> used in FacetIndex
+		 */
+		public static final String SHARED_CACHE = "shared_cache_db";
+
+		/*
 		 * fsl cache
 		 */
 		public static final String FS_CACHE = "fs_cache_db";
@@ -131,7 +136,9 @@ public class FacetEnvironment {
 		public static long MAX_COMPUTATION_TIME = 60000;
 		public static String CLEANER_NAME = "SearchSessionCleaner";
 		public static String INIT_QUERY_NAME = "initQuery";
-
+		public static String SHARED_CACHE_NAME = "shared";
+		public static long MAX_SESSION_LENGTH = 300000;
+		
 	}
 
 	public static class EdgeType {

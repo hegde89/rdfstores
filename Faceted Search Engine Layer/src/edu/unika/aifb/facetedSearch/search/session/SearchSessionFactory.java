@@ -151,7 +151,7 @@ public class SearchSessionFactory {
 		m_con.close();
 		releaseAndCloseAll();
 		s_sessionCleaningThread.interrupt();
-		
+
 	}
 
 	public SearchSession getSession(int id) {

@@ -27,6 +27,11 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
  */
 public class InitFacetsRequest extends Query {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4406450903033234832L;
+	
 	private StructuredQuery m_sQuery;
 	private Table<String> m_res;
 

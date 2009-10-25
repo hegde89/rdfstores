@@ -29,9 +29,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.semanticweb.yars.nx.namespace.RDF;
+import org.semanticweb.yars.nx.namespace.RDFS;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
@@ -92,6 +94,26 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		return res;
 	}
 	
+	
+	private String getKeywordElementId(String ext, KeywordElement ele) throws StorageException, IOException {
+		if (ele.getAttributeUri().equals("http://xmlns.com/foaf/0.1/name"))
+			ele.setAttributeUri(RDFS.LABEL.toString());
+		
+		String id = ext + "__" + ele.getAttributeUri();
+		
+		Table<String> t = m_idxReader.getDataIndex().getTriples(ele.getUri(), RDF.TYPE.toString(), null);
+		TreeSet<String> types = new TreeSet<String>();
+		for (String[] row : t)
+			types.add(row[2]);
+		id += "__" + types.toString();
+//		TreeSet<String> props = new TreeSet<String>(ele.getInProperties());
+//		props.addAll(ele.getOutProperties());
+//		id += "__" + props.toString();
+//		props = new TreeSet<String>(ele.getOutProperties());
+//		id += "__" + props.toString();
+		return id;
+	}
+	
 	protected void explore(HybridQuery query, int k, Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, 
 			List<TranslatedQuery> queries, Timings timings, Counters counters) throws StorageException, IOException {
 
@@ -123,13 +145,15 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					}
 					
 					schemaElement.addInProperties(Arrays.asList(RDF.TYPE.toString()));
+					schemaElement.entities.add(ele.getUri());
 
 					keywordNodeElements.add(ele);
 				}
 				else if (ele.getType() == KeywordElement.ENTITY) {
 					String ext = ele.getExtensionId();
 					
-					KeywordElement schemaElement = extAttribute2Element.get(ext + "__" + ele.getAttributeUri());
+//					KeywordElement schemaElement = extAttribute2Element.get(ext + "__" + ele.getAttributeUri());
+					KeywordElement schemaElement = extAttribute2Element.get(getKeywordElementId(ext, ele));
 					
 					if (schemaElement == null) {
 						schemaElement = new KeywordElement(new Entity(ext), KeywordElement.ENTITY, ele.getMatchingScore(), null, ele.getNeighborhoodStorage());
@@ -138,12 +162,14 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 						
 						elements.add(schemaElement);
 						
-						extAttribute2Element.put(ext + "__" + ele.getAttributeUri(), schemaElement);
+//						extAttribute2Element.put(ext + "__" + ele.getAttributeUri(), schemaElement);
+						extAttribute2Element.put(getKeywordElementId(ext, ele), schemaElement);
 					}
 					else {
 						schemaElement.setMatchingScore(Math.max(schemaElement.getMatchingScore(), ele.getMatchingScore()));
 					}
 					
+					schemaElement.entities.add(ele.getUri());
 					schemaElement.addOutProperties(ele.getOutProperties());
 					schemaElement.addInProperties(ele.getInProperties());
 
@@ -161,6 +187,39 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			log.debug("segment: " + ks + ", elements: " + elements.size());
 		}
 		
+		double inMax = 0.0, outMax = 0.0;
+		Map<String,Double> inprops = new HashMap<String,Double>(), outprops = new HashMap<String,Double>();
+		for (KeywordSegment ks : segment2elements.keySet()) {
+			for (KeywordElement ele : segment2elements.get(ks)) {
+				for (String property : ele.getInPropertyWeights().keySet()) {
+					Double w = inprops.get(property) == null ? 0.0 : inprops.get(property);
+					w += ele.getInPropertyWeights().get(property);
+					inMax = Math.max(inMax, w);
+					inprops.put(property, w);
+				}
+				
+				for (String property : ele.getOutPropertyWeights().keySet()) {
+					Double w = outprops.get(property) == null ? 0.0 : outprops.get(property);
+					w += ele.getOutPropertyWeights().get(property);
+					outMax = Math.max(outMax, w);
+					outprops.put(property, w);
+				}
+			}
+		}
+
+		for (KeywordSegment ks : segment2elements.keySet()) {
+			for (KeywordElement ele : segment2elements.get(ks)) {
+				for (String property : ele.getInPropertyWeights().keySet())
+					ele.getInPropertyWeights().put(property, inprops.get(property) / inMax);
+				
+				for (String property : ele.getOutPropertyWeights().keySet())
+					ele.getOutPropertyWeights().put(property, outprops.get(property) / outMax);
+			}
+		}
+
+		log.debug(inprops);
+		log.debug(outprops);
+
 		Map<String,Set<QNode>> ext2var = new HashMap<String,Set<QNode>>();
 		Table<String> structuredResults = null;
 		Table<String> queryIndexMatches = null;

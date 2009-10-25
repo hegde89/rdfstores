@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jgrapht.graph.DirectedMultigraph;
+import org.semanticweb.yars.nx.namespace.RDF;
 
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
@@ -116,6 +117,7 @@ public abstract class GraphElement {
 			if (!invalid) {
 				Set<String> combinationKeywords = new HashSet<String>();
 				Set<String> keywordElements = new HashSet<String>();
+				Map<String,String> keywordElementEdge = new HashMap<String,String>();
 				for (Cursor c : combination) {
 					for (KeywordSegment ks : c.getKeywordSegments())
 						combinationKeywords.addAll(ks.getKeywords());
@@ -128,10 +130,25 @@ public abstract class GraphElement {
 						cur = cur.getParent().getParent();
 					}
 					
-					if (!keywordElements.add(last.getSource().getLabel())) {
-						invalid = true;
-						break;
+					String knownEdge = keywordElementEdge.get(last.getSource().getLabel());
+					if (knownEdge != null) {
+						if (knownEdge.equals(RDF.TYPE.toString()))
+							keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
+						else if (last.getLabel().equals(RDF.TYPE.toString())) {
+							System.out.println("okay");
+						}
+						else if (!last.getLabel().equals(RDF.TYPE.toString())) {
+							invalid = true;
+							break;
+						}
 					}
+					else
+						keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
+					
+//					if (!keywordElements.add(last.getSource().getLabel())) {
+//						invalid = true;
+//						break;
+//					}
 				}
 				
 				if (!completeKeywords.equals(combinationKeywords))

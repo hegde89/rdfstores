@@ -24,8 +24,10 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.lucene.document.Document;
@@ -68,6 +70,10 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 	private NeighborhoodStorage ns;
 
 	private Set<String> m_inProperties, m_outProperties;
+	private Map<String,Double> m_inPropertyWeights = new HashMap<String,Double>();
+	private Map<String,Double> m_outPropertyWeights = new HashMap<String,Double>();
+	
+	public Set<String> entities = new HashSet<String>(100);
 	
 	public KeywordElement(IResource resource, int type, Document doc, double score, NeighborhoodStorage ns) {
 		this.resource = resource;
@@ -218,14 +224,51 @@ public class KeywordElement implements Comparable<KeywordElement>, Serializable 
 		if (m_inProperties == null)
 			m_inProperties = new HashSet<String>();
 		m_inProperties.addAll(properties);
+		
+		for (String property : properties) {
+			Double count = m_inPropertyWeights.get(property);
+			if (count == null)
+				count = 0.0;
+			count++;
+			m_inPropertyWeights.put(property, count);
+		}
 	}
 
 	public void addOutProperties(Collection<String> properties) {
 		if (m_outProperties == null)
 			m_outProperties = new HashSet<String>();
 		m_outProperties.addAll(properties);
+
+		for (String property : properties) {
+			Double count = m_outPropertyWeights.get(property);
+			if (count == null)
+				count = 0.0;
+			count++;
+			m_outPropertyWeights.put(property, count);
+		}
 	}
 	
+	public Map<String,Double> getInPropertyWeights() {
+		return m_inPropertyWeights;
+	}
+	
+	public Map<String,Double> getOutPropertyWeights() {
+		return m_outPropertyWeights;
+	}
+	
+	public void calcPropertyWeights() {
+		calcPropertyWeights(m_inPropertyWeights);
+		calcPropertyWeights(m_outPropertyWeights);
+	}
+	
+	private void calcPropertyWeights(Map<String,Double> propertyWeights) {
+		double max = 0.0;
+		for (String property : propertyWeights.keySet())
+			max = Math.max(max, propertyWeights.get(property));
+		for (String property : propertyWeights.keySet())
+			propertyWeights.put(property, propertyWeights.get(property) / max);
+	}
+
 	public BloomFilter getBloomFilter() {
 		if(bloomFilter == null) {
 			try {

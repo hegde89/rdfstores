@@ -3,6 +3,7 @@ package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -33,8 +34,7 @@ public class StructuredQueryCursor extends Cursor {
 //		m_startNode = startNode;
 	}
 
-	@Override
-	public Cursor getNextCursor(GraphElement element) {
+	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
 //		return new StructuredQueryCursor(m_keywords, element, this, m_query, m_attachNode);
 		if (element instanceof EdgeElement) {
 			EdgeElement edge = (EdgeElement)element;

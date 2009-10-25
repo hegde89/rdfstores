@@ -26,6 +26,7 @@ import org.semanticweb.yars.nx.namespace.RDF;
 import org.semanticweb.yars.nx.namespace.RDFS;
 
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.QueryEdge;
@@ -161,9 +162,27 @@ public class TranslatedQueryEvaluator extends StructuredQueryEvaluator {
 			resultTables.add(getAttributeTable(edge));
 			qe.visited(edge);
 		}
+
+		List<Table<String>> newResultTables = new ArrayList<Table<String>>();
+		Set<String> joinedNodes = new HashSet<String>();
+		for (Table<String> table : resultTables) {
+			String node = table.getColumnName(0);
+			
+			if (!joinedNodes.contains(node)) {
+				for (Table<String> otherTable : resultTables) {
+					if (table != otherTable && otherTable.getColumnName(0).equals(node)) {
+						table.sort(0);
+						otherTable.sort(0);
+						table = Tables.mergeJoin(table, otherTable, node);
+					}
+				}
+				joinedNodes.add(node);
+				newResultTables.add(table);
+			}
+		}
 		
-		log.debug(resultTables);
-		qe.setResultTables(resultTables);
+		log.debug(newResultTables);
+		qe.setResultTables(newResultTables);
 		
 		m_vpEvaluator.setQueryExecution(qe);
 		m_vpEvaluator.evaluate(tq);

@@ -1,5 +1,6 @@
 package edu.unika.aifb.graphindex.searcher.hybrid.exploration;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -20,7 +21,7 @@ public class NodeCursor extends Cursor {
 	}
 
 	@Override
-	public Cursor getNextCursor(GraphElement element) {
+	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
 		Statistics.start(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
 		Statistics.inc(NodeCursor.class, Statistics.Counter.EX_NODECURSORS);
 		if (element instanceof EdgeElement) {

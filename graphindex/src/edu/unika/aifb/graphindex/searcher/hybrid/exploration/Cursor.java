@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
@@ -40,6 +42,8 @@ public abstract class Cursor implements Comparable<Cursor> {
 	protected boolean m_finished;
 	protected Set<String> m_inProperties = new HashSet<String>();
 	protected Set<String> m_outProperties = new HashSet<String>();
+	protected Map<String,Double> m_inPropertyWeights = new HashMap<String,Double>();
+	protected Map<String,Double> m_outPropertyWeights = new HashMap<String,Double>();
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
 		this(keywords, element, null);
@@ -67,7 +71,7 @@ public abstract class Cursor implements Comparable<Cursor> {
 		m_cost += m_element.getCost();
 	}
 	
-	public abstract Cursor getNextCursor(GraphElement element);
+	public abstract Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts);
 	
 	public int getDistance() {
 		return m_distance;
@@ -206,5 +210,21 @@ public abstract class Cursor implements Comparable<Cursor> {
 	
 	public boolean isFinished() {
 		return m_finished;
+	}
+
+	public void setInPropertyWeights(Map<String,Double> inPropertyWeights) {
+		m_inPropertyWeights = inPropertyWeights;
+	}
+
+	public void setOutPropertyWeights(Map<String,Double> outPropertyWeights) {
+		m_outPropertyWeights = outPropertyWeights;
+	}
+	
+	public void addInPropertyWeight(String property, double weight) {
+		m_inPropertyWeights.put(property, weight);
+	}
+
+	public void addOutPropertyWeight(String property, double weight) {
+		m_outPropertyWeights.put(property, weight);
 	}
 }

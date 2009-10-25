@@ -133,22 +133,22 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				cur = cur.getParent().getParent();
 			}
 			
-			if (last != null) {
-				// there should be only one edge for each keyword matching element to eliminate stuff like (x->a, x->b)
-				Set<EdgeElement> edges = attributeEdges.get(last.getSource().getLabel());
-				if (edges == null) {
-					edges = new HashSet<EdgeElement>();
-					attributeEdges.put(last.getSource().getLabel(), edges);
-				}
-				edges.add(last);
-				
-				if (edges.size() > 1) {
-					m_valid = false;
-					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID2);
-					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
-					return;
-				}
-			}
+//			if (last != null) {
+//				// there should be only one edge for each keyword matching element to eliminate stuff like (x->a, x->b)
+//				Set<EdgeElement> edges = attributeEdges.get(last.getSource().getLabel());
+//				if (edges == null) {
+//					edges = new HashSet<EdgeElement>();
+//					attributeEdges.put(last.getSource().getLabel(), edges);
+//				}
+//				edges.add(last);
+//				
+//				if (edges.size() > 1) {
+//					m_valid = false;
+//					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID2);
+//					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+//					return;
+//				}
+//			}
 			
 			// find the second node cursor from the beginning (which is the keyword element cursor)
 			cur = c;
@@ -248,6 +248,12 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			m_cost += edge.getCost();
 		for (NodeElement node : vertexSet())
 			m_cost += node.getCost();
+		
+		double cursorCost = 0.0;
+		for (Cursor c : m_cursors)
+			cursorCost += c.getCost();
+//		log.debug(m_cost + " " + cursorCost);
+		m_cost = cursorCost;
 
 //		NodeElement start = null;
 //		for (NodeElement node : vertexSet()) {

@@ -34,11 +34,15 @@ public class NodeElement extends GraphElement {
 
 	private Map<String,List<KeywordSegment>> m_augmentEdges;
 	private Map<KeywordSegment,Table<String>> m_segmentEntities;
+	private Set<String> m_inProperties;
+	private Set<String> m_outProperties;
 	
 	public NodeElement(String label) {
 		super(label);
 		m_augmentEdges = new HashMap<String,List<KeywordSegment>>();
 		m_segmentEntities = new HashMap<KeywordSegment,Table<String>>();
+		m_inProperties = new HashSet<String>();
+		m_outProperties = new HashSet<String>();
 	}
 	
 	@Override
@@ -46,8 +50,43 @@ public class NodeElement extends GraphElement {
 		super.reset();
 		m_augmentEdges = new HashMap<String,List<KeywordSegment>>();
 		m_segmentEntities = new HashMap<KeywordSegment,Table<String>>();
+		m_inProperties = null;
+		m_outProperties = null;
 	}
 	
+	public void addInProperties(Set<String> props) {
+		if (m_inProperties == null)
+			m_inProperties = new HashSet<String>();
+		m_inProperties.addAll(props);
+	}
+
+	public void addOutProperties(Set<String> props) {
+		if (m_outProperties == null)
+			m_outProperties = new HashSet<String>();
+		m_outProperties.addAll(props);
+	}
+	
+	public boolean acceptsEdge(EdgeElement edge) {
+//		 {
+//				if (m_keywordCursors.size() == 0)
+//					return true;
+//				
+//				for (List<Cursor> cursors : m_keywordCursors.values())
+//					for (Cursor c : cursors)
+//						if (c.acceptsEdge(edge))
+//							return true;
+//				return false;
+//			}
+		
+		if (edge.getTarget() == this && m_inProperties != null && !m_inProperties.contains(edge.getLabel()))
+			return false;
+		
+		if (edge.getSource() == this && m_outProperties != null && !m_outProperties.contains(edge.getLabel()))
+			return false;
+		
+		return true;
+	}
+
 	public double getCost() {
 		return m_cost;
 	}
@@ -86,7 +125,7 @@ public class NodeElement extends GraphElement {
 		return m_augmentEdges;
 	}
 	
-	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor, Set<String> keywordEdges) {
 		EdgeElement prevEdge = (EdgeElement)(cursor.getParent() != null ? cursor.getParent().getGraphElement() : null);
 		Set<GraphElement> parents = cursor.getParents();
 
@@ -94,6 +133,13 @@ public class NodeElement extends GraphElement {
 		
 		if (!cursor.isFinished()) {
 			for (EdgeElement edge : graph.get(this)) {
+				if (!keywordEdges.contains(edge.getLabel())) {
+					if (edge.getSource() == this && !edge.getTarget().acceptsEdge(edge))
+						continue;
+					if (edge.getTarget() == this && !edge.getSource().acceptsEdge(edge))
+						continue;
+				}
+
 				if (!edge.equals(prevEdge) && !parents.contains(edge.getSource()) && !parents.contains(edge.getTarget()))
 					neighbors.add(edge);
 			}
@@ -103,6 +149,6 @@ public class NodeElement extends GraphElement {
 	}
 	
 	public String toString() {
-		return m_label + "[" + getCost() + "," + m_keywordCursors.size() + "," + m_segmentEntities.size() + "," + m_augmentEdges.size() + "]";
+		return m_label + "[" + getCost() + "," + m_keywordCursors.size() + "]";
 	}
 }

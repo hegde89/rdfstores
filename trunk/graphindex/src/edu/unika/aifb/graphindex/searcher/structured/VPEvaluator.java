@@ -130,12 +130,32 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 		
 		toVisit.addAll(m_qe.toVisit());
 		
-		while (toVisit.size() > 0) {
-			QueryEdge currentEdge = toVisit.poll();
+		Set<String> matchedNodes = new HashSet<String>();
+		if (m_qe.getResultTables() != null && m_qe.getResultTables().size() > 0) {
+			for (Table<String> t : m_qe.getResultTables())
+				for (String col : t.getColumnNames())
+					matchedNodes.add(col);
+		}
 
-			String property = currentEdge.getLabel();
-			String srcLabel = currentEdge.getSource().getLabel();
-			String trgLabel = currentEdge.getTarget().getLabel();
+		log.debug("matched: " + matchedNodes);
+		
+		while (toVisit.size() > 0) {
+			QueryEdge currentEdge;
+			String srcLabel, trgLabel, property;
+			List<QueryEdge> skipped = new ArrayList<QueryEdge>();
+			do {
+				currentEdge = toVisit.poll();
+				skipped.add(currentEdge);
+
+				property = currentEdge.getLabel();
+				srcLabel = currentEdge.getSource().getLabel();
+				trgLabel = currentEdge.getTarget().getLabel();
+			}
+			while (!matchedNodes.contains(srcLabel) && !matchedNodes.contains(trgLabel) && Util.isVariable(srcLabel) && Util.isVariable(trgLabel));
+//				|| (Util.isConstant(trgLabel) && !matchedNodes.contains(srcLabel) && matchedNodes.contains(trgLabel)));
+			
+			skipped.remove(currentEdge);
+			toVisit.addAll(skipped);
 			
 			log.debug(srcLabel + " -> " + trgLabel + " (" + property + ")");
 			
@@ -171,7 +191,9 @@ public class VPEvaluator extends StructuredQueryEvaluator {
 			}
 			
 			log.debug("res: " + result);
-			
+			matchedNodes.add(srcLabel);
+			matchedNodes.add(trgLabel);
+
 			resultTables.add(result);
 			m_qe.visited(currentEdge);
 

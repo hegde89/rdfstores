@@ -44,6 +44,9 @@ public abstract class Cursor implements Comparable<Cursor> {
 	protected Set<String> m_outProperties = new HashSet<String>();
 	protected Map<String,Double> m_inPropertyWeights = new HashMap<String,Double>();
 	protected Map<String,Double> m_outPropertyWeights = new HashMap<String,Double>();
+	protected Cursor m_startCursor;
+	
+	public boolean track = false;
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
 		this(keywords, element, null);
@@ -72,6 +75,8 @@ public abstract class Cursor implements Comparable<Cursor> {
 	}
 	
 	public abstract Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts);
+	
+	public abstract boolean acceptsEdge(EdgeElement edge);
 	
 	public int getDistance() {
 		return m_distance;
@@ -106,10 +111,17 @@ public abstract class Cursor implements Comparable<Cursor> {
 	}
 	
 	public Cursor getStartCursor() {
-		if (m_parent == null)
-			return this;
-		else
-			return m_parent.getStartCursor();
+		if (m_startCursor == null) {
+			if (m_parent == null) {
+				m_startCursor = this;
+				return this;
+			}
+			else {
+				m_startCursor = m_parent.getStartCursor();
+				return m_startCursor;
+			}
+		}
+		return m_startCursor;
 	}
 	
 	public GraphElement getGraphElement() {

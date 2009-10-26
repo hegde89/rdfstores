@@ -19,6 +19,11 @@ public class NodeCursor extends Cursor {
 	public NodeCursor(Set<KeywordSegment> keywords, GraphElement element, Cursor parent) {
 		super(keywords, element, parent);
 	}
+	
+	@Override
+	public boolean acceptsEdge(EdgeElement edge) {
+		return true;
+	}
 
 	@Override
 	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {

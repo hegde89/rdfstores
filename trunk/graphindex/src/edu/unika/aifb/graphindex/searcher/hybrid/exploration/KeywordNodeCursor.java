@@ -25,7 +25,7 @@ public class KeywordNodeCursor extends NodeCursor {
 	
 	private Map<String,Set<String>> propertyConcepts = new HashMap<String,Set<String>>();
 	
-	private static final Logger log = Logger.getLogger(NodeCursor.class);
+	private static final Logger log = Logger.getLogger(KeywordNodeCursor.class);
 	
 	public KeywordNodeCursor(Set<KeywordSegment> keywords, GraphElement element) {
 		super(keywords, element);
@@ -37,6 +37,16 @@ public class KeywordNodeCursor extends NodeCursor {
 	
 	public void setDataIndex(DataIndex dataIndex) {
 		m_dataIndex = dataIndex;
+	}
+
+	@Override
+	public boolean acceptsEdge(EdgeElement edge) {
+		boolean out = edge.getSource().equals(getGraphElement());
+		
+		if (out)
+			return m_outProperties.contains(edge.getLabel());
+		else
+			return m_inProperties.contains(edge.getLabel());
 	}
 
 	@Override
@@ -110,9 +120,14 @@ public class KeywordNodeCursor extends NodeCursor {
 					return null;
 				}
 				
+				
 				Cursor nextEdge = new EdgeCursor(m_keywords, element, this);
 				nextEdge.setCost(getCost() + (out ? m_outPropertyWeights.get(edge.getLabel()) : m_inPropertyWeights.get(edge.getLabel())));
 				Cursor nextCursor = new NodeCursor(m_keywords, next, nextEdge);
+
+				if (track && edge.getLabel().contains("writer"))
+					log.debug(this + " => " + edge + " " + nextCursor);
+				
 				Statistics.end(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
 				return nextCursor;
 			}

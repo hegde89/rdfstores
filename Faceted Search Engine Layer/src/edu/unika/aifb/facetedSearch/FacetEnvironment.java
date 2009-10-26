@@ -114,7 +114,7 @@ public class FacetEnvironment {
 
 		public static String CLEANER_ID = "cleaner";
 		public static String KEYWORD_DOMAIN = "?Name of Entity";
-		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword/";
+		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword";
 		public static String VAR_PREFIX = "?";
 		public static String BASE_URI = "http://www.fluidops.com/";
 		public static String INDEX_DIRECTORY = "D:/Data/DA/idx";

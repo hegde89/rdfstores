@@ -162,6 +162,9 @@ public class TranslatedQueryEvaluator extends StructuredQueryEvaluator {
 			resultTables.add(getAttributeTable(edge));
 			qe.visited(edge);
 		}
+		log.debug(tq.getResults());
+		if (tq.getResults() != null)
+			resultTables.addAll(tq.getResults());
 
 		List<Table<String>> newResultTables = new ArrayList<Table<String>>();
 		Set<String> joinedNodes = new HashSet<String>();

@@ -16,6 +16,11 @@ public class EdgeCursor extends Cursor {
 	}
 
 	@Override
+	public boolean acceptsEdge(EdgeElement edge) {
+		return true;
+	}
+
+	@Override
 	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
 		return new NodeCursor(m_keywords, element, this);
 	}

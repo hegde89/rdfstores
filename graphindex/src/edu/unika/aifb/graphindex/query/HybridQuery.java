@@ -1,5 +1,7 @@
 package edu.unika.aifb.graphindex.query;
 
+import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -23,6 +25,7 @@ import org.apache.log4j.Logger;
 public class HybridQuery extends Query {
 	private StructuredQuery m_structuredQuery;
 	private KeywordQuery m_keywordQuery;
+	private Set<String> m_entities;
 	private QNode m_attachNode;
 	
 	private static final Logger log = Logger.getLogger(HybridQuery.class);
@@ -42,6 +45,16 @@ public class HybridQuery extends Query {
 			log.warn("attach node " + attachNode + " not in query graph!");
 			throw new IllegalArgumentException("attach node " + attachNode + " not in query graph!");
 		}
+	}
+	
+	public HybridQuery(String name, KeywordQuery kq, Set<String> entities) {
+		super(name);
+		m_keywordQuery = kq;
+		m_entities = entities;
+	}
+	
+	public Set<String> getEntities() {
+		return m_entities;
 	}
 	
 	public QNode getAttachNode() {

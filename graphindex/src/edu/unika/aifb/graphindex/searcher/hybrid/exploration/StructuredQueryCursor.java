@@ -12,11 +12,12 @@ import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 
-public class StructuredQueryCursor extends Cursor {
+public class StructuredQueryCursor extends NodeCursor {
 
 	private NodeElement m_startNode;
 	private HybridQuery m_query;
 	private String m_attachNode;
+	public Set<String> entities;
 	
 	private static final Logger log = Logger.getLogger(StructuredQueryCursor.class);
 
@@ -34,6 +35,16 @@ public class StructuredQueryCursor extends Cursor {
 //		m_startNode = startNode;
 	}
 
+	@Override
+	public boolean acceptsEdge(EdgeElement edge) {
+		boolean out = edge.getSource().equals(getGraphElement());
+		
+		if (out)
+			return m_outProperties.contains(edge.getLabel());
+		else
+			return m_inProperties.contains(edge.getLabel());
+	}
+
 	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
 //		return new StructuredQueryCursor(m_keywords, element, this, m_query, m_attachNode);
 		if (element instanceof EdgeElement) {
@@ -43,7 +54,14 @@ public class StructuredQueryCursor extends Cursor {
 			
 //			if ((out && (m_outProperties == null || m_outProperties.size() == 0 || m_outProperties.contains(edge.getLabel())))
 //				|| (!out && (m_inProperties == null || m_inProperties.size() == 0 || m_inProperties.contains(edge.getLabel()))) )
-				return new NodeCursor(m_keywords, next, new EdgeCursor(m_keywords, element, this));
+			if ((out && m_outProperties.contains(edge.getLabel())) || (!out &&  m_inProperties.contains(edge.getLabel()))) {
+				Cursor nextEdge = new EdgeCursor(m_keywords, element, this);
+				nextEdge.setCost(getCost() + 1 - (out ? m_outPropertyWeights.get(edge.getLabel()) : m_inPropertyWeights.get(edge.getLabel())));
+				Cursor nextCursor = new NodeCursor(m_keywords, next, nextEdge);
+
+				return nextCursor;
+//				return new NodeCursor(m_keywords, next, new EdgeCursor(m_keywords, element, this));
+			}
 		}
 		else
 			log.error("next cursor has to be for an edge");
@@ -62,14 +80,19 @@ public class StructuredQueryCursor extends Cursor {
 	public List<GraphElement> getPath() {
 		List<GraphElement> path = new ArrayList<GraphElement>();
 
-		for (QueryEdge edge : m_query.getStructuredQuery().getQueryGraph().edgeSet()) {
-			String src = edge.getSource().getLabel();
-			String trg = edge.getTarget().getLabel();
-			
-			if (src.equals(m_attachNode))
-				src = m_element.getLabel();
-			
-			path.add(new EdgeElement(new NodeElement(src), edge.getLabel(), new NodeElement(trg)));
+		if (m_query.getStructuredQuery() != null) {
+			for (QueryEdge edge : m_query.getStructuredQuery().getQueryGraph().edgeSet()) {
+				String src = edge.getSource().getLabel();
+				String trg = edge.getTarget().getLabel();
+				
+				if (src.equals(m_attachNode))
+					src = m_element.getLabel();
+				
+				path.add(new EdgeElement(new NodeElement(src), edge.getLabel(), new NodeElement(trg)));
+			}
+		}
+		else {
+//			path.add(new NodeElement(m_element.getLabel()));
 		}
 		
 		return path;
@@ -79,14 +102,16 @@ public class StructuredQueryCursor extends Cursor {
 	public Set<EdgeElement> getEdges() {
 		Set<EdgeElement> edges = new HashSet<EdgeElement>();
 		
-		for (QueryEdge edge : m_query.getStructuredQuery().getQueryGraph().edgeSet()) {
-			String src = edge.getSource().getLabel();
-			String trg = edge.getTarget().getLabel();
-			
-			if (src.equals(m_attachNode))
-				src = m_element.getLabel();
-			
-			edges.add(new EdgeElement(new NodeElement(src), edge.getLabel(), new NodeElement(trg)));
+		if (m_query.getStructuredQuery() != null) {
+			for (QueryEdge edge : m_query.getStructuredQuery().getQueryGraph().edgeSet()) {
+				String src = edge.getSource().getLabel();
+				String trg = edge.getTarget().getLabel();
+				
+				if (src.equals(m_attachNode))
+					src = m_element.getLabel();
+				
+				edges.add(new EdgeElement(new NodeElement(src), edge.getLabel(), new NodeElement(trg)));
+			}
 		}
 		
 		return edges;

@@ -43,7 +43,7 @@ public class EdgeElement extends GraphElement {
 		return m_cost;
 	}
 	
-	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor, Set<String> keywordEdges) {
 		List<GraphElement> neighbors = new ArrayList<GraphElement>();
 		
 		if (cursor.getParent() == null) {

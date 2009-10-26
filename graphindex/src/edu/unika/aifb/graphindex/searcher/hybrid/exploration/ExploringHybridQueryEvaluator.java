@@ -112,16 +112,49 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 //		id += "__" + props.toString();
 //		props = new TreeSet<String>(ele.getOutProperties());
 //		id += "__" + props.toString();
+		
 		return id;
 	}
 	
 	protected void explore(HybridQuery query, int k, Map<KeywordSegment,Collection<KeywordElement>> entities, ExploringIndexMatcher matcher, 
 			List<TranslatedQuery> queries, Timings timings, Counters counters) throws StorageException, IOException {
 
-		Set<KeywordElement> keywordNodeElements = new HashSet<KeywordElement>();
-
 		Map<KeywordSegment,List<KeywordElement>> segment2elements = new HashMap<KeywordSegment,List<KeywordElement>>();
+
+		Set<KeywordElement> structuredElements = new HashSet<KeywordElement>();
+		if (query.getEntities() != null && query.getEntities().size() > 0) {
+			List<KeywordElement> elements = new ArrayList<KeywordElement>();
+			Map<String,KeywordElement> id2element = new HashMap<String,KeywordElement>();
+
+			for (String entity : query.getEntities()) {
+				String ext = m_si.getExtension(entity);
+				
+				KeywordElement element = id2element.get(ext);
+				
+				if (element == null) {
+					element = new SQueryKeywordElement(new Entity(ext), KeywordElement.ENTITY, 1.0, "?ATTACH");
+					elements.add(element);
+				}
+				else {
+					
+				}
+				
+				Set<String> inProperties = new HashSet<String>();
+				Set<String> outProperties = new HashSet<String>();
+				
+				m_searcher.getProperties(entity, inProperties, outProperties);
+				
+				element.entities.add(entity);
+				element.addInProperties(inProperties);
+				element.addOutProperties(outProperties);
+				
+				structuredElements.add(new KeywordElement(new Entity(entity), KeywordElement.ENTITY, null));
+			}
+			
+			segment2elements.put(new KeywordSegment("STRUCTURED"), elements);
+		}
 		
+		Set<KeywordElement> keywordNodeElements = new HashSet<KeywordElement>();
 		for (KeywordSegment ks : entities.keySet()) {
 			List<KeywordElement> elements = new ArrayList<KeywordElement>(entities.get(ks).size());
 			Map<String,NodeElement> label2node = new HashMap<String,NodeElement>();
@@ -151,6 +184,18 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 					keywordNodeElements.add(ele);
 				}
 				else if (ele.getType() == KeywordElement.ENTITY) {
+					if (structuredElements.size() > 0) {
+						boolean found = false;
+						for (KeywordElement sele : structuredElements) {
+							if (ele.isReachable(sele)) {
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+							continue;
+					}
+					
 					String ext = ele.getExtensionId();
 					
 //					KeywordElement schemaElement = extAttribute2Element.get(ext + "__" + ele.getAttributeUri());
@@ -187,7 +232,7 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			
 			log.debug("segment: " + ks + ", elements: " + elements.size());
 		}
-		
+
 		double inMax = 0.0, outMax = 0.0;
 		Map<String,Double> inprops = new HashMap<String,Double>(), outprops = new HashMap<String,Double>();
 		for (KeywordSegment ks : segment2elements.keySet()) {
@@ -218,8 +263,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 			}
 		}
 
-		log.debug(inprops);
-		log.debug(outprops);
+//		log.debug(inprops);
+//		log.debug(outprops);
 
 		Map<String,Set<QNode>> ext2var = new HashMap<String,Set<QNode>>();
 		Table<String> structuredResults = null;

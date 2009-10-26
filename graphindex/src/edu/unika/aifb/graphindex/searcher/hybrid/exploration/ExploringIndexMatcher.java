@@ -29,12 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.ho.yaml.Yaml;
-import org.jgrapht.graph.DirectedMultigraph;
 import org.semanticweb.yars.nx.namespace.RDF;
 
 import edu.unika.aifb.graphindex.algorithm.graph.GraphIsomorphism;
@@ -305,6 +302,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	
 	public void setKeywords(Map<KeywordSegment,List<KeywordElement>> keywords, HybridQuery query) throws StorageException, IOException {
 		reset();
+
 		log.debug(keywords.keySet());
 		for (KeywordSegment keyword : keywords.keySet()) {
 			PriorityQueue<Cursor> queue = new PriorityQueue<Cursor>();
@@ -316,7 +314,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				keywordSet.add(keyword);
 				
 				if (ele.getType() == KeywordElement.CONCEPT) {
-					TIMEOUT = 4500;
+					TIMEOUT = 4000;
 					
 					NodeElement node = m_nodes.get(ele.getUri());
 					if (node == null) {
@@ -343,6 +341,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 							for (String e : ele.entities)
 								concepts.add(e);
 							
+//							edge.getSource().addCursor(nodeCursor);
+							
 							queue.add(nodeCursor);
 //							log.debug("concept cursor: " + nodeCursor);
 						}
@@ -359,8 +359,23 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					
 					if (keyword.getKeywords().contains("STRUCTURED")) {
 						SQueryKeywordElement sqele = (SQueryKeywordElement)ele;
-						Cursor c = new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode());
+						StructuredQueryCursor c = new StructuredQueryCursor(keywordSet, node, query, sqele.getAttachNode());
+						c.entities = ele.entities;
 //						log.debug(c);
+						
+						c.addInProperties(ele.getInProperties());
+						c.addOutProperties(ele.getOutProperties());
+
+						node.addInProperties(ele.getInProperties());
+						node.addOutProperties(ele.getOutProperties());
+
+						c.setInPropertyWeights(ele.getInPropertyWeights());
+						c.setOutPropertyWeights(ele.getOutPropertyWeights());
+						
+//						log.debug(sqele + " " + sqele.entities);
+//						log.debug(" " + ele.getInPropertyWeights());
+//						log.debug(" " + ele.getOutPropertyWeights());
+
 						queue.add(c);
 					}
 					else {
@@ -371,6 +386,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 							log.warn("data edge missing " + node + " " + property);
 							continue;
 						}
+						
 
 						Cursor start = new NodeCursor(keywordSet, dataEdge.getTarget());
 						Cursor edgeCursor = new EdgeCursor(keywordSet, dataEdge, start);
@@ -387,10 +403,17 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						nodeCursor.setInPropertyWeights(ele.getInPropertyWeights());
 						nodeCursor.setOutPropertyWeights(ele.getOutPropertyWeights());
 						
-//						log.debug(nodeCursor + " " + dataEdge.getLabel());
+						node.addInProperties(ele.getInProperties());
+						node.addOutProperties(ele.getOutProperties());
+						
+//						log.debug(nodeCursor + " " + ele.entities);
 //						log.debug(" " + ele.getInPropertyWeights());
 //						log.debug(" " + ele.getOutPropertyWeights());
-//						log.debug(" " + ele.entities.size());
+
+						if (ele.entities.contains("http://dbpedia.org/resource/Freddie_Mercury"))
+							nodeCursor.track = true;
+						
+//						node.addCursor(nodeCursor);
 						
 						queue.add(nodeCursor);
 //						log.debug(nodeCursor + " " + dataEdge);
@@ -406,24 +429,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					edgeKeywords.add(keyword);
 				}
-//				else if (ele instanceof StructuredMatchElement) {
-////					Set<NodeElement> nodes = new HashSet<NodeElement>();
-////					for (NodeElement node : ((StructuredMatchElement)ele).getNodes()) {
-////						// HACK replace NodeElement objects with their equivalent from the graph
-////						NodeElement n = m_nodes.get(node.getLabel()); 
-////						n.addFrom(node); // don't forget to copy stuff
-////						
-////						queue.add(new StructuredQueryCursor(keywordSet, ele, n));
-////						nodes.add(n);
-////					}
-////					((StructuredMatchElement)ele).setNodes(nodes);
-//					NodeElement node = m_nodes.get(((StructuredMatchElement)ele).getNode().getLabel());
-//					node.addFrom(((StructuredMatchElement)ele).getNode());
-//					((StructuredMatchElement)ele).setNode(node);
-//					queue.add(new StructuredQueryCursor(keywordSet, ele));
-//				}
 			}
-//			log.debug("queue size for " + keyword + ": " + queue.size());
+
 			if (!queue.isEmpty()) {
 				m_queues.add(queue);
 				m_keywordQueues.put(keyword, queue);
@@ -486,10 +493,12 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 	private boolean topK(GraphElement currentElement) {
 		if (currentElement.getKeywords().size() == m_keywords.size()) {
 			// current element is a connecting element
-//			log.debug(m_subgraphs.size());
+
 			Statistics.start(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
 			Set<List<Cursor>> combinations = currentElement.getCursorCombinations(m_keywords);
 			Statistics.end(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
+
+			Statistics.inc(this, Statistics.Counter.EX_TOPK_COMBINATIONS, combinations.size());
 			
 			Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
 			for (List<Cursor> combination : combinations) {
@@ -513,9 +522,13 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 								
 								if (existing.getCost() > sg.getCost()) {
 									// replace existing if score of new is lower
+//									if (sg.track)
+//										log.debug("iso rem" + sg);
 									i.remove();
 									found = false;
 								}
+//								else if (sg.track)
+//									log.debug("iso " + sg);
 								
 								break;
 							}
@@ -525,6 +538,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					
 					if (!found) {
+//						if (sg.track)
+//							log.debug("add " + sg);
 						m_subgraphs.add(sg);
 						Collections.sort(m_subgraphs);
 						for (int i = m_subgraphs.size() - 1; i >= m_k; i--)
@@ -596,7 +611,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					}
 					
 					Statistics.start(this, Statistics.Timing.EX_NEIGHBORS);
-					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor);
+					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor, m_edgeUri2Keywords.keySet());
 					Statistics.end(this, Statistics.Timing.EX_NEIGHBORS);
 
 //					int size = neighbors.size();
@@ -625,6 +640,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //					}
 //					
 //					log.debug(size + " " + neighbors.size() + " " + labels.size() + " " + (System.currentTimeMillis() - start));
+//					log.debug(neighbors.size());
 					
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {

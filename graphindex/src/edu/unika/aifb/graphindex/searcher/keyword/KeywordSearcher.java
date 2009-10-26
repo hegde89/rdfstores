@@ -39,7 +39,9 @@ import joptsimple.OptionSet;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.document.SetBasedFieldSelector;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
@@ -71,6 +73,7 @@ import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordElement;
 import edu.unika.aifb.graphindex.searcher.keyword.model.KeywordSegment;
 import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.util.StringSplitter;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 
 public class KeywordSearcher {
@@ -674,6 +677,40 @@ public class KeywordSearcher {
     	}
 	   	
 		return true;
+	}
+	
+	public void getProperties(String entity, Set<String> inProperties, Set<String> outProperties) throws StorageException {
+	    Set<String> loadFieldNames = new HashSet<String>();
+	    loadFieldNames.add(Constant.IN_PROPERTIES_FIELD);
+	    loadFieldNames.add(Constant.OUT_PROPERTIES_FIELD);
+	    Set<String> lazyFieldNames = new HashSet<String>();
+	    SetBasedFieldSelector fieldSelector = new SetBasedFieldSelector(loadFieldNames, lazyFieldNames);
+
+   		
+   		try {
+   		    TermDocs td = reader.termDocs(new Term(Constant.URI_FIELD, entity));
+   	   		if (!td.next())
+   	   			return;
+   	   		
+			Document doc = reader.document(td.doc(), fieldSelector);
+
+			Fieldable field = doc.getFieldable(Constant.IN_PROPERTIES_FIELD);
+			String s = field.stringValue();
+			StringSplitter splitter = new StringSplitter(s, "\n");
+			while ((s = splitter.next()) != null)
+				inProperties.add(s.trim());
+			
+			field = doc.getFieldable(Constant.OUT_PROPERTIES_FIELD);
+			s = field.stringValue();
+			splitter = new StringSplitter(s, "\n");
+			while ((s = splitter.next()) != null)
+				outProperties.add(s.trim());
+
+   		} catch (CorruptIndexException e) {
+			throw new StorageException(e);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		} 
 	}
 	
 	private String pruneString(String str) {

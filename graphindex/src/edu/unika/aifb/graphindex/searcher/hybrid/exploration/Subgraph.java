@@ -59,12 +59,16 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 
 	private HashMap<String,Set<KeywordSegment>> m_select2ks;
 
+	private Set<String> structuredEntities;
+	
 	private boolean m_valid = true;
 	private Map<String,String> m_rename;
 	private Map<String,KeywordQNode> m_keywordNodes;
 
 
 	private static final Logger log = Logger.getLogger(Subgraph.class);
+
+	public boolean track = false;
 	
 	public Subgraph(Class<? extends EdgeElement> arg0) {
 		super(arg0);
@@ -88,16 +92,23 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 
 		Set<NodeElement> keywordElementNodes = new HashSet<NodeElement>();
 		
+		Map<String,Set<String>> keywordEntities = new HashMap<String,Set<String>>();
+
 		Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_CREATED);
 		
 		Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 		for (Cursor c : cursors) {
+//			if (c.track) {
+//				log.debug(c);
+//				track = true;
+//			}
 			if (c.getStartCursor() instanceof StructuredQueryCursor) {
 				m_structuredNode = (NodeElement)c.getStartCursor().getGraphElement();
 				for (EdgeElement edge : c.getStartCursor().getEdges()) {
 					m_label2var.put(edge.getSource().getLabel(), edge.getSource().getLabel());
 					m_label2var.put(edge.getTarget().getLabel(), edge.getTarget().getLabel());
 				}
+				structuredEntities = ((StructuredQueryCursor)c.getStartCursor()).entities;
 				m_label2var.remove(c.getStartCursor().getGraphElement().getLabel());
 			}
 			else {
@@ -163,8 +174,18 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				cur = cur.getParent().getParent();
 			}
 			
-			if (elementCursor != null)
+			if (c.getStartCursor() instanceof StructuredQueryCursor)
+				elementCursor = (NodeCursor)c.getStartCursor();
+			
+			
+			if (elementCursor != null) {
 				keywordElementNodes.add((NodeElement)elementCursor.getGraphElement());
+				if (elementCursor instanceof KeywordNodeCursor)
+					keywordEntities.put(elementCursor.getGraphElement().getLabel(), ((KeywordNodeCursor)elementCursor).m_keywordElement.entities);
+				else if (elementCursor instanceof StructuredQueryCursor)
+					keywordEntities.put(elementCursor.getGraphElement().getLabel(), ((StructuredQueryCursor)elementCursor).entities);
+
+			}
 			
 			// retrieve allowed incoming edge labels
 			if (elementCursor != null && elementCursor.getInProperties().size() > 0) {
@@ -189,6 +210,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add(e);
+
+//				if (e.getLabel().contains("writer"))
+//					track = false;
 				
 				addVertex(((EdgeElement)e).getSource());
 				addVertex(((EdgeElement)e).getTarget());
@@ -197,15 +221,15 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 		}
 		Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
-		
-		if (m_structuredNode != null) {
-			// subgraph is invalid if an entity edge and the structured part attach to the same node
-			for (NodeElement node : keywordElementNodes)
-				if (node.equals(m_structuredNode)) {
-					m_valid = false;
-					return;
-				}
-		}
+
+//		if (m_structuredNode != null) {
+//			// subgraph is invalid if an entity edge and the structured part attach to the same node
+//			for (NodeElement node : keywordElementNodes)
+//				if (node.equals(m_structuredNode)) {
+//					m_valid = false;
+//					return;
+//				}
+//		}
 		
 		Set<String> values = new HashSet<String>(m_rename.values().size() + 5);
 		values.addAll(m_rename.values());
@@ -214,6 +238,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 			Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID3);
 			return;
 		}
+		
+//		if (track)
+//			log.debug(this);
 		
 		if (m_valid) {
 			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
@@ -224,7 +251,14 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 						m_valid = false;
 						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
-						break;
+						
+//						if (track) {
+//							log.debug(edgeSet());
+//							log.debug(" failed " + node + " in " + edge.getLabel() + ", allowed: " + allowedEdgeLabels);
+//							log.debug(" " + keywordEntities);
+//						}
+						
+						return;
 					}
 				}
 			}
@@ -236,7 +270,14 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 						m_valid = false;
 						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
-						break;
+
+//						if (track) {
+//							log.debug(edgeSet());
+//							log.debug(" failed " + node + " out " + edge.getLabel() + ", allowed: " + allowedEdgeLabels);
+//							log.debug(" " + keywordEntities);
+//						}
+						
+						return;
 					}
 				}
 			}
@@ -255,6 +296,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 //		log.debug(m_cost + " " + cursorCost);
 		m_cost = cursorCost;
 
+//		if (track)
+//			log.debug(" " + m_cost + " " + m_valid);
+		
 //		NodeElement start = null;
 //		for (NodeElement node : vertexSet()) {
 //			if (inDegreeOf(node) + outDegreeOf(node) == 1) {
@@ -289,29 +333,6 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 	
 	public Set<Map<NodeElement,NodeElement>> getMappings() {
 		return m_mappings;
-	}
-	
-	private int getLongestPath(NodeElement node, List<String> path) {
-		List<String> newPath = new ArrayList<String>(path);
-		newPath.add(node.getLabel());
-		
-		Set<NodeElement> next = new HashSet<NodeElement>();
-		
-		for (EdgeElement edge : outgoingEdgesOf(node))
-			if (!path.contains(edge.getTarget().getLabel()))
-				next.add(edge.getTarget());
-		for (EdgeElement edge : incomingEdgesOf(node)) 
-			if (!path.contains(edge.getSource().getLabel()))
-				next.add(edge.getSource());
-		
-		int max = 0;
-		for (NodeElement nextNode : next) {
-			int length = getLongestPath(nextNode, newPath);
-			if (length > max)
-				max = length;
-		}
-		
-		return Math.max(max, newPath.size() - 1);
 	}
 	
 	public double getCost() {
@@ -389,6 +410,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 //		addAugmentedEdges();
 
 		m_label2var.putAll(m_rename);
+		
+		if (m_structuredNode != null && query == null)
+			m_label2var.put(m_structuredNode.getLabel(), "?ATTACH");
 		
 		int x = 0;
 		for (EdgeElement edge : edgeSet()) {
@@ -482,6 +506,13 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 						qnode = new QNode(edge.getTarget().getLabel());
 					q.addAttributeEdge(new QNode(m_label2var.get(edge.getSource().getLabel())), edge.getLabel(), qnode);
 				}
+			}
+			
+			if (structuredEntities != null && structuredEntities.size() > 0) {
+				Table<String> t = new Table<String>("?ATTACH");
+				for (String s : structuredEntities)
+					t.addRow(new String[] { s });
+				q.addResult(t);
 			}
 
 //			q.setIndexMatches(indexMatches);

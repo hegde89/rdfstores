@@ -36,16 +36,19 @@ public abstract class GraphElement {
 	protected Map<String,List<Cursor>> m_keywordCursors;
 	protected Set<String> m_keywords;
 	protected double m_cost;
+	private Set<List<Cursor>> m_previousCombinations;
 	
 	public GraphElement(String label) {
 		m_label = label;
 		m_keywordCursors = new HashMap<String,List<Cursor>>();
 		m_keywords = new HashSet<String>();
+		m_previousCombinations = new HashSet<List<Cursor>>();
 	}
 	
 	public void reset() {
 		m_keywordCursors = new HashMap<String,List<Cursor>>();
 		m_keywords = new HashSet<String>();
+		m_previousCombinations = new HashSet<List<Cursor>>();
 	}
 	
 	public String getLabel() {
@@ -74,7 +77,19 @@ public abstract class GraphElement {
 							equalCursorPresent = true;
 					}
 				}
-				cursors.add(c);
+				
+				if (!equalCursorPresent) {
+					boolean found = false;
+					for (Cursor cursor : cursors)
+						if (c == cursor) {
+							found = true;
+							break;
+						}
+					if (!found)
+						cursors.add(c);
+				}
+				else
+					cursors.add(c);
 				Collections.sort(cursors);
 			}
 		}
@@ -84,6 +99,11 @@ public abstract class GraphElement {
 	}
 	
 	public Set<List<Cursor>> getCursorCombinations(Set<String> completeKeywords) {
+		for (List<Cursor> list : m_keywordCursors.values())
+			for (Cursor c : list)
+				if (c.track)
+					System.out.println("comb: " + c);
+		
 		Set<List<Cursor>> list = new HashSet<List<Cursor>>();
 		
 		int[] idx = new int [m_keywordCursors.size()];
@@ -97,6 +117,7 @@ public abstract class GraphElement {
 		
 		boolean carry = true;
 		do {
+			boolean track = false;
 			List<Cursor> combination = new ArrayList<Cursor>();
 			Set<String> startLabels = new HashSet<String>();
 			boolean invalid = false;
@@ -105,6 +126,7 @@ public abstract class GraphElement {
 					continue;
 				
 				Cursor c = m_keywordCursors.get(keywords.get(i)).get(idx[i]);
+				track = c.track;
 				Cursor startCursor = c.getStartCursor();
 				if (!startLabels.add(startCursor.getGraphElement().getLabel())) {
 					invalid = true;
@@ -130,19 +152,21 @@ public abstract class GraphElement {
 						cur = cur.getParent().getParent();
 					}
 					
-					String knownEdge = keywordElementEdge.get(last.getSource().getLabel());
-					if (knownEdge != null) {
-						if (knownEdge.equals(RDF.TYPE.toString()))
+					if (last != null) {
+						String knownEdge = keywordElementEdge.get(last.getSource().getLabel());
+						if (knownEdge != null) {
+							if (knownEdge.equals(RDF.TYPE.toString()))
+								keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
+							else if (last.getLabel().equals(RDF.TYPE.toString())) {
+							}
+							else if (!last.getLabel().equals(RDF.TYPE.toString())) {
+								invalid = true;
+								break;
+							}
+						}
+						else
 							keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
-						else if (last.getLabel().equals(RDF.TYPE.toString())) {
-						}
-						else if (!last.getLabel().equals(RDF.TYPE.toString())) {
-							invalid = true;
-							break;
-						}
 					}
-					else
-						keywordElementEdge.put(last.getSource().getLabel(), last.getLabel());
 					
 //					if (!keywordElements.add(last.getSource().getLabel())) {
 //						invalid = true;
@@ -154,8 +178,13 @@ public abstract class GraphElement {
 					invalid = true;
 			}
 			
-			if (!invalid && combination.size() > 0)
+//			if (track)
+//				System.out.println(invalid + " " + combination);
+			
+			if (!invalid && combination.size() > 0 && !m_previousCombinations.contains(combination)) {
 				list.add(combination);
+				m_previousCombinations.add(combination);
+			}
 			
 //			if (combination.size() == 1 && !invalid)
 //				System.out.println(combination);
@@ -179,7 +208,7 @@ public abstract class GraphElement {
 	}
 	
 //	public abstract List<GraphElement> getNeighbors(DirectedMultigraph<NodeElement,EdgeElement> graph, Cursor cursor);
-	public abstract List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> node2edges, Cursor cursor);
+	public abstract List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> node2edges, Cursor cursor, Set<String> keywordEdges);
 	
 	@Override
 	public int hashCode() {

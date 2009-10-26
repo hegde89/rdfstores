@@ -43,6 +43,7 @@ public class Statistics {
 		}
 		
 		public static final Counter EX_NODECURSORS = addCounter("ex_node_cursors");
+		public static final Counter EX_TOPK_COMBINATIONS = addCounter("ex_subgraph_topk_combs");
 		public static final Counter EX_SUBGRAPH_CREATED = addCounter("ex_subgraph_created");
 		public static final Counter EX_SUBGRAPH_INVALID1 = addCounter("ex_subgraph_invalid1");
 		public static final Counter EX_SUBGRAPH_INVALID2 = addCounter("ex_subgraph_invalid2");

@@ -62,9 +62,9 @@ public class StructuredMatchElement extends GraphElement {
 //	}
 
 	@Override
-	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor) {
+	public List<GraphElement> getNeighbors(Map<NodeElement,List<EdgeElement>> graph, Cursor cursor, Set<String> keywordEdges) {
 		Set<GraphElement> neighbors = new HashSet<GraphElement>();
-		return m_node.getNeighbors(graph, cursor);
+		return m_node.getNeighbors(graph, cursor, keywordEdges);
 //		for (NodeElement node : m_nodes)
 //			neighbors.addAll(node.getNeighbors(graph, cursor));
 //		neighbors.removeAll(m_nodes);

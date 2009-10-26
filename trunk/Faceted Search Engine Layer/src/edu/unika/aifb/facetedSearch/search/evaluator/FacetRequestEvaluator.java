@@ -32,7 +32,9 @@ import com.sleepycat.je.DatabaseException;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.converter.facet2tree.Facet2TreeModelConverter;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
+import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetValueDummy;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Literal;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
@@ -330,7 +332,7 @@ public class FacetRequestEvaluator extends Searcher {
 					 */
 					FacetedQuery fquery = m_session.getCurrentQuery();
 					String nextAbstractQuery = fquery
-							.addFacetFacetValueTupleStrg(newTuple.toString());
+							.addFacetFacetValueTuple(newTuple);
 
 					// fquery.clearOldVar2newVarMap();
 					// fquery.mergeWithAdditionalQuery(node.getDomain(),
@@ -423,11 +425,14 @@ public class FacetRequestEvaluator extends Searcher {
 					if ((refinementTable != null)
 							&& (refinementTable.rowCount() > 0)) {
 
+						FacetFacetValueTuple ffvTuple = new FacetFacetValueTuple();
+						ffvTuple.setDomain(keyRefReq.getDomain());
+						ffvTuple.setFacet(new Facet(facet.getValue()));
+						ffvTuple.setFacetValue(new FacetValueDummy(keyRefReq.getKeywords()));
+						
 						FacetedQuery fquery = m_session.getCurrentQuery();
 						String nextAbstractQuery = fquery
-								.addFacetFacetValueTupleStrg(Util
-										.truncateUri(facet.getValue())
-										+ ": " + keyRefReq.getKeywords());
+								.addFacetFacetValueTuple(ffvTuple);
 
 						// fquery.clearOldVar2newVarMap();
 						// fquery.mergeWithAdditionalQuery(keyRefReq.getDomain(),
@@ -551,14 +556,16 @@ public class FacetRequestEvaluator extends Searcher {
 						if (!sources.isEmpty()) {
 
 							try {
-
+								
+								FacetFacetValueTuple ffvTuple = new FacetFacetValueTuple();
+								ffvTuple.setDomain(keyRefReq.getDomain());
+								ffvTuple.setFacet(new Facet(facet.getValue()));
+								ffvTuple.setFacetValue(new FacetValueDummy(keyRefReq.getKeywords()));
+								
 								FacetedQuery fquery = m_session
 										.getCurrentQuery();
 								String nextAbstractQuery = fquery
-										.addFacetFacetValueTupleStrg(Util
-												.truncateUri(facet.getValue())
-												+ ": "
-												+ keyRefReq.getKeywords());
+										.addFacetFacetValueTuple(ffvTuple);
 
 								m_session.setCurrentQuery(fquery);
 
@@ -673,6 +680,11 @@ public class FacetRequestEvaluator extends Searcher {
 
 							if (!sources.isEmpty()) {
 
+								FacetFacetValueTuple ffvTuple = new FacetFacetValueTuple();
+								ffvTuple.setDomain(keyRefReq.getDomain());
+								ffvTuple.setFacet(new Facet(facet.getValue()));
+								ffvTuple.setFacetValue(new FacetValueDummy(keyRefReq.getKeywords()));
+								
 								/*
 								 * refine table
 								 */
@@ -687,11 +699,7 @@ public class FacetRequestEvaluator extends Searcher {
 										.getCurrentQuery();
 
 								String nextAbstractQuery = fquery
-										.addFacetFacetValueTupleStrg(Util
-												.truncateUri(facet.getValue())
-												+ ": "
-												+ Util.truncateUri(keyRefReq
-														.getKeywords()));
+										.addFacetFacetValueTuple(ffvTuple);
 
 								// fquery.clearOldVar2newVarMap();
 								// fquery.mergeWithAdditionalQuery(node.getDomain(),
@@ -772,6 +780,11 @@ public class FacetRequestEvaluator extends Searcher {
 
 						try {
 
+							FacetFacetValueTuple ffvTuple = new FacetFacetValueTuple();
+							ffvTuple.setDomain(keyRefReq.getDomain());
+							ffvTuple.setFacet(new Facet(facet.getValue()));
+							ffvTuple.setFacetValue(new FacetValueDummy(keyRefReq.getKeywords()));
+							
 							String object = FacetUtils.cleanURI(keyRefReq
 									.getKeywords());
 							object = FacetUtils.decodeLocalName(object);
@@ -794,9 +807,7 @@ public class FacetRequestEvaluator extends Searcher {
 							 */
 							FacetedQuery fquery = m_session.getCurrentQuery();
 							String nextAbstractQuery = fquery
-									.addFacetFacetValueTupleStrg(Util
-											.truncateUri(facet.getValue())
-											+ ": " + Util.truncateUri(object));
+									.addFacetFacetValueTuple(ffvTuple);
 
 							// fquery.clearOldVar2newVarMap();
 							// fquery.mergeWithAdditionalQuery(node.getDomain(),
@@ -906,6 +917,11 @@ public class FacetRequestEvaluator extends Searcher {
 							if ((refinementTable != null)
 									&& (refinementTable.rowCount() > 0)) {
 
+								FacetFacetValueTuple ffvTuple = new FacetFacetValueTuple();
+								ffvTuple.setDomain(keyRefReq.getDomain());
+								ffvTuple.setFacet(new Facet(facet.getValue()));
+								ffvTuple.setFacetValue(new FacetValueDummy(keyRefReq.getKeywords()));
+								
 								// StructuredQuery sQueryTranslated =
 								// translatedQueries
 								// .get(0);
@@ -913,10 +929,7 @@ public class FacetRequestEvaluator extends Searcher {
 								FacetedQuery fquery = m_session
 										.getCurrentQuery();
 								String nextAbstractQuery = fquery
-										.addFacetFacetValueTupleStrg(Util
-												.truncateUri(facet.getValue())
-												+ ": "
-												+ keyRefReq.getKeywords());
+										.addFacetFacetValueTuple(ffvTuple);
 
 								// fquery.clearOldVar2newVarMap();
 								// fquery.mergeWithAdditionalQuery(keyRefReq

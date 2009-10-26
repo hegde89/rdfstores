@@ -27,6 +27,7 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
@@ -75,7 +76,7 @@ public class FacetedQuery implements Serializable {
 	 * 
 	 */
 	private Map<String, String> m_oldVar2newVarMap;
-	private List<Map<String, String>> m_facetFacetValue2QueryMapList;
+	private List<Map<FacetFacetValueTuple, String>> m_facetFacetValue2QueryMapList;
 
 	/*
 	 * 
@@ -94,52 +95,38 @@ public class FacetedQuery implements Serializable {
 		init();
 	}
 
-	public String addFacetFacetValueTupleStrg(String ffvTupleString) {
+	public String addFacetFacetValueTuple(FacetFacetValueTuple ffvTuple) {
 
-		Map<String, String> facetFacetValue2Query = new HashMap<String, String>();
-		facetFacetValue2Query.put(ffvTupleString, getNextAbstractQuery());
+		Map<FacetFacetValueTuple, String> facetFacetValue2Query = new HashMap<FacetFacetValueTuple, String>();
+		facetFacetValue2Query.put(ffvTuple, getNextAbstractQuery());
 		m_facetFacetValue2QueryMapList.add(facetFacetValue2Query);
 
-		return facetFacetValue2Query.get(ffvTupleString);
+		return facetFacetValue2Query.get(ffvTuple);
 	}
 
-	public void updateFacetFacetValueTuple(String historyQuery) {
-
-//		Iterator<Map<String, String>> mapIter = m_facetFacetValue2QueryMapList.iterator();
-//		Stack<Map<String, String>> mapStack = new Stack<Map<String,String>>();
-//		
-//		while(mapIter.hasNext()){			
-//			mapStack.push(mapIter.next());
-//		}
-//		
-//		while(!mapStack.isEmpty()) {
-//			
-//			Map<String, String> facetFacetValue2Query = mapStack.pop();
-//			String currentQuery = facetFacetValue2Query.values().iterator().next();
-//			
-//			if(!currentQuery.equals(historyQuery)) {				
-//				m_facetFacetValue2QueryMapList.remove(facetFacetValue2Query);
-//			} else {
-//				break;
-//			}
-//		}
-	}
-	
 	public void clean() {
 
 		for (Map<? extends Object, ? extends Object> map : m_maps) {
 			map.clear();
 		}
 
-//		m_facetFacetValue2QueryMapList.clear();
+		// m_facetFacetValue2QueryMapList.clear();
 	}
 
 	public void clearOldVar2newVarMap() {
 		m_oldVar2newVarMap.clear();
 	}
 
-	public Iterator<Map<String, String>> getFacetFacetValueTuple2QueryIterator() {
+	public List<Map<FacetFacetValueTuple, String>> getFacetFacetValue2QueryMapList() {
+		return m_facetFacetValue2QueryMapList;
+	}
+
+	public Iterator<Map<FacetFacetValueTuple, String>> getFacetFacetValueTuple2QueryIterator() {
 		return m_facetFacetValue2QueryMapList.iterator();
+	}
+
+	public int getFFVTupleCount() {
+		return m_facetFacetValue2QueryMapList.size();
 	}
 
 	public StructuredQuery getInitialQuery() {
@@ -176,7 +163,7 @@ public class FacetedQuery implements Serializable {
 		 * 
 		 */
 		m_oldVar2newVarMap = new HashMap<String, String>();
-		m_facetFacetValue2QueryMapList = new ArrayList<Map<String, String>>();
+		m_facetFacetValue2QueryMapList = new ArrayList<Map<FacetFacetValueTuple, String>>();
 
 		/*
 		 * 
@@ -309,5 +296,30 @@ public class FacetedQuery implements Serializable {
 
 	public void setInitialQuery(StructuredQuery initialQuery) {
 		m_initialQuery = initialQuery;
+	}
+
+	public void updateFacetFacetValueTuple(String historyQuery) {
+
+		// Iterator<Map<String, String>> mapIter =
+		// m_facetFacetValue2QueryMapList.iterator();
+		// Stack<Map<String, String>> mapStack = new
+		// Stack<Map<String,String>>();
+		//		
+		// while(mapIter.hasNext()){
+		// mapStack.push(mapIter.next());
+		// }
+		//		
+		// while(!mapStack.isEmpty()) {
+		//			
+		// Map<String, String> facetFacetValue2Query = mapStack.pop();
+		// String currentQuery =
+		// facetFacetValue2Query.values().iterator().next();
+		//			
+		// if(!currentQuery.equals(historyQuery)) {
+		// m_facetFacetValue2QueryMapList.remove(facetFacetValue2Query);
+		// } else {
+		// break;
+		// }
+		// }
 	}
 }

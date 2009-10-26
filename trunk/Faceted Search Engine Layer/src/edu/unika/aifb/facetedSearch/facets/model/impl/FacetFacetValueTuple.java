@@ -17,6 +17,8 @@
  */
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
+import java.io.Serializable;
+
 import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueTuple;
 import edu.unika.aifb.graphindex.util.Util;
 
@@ -24,13 +26,31 @@ import edu.unika.aifb.graphindex.util.Util;
  * @author andi
  * 
  */
-public class FacetFacetValueTuple implements IFacetFacetValueTuple {
+public class FacetFacetValueTuple
+		implements
+			IFacetFacetValueTuple,
+			Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5049061404110005282L;
+
+	/*
+	 * 
+	 */
 	private double m_id;
 	private String m_domain;
 
+	/*
+	 * 
+	 */
 	private Facet m_facet;
 	private AbstractFacetValue m_abstractFacetValue;
+
+	/*
+	 * 
+	 */
 
 	public FacetFacetValueTuple() {
 	}
@@ -84,14 +104,22 @@ public class FacetFacetValueTuple implements IFacetFacetValueTuple {
 	public void setFacet(Facet facet) {
 
 		m_facet = facet;
-		m_domain = facet.getDomain();
+	
+		if(m_domain == null) {
+			m_domain = facet.getDomain();
+		}
+		
 		updateID();
 	}
 
 	public void setFacetValue(AbstractFacetValue abstractFacetValue) {
 
 		m_abstractFacetValue = abstractFacetValue;
-		m_domain = abstractFacetValue.getDomain();
+		
+		if(m_domain == null) {
+			m_domain = abstractFacetValue.getDomain();
+		}
+
 		updateID();
 	}
 

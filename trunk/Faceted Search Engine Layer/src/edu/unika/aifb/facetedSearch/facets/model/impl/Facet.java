@@ -63,6 +63,7 @@ public class Facet extends AbstractBrowsingObject implements IFacet {
 		return m_dataType;
 	}
 
+	@Override
 	public int getType() {
 		return m_facetType;
 	}
@@ -113,6 +114,7 @@ public class Facet extends AbstractBrowsingObject implements IFacet {
 		m_dataType = dataType;
 	}
 
+	@Override
 	public void setType(int type) {
 		m_facetType = type;
 	}

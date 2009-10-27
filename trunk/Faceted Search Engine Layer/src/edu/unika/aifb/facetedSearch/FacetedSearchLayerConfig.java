@@ -108,6 +108,11 @@ public class FacetedSearchLayerConfig {
 	 */
 	private static long s_cleaningInterval;
 
+	/*
+	 * 
+	 */
+	private static int s_maxComputationThread;
+
 	public static boolean createFacetIdx() {
 		return s_createFacetIdx;
 	}
@@ -196,6 +201,10 @@ public class FacetedSearchLayerConfig {
 
 	public static String getGraphIndexDirStrg() {
 		return s_graphIndexDirStrg;
+	}
+
+	public static int getMaxComputationThread() {
+		return s_maxComputationThread;
 	}
 
 	public static long getMaxSearchSessionLength() {
@@ -289,6 +298,10 @@ public class FacetedSearchLayerConfig {
 
 	public static void setGraphIndexDirStrg(String graphIndexDirStrg) {
 		s_graphIndexDirStrg = graphIndexDirStrg;
+	}
+
+	public static void setMaxComputationThread(int maxComputationThread) {
+		s_maxComputationThread = maxComputationThread;
 	}
 
 	public static void setMaxSearchSessionLength(long maxSearchSessionLength) {

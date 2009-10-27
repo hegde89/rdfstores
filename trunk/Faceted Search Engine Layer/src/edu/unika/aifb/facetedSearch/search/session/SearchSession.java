@@ -39,13 +39,14 @@ import edu.unika.aifb.facetedSearch.facets.converter.tree2facet.Tree2FacetModelC
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.query.FacetedQuery;
 import edu.unika.aifb.facetedSearch.search.fpage.FacetPageManager;
+import edu.unika.aifb.facetedSearch.search.history.ExpansionManager;
 import edu.unika.aifb.facetedSearch.search.history.HistoryManager;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore;
 
 public class SearchSession {
 
 	public enum CleanType {
-		ALL, REFINEMENT
+		ALL, REFINEMENT, EXPANSION
 	}
 
 	public enum Converters {
@@ -99,6 +100,7 @@ public class SearchSession {
 	private FacetPageManager m_fpageManager;
 	private SearchSessionCacheManager m_cacheManager;
 	private HistoryManager m_historyManager;
+	private ExpansionManager m_expManager;
 
 	/*
 	 * 
@@ -178,10 +180,11 @@ public class SearchSession {
 
 				m_fpageManager.clean();
 				m_historyManager.clean();
+				m_expManager.clean();
 
 				m_currentQuery.clean();
 				m_currentPageNum = 1;
-				
+
 				break;
 			}
 			case REFINEMENT : {
@@ -201,13 +204,35 @@ public class SearchSession {
 				m_constructionDelegator.clean();
 
 				m_fpageManager.clean();
-
 				m_currentQuery.clean();
 				m_currentPageNum = 1;
 
 				break;
 			}
-			
+			case EXPANSION : {
+
+				try {
+
+					m_cacheManager.get(m_searchSessionId).clean(
+							SearchSessionCache.CleanType.NO_RES);
+
+				} catch (DatabaseException e) {
+					e.printStackTrace();
+				} catch (CacheException e) {
+					e.printStackTrace();
+				}
+
+				m_facetTreeDelegator.clean();
+				m_rankingDelegator.clean();
+				m_constructionDelegator.clean();
+
+				m_fpageManager.clean();
+				m_currentQuery.clean();
+				m_currentPageNum = 1;
+
+				break;
+			}
+
 			default :
 				break;
 		}
@@ -312,6 +337,12 @@ public class SearchSession {
 		touch();
 		return m_historyManager;
 	}
+	
+	public ExpansionManager getExpansionManagerManager() {
+
+		touch();
+		return m_expManager;
+	}
 
 	public String getHttpSessionId() {
 
@@ -352,9 +383,10 @@ public class SearchSession {
 
 		m_fpageManager = new FacetPageManager(this);
 		m_historyManager = new HistoryManager(this);
+		m_expManager = new ExpansionManager(this);
 
 		m_currentQuery = new FacetedQuery();
-		
+
 		setStatus(SessionStatus.FREE);
 	}
 
@@ -376,9 +408,8 @@ public class SearchSession {
 			compositeCacheManager.configure(cacheProps);
 
 			SearchSessionCache cache = new SearchSessionCache(
-					FacetedSearchLayerConfig
-							.getCacheDir4Session(m_searchSessionId), this,
-					compositeCacheManager);
+					FacetedSearchLayerConfig.getCacheDirStrg() + "/"
+							+ m_searchSessionId, this, compositeCacheManager);
 
 			m_cacheManager.put(m_searchSessionId, cache);
 

@@ -45,10 +45,12 @@ import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueList.CleanT
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
+import edu.unika.aifb.facetedSearch.index.db.StorageHelperThread;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Converters;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
+import edu.unika.aifb.graphindex.data.Table;
 
 /**
  * @author andi
@@ -142,10 +144,10 @@ public class FacetPageManager {
 		m_facetPageMap.clear();
 	}
 
-	public FacetPage getInitialFacetPage() {
+	public FacetPage getInitialFacetPage(Table<String> resTable) {
 
 		FacetPage fpage = new FacetPage();
-		m_treeDelegator.initTrees();
+		m_treeDelegator.initTrees(resTable);
 
 		Iterator<String> domainIter = m_treeDelegator.getDomains().iterator();
 
@@ -227,7 +229,10 @@ public class FacetPageManager {
 
 		}
 
-		storeFacetPage(fpage);
+		StorageHelperThread<Integer, FacetPage> storageHelper = new StorageHelperThread<Integer, FacetPage>(
+				m_facetPageMap, FACETPAGE_KEY, fpage);
+		storageHelper.start();
+
 		return fpage;
 	}
 
@@ -313,7 +318,10 @@ public class FacetPageManager {
 			}
 
 			fpage.put(domain, facet, fvList);
-			storeFacetPage(fpage);
+
+			StorageHelperThread<Integer, FacetPage> storageHelper = new StorageHelperThread<Integer, FacetPage>(
+					m_facetPageMap, FACETPAGE_KEY, fpage);
+			storageHelper.start();
 		}
 
 		return fpage;
@@ -349,9 +357,5 @@ public class FacetPageManager {
 
 	private FacetPage loadPreviousFacetPage() {
 		return m_facetPageMap.get(FACETPAGE_KEY);
-	}
-
-	private boolean storeFacetPage(FacetPage fpage) {
-		return m_facetPageMap.put(FACETPAGE_KEY, fpage) == null;
 	}
 }

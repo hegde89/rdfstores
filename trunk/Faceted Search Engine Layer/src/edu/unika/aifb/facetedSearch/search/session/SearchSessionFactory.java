@@ -116,7 +116,7 @@ public class SearchSessionFactory {
 		}
 
 		s_sessionCleaningThread = new SearchSessionCleaningThread();
-		s_sessionCleaningThread.start();
+//		s_sessionCleaningThread.start();
 	}
 
 	public int acquire(String httpSessionId) throws InterruptedException {
@@ -210,6 +210,9 @@ public class SearchSessionFactory {
 		FacetedSearchLayerConfig.setCleaningInterval(Long.parseLong(props
 				.getProperty(FacetEnvironment.Property.CLEANING_INTERVAL)));
 
+		FacetedSearchLayerConfig.setMaxComputationThread(Integer.parseInt(props
+				.getProperty(FacetEnvironment.Property.MAX_COMPUTATON_THREADS)));
+		
 	}
 
 	public void release(int id) {

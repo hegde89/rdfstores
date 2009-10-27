@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License 
  * along with Faceted Search Layer Project.  If not, see <http://www.gnu.org/licenses/>. 
  */
-package edu.unika.aifb.facetedSearch.search.evaluator;
+package edu.unika.aifb.facetedSearch.search.evaluator.helper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,13 +24,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.sleepycat.je.DatabaseException;
 
-import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.FacetTreeDelegator;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
@@ -47,12 +45,12 @@ import edu.unika.aifb.graphindex.query.StructuredQuery;
  * 
  */
 @SuppressWarnings("unused")
-public class FacetRequestHelper {
+public class FacetRefinementHelper {
 
 	/*
 	 * 
 	 */
-	private static Logger s_log = Logger.getLogger(FacetRequestHelper.class);
+	private static Logger s_log = Logger.getLogger(FacetRefinementHelper.class);
 
 	/*
 	 * 
@@ -69,7 +67,7 @@ public class FacetRequestHelper {
 	 */
 	private HashSet<String> m_parsedItems;
 
-	public FacetRequestHelper(SearchSession session) {
+	public FacetRefinementHelper(SearchSession session) {
 
 		m_session = session;
 		m_treeDelegator = (FacetTreeDelegator) session
@@ -285,7 +283,7 @@ public class FacetRequestHelper {
 
 		return additionalTable;
 	}
-	
+
 	public List<String> getCleanCollection(Collection<String> sources) {
 
 		List<String> cleanSources = new ArrayList<String>();
@@ -326,14 +324,11 @@ public class FacetRequestHelper {
 
 		return sources;
 	}
-	
-	public Table<String> refineResult(String domain, List<String> sources)
-			throws DatabaseException, IOException {
+
+	public Table<String> refineResult(String domain, List<String> sources,
+			Table<String> oldTable) throws DatabaseException, IOException {
 
 		Collections.sort(sources);
-		// Table<String> addTable = getAdditionalTable(node, sources, sQuery);
-
-		Table<String> oldTable = m_session.getCache().getCurrentResultTable();
 		oldTable.sort(domain, true);
 
 		return FacetUtils.mergeJoin(oldTable, sources, domain);

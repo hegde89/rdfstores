@@ -54,6 +54,8 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
+import edu.unika.aifb.facetedSearch.index.db.StorageHelperThread;
+import edu.unika.aifb.facetedSearch.index.db.TransactionalStorageHelperThread;
 import edu.unika.aifb.facetedSearch.index.db.binding.LiteralListBinding;
 import edu.unika.aifb.facetedSearch.index.db.util.FacetDbUtils;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
@@ -69,7 +71,7 @@ import edu.unika.aifb.graphindex.storage.StorageException;
 public class SearchSessionCache {
 
 	public enum CleanType {
-		ALL, PATHS, DISTANCES, LEAVE_GROUPS
+		ALL, NO_RES
 	}
 
 	private static final Logger s_log = Logger
@@ -96,10 +98,13 @@ public class SearchSessionCache {
 	/*
 	 * berkeley db configs/environment
 	 */
-	private File m_dir;
+	private String m_dirStrg;
 	private Environment m_env;
+	private Environment m_env2;
 	private DatabaseConfig m_dbConfig;
 	private DatabaseConfig m_dbConfig2;
+	private DatabaseConfig m_dbConfig3;
+	private DatabaseConfig m_dbConfig4;
 
 	/*
 	 * Caches based on berkeley db ...
@@ -112,6 +117,7 @@ public class SearchSessionCache {
 	private Database m_resCache;
 	private Database m_litCache;
 	private Database m_sourceCache;
+	private Database m_leaveGroupsCache;
 
 	/*
 	 * delegator caches
@@ -123,6 +129,11 @@ public class SearchSessionCache {
 	 * history
 	 */
 	private Database m_historyCache;
+
+	/*
+	 * 
+	 */
+	private Database m_expansionCache;
 
 	/*
 	 * other
@@ -160,12 +171,12 @@ public class SearchSessionCache {
 	 */
 	private FacetIndex m_facetIdx;
 
-	protected SearchSessionCache(File dir, SearchSession session,
+	protected SearchSessionCache(String dirStrg, SearchSession session,
 			CompositeCacheManager compositeCacheManager)
 			throws EnvironmentLockedException, DatabaseException {
 
 		m_session = session;
-		m_dir = dir;
+		m_dirStrg = dirStrg;
 		m_compositeCacheManager = compositeCacheManager;
 
 		init();
@@ -177,9 +188,23 @@ public class SearchSessionCache {
 		m_distanceCacheAccess.put(object1 + object2 + ext, distance);
 	}
 
-	public void addObject2SourceMapping(String domain, String object,
-			String source) {
-		m_object2sourceMap.put(domain + object, source);
+	public TransactionalStorageHelperThread<String, String> addObject2SourceMapping(
+			String domain, String object, String source) {
+
+		try {
+
+			TransactionalStorageHelperThread<String, String> storageHelper = new TransactionalStorageHelperThread<String, String>(
+					m_env2, m_sourceCache, m_strgBinding, m_strgBinding, domain
+							+ object, source);
+			storageHelper.start();
+
+			return storageHelper;
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 	public void clean(CleanType type) throws DatabaseException, CacheException {
@@ -215,29 +240,28 @@ public class SearchSessionCache {
 
 				break;
 			}
-			case LEAVE_GROUPS : {
+			case NO_RES : {
 
-				if (m_leave2subjectsMap != null) {
-					m_leave2subjectsMap.clear();
+				if (m_dynNode2litListMap != null) {
+					m_dynNode2litListMap.clear();
 				}
 				if (m_object2sourceMap != null) {
 					m_object2sourceMap.clear();
 				}
-
-				break;
-			}
-			case PATHS : {
-
+				if (m_leave2subjectsMap != null) {
+					m_leave2subjectsMap.clear();
+				}
 				if (m_sources4NodeCacheAccess != null) {
 					m_sources4NodeCacheAccess.clear();
 				}
-
-				break;
-			}
-			case DISTANCES : {
-
 				if (m_distanceCacheAccess != null) {
 					m_distanceCacheAccess.clear();
+				}
+				if (m_subjects4NodeCacheAccess != null) {
+					m_subjects4NodeCacheAccess.clear();
+				}
+				if (m_objects4NodeCacheAccess != null) {
+					m_objects4NodeCacheAccess.clear();
 				}
 
 				break;
@@ -261,6 +285,11 @@ public class SearchSessionCache {
 			m_sourceCache.close();
 			m_sourceCache = null;
 		}
+		if (m_leaveGroupsCache != null) {
+
+			m_leaveGroupsCache.close();
+			m_leaveGroupsCache = null;
+		}
 		if (m_fpageCache != null) {
 
 			m_fpageCache.close();
@@ -270,6 +299,11 @@ public class SearchSessionCache {
 
 			m_historyCache.close();
 			m_historyCache = null;
+		}
+		if (m_expansionCache != null) {
+
+			m_expansionCache.close();
+			m_expansionCache = null;
 		}
 		if (m_sources4NodeCacheAccess != null) {
 			m_sources4NodeCacheAccess.clear();
@@ -434,6 +468,10 @@ public class SearchSessionCache {
 		} else if (name.equals(FacetEnvironment.DatabaseName.FHIST_CACHE)) {
 
 			return m_historyCache;
+
+		} else if (name.equals(FacetEnvironment.DatabaseName.FEXP_CACHE)) {
+
+			return m_expansionCache;
 
 		} else {
 
@@ -758,12 +796,26 @@ public class SearchSessionCache {
 		 * Berkeley dbs ...
 		 */
 
+		File dirEnv1 = new File(m_dirStrg
+				+ FacetEnvironment.DatabaseName.ENV_JDB1);
+		dirEnv1.mkdir();
+
+		File dirEnv2 = new File(m_dirStrg
+				+ FacetEnvironment.DatabaseName.ENV_JDB2);
+		dirEnv2.mkdir();
+
 		// init db
 		EnvironmentConfig envConfig = new EnvironmentConfig();
 		envConfig.setTransactional(false);
 		envConfig.setAllowCreate(true);
 
-		m_env = new Environment(m_dir, envConfig);
+		m_env = new Environment(dirEnv1, envConfig);
+
+		EnvironmentConfig envConfig2 = new EnvironmentConfig();
+		envConfig2.setTransactional(true);
+		envConfig2.setAllowCreate(true);
+
+		m_env2 = new Environment(dirEnv2, envConfig2);
 
 		// Databases without duplicates
 		m_dbConfig = new DatabaseConfig();
@@ -778,24 +830,42 @@ public class SearchSessionCache {
 		m_fpageCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FPAGE_CACHE, m_dbConfig);
 
-		m_litCache = m_env.openDatabase(null,
-				FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig);
-
 		m_treeCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FTREE_CACHE, m_dbConfig);
 
 		m_historyCache = m_env.openDatabase(null,
 				FacetEnvironment.DatabaseName.FHIST_CACHE, m_dbConfig);
 
-		// Databases with duplicates
+		// Transactional databases with duplicates
 		m_dbConfig2 = new DatabaseConfig();
-		m_dbConfig2.setTransactional(false);
+		m_dbConfig2.setTransactional(true);
 		m_dbConfig2.setAllowCreate(true);
 		m_dbConfig2.setSortedDuplicates(true);
-		m_dbConfig2.setDeferredWrite(true);
 
-		m_sourceCache = m_env.openDatabase(null,
+		m_sourceCache = m_env2.openDatabase(null,
 				FacetEnvironment.DatabaseName.FS_CACHE, m_dbConfig2);
+
+		// Transactional databases without duplicates
+		m_dbConfig3 = new DatabaseConfig();
+		m_dbConfig3.setTransactional(true);
+		m_dbConfig3.setAllowCreate(true);
+		m_dbConfig3.setSortedDuplicates(true);
+
+		m_leaveGroupsCache = m_env2.openDatabase(null,
+				FacetEnvironment.DatabaseName.FLG_CACHE, m_dbConfig3);
+
+		m_litCache = m_env2.openDatabase(null,
+				FacetEnvironment.DatabaseName.FLIT_CACHE, m_dbConfig3);
+
+		// Databases with duplicates
+		m_dbConfig4 = new DatabaseConfig();
+		m_dbConfig4.setTransactional(false);
+		m_dbConfig4.setAllowCreate(true);
+		m_dbConfig4.setSortedDuplicates(true);
+		m_dbConfig4.setDeferredWrite(true);
+
+		m_expansionCache = m_env.openDatabase(null,
+				FacetEnvironment.DatabaseName.FEXP_CACHE, m_dbConfig);
 
 		m_dbs = new ArrayList<Database>();
 		m_dbs.add(m_resCache);
@@ -804,6 +874,8 @@ public class SearchSessionCache {
 		m_dbs.add(m_litCache);
 		m_dbs.add(m_treeCache);
 		m_dbs.add(m_historyCache);
+		m_dbs.add(m_expansionCache);
+		m_dbs.add(m_leaveGroupsCache);
 
 		/*
 		 * Create the bindings
@@ -823,7 +895,7 @@ public class SearchSessionCache {
 		m_resMap = new StoredMap<String, Result>(m_resCache, m_strgBinding,
 				m_resBinding, true);
 
-		m_leave2subjectsMap = new StoredMap<Double, String>(m_sourceCache,
+		m_leave2subjectsMap = new StoredMap<Double, String>(m_leaveGroupsCache,
 				m_doubleBinding, m_strgBinding, true);
 
 		m_object2sourceMap = new StoredMap<String, String>(m_sourceCache,
@@ -855,15 +927,46 @@ public class SearchSessionCache {
 	public void storeCurrentResult(Result res)
 			throws UnsupportedEncodingException, DatabaseException {
 
-		m_resMap.put(Keys.RESULT_SET_CURRENT, res);
+		StorageHelperThread<String, Result> storageHelper = new StorageHelperThread<String, Result>(
+				m_resMap, Keys.RESULT_SET_CURRENT, res);
+		storageHelper.start();
 	}
 
-	public void storeLiterals(DynamicNode dynamicNode,
-			List<AbstractSingleFacetValue> lits) {
-		m_dynNode2litListMap.put(dynamicNode.getID(), lits);
+	public TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> storeLiterals(
+			DynamicNode dynamicNode, List<AbstractSingleFacetValue> lits) {
+
+		try {
+
+			TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> storageHelper = new TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>>(
+					m_env2, m_litCache, m_doubleBinding, m_litListBinding,
+					dynamicNode.getID(), lits);
+			storageHelper.start();
+
+			return storageHelper;
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
-	public void updateLeaveGroups(double leaveID, String subject) {
-		m_leave2subjectsMap.put(leaveID, subject);
+	public TransactionalStorageHelperThread<Double, String> updateLeaveGroups(
+			double leaveID, String subject) {
+
+		try {
+
+			TransactionalStorageHelperThread<Double, String> storageHelper = new TransactionalStorageHelperThread<Double, String>(
+					m_env2, m_leaveGroupsCache, m_doubleBinding, m_strgBinding,
+					leaveID, subject);
+			storageHelper.start();
+
+			return storageHelper;
+
+		} catch (DatabaseException e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 }

@@ -31,7 +31,7 @@ public class InitFacetsRequest extends Query {
 	 * 
 	 */
 	private static final long serialVersionUID = 4406450903033234832L;
-	
+
 	private StructuredQuery m_sQuery;
 	private Table<String> m_res;
 
@@ -41,14 +41,14 @@ public class InitFacetsRequest extends Query {
 
 	public InitFacetsRequest(Table<String> res) {
 		super("InitFacetsRequest");
-		setRes(res);
+		setResultTable(res);
 	}
 
 	public StructuredQuery getQuery() {
 		return m_sQuery;
 	}
 
-	public Table<String> getRes() {
+	public Table<String> getResultTable() {
 		return m_res;
 	}
 
@@ -60,7 +60,7 @@ public class InitFacetsRequest extends Query {
 		m_sQuery = sQuery;
 	}
 
-	public void setRes(Table<String> res) {
+	public void setResultTable(Table<String> res) {
 		m_res = res;
 	}
 }

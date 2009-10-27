@@ -18,6 +18,7 @@
 package edu.unika.aifb.facetedSearch.facets.model.impl;
 
 import java.io.Serializable;
+import java.util.Random;
 
 import edu.unika.aifb.facetedSearch.facets.model.IFacetFacetValueTuple;
 import edu.unika.aifb.graphindex.util.Util;
@@ -53,6 +54,7 @@ public class FacetFacetValueTuple
 	 */
 
 	public FacetFacetValueTuple() {
+		init();
 	}
 
 	public FacetFacetValueTuple(Facet facet, AbstractFacetValue value) {
@@ -60,25 +62,7 @@ public class FacetFacetValueTuple
 		m_facet = facet;
 		m_abstractFacetValue = value;
 		m_domain = m_abstractFacetValue.getDomain();
-
-		updateID();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(Object obj) {
-
-		if (obj instanceof FacetFacetValueTuple) {
-
-			return m_id == ((FacetFacetValueTuple) obj).getId();
-
-		} else {
-			return false;
-		}
+		init();
 	}
 
 	public String getDomain() {
@@ -97,6 +81,10 @@ public class FacetFacetValueTuple
 		return m_id;
 	}
 
+	private void init() {
+		m_id = (new Random()).nextGaussian();
+	}
+
 	public void setDomain(String domain) {
 		m_domain = domain;
 	}
@@ -104,23 +92,19 @@ public class FacetFacetValueTuple
 	public void setFacet(Facet facet) {
 
 		m_facet = facet;
-	
-		if(m_domain == null) {
+
+		if (m_domain == null) {
 			m_domain = facet.getDomain();
 		}
-		
-		updateID();
 	}
 
 	public void setFacetValue(AbstractFacetValue abstractFacetValue) {
 
 		m_abstractFacetValue = abstractFacetValue;
-		
-		if(m_domain == null) {
+
+		if (m_domain == null) {
 			m_domain = abstractFacetValue.getDomain();
 		}
-
-		updateID();
 	}
 
 	@Deprecated
@@ -137,16 +121,5 @@ public class FacetFacetValueTuple
 	public String toString() {
 		return Util.truncateUri(m_facet.getUri() + ": "
 				+ Util.truncateUri(m_abstractFacetValue.getValue()));
-	}
-
-	private void updateID() {
-
-		int domainHash = m_domain != null ? m_domain.hashCode() : 0;
-		int facetHash = m_facet != null ? m_facet.hashCode() : 0;
-		int facetValueHash = m_abstractFacetValue != null
-				? m_abstractFacetValue.hashCode()
-				: 0;
-
-		m_id = domainHash + facetHash + facetValueHash;
 	}
 }

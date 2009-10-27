@@ -17,8 +17,7 @@
  */
 package edu.unika.aifb.facetedSearch.search.datastructure.impl.request;
 
-import edu.unika.aifb.graphindex.query.QNode;
-
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 
 /**
  * @author andi
@@ -26,12 +25,35 @@ import edu.unika.aifb.graphindex.query.QNode;
  */
 public class ExpansionRequest extends AbstractFacetRequest {
 
+	// /**
+	// *
+	// */
+	// private static final long serialVersionUID = 6622448083241709767L;
+	//	
+	// private QNode m_qNode;
+	//
+	// public ExpansionRequest() {
+	// super("expansionRequest");
+	// }
+	//
+	// public ExpansionRequest(String name) {
+	// super(name);
+	// }
+	//
+	// public void setQNode(QNode qNode) {
+	// m_qNode = qNode;
+	// }
+	//
+	// public QNode getQNode() {
+	// return m_qNode;
+	// }
+
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6622448083241709767L;
-	
-	private QNode m_qNode;
+
+	private FacetFacetValueTuple m_ffvTuple;
 
 	public ExpansionRequest() {
 		super("expansionRequest");
@@ -41,11 +63,11 @@ public class ExpansionRequest extends AbstractFacetRequest {
 		super(name);
 	}
 
-	public void setQNode(QNode qNode) {
-		m_qNode = qNode;
+	public FacetFacetValueTuple getFfvTuple() {
+		return m_ffvTuple;
 	}
 
-	public QNode getQNode() {
-		return m_qNode;
+	public void setFfvTuple(FacetFacetValueTuple ffvTuple) {
+		m_ffvTuple = ffvTuple;
 	}
 }

@@ -47,6 +47,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Edge;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
+import edu.unika.aifb.facetedSearch.index.db.TransactionalStorageHelperThread;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.util.FacetUtils;
 
@@ -167,6 +168,9 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 						.getCache().getObjects4StaticNode(node, subject)
 						.iterator();
 
+				int thread_count = 0;
+				ArrayList<TransactionalStorageHelperThread<String, String>> storageHelpers = new ArrayList<TransactionalStorageHelperThread<String, String>>();
+
 				while (objIter.hasNext()) {
 
 					AbstractSingleFacetValue fv = objIter.next();
@@ -178,20 +182,76 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 						while (sourcesIter.hasNext()) {
 
-							m_session.getCache().addObject2SourceMapping(
-									domain, fv.getValue(), sourcesIter.next());
+							TransactionalStorageHelperThread<String, String> helperThread = m_session
+									.getCache().addObject2SourceMapping(domain,
+											fv.getValue(), sourcesIter.next());
 
+							if (helperThread != null) {
+								storageHelpers.add(helperThread);
+							}
+
+							thread_count++;
+
+							if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+								for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+									try {
+										thread.join();
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+								}
+
+								storageHelpers.clear();
+								thread_count = 0;
+							}
 						}
 					} else {
 
-						m_session.getCache().addObject2SourceMapping(domain,
-								fv.getValue(), subject);
+						TransactionalStorageHelperThread<String, String> helperThread = m_session
+								.getCache().addObject2SourceMapping(domain,
+										fv.getValue(), subject);
+
+						if (helperThread != null) {
+							storageHelpers.add(helperThread);
+						}
+
+						thread_count++;
+
+						if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+							for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+								try {
+									thread.join();
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+
+							storageHelpers.clear();
+							thread_count = 0;
+						}
 					}
 
 					if (!lits.contains(fv)) {
 						lits.add(fv);
 					}
 				}
+
+				for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+					try {
+						thread.join();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				storageHelpers.clear();
+				thread_count = 0;
+
 			}
 
 			/*
@@ -223,6 +283,9 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 			if (currentCalClusterDepth != FacetEnvironment.CalClusterDepth.DAY) {
 
 				int i = 0;
+
+				int thread_count = 0;
+				ArrayList<TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>>> storageHelpers = new ArrayList<TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>>>();
 
 				while (i < lits.size()) {
 
@@ -273,8 +336,34 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 													currentCalClusterDepth,
 													currentCalValue));
 
-									m_session.getCache().storeLiterals(dynNode,
-											lits4Node);
+									/*
+									 * store lits
+									 */
+
+									TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> helperThread = m_session
+											.getCache().storeLiterals(dynNode,
+													lits4Node);
+
+									if (helperThread != null) {
+										storageHelpers.add(helperThread);
+									}
+
+									thread_count++;
+
+									if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+										for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+											try {
+												thread.join();
+											} catch (InterruptedException e) {
+												e.printStackTrace();
+											}
+										}
+
+										storageHelpers.clear();
+										thread_count = 0;
+									}
 
 								} else {
 
@@ -303,9 +392,32 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 							 * store literals for this dynamic node
 							 */
 
-							m_session.getCache().storeLiterals(dynNode,
-									lits.subList(leftBorderIdx, lits.size()));
+							TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> helperThread = m_session
+									.getCache().storeLiterals(
+											dynNode,
+											lits.subList(leftBorderIdx, lits
+													.size()));
 
+							if (helperThread != null) {
+								storageHelpers.add(helperThread);
+							}
+
+							thread_count++;
+
+							if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+								for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+									try {
+										thread.join();
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+								}
+
+								storageHelpers.clear();
+								thread_count = 0;
+							}
 						}
 
 						tree.addVertex(dynNode);
@@ -321,6 +433,19 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 						i++;
 					}
 				}
+
+				for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+					try {
+						thread.join();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				storageHelpers.clear();
+				thread_count = 0;
+
 			} else {
 
 				int i = 0;
@@ -366,6 +491,9 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 				int i = 0;
 
+				int thread_count = 0;
+				ArrayList<TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>>> storageHelpers = new ArrayList<TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>>>();
+
 				while (i < lits.size()) {
 
 					DynamicNode dynNode = new DynamicNode();
@@ -389,8 +517,34 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 										.getLiteralValue(dynNode
 												.getRightBorder())) + "]");
 
-						m_session.getCache().storeLiterals(dynNode,
-								lits.subList(i, lits.size()));
+						/*
+						 * store lits
+						 */
+
+						TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> helperThread = m_session
+								.getCache().storeLiterals(dynNode,
+										lits.subList(i, lits.size()));
+
+						if (helperThread != null) {
+							storageHelpers.add(helperThread);
+						}
+
+						thread_count++;
+
+						if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+							for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+								try {
+									thread.join();
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+
+							storageHelpers.clear();
+							thread_count = 0;
+						}
 
 					} else {
 
@@ -406,8 +560,30 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 										.getLiteralValue(dynNode
 												.getRightBorder())) + "]");
 
-						m_session.getCache().storeLiterals(dynNode,
-								lits.subList(i, i + delta + 1));
+						TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> helperThread = m_session
+								.getCache().storeLiterals(dynNode,
+										lits.subList(i, i + delta + 1));
+
+						if (helperThread != null) {
+							storageHelpers.add(helperThread);
+						}
+
+						thread_count++;
+
+						if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+							for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+								try {
+									thread.join();
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+
+							storageHelpers.clear();
+							thread_count = 0;
+						}
 					}
 
 					tree.addVertex(dynNode);
@@ -417,6 +593,19 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 
 					i += delta + 1;
 				}
+
+				for (TransactionalStorageHelperThread<Double, List<AbstractSingleFacetValue>> thread : storageHelpers) {
+
+					try {
+						thread.join();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				storageHelpers.clear();
+				thread_count = 0;
+
 			} else {
 
 				m_helper.clearParsedFacetValues();
@@ -424,7 +613,6 @@ public class FacetSimpleClusterBuilder implements IBuilder {
 			}
 		}
 	}
-
 	private int getCalValue(Literal lit, int currentDepth) {
 
 		XMLGregorianCalendar cal = (XMLGregorianCalendar) lit

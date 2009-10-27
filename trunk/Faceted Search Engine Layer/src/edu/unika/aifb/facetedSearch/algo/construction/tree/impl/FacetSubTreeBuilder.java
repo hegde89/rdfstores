@@ -20,6 +20,7 @@ package edu.unika.aifb.facetedSearch.algo.construction.tree.impl;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -30,12 +31,14 @@ import org.apache.log4j.Logger;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.algo.construction.tree.IBuilder;
 import edu.unika.aifb.facetedSearch.facets.model.impl.AbstractSingleFacetValue;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetValueNode;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
+import edu.unika.aifb.facetedSearch.index.db.TransactionalStorageHelperThread;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -106,11 +109,15 @@ public class FacetSubTreeBuilder implements IBuilder {
 					if (!m_parsedSubjects.contains(subject)) {
 
 						Iterator<AbstractSingleFacetValue> objIter = m_session
-								.getCache().getObjects4StaticNode(node, subject)
+								.getCache()
+								.getObjects4StaticNode(node, subject)
 								.iterator();
 
 						Iterator<String> sourcesIter = m_session.getCache()
 								.getSources4Object(domain, subject).iterator();
+
+						int thread_count = 0;
+						ArrayList<TransactionalStorageHelperThread<String, String>> storageHelpers = new ArrayList<TransactionalStorageHelperThread<String, String>>();
 
 						while (objIter.hasNext()) {
 
@@ -123,14 +130,60 @@ public class FacetSubTreeBuilder implements IBuilder {
 							if (sourcesIter.hasNext()) {
 
 								while (sourcesIter.hasNext()) {
-									m_session.getCache()
+
+									TransactionalStorageHelperThread<String, String> helperThread = m_session
+											.getCache()
 											.addObject2SourceMapping(domain,
 													fv.getValue(),
 													sourcesIter.next());
+
+									if (helperThread != null) {
+										storageHelpers.add(helperThread);
+									}
+
+									thread_count++;
+
+									if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+										for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+											try {
+												thread.join();
+											} catch (InterruptedException e) {
+												e.printStackTrace();
+											}
+										}
+
+										storageHelpers.clear();
+										thread_count = 0;
+									}
 								}
 							} else {
-								m_session.getCache().addObject2SourceMapping(
-										domain, fv.getValue(), subject);
+
+								TransactionalStorageHelperThread<String, String> helperThread = m_session
+										.getCache().addObject2SourceMapping(
+												domain, fv.getValue(), subject);
+
+								if (helperThread != null) {
+									storageHelpers.add(helperThread);
+								}
+
+								thread_count++;
+
+								if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+									for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+										try {
+											thread.join();
+										} catch (InterruptedException e) {
+											e.printStackTrace();
+										}
+									}
+
+									storageHelpers.clear();
+									thread_count = 0;
+								}
 							}
 
 							// /*
@@ -158,6 +211,17 @@ public class FacetSubTreeBuilder implements IBuilder {
 							// }
 						}
 
+						for (TransactionalStorageHelperThread<String, String> thread : storageHelpers) {
+
+							try {
+								thread.join();
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+
+						storageHelpers.clear();
+						
 						m_parsedSubjects.add(subject);
 					}
 				}

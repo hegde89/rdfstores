@@ -23,13 +23,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
 import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.graphindex.query.QNode;
-import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.QueryGraph;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
@@ -76,6 +74,7 @@ public class FacetedQuery implements Serializable {
 	 * 
 	 */
 	private Map<String, String> m_oldVar2newVarMap;
+	private List<FacetFacetValueTuple> m_facetFacetValueList;
 	private List<Map<FacetFacetValueTuple, String>> m_facetFacetValue2QueryMapList;
 
 	/*
@@ -117,8 +116,16 @@ public class FacetedQuery implements Serializable {
 		m_oldVar2newVarMap.clear();
 	}
 
+	public boolean containsFacetFacetValueTuple(FacetFacetValueTuple ffvTuple) {
+		return m_facetFacetValueList.contains(ffvTuple);
+	}
+
 	public List<Map<FacetFacetValueTuple, String>> getFacetFacetValue2QueryMapList() {
 		return m_facetFacetValue2QueryMapList;
+	}
+
+	public List<FacetFacetValueTuple> getFacetFacetValueList() {
+		return m_facetFacetValueList;
 	}
 
 	public Iterator<Map<FacetFacetValueTuple, String>> getFacetFacetValueTuple2QueryIterator() {
@@ -163,6 +170,7 @@ public class FacetedQuery implements Serializable {
 		 * 
 		 */
 		m_oldVar2newVarMap = new HashMap<String, String>();
+		m_facetFacetValueList = new ArrayList<FacetFacetValueTuple>();
 		m_facetFacetValue2QueryMapList = new ArrayList<Map<FacetFacetValueTuple, String>>();
 
 		/*
@@ -259,67 +267,48 @@ public class FacetedQuery implements Serializable {
 		// m_oldVar2newVarMap.clear();
 	}
 
+	public void removeFacetFacetValueTuple(FacetFacetValueTuple ffvTuple) {
+		m_facetFacetValueList.remove(ffvTuple);
+	}
+
 	public boolean removePath(QNode node) {
 
-		boolean success = true;
+		// boolean success = true;
+		//
+		// Iterator<QueryEdge> inEdgesIter = m_qGraph.incomingEdgesOf(node)
+		// .iterator();
+		//
+		// while (inEdgesIter.hasNext()) {
+		// QueryEdge inEdge = inEdgesIter.next();
+		// success = success && m_qGraph.removeEdge(inEdge);
+		// }
+		//
+		// Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
+		// todoStack.addAll(m_qGraph.outgoingEdgesOf(node));
+		//
+		// while (!todoStack.isEmpty()) {
+		//
+		// QueryEdge nextEdge = todoStack.pop();
+		// m_qGraph.removeVertex(nextEdge.getSource());
+		//
+		// if (m_qGraph.outDegreeOf(nextEdge.getTarget()) > 0) {
+		//
+		// todoStack
+		// .addAll(m_qGraph.outgoingEdgesOf(nextEdge.getTarget()));
+		// } else {
+		//
+		// success = success
+		// && m_qGraph.removeVertex(nextEdge.getTarget());
+		// }
+		//
+		// }
+		//
+		// return success;
 
-		Iterator<QueryEdge> inEdgesIter = m_qGraph.incomingEdgesOf(node)
-				.iterator();
-
-		while (inEdgesIter.hasNext()) {
-			QueryEdge inEdge = inEdgesIter.next();
-			success = success && m_qGraph.removeEdge(inEdge);
-		}
-
-		Stack<QueryEdge> todoStack = new Stack<QueryEdge>();
-		todoStack.addAll(m_qGraph.outgoingEdgesOf(node));
-
-		while (!todoStack.isEmpty()) {
-
-			QueryEdge nextEdge = todoStack.pop();
-			m_qGraph.removeVertex(nextEdge.getSource());
-
-			if (m_qGraph.outDegreeOf(nextEdge.getTarget()) > 0) {
-
-				todoStack
-						.addAll(m_qGraph.outgoingEdgesOf(nextEdge.getTarget()));
-			} else {
-
-				success = success
-						&& m_qGraph.removeVertex(nextEdge.getTarget());
-			}
-
-		}
-
-		return success;
+		return true;
 	}
 
 	public void setInitialQuery(StructuredQuery initialQuery) {
 		m_initialQuery = initialQuery;
-	}
-
-	public void updateFacetFacetValueTuple(String historyQuery) {
-
-		// Iterator<Map<String, String>> mapIter =
-		// m_facetFacetValue2QueryMapList.iterator();
-		// Stack<Map<String, String>> mapStack = new
-		// Stack<Map<String,String>>();
-		//		
-		// while(mapIter.hasNext()){
-		// mapStack.push(mapIter.next());
-		// }
-		//		
-		// while(!mapStack.isEmpty()) {
-		//			
-		// Map<String, String> facetFacetValue2Query = mapStack.pop();
-		// String currentQuery =
-		// facetFacetValue2Query.values().iterator().next();
-		//			
-		// if(!currentQuery.equals(historyQuery)) {
-		// m_facetFacetValue2QueryMapList.remove(facetFacetValue2Query);
-		// } else {
-		// break;
-		// }
-		// }
 	}
 }

@@ -18,13 +18,11 @@
 package edu.unika.aifb.facetedSearch.search.evaluator;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.InvalidParameterException;
 
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
-import edu.unika.aifb.facetedSearch.FacetedSearchLayerConfig;
 import edu.unika.aifb.facetedSearch.facets.model.impl.Facet;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.FacetPage;
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
@@ -36,7 +34,6 @@ import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.ChangePage
 import edu.unika.aifb.facetedSearch.search.datastructure.impl.request.InitFacetsRequest;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.SessionStatus;
-import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.HybridQuery;
 import edu.unika.aifb.graphindex.query.KeywordQuery;
@@ -68,44 +65,9 @@ public class GenericQueryEvaluator {
 	private IndexReader m_idxReader;
 	private SearchSession m_session;
 
-	/*
-	 * 
-	 */
-	private boolean m_facetsEnabled;
-
 	public GenericQueryEvaluator(SearchSession session, IndexReader idxReader) {
-
 		m_session = session;
 		m_idxReader = idxReader;
-
-		m_facetsEnabled = FacetedSearchLayerConfig.isFacetsEnabled();
-	}
-
-	private Result constructResult(Table<String> resultTable) {
-
-		Result res = new Result();
-		res.setResultTable(resultTable);
-
-		try {
-
-			m_session.getCache().storeCurrentResult(res);
-
-			// create facets for this result set
-			if (m_facetsEnabled) {
-
-				FacetPage fpage = m_session.getFacetPageManager()
-						.getInitialFacetPage();
-
-				res.setFacetPage(fpage);
-				m_session.getCache().storeCurrentResult(res);
-			}
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
-
-		return res;
 	}
 
 	public Object evaluate(Query query) {
@@ -138,27 +100,28 @@ public class GenericQueryEvaluator {
 
 		} else if (query instanceof StructuredQuery) {
 
-			VPEvaluator eval = null;
-			Table<String> resultTable;
-
-			try {
-
-				m_session.clean(SearchSession.CleanType.ALL);
-
-				eval = (VPEvaluator) getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
-				resultTable = eval.evaluate((StructuredQuery) query);
-
-				constructResult(resultTable);
-				resultPage = getFirstResultPage();
-
-				FacetedQuery fquery = new FacetedQuery((StructuredQuery) query);
-				m_session.setCurrentQuery(fquery);
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (StorageException e) {
-				e.printStackTrace();
-			}
+			// VPEvaluator eval = null;
+			// Table<String> resultTable;
+			//
+			// try {
+			//
+			// m_session.clean(SearchSession.CleanType.ALL);
+			//
+			// eval = (VPEvaluator)
+			// getEvaluator(FacetEnvironment.EvaluatorType.StructuredQueryEvaluator);
+			// resultTable = eval.evaluate((StructuredQuery) query);
+			//
+			// constructResult(resultTable);
+			// resultPage = getFirstResultPage();
+			//
+			// FacetedQuery fquery = new FacetedQuery((StructuredQuery) query);
+			// m_session.setCurrentQuery(fquery);
+			//
+			// } catch (IOException e) {
+			// e.printStackTrace();
+			// } catch (StorageException e) {
+			// e.printStackTrace();
+			// }
 
 		} else if (query instanceof HybridQuery) {
 
@@ -278,7 +241,11 @@ public class GenericQueryEvaluator {
 			/*
 			 * 
 			 */
-			Result res = constructResult(initReq.getRes());
+			Result res = new Result(initReq.getResultTable());
+			
+			FacetPage fpage = m_session.getFacetPageManager()
+					.getInitialFacetPage(res.getResultTable());
+			res.setFacetPage(fpage);
 
 			/*
 			 * 
@@ -288,31 +255,25 @@ public class GenericQueryEvaluator {
 			res.setQuery(fquery);
 			m_session.setCurrentQuery(fquery);
 
-			/*
-			 * 
-			 */
-			m_session.getHistoryManager().putResult(
-					FacetEnvironment.DefaultValue.INIT_QUERY_NAME, res);
-
 			try {
 
 				m_session.getCache().storeCurrentResult(res);
+				m_session.getHistoryManager().putResult(
+						FacetEnvironment.DefaultValue.INIT_QUERY_NAME, res);
+				
 				m_session.setStatus(SessionStatus.FREE);
 
-				return m_session.getCache().getCurrentResult();
+				return res;
 
 			} catch (DatabaseException e) {
-
 				e.printStackTrace();
-				m_session.setStatus(SessionStatus.FREE);
 
 			} catch (IOException e) {
-
 				e.printStackTrace();
-				m_session.setStatus(SessionStatus.FREE);
 			}
 		}
 
+		m_session.setStatus(SessionStatus.FREE);
 		return resultPage;
 	}
 
@@ -371,18 +332,18 @@ public class GenericQueryEvaluator {
 		}
 	}
 
-	private ResultPage getFirstResultPage() {
-
-		ResultPage resPage = ResultPage.EMPTY_PAGE;
-
-		try {
-			resPage = m_session.getCache().getCurrentResultPage(1);
-		} catch (DatabaseException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return resPage;
-	}
+	// private ResultPage getFirstResultPage() {
+	//
+	// ResultPage resPage = ResultPage.EMPTY_PAGE;
+	//
+	// try {
+	// resPage = m_session.getCache().getCurrentResultPage(1);
+	// } catch (DatabaseException e) {
+	// e.printStackTrace();
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// }
+	//
+	// return resPage;
+	// }
 }

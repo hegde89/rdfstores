@@ -36,6 +36,7 @@ import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.EnvironmentLockedException;
 
 import edu.unika.aifb.facetedSearch.Delegator;
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
@@ -268,7 +269,7 @@ public class FacetTreeDelegator extends Delegator {
 	private void init() {
 
 		m_node2pathMap = new Double2ObjectOpenHashMap<Stack<Edge>>();
-		
+
 		try {
 
 			StoredClassCatalog cata = new StoredClassCatalog(m_session
@@ -298,21 +299,19 @@ public class FacetTreeDelegator extends Delegator {
 		m_maps.add(m_node2pathMap);
 	}
 
-	public void initTrees() {
-
-		Table<String> resultTable;
+	public void initTrees(Table<String> resultTable) {
 
 		try {
-
-			resultTable = m_session.getCache().getCurrentResultTable();
 
 			((ConstructionDelegator) m_session
 					.getDelegator(Delegators.CONSTRUCTION))
 					.constructTrees(resultTable);
 
-		} catch (DatabaseException e) {
+		} catch (EnvironmentLockedException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (DatabaseException e) {
 			e.printStackTrace();
 		} catch (StorageException e) {
 			e.printStackTrace();

@@ -20,6 +20,7 @@ package edu.unika.aifb.facetedSearch.algo.construction.tree.impl;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,6 +39,7 @@ import edu.unika.aifb.facetedSearch.facets.tree.model.impl.FacetTree;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.Node;
 import edu.unika.aifb.facetedSearch.facets.tree.model.impl.StaticNode;
 import edu.unika.aifb.facetedSearch.index.FacetIndex;
+import edu.unika.aifb.facetedSearch.index.db.TransactionalStorageHelperThread;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession.Delegators;
 import edu.unika.aifb.facetedSearch.store.impl.GenericRdfStore.IndexName;
@@ -111,6 +113,9 @@ public class FacetTreeBuilder implements IBuilder {
 		Set<StaticNode> newLeaves = new HashSet<StaticNode>();
 		Iterator<String[]> iter = results.iterator();
 
+		int thread_count = 0;
+		ArrayList<TransactionalStorageHelperThread<Double, String>> storageHelpers = new ArrayList<TransactionalStorageHelperThread<Double, String>>();
+
 		while (iter.hasNext()) {
 
 			if (timeOut()) {
@@ -129,11 +134,42 @@ public class FacetTreeBuilder implements IBuilder {
 							leave, m_paths);
 					newLeaves.add(newLeave);
 
-					m_session.getCache().updateLeaveGroups(newLeave.getID(),
-							resItem);
+					TransactionalStorageHelperThread<Double, String> helperThread = m_session
+							.getCache().updateLeaveGroups(newLeave.getID(),
+									resItem);
+
+					if (helperThread != null) {
+						storageHelpers.add(helperThread);
+					}
+
+					thread_count++;
+
+					if (thread_count > FacetEnvironment.DefaultValue.MAX_THREADS) {
+
+						for (TransactionalStorageHelperThread<Double, String> thread : storageHelpers) {
+
+							try {
+								thread.join();
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+
+						storageHelpers.clear();
+						thread_count = 0;
+					}
 				}
 
 				m_parsedResources.add(resItem);
+			}
+		}
+
+		for (TransactionalStorageHelperThread<Double, String> helperThread : storageHelpers) {
+
+			try {
+				helperThread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 		}
 

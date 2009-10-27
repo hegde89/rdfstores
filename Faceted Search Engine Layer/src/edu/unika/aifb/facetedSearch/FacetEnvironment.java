@@ -57,6 +57,9 @@ public class FacetEnvironment {
 
 	public static class DatabaseName {
 
+		public static final String ENV_JDB1 = "/jdb1";
+		public static final String ENV_JDB2 = "/jdb2";
+
 		/*
 		 * other
 		 */
@@ -70,7 +73,7 @@ public class FacetEnvironment {
 		public static final String OBJECT = "object_db";
 
 		/*
-		 * shared Cache -> used in FacetIndex
+		 * shared Cache (for all sessions) -> used in FacetIndex
 		 */
 		public static final String SHARED_CACHE = "shared_cache_db";
 
@@ -78,6 +81,7 @@ public class FacetEnvironment {
 		 * fsl cache
 		 */
 		public static final String FS_CACHE = "fs_cache_db";
+		public static final String FLG_CACHE = "flg_cache_db";
 		public static final String FRES_CACHE = "fres_cache_db";
 		public static final String FLIT_CACHE = "flit_cache_db";
 
@@ -91,6 +95,11 @@ public class FacetEnvironment {
 		 * history manager
 		 */
 		public static final String FHIST_CACHE = "fhist_cache_db";
+
+		/*
+		 * expansion helper
+		 */
+		public static final String FEXP_CACHE = "fexp_cache_db";
 
 		/*
 		 * facet index builder helper
@@ -114,7 +123,7 @@ public class FacetEnvironment {
 
 		public static String CLEANER_ID = "cleaner";
 		public static String KEYWORD_DOMAIN = "?Name of Entity";
-		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/containsKeyword";
+		public static String CONTAINS_KEYWORD_PREDICATE = "http://dbpedia.org/keyword";
 		public static String VAR_PREFIX = "?";
 		public static String BASE_URI = "http://www.fluidops.com/";
 		public static String INDEX_DIRECTORY = "D:/Data/DA/idx";
@@ -138,7 +147,9 @@ public class FacetEnvironment {
 		public static String INIT_QUERY_NAME = "initQuery";
 		public static String SHARED_CACHE_NAME = "shared";
 		public static long MAX_SESSION_LENGTH = 300000;
-		
+		public static int DB_WRITER_MAX_RETRY = 20;
+		public static int MAX_THREADS = 50;
+
 	}
 
 	public static class EdgeType {
@@ -248,6 +259,7 @@ public class FacetEnvironment {
 		public static final String MAX_SEARCH_SESSIONS = "maxSearchSessions";
 		public static final String MAX_SEARCH_LENGTH = "maxSearchSessionLength";
 		public static final String CLEANING_INTERVAL = "cleaningInterval";
+		public static final String MAX_COMPUTATON_THREADS = "maxComputationThreads";
 
 	}
 

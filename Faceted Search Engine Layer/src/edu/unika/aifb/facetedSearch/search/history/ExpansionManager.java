@@ -17,23 +17,25 @@
  */
 package edu.unika.aifb.facetedSearch.search.history;
 
+import java.util.Collection;
+import java.util.List;
+
 import com.sleepycat.bind.EntryBinding;
-import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.TupleBinding;
 import com.sleepycat.collections.StoredMap;
 import com.sleepycat.je.DatabaseException;
 
 import edu.unika.aifb.facetedSearch.FacetEnvironment;
+import edu.unika.aifb.facetedSearch.facets.model.impl.FacetFacetValueTuple;
 import edu.unika.aifb.facetedSearch.index.db.StorageHelperThread;
-import edu.unika.aifb.facetedSearch.search.datastructure.impl.Result;
 import edu.unika.aifb.facetedSearch.search.session.SearchSession;
 
 /**
  * @author andi
  * 
  */
-public class HistoryManager {
+public class ExpansionManager {
 
 	/*
 	 * 
@@ -43,58 +45,55 @@ public class HistoryManager {
 	/*
 	 * 
 	 */
-	private StoredMap<String, Result> m_history;
+	private StoredMap<Double, String> m_sources4ffvTupleMap;
 
 	/*
-	 * bindings
+	 * binding
 	 */
-	private EntryBinding<Result> m_resBinding;
+	private EntryBinding<Double> m_doubleBinding;
 	private EntryBinding<String> m_strgBinding;
 
-	public HistoryManager(SearchSession session) {
+	public ExpansionManager(SearchSession session) {
 
 		m_session = session;
 		init();
 	}
 
 	public void clean() {
-		m_history.clear();
+		m_sources4ffvTupleMap.clear();
 	}
 
 	public void close() {
 
 		clean();
-		m_resBinding = null;
+		m_sources4ffvTupleMap = null;
 		m_strgBinding = null;
 	}
 
-	public Result getResult(String query) {
-		return m_history.get(query);
-	}
-
-	public boolean hasResult(String query) {
-		return m_history.containsKey(query);
+	public Collection<String> getSources(FacetFacetValueTuple ffvTuple) {
+		return m_sources4ffvTupleMap.duplicates(ffvTuple.getId());
 	}
 
 	private void init() {
 
 		try {
 
-			StoredClassCatalog cata = new StoredClassCatalog(m_session
-					.getCache().getDB(FacetEnvironment.DatabaseName.CLASS));
+			new StoredClassCatalog(m_session.getCache().getDB(
+					FacetEnvironment.DatabaseName.CLASS));
 
 			/*
 			 * bindings
 			 */
-			m_resBinding = new SerialBinding<Result>(cata, Result.class);
+			m_doubleBinding = TupleBinding.getPrimitiveBinding(Double.class);
 			m_strgBinding = TupleBinding.getPrimitiveBinding(String.class);
 
 			/*
 			 * stored map
 			 */
-			m_history = new StoredMap<String, Result>(m_session.getCache()
-					.getDB(FacetEnvironment.DatabaseName.FHIST_CACHE),
-					m_strgBinding, m_resBinding, true);
+			m_sources4ffvTupleMap = new StoredMap<Double, String>(
+					m_session.getCache().getDB(
+							FacetEnvironment.DatabaseName.FEXP_CACHE),
+					m_doubleBinding, m_strgBinding, true);
 
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
@@ -104,13 +103,13 @@ public class HistoryManager {
 	}
 
 	public boolean isOpen() {
-		return m_history != null;
+		return m_sources4ffvTupleMap != null;
 	}
 
-	public void putResult(String query, Result res) {
+	public void putSources(FacetFacetValueTuple ffvTuple, List<String> sources) {
 
-		StorageHelperThread<String, Result> storageHelper = new StorageHelperThread<String, Result>(
-				m_history, query, res);
+		StorageHelperThread<Double, String> storageHelper = new StorageHelperThread<Double, String>(
+				m_sources4ffvTupleMap, ffvTuple.getId(), sources);
 		storageHelper.start();
 	}
 }

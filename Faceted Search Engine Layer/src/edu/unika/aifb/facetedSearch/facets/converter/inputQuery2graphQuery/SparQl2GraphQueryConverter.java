@@ -17,6 +17,17 @@
  */
 package edu.unika.aifb.facetedSearch.facets.converter.inputQuery2graphQuery;
 
+import java.util.List;
+
+import org.openrdf.query.MalformedQueryException;
+import org.openrdf.query.algebra.StatementPattern;
+import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.Var;
+import org.openrdf.query.algebra.helpers.StatementPatternCollector;
+import org.openrdf.query.parser.ParsedQuery;
+import org.openrdf.query.parser.sparql.SPARQLParser;
+
+import edu.unika.aifb.facetedSearch.FacetEnvironment;
 import edu.unika.aifb.facetedSearch.facets.converter.AbstractConverter;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 
@@ -42,40 +53,40 @@ public class SparQl2GraphQueryConverter extends AbstractConverter {
 
 		StructuredQuery sQuery = new StructuredQuery("");
 
-		// try {
-		//
-		// SPARQLParser parser = new SPARQLParser();
-		// ParsedQuery parsedQuery = parser.parseQuery(sparQlQueryStrg,
-		// FacetEnvironment.DefaultValue.BASE_URI);
-		//
-		// TupleExpr tupleExpr = parsedQuery.getTupleExpr();
-		// List<StatementPattern> stmtPatterns = StatementPatternCollector
-		// .process(tupleExpr);
-		//
-		// for (StatementPattern stmtPattern : stmtPatterns) {
-		//
-		// Var subjectVar = stmtPattern.getSubjectVar();
-		// Var predicateVar = stmtPattern.getPredicateVar();
-		// Var objectVar = stmtPattern.getObjectVar();
-		//
-		// sQuery.addEdge(subjectVar.getValue() == null
-		// ? FacetEnvironment.DefaultValue.VAR_PREFIX
-		// + subjectVar.getName()
-		// : subjectVar.getValue().stringValue(), predicateVar
-		// .getValue() == null
-		// ? FacetEnvironment.DefaultValue.VAR_PREFIX
-		// + predicateVar.getName()
-		// : predicateVar.getValue().stringValue(), objectVar
-		// .getValue() == null
-		// ? FacetEnvironment.DefaultValue.VAR_PREFIX
-		// + objectVar.getName()
-		// : objectVar.getValue().stringValue());
-		//
-		// }
-		//
-		// } catch (MalformedQueryException e) {
-		// e.printStackTrace();
-		// }
+		 try {
+
+			SPARQLParser parser = new SPARQLParser();
+			ParsedQuery parsedQuery = parser.parseQuery(sparQlQueryStrg,
+					FacetEnvironment.DefaultValue.BASE_URI);
+
+			TupleExpr tupleExpr = parsedQuery.getTupleExpr();
+			List<StatementPattern> stmtPatterns = StatementPatternCollector
+					.process(tupleExpr);
+
+			for (StatementPattern stmtPattern : stmtPatterns) {
+
+				Var subjectVar = stmtPattern.getSubjectVar();
+				Var predicateVar = stmtPattern.getPredicateVar();
+				Var objectVar = stmtPattern.getObjectVar();
+
+				sQuery.addEdge(subjectVar.getValue() == null
+						? FacetEnvironment.DefaultValue.VAR_PREFIX
+								+ subjectVar.getName()
+						: subjectVar.getValue().stringValue(), predicateVar
+						.getValue() == null
+						? FacetEnvironment.DefaultValue.VAR_PREFIX
+								+ predicateVar.getName()
+						: predicateVar.getValue().stringValue(), objectVar
+						.getValue() == null
+						? FacetEnvironment.DefaultValue.VAR_PREFIX
+								+ objectVar.getName()
+						: objectVar.getValue().stringValue());
+
+			}
+
+		} catch (MalformedQueryException e) {
+			e.printStackTrace();
+		}
 
 		return sQuery;
 	}

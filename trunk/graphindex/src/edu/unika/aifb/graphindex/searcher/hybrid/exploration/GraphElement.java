@@ -99,10 +99,10 @@ public abstract class GraphElement {
 	}
 	
 	public Set<List<Cursor>> getCursorCombinations(Set<String> completeKeywords) {
-		for (List<Cursor> list : m_keywordCursors.values())
-			for (Cursor c : list)
-				if (c.track)
-					System.out.println("comb: " + c);
+//		for (List<Cursor> list : m_keywordCursors.values())
+//			for (Cursor c : list)
+//				if (c.track)
+//					System.out.println("comb: " + c);
 		
 		Set<List<Cursor>> list = new HashSet<List<Cursor>>();
 		
@@ -117,7 +117,7 @@ public abstract class GraphElement {
 		
 		boolean carry = true;
 		do {
-			boolean track = false;
+//			boolean track = false;
 			List<Cursor> combination = new ArrayList<Cursor>();
 			Set<String> startLabels = new HashSet<String>();
 			boolean invalid = false;
@@ -126,7 +126,7 @@ public abstract class GraphElement {
 					continue;
 				
 				Cursor c = m_keywordCursors.get(keywords.get(i)).get(idx[i]);
-				track = c.track;
+//				track = c.track;
 				Cursor startCursor = c.getStartCursor();
 				if (!startLabels.add(startCursor.getGraphElement().getLabel())) {
 					invalid = true;

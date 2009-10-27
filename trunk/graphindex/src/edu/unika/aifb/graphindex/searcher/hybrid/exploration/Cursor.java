@@ -46,7 +46,7 @@ public abstract class Cursor implements Comparable<Cursor> {
 	protected Map<String,Double> m_outPropertyWeights = new HashMap<String,Double>();
 	protected Cursor m_startCursor;
 	
-	public boolean track = false;
+//	public boolean track = false;
 	
 	public Cursor(Set<KeywordSegment> keywords, GraphElement element) {
 		this(keywords, element, null);

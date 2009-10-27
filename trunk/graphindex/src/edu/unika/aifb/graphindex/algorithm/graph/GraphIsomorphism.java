@@ -39,7 +39,7 @@ public class GraphIsomorphism {
 	public List<Map<String,String>> getIsomorphicMappings(DirectedMultigraph<NodeElement,EdgeElement> g1, DirectedMultigraph<NodeElement,EdgeElement> g2) {
 		List<Map<String,String>> maps = new ArrayList<Map<String,String>>();
 
-		Statistics.inc(this, Statistics.Counter.ISO_ALL);
+//		Statistics.inc(this, Statistics.Counter.ISO_ALL);
 		
 		if (g1.edgeSet().size() != g2.edgeSet().size() || g1.vertexSet().size() != g2.vertexSet().size())
 			return maps;
@@ -55,7 +55,7 @@ public class GraphIsomorphism {
 		if (!g1labels.equals(g2tables.keySet()))
 			return maps;
 
-		Statistics.inc(this, Statistics.Counter.ISO_CHECK);
+//		Statistics.inc(this, Statistics.Counter.ISO_CHECK);
 		
 		List<Table<String>> resultTables = new ArrayList<Table<String>>();
 		Queue<EdgeElement> toVisit = new LinkedList<EdgeElement>(g1.edgeSet()); 
@@ -134,7 +134,7 @@ public class GraphIsomorphism {
 			maps.add(map);
 		}
 		
-		Statistics.inc(this, Statistics.Counter.ISO_END);
+//		Statistics.inc(this, Statistics.Counter.ISO_END);
 		
 		return maps;
 	}

@@ -27,8 +27,8 @@ public class NodeCursor extends Cursor {
 
 	@Override
 	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
-		Statistics.start(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
-		Statistics.inc(NodeCursor.class, Statistics.Counter.EX_NODECURSORS);
+//		Statistics.start(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
+//		Statistics.inc(NodeCursor.class, Statistics.Counter.EX_NODECURSORS);
 		if (element instanceof EdgeElement) {
 			EdgeElement edge = (EdgeElement)element;
 			boolean out = edge.getSource().equals(getGraphElement());
@@ -37,12 +37,12 @@ public class NodeCursor extends Cursor {
 //			if ((out && (m_outProperties == null || m_outProperties.size() == 0 || m_outProperties.contains(edge.getLabel())))
 //				|| (!out && (m_inProperties == null || m_inProperties.size() == 0 || m_inProperties.contains(edge.getLabel()))) )
 			Cursor nextCursor = new NodeCursor(m_keywords, next, new EdgeCursor(m_keywords, element, this));
-			Statistics.end(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
+//			Statistics.end(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
 			return nextCursor;
 		}
 		else
 			log.error("next cursor has to be for an edge");
-		Statistics.end(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
+//		Statistics.end(NodeCursor.class, Statistics.Timing.EX_NODECURSOR_NEXT);
 		return null;
 	}
 

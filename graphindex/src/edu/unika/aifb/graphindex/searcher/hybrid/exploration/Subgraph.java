@@ -94,9 +94,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		
 		Map<String,Set<String>> keywordEntities = new HashMap<String,Set<String>>();
 
-		Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_CREATED);
+//		Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_CREATED);
 		
-		Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+//		Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 		for (Cursor c : cursors) {
 //			if (c.track) {
 //				log.debug(c);
@@ -120,8 +120,8 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				else {
 					name += "," + startCursor.getKeywordSegments().toString();
 					m_valid = false;
-					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID1);
-					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+//					Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID1);
+//					Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 					return;
 				}
 				
@@ -207,7 +207,7 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				allowed.addAll(elementCursor.getOutProperties());
 			}
 
-			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
+//			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 			for (EdgeElement e : c.getEdges()) {
 				m_edges.add(e);
 
@@ -218,9 +218,9 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				addVertex(((EdgeElement)e).getTarget());
 				addEdge(((EdgeElement)e).getSource(), ((EdgeElement)e).getTarget(), (EdgeElement)e);
 			}
-			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
+//			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS_GRAPH);
 		}
-		Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
+//		Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_CURSORS);
 
 //		if (m_structuredNode != null) {
 //			// subgraph is invalid if an entity edge and the structured part attach to the same node
@@ -235,7 +235,7 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 		values.addAll(m_rename.values());
 		if (values.size() < m_rename.size()) {
 			m_valid = false;
-			Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID3);
+//			Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID3);
 			return;
 		}
 		
@@ -243,14 +243,14 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 //			log.debug(this);
 		
 		if (m_valid) {
-			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+//			Statistics.start(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 			for (NodeElement node : node2AllowedInEdgeLabels.keySet()) {
 				Set<String> allowedEdgeLabels = node2AllowedInEdgeLabels.get(node);
 				for (EdgeElement edge : edgesOf(node)) {
 					if (edge.getTarget().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
 						m_valid = false;
-						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
-						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
+//						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+//						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
 						
 //						if (track) {
 //							log.debug(edgeSet());
@@ -268,8 +268,8 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 				for (EdgeElement edge : edgesOf(node)) {
 					if (edge.getSource().equals(node) && !allowedEdgeLabels.contains(edge.getLabel()) && !m_rename.containsKey(edge.getTarget().getLabel())) {
 						m_valid = false;
-						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
-						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
+//						Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+//						Statistics.inc(Subgraph.class, Statistics.Counter.EX_SUBGRAPH_INVALID4);
 
 //						if (track) {
 //							log.debug(edgeSet());
@@ -281,7 +281,7 @@ public class Subgraph extends DirectedMultigraph<NodeElement,EdgeElement> implem
 					}
 				}
 			}
-			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
+//			Statistics.end(Subgraph.class, Statistics.Timing.EX_SUBGRAPH_ALLOWED_CHECK);
 		}
 
 		m_cost = 0;

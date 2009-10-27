@@ -198,12 +198,26 @@ public class KeywordSearcher {
 		log.debug("...done");
 		
 		for(String keyword : conceptsAndRelations.keySet()) {
-			segments2Entities.put(new KeywordSegment(keyword), conceptsAndRelations.get(keyword));
+			KeywordSegment ks = new KeywordSegment(keyword);
+			Collection<KeywordElement> uris = segments2Entities.get(ks);
+			if (uris == null) {
+				uris = new HashSet<KeywordElement>();
+				segments2Entities.put(ks, uris);
+			}
+			uris.addAll(conceptsAndRelations.get(keyword));
+//			segments2Entities.put(new KeywordSegment(keyword), conceptsAndRelations.get(keyword));
 		}
 
 //		attributes.keySet().removeAll(keywords2Entities.keySet());
 		for(String keyword : attributes.keySet()) {
-			segments2Entities.put(new KeywordSegment(keyword), attributes.get(keyword));
+			KeywordSegment ks = new KeywordSegment(keyword);
+			Collection<KeywordElement> uris = segments2Entities.get(ks);
+			if (uris == null) {
+				uris = new HashSet<KeywordElement>();
+				segments2Entities.put(ks, uris);
+			}
+			uris.addAll(attributes.get(keyword));
+//			segments2Entities.put(new KeywordSegment(keyword), attributes.get(keyword));
 		}
 
 		return segments2Entities;

@@ -51,7 +51,7 @@ public class KeywordNodeCursor extends NodeCursor {
 
 	@Override
 	public Cursor getNextCursor(GraphElement element, Map<String,Set<String>> nodesWithConcepts) {
-		Statistics.start(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
+//		Statistics.start(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
 		if (element instanceof EdgeElement) {
 			EdgeElement edge = (EdgeElement)element;
 			boolean out = edge.getSource().equals(getGraphElement());
@@ -125,17 +125,17 @@ public class KeywordNodeCursor extends NodeCursor {
 				nextEdge.setCost(getCost() + (out ? m_outPropertyWeights.get(edge.getLabel()) : m_inPropertyWeights.get(edge.getLabel())));
 				Cursor nextCursor = new NodeCursor(m_keywords, next, nextEdge);
 
-				if (track && edge.getLabel().contains("writer"))
-					log.debug(this + " => " + edge + " " + nextCursor);
+//				if (track && edge.getLabel().contains("writer"))
+//					log.debug(this + " => " + edge + " " + nextCursor);
 				
-				Statistics.end(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
+//				Statistics.end(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
 				return nextCursor;
 			}
 
 		}
 		else
 			log.error("next cursor has to be for an edge");
-		Statistics.end(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
+//		Statistics.end(KeywordNodeCursor.class, Statistics.Timing.EX_KWCURSOR_NEXT);
 		return null;
 	}
 }

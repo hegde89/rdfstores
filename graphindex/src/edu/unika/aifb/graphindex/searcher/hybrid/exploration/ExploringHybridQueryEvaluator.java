@@ -386,15 +386,15 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		log.info("evaluating...");
 		timings.start(Timings.TOTAL_QUERY_EVAL);
 
-		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
+//		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
 		Map<KeywordSegment,Collection<KeywordElement>> decomposition = search(query.getKeywordQuery().getQuery(), m_searcher, m_doOverlap, timings);
-		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
+//		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_SEARCH);
 
 		List<TranslatedQuery> queries = new ArrayList<TranslatedQuery>();
 
-		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
+//		Statistics.start(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
 		explore(query, numberOfQueries, decomposition, m_matcher, queries, timings, counters);
-		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
+//		Statistics.end(ExploringHybridQueryEvaluator.class, Statistics.Timing.HY_EXPLORE);
 
 		timings.start(Timings.STEP_IQA);
 		
@@ -458,8 +458,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 		
 		timings.end(Timings.TOTAL_QUERY_EVAL);
 
-		Statistics.print();
-		Statistics.reset();
+//		Statistics.print();
+//		Statistics.reset();
 
 		return queries;
 	}

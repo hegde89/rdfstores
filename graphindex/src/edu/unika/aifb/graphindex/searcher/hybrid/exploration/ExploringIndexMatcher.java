@@ -410,8 +410,8 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //						log.debug(" " + ele.getInPropertyWeights());
 //						log.debug(" " + ele.getOutPropertyWeights());
 
-						if (ele.entities.contains("http://dbpedia.org/resource/Freddie_Mercury"))
-							nodeCursor.track = true;
+//						if (ele.entities.contains("http://dbpedia.org/resource/Freddie_Mercury"))
+//							nodeCursor.track = true;
 						
 //						node.addCursor(nodeCursor);
 						
@@ -471,7 +471,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 
 //		m_keywordSegments = keywords;
 		
-		setMaxDistance(nodeKeywords.size() * 2);
+		setMaxDistance(nodeKeywords.size() * 2 + m_edgeUri2Keywords.size());
 		log.debug("nodeKeywords: " + nodeKeywords);
 		log.debug("max distance: " + m_maxDistance);
 		log.debug("data edges added: " + m_dataEdges);
@@ -494,17 +494,17 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 		if (currentElement.getKeywords().size() == m_keywords.size()) {
 			// current element is a connecting element
 
-			Statistics.start(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
+//			Statistics.start(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
 			Set<List<Cursor>> combinations = currentElement.getCursorCombinations(m_keywords);
-			Statistics.end(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
+//			Statistics.end(this, Statistics.Timing.EX_TOPK_COMBINATIONS);
 
-			Statistics.inc(this, Statistics.Counter.EX_TOPK_COMBINATIONS, combinations.size());
+//			Statistics.inc(this, Statistics.Counter.EX_TOPK_COMBINATIONS, combinations.size());
 			
-			Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
+//			Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
 			for (List<Cursor> combination : combinations) {
-				Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
+//				Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
 				Subgraph sg = new Subgraph(new HashSet<Cursor>(combination));
-				Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
+//				Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_CREATION);
 
 				if (sg.isValid() && !m_subgraphs.contains(sg)) {// && !sg.hasDanglingEdge()) {
 					boolean found = false;
@@ -512,9 +512,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 //					for (Subgraph existing : m_subgraphs) {
 						Subgraph existing = i.next();
 						try {
-							Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
+//							Statistics.start(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
 							List<Map<String,String>> maps = m_iso.getIsomorphicMappings(existing, sg);
-							Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
+//							Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH_ISO);
 
 							if (maps.size() > 0) {
 								found = true;
@@ -548,7 +548,7 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 				}
 			}
 //			log.debug(m_subgraphs.size());
-			Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
+//			Statistics.end(this, Statistics.Timing.EX_TOPK_SUBGRAPH);
 		}
 		
 		if (System.currentTimeMillis() - m_matchingStart > TIMEOUT * 1.2) {
@@ -610,9 +610,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 						break;
 					}
 					
-					Statistics.start(this, Statistics.Timing.EX_NEIGHBORS);
+//					Statistics.start(this, Statistics.Timing.EX_NEIGHBORS);
 					List<GraphElement> neighbors = currentElement.getNeighbors(m_node2edges, minCursor, m_edgeUri2Keywords.keySet());
-					Statistics.end(this, Statistics.Timing.EX_NEIGHBORS);
+//					Statistics.end(this, Statistics.Timing.EX_NEIGHBORS);
 
 //					int size = neighbors.size();
 //					long start = System.currentTimeMillis();
@@ -644,9 +644,9 @@ public class ExploringIndexMatcher extends AbstractIndexGraphMatcher {
 					
 					for (GraphElement neighbor : neighbors) {
 						if (!parents.contains(neighbor) && !m_ksStartNodes.get(startKS).contains(neighbor)) {
-							Statistics.start(this, Statistics.Timing.EX_NEXTCURSOR);
+//							Statistics.start(this, Statistics.Timing.EX_NEXTCURSOR);
 							Cursor c = minCursor.getNextCursor(neighbor, m_nodesWithConcepts);
-							Statistics.end(this, Statistics.Timing.EX_NEXTCURSOR);
+//							Statistics.end(this, Statistics.Timing.EX_NEXTCURSOR);
 							
 							if (c == null)
 								continue;

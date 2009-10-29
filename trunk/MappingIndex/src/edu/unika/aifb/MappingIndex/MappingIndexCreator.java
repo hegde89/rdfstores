@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.TripleSink;
@@ -36,8 +37,6 @@ public class MappingIndexCreator implements TripleSink{
 	private String m_ds_source;
 	// Target data source
 	private String m_ds_destination;
-	// Mapping Directory
-	//private String m_mapping_dir;
 	// Output Directory
 	private String m_root_dir;
 	
@@ -51,24 +50,12 @@ public class MappingIndexCreator implements TripleSink{
 	
 	private final static Logger log = Logger.getLogger(IndexCreator.class);
 	
-	/*public MappingIndexCreator(String indexDirectory, String s, String d) throws IOException {
-		m_idxDirectory = new IndexDirectory(indexDirectory);
-		m_MappingIndexConfig = new IndexConfiguration();
-		m_root_dir = indexDirectory;
-		m_ds_source = s;
-		m_ds_destination = d;
-	}*/
-	
 	public MappingIndexCreator(String indexDirectory, List<Mapping> maps) throws IOException {
 		m_idxDirectory = new IndexDirectory(indexDirectory);
 		m_MappingIndexConfig = new IndexConfiguration();
 		m_root_dir = indexDirectory;
 		mappings = maps;
 	}
-	
-	/*public void setImporter(Importer importer) {
-		m_importer = importer;
-	}*/
 	
 	/**
 	 * Adds the given IndexDescription to the IndexConfiguration.
@@ -79,7 +66,6 @@ public class MappingIndexCreator implements TripleSink{
 	}
 	
 	private void importData() throws IOException, StorageException {
-		//m_importer.setTripleSink(this);
 		
 		m_mappingIndexes = new HashMap<IndexDescription,IndexStorage>();
 		for (IndexDescription idx : m_MappingIndexConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
@@ -113,12 +99,12 @@ public class MappingIndexCreator implements TripleSink{
 			// Import triples from mapping file
 			m_importer.doImport();
 			
+			// Clean up
 			o_idx.close();
 			s_idx.close();
 		}
-
-		//m_importer.doImport();
-
+		
+		// Merge indexes
 		for (IndexDescription idx : m_MappingIndexConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
 			//m_mappingIndexes.get(idx).mergeSingleIndex(idx);
@@ -161,16 +147,6 @@ public class MappingIndexCreator implements TripleSink{
 		// Create directory for indices
 		m_idxDirectory.create();
 		
-		// Open index of target entity
-		//IndexReader o_IndexReader = new IndexReader(new IndexDirectory(m_ds_destination));
-		//o_idx = o_IndexReader.getStructureIndex();
-		
-		// Open index of source entity
-		//IndexReader s_IndexReader = new IndexReader(new IndexDirectory(m_ds_source));
-		//s_idx = s_IndexReader.getStructureIndex();
-		
-		//m_MappingIndexConfig = new IndexConfiguration();
-		
 		// ds1,ds2,e1->e2
 		addMappingIndex(IndexDescription.DSDTESET);
 		// ds1,ds2,e2->e1
@@ -185,9 +161,6 @@ public class MappingIndexCreator implements TripleSink{
 		
 		// Import triples from mapping file
 		importData();
-			
-		/*o_idx.close();
-		s_idx.close();*/
 		
 		m_MappingIndexConfig.store(m_idxDirectory);
 		
@@ -201,8 +174,8 @@ public class MappingIndexCreator implements TripleSink{
 			midx.getIndexStorage(IndexDescription.DSDTESET);
 			String entity = "http://dbpedia.org/resource/Albania";
 			
-			Set<String> mset = midx.getStoTMapping(m_ds_source, m_ds_destination, entity);
-			System.out.println(mset.size());
+			Table<String> mtable = midx.getStoTMapping(m_ds_source, m_ds_destination, entity);
+			System.out.println(mtable.toDataString());
 				
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

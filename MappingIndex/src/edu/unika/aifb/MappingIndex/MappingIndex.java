@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.index.*;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
@@ -72,9 +73,9 @@ public class MappingIndex extends Index {
 	 * @return
 	 * @throws StorageException
 	 */
-	public Set<String> getStoTMapping(String ds_source, String ds_target, String e_source) throws StorageException {
+	public Table<String> getStoTMapping(String ds_source, String ds_target, String e_source) throws StorageException {
 		IndexDescription index = IndexDescription.DSDTESET;
-		return  getIndexStorage(index).getDataSet(index, DataField.E_TARGET, 
+		return  getIndexStorage(index).getTable(index, new DataField[] { DataField.E_SOURCE, DataField.E_TARGET }, 
 				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_SOURCE, e_source));
 	}
 	
@@ -86,9 +87,9 @@ public class MappingIndex extends Index {
 	 * @return
 	 * @throws StorageException
 	 */
-	public Set<String> getTtoSMapping(String ds_source, String ds_target, String e_target) throws StorageException {
+	public Table<String> getTtoSMapping(String ds_source, String ds_target, String e_target) throws StorageException {
 		IndexDescription index = IndexDescription.DSDTETES;
-		return  getIndexStorage(index).getDataSet(index, DataField.E_SOURCE, 
+		return  getIndexStorage(index).getTable(index, new DataField[] { DataField.E_TARGET, DataField.E_SOURCE }, 
 				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_TARGET, e_target));
 	}
 	
@@ -100,9 +101,9 @@ public class MappingIndex extends Index {
 	 * @return
 	 * @throws StorageException
 	 */
-	public Set<String> getStoTExtMapping(String ds_source, String ds_target, String ext_source) throws StorageException {
+	public Table<String> getStoTExtMapping(String ds_source, String ds_target, String ext_source) throws StorageException {
 		IndexDescription index = IndexDescription.DSDTESXETX;
-		return  getIndexStorage(index).getDataSet(index, DataField.E_TARGET_EXT, 
+		return  getIndexStorage(index).getTable(index, new DataField[] {DataField.E_SOURCE_EXT, DataField.E_TARGET_EXT }, 
 				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_SOURCE_EXT, ext_source));
 	}
 	
@@ -114,9 +115,9 @@ public class MappingIndex extends Index {
 	 * @return
 	 * @throws StorageException
 	 */
-	public Set<String> getTtoSExtMapping(String ds_source, String ds_target, String ext_target) throws StorageException {
+	public Table<String> getTtoSExtMapping(String ds_source, String ds_target, String ext_target) throws StorageException {
 		IndexDescription index = IndexDescription.DSDTETXESX;
-		return  getIndexStorage(index).getDataSet(index, DataField.E_SOURCE_EXT, 
+		return  getIndexStorage(index).getTable(index, new DataField[] { DataField.E_TARGET_EXT, DataField.E_SOURCE_EXT }, 
 				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_TARGET_EXT, ext_target));
 	}
 }

@@ -1,7 +1,9 @@
-package edu.unika.aifb.multipartquery;
+package edu.unika.aifb.multipartquery.test;
 
 import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.multipartquery.MultiPartQuery;
+import edu.unika.aifb.multipartquery.MultiPartQueryEvaluator;
 
 public class Test {
 
@@ -14,11 +16,11 @@ public class Test {
 		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Germany");
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
 
-		sq1.addEdge("?y", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
-		sq1.setAsSelect("?y");
+		sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
+		sq1.setAsSelect("?x");
 
-		sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
-		sq2.setAsSelect("?x");
+		sq2.addEdge("?y", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
+		sq2.setAsSelect("?y");
 
 		mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", sq1);
 		mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", sq2);

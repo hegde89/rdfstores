@@ -1,0 +1,385 @@
+package edu.unika.aifb.graphindex.searcher.keyword.model;
+
+/**
+ * Copyright (C) 2009 Lei Zhang (beyondlei at gmail.com)
+ * 
+ * This file is part of the graphindex project.
+ *
+ * graphindex is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2
+ * as published by the Free Software Foundation.
+ * 
+ * graphindex is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with graphindex.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Fieldable;
+
+import edu.unika.aifb.graphindex.model.IResource;
+import edu.unika.aifb.graphindex.model.impl.Attribute;
+import edu.unika.aifb.graphindex.model.impl.Entity;
+import edu.unika.aifb.graphindex.model.impl.NamedConcept;
+import edu.unika.aifb.graphindex.model.impl.Relation;
+import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
+import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
+import edu.unika.aifb.graphindex.util.StringSplitter;
+
+
+public class KeywordElement implements Comparable<KeywordElement>, Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8594203186544962955L;
+	
+	// TODO make these subclasses, that's what they are there for
+	public static final int CONCEPT = 0;
+	public static final int RELATION = 1;
+	public static final int ENTITY = 2;
+	public static final int ATTRIBUTE = 3;
+
+	private IResource resource;
+	private double matchingScore;
+	private Set<String> keywords;
+	private Set<String> reachableKeywords; 
+	private Document doc;
+	private BloomFilter bloomFilter;
+	private String attributeUri;
+
+	protected int type;
+
+	private NeighborhoodStorage ns;
+
+	private Set<String> m_inProperties, m_outProperties;
+	private Map<String,Double> m_inPropertyWeights = new HashMap<String,Double>();
+	private Map<String,Double> m_outPropertyWeights = new HashMap<String,Double>();
+	
+	public Set<String> entities = new HashSet<String>(100);
+	
+	public KeywordElement(IResource resource, int type, Document doc, double score, NeighborhoodStorage ns) {
+		this.resource = resource;
+		this.type = type;
+		this.matchingScore = score;
+		this.doc = doc;
+		this.ns = ns;
+	}
+	
+	public KeywordElement(IResource resource, int type, Document doc, double score, String keyword, NeighborhoodStorage ns) {
+		this.doc = doc;
+		this.resource = resource;
+		this.type = type;
+		this.matchingScore = score;
+		this.keywords = new HashSet<String>();
+		this.keywords.add(keyword);
+		this.ns = ns;
+	}
+
+	public KeywordElement(IResource resource, int type, double score, String keyword, NeighborhoodStorage ns) {
+		this.resource = resource;
+		this.type = type;
+		this.matchingScore = score;
+		this.keywords = new HashSet<String>();
+		this.keywords.add(keyword);
+		this.ns = ns;
+	}
+	
+	public KeywordElement(IResource resource, int type, NeighborhoodStorage ns) {
+		this.resource = resource;
+		this.type = type;
+		this.ns = ns;
+	}
+	
+	public KeywordElement(){}
+	
+	public int getType(){
+		return type;
+	}
+	
+	public void setType(int type) {
+		this.type = type;
+	}
+	
+	public void clearDoc() {
+		this.doc = null;
+	}
+	
+	public void setKeywords(Set<String> keywords) {
+		this.keywords = keywords;
+	}
+	
+	public void addKeywords(Set<String> keywords) {
+		if(this.keywords == null) {
+			this.keywords = new HashSet<String>();
+		}
+		for(String keyword : keywords) {
+			this.keywords.add(keyword);
+		}
+	}
+	
+	public Collection<String> getKeywords() {
+		return keywords;
+	}
+	
+	public String getAttributeUri() {
+		return attributeUri;
+	}
+	
+	public void setAttributeUri(String attr) {
+		attributeUri = attr;
+	}
+	
+	public void addReachableKeywords(Collection<String> keywords) {
+		if(reachableKeywords == null) {
+			reachableKeywords = new HashSet<String>();
+		}
+		reachableKeywords.addAll(keywords);
+			
+	}
+	
+	public void addReachableKeyword(String keyword) {
+		if(reachableKeywords == null) {
+			reachableKeywords = new HashSet<String>();
+		}
+		reachableKeywords.add(keyword);
+	}
+	
+	public Collection<String> getReachableKeywords() {
+		return reachableKeywords;
+	}
+	
+	public void setResource(IResource resource){
+		this.resource = resource;
+	}
+
+	public IResource getResource(){
+		return resource;
+	}
+
+	public void setMatchingScore(double score){
+		this.matchingScore = score;
+	}
+
+	public double getMatchingScore(){
+		return matchingScore;
+	}
+	
+	public void setBloomFilter(BloomFilter bf) {
+		bloomFilter = bf;
+	}
+	
+	public NeighborhoodStorage getNeighborhoodStorage() {
+		return ns;
+	}
+	
+	public Set<String> getInProperties() {
+		if (m_inProperties == null) {
+			m_inProperties = new HashSet<String>();
+			Fieldable field = doc != null ? doc.getFieldable(Constant.IN_PROPERTIES_FIELD) : null;
+			if (field != null) {
+				String s = field.stringValue();
+				StringSplitter splitter = new StringSplitter(s, "\n");
+				while ((s = splitter.next()) != null)
+					m_inProperties.add(s.trim());
+			}
+		}
+		
+		return m_inProperties;
+	}
+	
+	public Set<String> getOutProperties() {
+		if (m_outProperties == null) {
+			m_outProperties = new HashSet<String>();
+			Fieldable field = doc != null ? doc.getFieldable(Constant.OUT_PROPERTIES_FIELD) : null;
+			if (field != null) {
+				String s = field.stringValue();
+				StringSplitter splitter = new StringSplitter(s, "\n");
+				while ((s = splitter.next()) != null)
+					m_outProperties.add(s.trim());
+			}
+		}
+		
+		return m_outProperties;
+	}
+
+	public void addInProperties(Collection<String> properties) {
+		if (m_inProperties == null)
+			m_inProperties = new HashSet<String>();
+		m_inProperties.addAll(properties);
+		
+		for (String property : properties) {
+			Double count = m_inPropertyWeights.get(property);
+			if (count == null)
+				count = 0.0;
+			count++;
+			m_inPropertyWeights.put(property, count);
+		}
+	}
+
+	public void addOutProperties(Collection<String> properties) {
+		if (m_outProperties == null)
+			m_outProperties = new HashSet<String>();
+		m_outProperties.addAll(properties);
+
+		for (String property : properties) {
+			Double count = m_outPropertyWeights.get(property);
+			if (count == null)
+				count = 0.0;
+			count++;
+			m_outPropertyWeights.put(property, count);
+		}
+	}
+	
+	public Map<String,Double> getInPropertyWeights() {
+		return m_inPropertyWeights;
+	}
+	
+	public Map<String,Double> getOutPropertyWeights() {
+		return m_outPropertyWeights;
+	}
+	
+	public void calcPropertyWeights() {
+		calcPropertyWeights(m_inPropertyWeights);
+		calcPropertyWeights(m_outPropertyWeights);
+	}
+	
+	private void calcPropertyWeights(Map<String,Double> propertyWeights) {
+		double max = 0.0;
+		for (String property : propertyWeights.keySet())
+			max = Math.max(max, propertyWeights.get(property));
+		for (String property : propertyWeights.keySet())
+			propertyWeights.put(property, propertyWeights.get(property) / max);
+	}
+
+	public BloomFilter getBloomFilter() {
+		if(bloomFilter == null) {
+			try {
+				bloomFilter = ns.getNeighborhoodBloomFilter(resource.getUri());
+			} catch (StorageException e) {
+				e.printStackTrace();
+			}
+//			byte[] bytes = doc.getFieldable(Constant.NEIGHBORHOOD_FIELD).binaryValue();
+//			ByteArrayInputStream byteArrayInput = new ByteArrayInputStream(bytes);
+//			try {
+//				ObjectInputStream objectInput = new ObjectInputStream(byteArrayInput);
+//				bloomFilter = (BloomFilter)objectInput.readObject();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} catch (ClassNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} 
+		}
+		return bloomFilter;
+	}
+	
+	public Collection<KeywordElement> getReachable(Collection<KeywordElement> elements) {
+		Collection<KeywordElement> result = new ArrayList<KeywordElement>();
+		for(KeywordElement ele : elements) {
+			if(isReachable(ele))
+				result.add(ele);
+		}
+		return result;
+	}
+	
+	public boolean isReachable(KeywordElement ele) {
+		if(ele.getType() != KeywordElement.ENTITY)
+			return false;
+		if(this.equals(ele))
+			return true;
+		String uri = ele.getResource().getUri();
+		if(uri.startsWith("http://www."))
+			uri = uri.substring(11);
+		else if(uri.startsWith("http://"))
+			uri = uri.substring(7);
+		return getBloomFilter().contains(uri);
+	}
+	
+	public boolean isReachable(Collection<KeywordElement> elements) {
+		for(KeywordElement ele : elements) {
+			if(isReachable(ele)) 
+				return true;
+		}
+		return false;
+	}
+	
+	public boolean isAllReachable(Collection<Collection<KeywordElement>> colls) {
+		for(Collection<KeywordElement> coll : colls) {
+			if(!isReachable(coll))
+				return false;
+		}
+		return true;
+	}
+	
+	public String getUri() {
+		return resource.getUri(); 
+	} 
+	
+	public String getExtensionId() {
+		if(resource instanceof Entity) {
+			return ((Entity)resource).getExtension(); 	
+		}
+		else if (resource instanceof NamedConcept)
+			return ((NamedConcept)resource).getExtension();
+		else
+			return null;
+	}
+
+	public void setExtensionId(String ext) {
+		if(resource instanceof Entity) {
+			((Entity)resource).setExtension(ext); 	
+		}
+		else if (resource instanceof NamedConcept)
+			((NamedConcept)resource).setExtension(ext);
+	}
+	
+	public String toString(){
+		if(resource == null)return null;
+		if(resource instanceof NamedConcept)
+			return ((NamedConcept)resource).getUri();
+		else if(resource instanceof Attribute )
+			return ((Attribute)resource).getUri();
+		else if(resource instanceof Entity )
+			return ((Entity)resource).getUri();
+		else if(resource instanceof Relation )
+			return ((Relation)resource).getUri();
+		else return super.toString();
+	}
+
+	public boolean equals(Object object){
+		if(this == object) return true;
+		if(object == null) return false;
+		if(!(object instanceof KeywordElement)) return false;
+		
+		KeywordElement vertex = (KeywordElement)object;
+		return getResource().getUri().equals(vertex.getResource().getUri()) && this.attributeUri.equals(vertex.attributeUri);
+	}
+	
+	public int hashCode(){
+		return resource.hashCode() + (attributeUri != null ? attributeUri.hashCode() : 0);
+	}
+
+	public int compareTo(KeywordElement o) {
+		return this.getResource().getUri().compareTo(o.getResource().getUri());
+	}
+
+}

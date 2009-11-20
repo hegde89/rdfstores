@@ -1,13 +1,19 @@
 package edu.unika.aifb.multipartquery;
 
+import edu.unika.aifb.MappingIndex.MappingIndex;
+import edu.unika.aifb.graphindex.index.IndexDirectory;
+import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.*;
+import edu.unika.aifb.graphindex.storage.StorageException;
+
+import java.io.IOException;
 import java.util.*;
 
 public class MultiPartQuery extends StructuredQuery{
 
 	private Map<String, StructuredQuery>  queries = new HashMap<String, StructuredQuery>();
 	// Path to Mapping index
-	String indexDirectory = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings";
+	MappingIndex midx = null;
 	
 	public MultiPartQuery(String name) {
 		super(name);
@@ -22,8 +28,20 @@ public class MultiPartQuery extends StructuredQuery{
 		return queries;
 	}
 	
-	public String getMIDXPath () {
-		return indexDirectory;
+	public MappingIndex getMappingIndex () {
+		return midx;
+	}
+	
+	public void setMappingIndex (String path) {
+		try {
+			midx = new MappingIndex(path, new IndexReader(new IndexDirectory(path)).getIndexConfiguration());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (StorageException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

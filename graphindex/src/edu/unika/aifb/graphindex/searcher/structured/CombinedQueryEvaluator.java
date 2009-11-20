@@ -248,7 +248,7 @@ public class CombinedQueryEvaluator extends StructuredQueryEvaluator {
 		
 		counters.set(Counters.RESULTS, m_qe.getResult().rowCount());
 		
-		m_qe = null;
+	//	m_qe = null;
 		
 		return m_qe.getResult();
 	}

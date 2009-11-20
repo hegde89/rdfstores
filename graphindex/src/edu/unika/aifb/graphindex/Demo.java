@@ -27,6 +27,7 @@ import edu.unika.aifb.graphindex.importer.Importer;
 import edu.unika.aifb.graphindex.importer.NxImporter;
 import edu.unika.aifb.graphindex.importer.RDFImporter;
 import edu.unika.aifb.graphindex.index.DataIndex;
+import edu.unika.aifb.graphindex.index.IndexConfiguration;
 import edu.unika.aifb.graphindex.index.IndexCreator;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
@@ -109,6 +110,8 @@ public class Demo {
 			
 			ic.setSICreateDataExtensions(true);
 			
+			ic.setOption(IndexConfiguration.TRIPLES_ONLY, true);
+			
 			// create index
 			ic.create();
 		}
@@ -117,6 +120,7 @@ public class Demo {
 			// an index is accessed through an IndexReader object, which is passed
 			// to all evaluators and searchers
 			IndexReader ir = new IndexReader(new IndexDirectory(directory));
+			
 			
 			// print all object properties in the data set
 			// IndexReader has other methods which report information about the data,

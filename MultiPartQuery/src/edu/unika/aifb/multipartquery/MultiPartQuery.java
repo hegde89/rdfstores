@@ -17,7 +17,6 @@ public class MultiPartQuery extends StructuredQuery{
 	
 	public MultiPartQuery(String name) {
 		super(name);
-		// TODO Auto-generated constructor stub
 	}
 	
 	public void addQuery(String datasource, StructuredQuery query) {
@@ -36,10 +35,8 @@ public class MultiPartQuery extends StructuredQuery{
 		try {
 			midx = new MappingIndex(path, new IndexReader(new IndexDirectory(path)).getIndexConfiguration());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (StorageException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

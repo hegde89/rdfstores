@@ -1,7 +1,11 @@
 package edu.unika.aifb.multipartquery;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import edu.unika.aifb.MappingIndex.MappingIndex;
@@ -9,6 +13,8 @@ import edu.unika.aifb.graphindex.data.Table;
 import edu.unika.aifb.graphindex.data.Tables;
 import edu.unika.aifb.graphindex.index.IndexDirectory;
 import edu.unika.aifb.graphindex.index.IndexReader;
+import edu.unika.aifb.graphindex.query.QNode;
+import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
@@ -21,7 +27,82 @@ public class MultiPartQueryEvaluator {
 		query = mpquery;
 	}
 	
-	public Table<String> evaluate(){
+	public void evaluate() {
+		Map<QueryEdge, String> map = query.getMap();
+		
+		// Build subqueries for each dataset
+		Map<String, StructuredQuery> dsQuery = new HashMap<String, StructuredQuery>();
+		
+		for (Iterator<Entry<QueryEdge, String>> it = map.entrySet().iterator();it.hasNext();){
+			Entry<QueryEdge, String> e = it.next();
+			
+			if (dsQuery.containsKey(e.getValue())) {
+				dsQuery.get(e.getValue()).addEdge(e.getKey().getSource(), e.getKey().getProperty(), e.getKey().getTarget());
+			} else {
+				StructuredQuery sq = new StructuredQuery(e.getValue());
+				sq.addEdge(e.getKey().getSource(), e.getKey().getProperty(), e.getKey().getTarget());
+				dsQuery.put(e.getValue(), sq);
+			}
+		}
+		
+		// Subquery execution
+		Map<String, Table<String>> result = new HashMap<String, Table<String>>();
+		
+		for (Iterator<Entry<String, StructuredQuery>> it = dsQuery.entrySet().iterator();it.hasNext();) {
+			Entry<String, StructuredQuery> e = it.next();
+			
+			// Run the query
+			try {
+				IndexReader indexReader = new IndexReader(new IndexDirectory(e.getKey()));
+				VPEvaluator qe = new VPEvaluator(indexReader);
+				result.put(e.getKey(), qe.evaluate(e.getValue()));
+				
+			} catch (StorageException e1) {
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		
+		Set<String> datasets = new HashSet<String>();
+		
+		// Iterate the map
+		for (Iterator<Entry<String, StructuredQuery>> it1 = dsQuery.entrySet().iterator();it1.hasNext();){
+			Entry<String, StructuredQuery> e1 = it1.next();
+			
+			datasets.add(e1.getKey());
+			
+			// Iterate the map to get the other entries
+			for (Iterator<Entry<String, StructuredQuery>> it2 = dsQuery.entrySet().iterator();it2.hasNext();){
+				Entry<String, StructuredQuery> e2 = it2.next();
+				
+				// Only different entries are interesting
+				if (!e1.getKey().equals(e2.getKey()) && datasets.add(e2.getKey())) {
+					for (Iterator<QNode> node1_it = e1.getValue().getQueryGraph().vertexSet().iterator();node1_it.hasNext();) {
+						
+						QNode n1 = node1_it.next();
+						
+						// Iterate nodes
+						for (Iterator<QNode> node2_it = e2.getValue().getQueryGraph().vertexSet().iterator();node2_it.hasNext();) {
+							QNode n2 = node2_it.next();
+							
+							if (n1.equals(n2)) {
+								//TODO: Join the result of these two subqueries
+								// join(e1.getKey(), e2.getKey, n1);
+								System.out.println("Found node " + n1.getLabel() + " in subquerie for " + e1.getKey() + " and " + e2.getKey());
+							}
+						}
+					}
+					
+				}
+				
+			}
+		
+		}
+
+	}
+	
+	/*public Table<String> evaluate(){
 		// The result that will be returned
 		Table<String> result = null;
 		// Identifier of the data source used as source in mapping index
@@ -117,5 +198,5 @@ public class MultiPartQueryEvaluator {
 		
 		return result;
 		
-	}
+	}*/
 }

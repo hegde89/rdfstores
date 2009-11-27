@@ -43,13 +43,14 @@ public class Test {
 		/*mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", sq1);
 		mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", sq2);
 		// Set path for the mapping index
-		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");
+		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");*/
 		
 		// Execute the query
 		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(mpq);
-		Table<String> result = meq.evaluate();*/
+		//Table<String> result = meq.evaluate();
+		meq.evaluate();
 		
-		Map<QueryEdge, String> map = new HashMap<QueryEdge, String>();
+		/*Map<QueryEdge, String> map = new HashMap<QueryEdge, String>();
 		map.put(sq1.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index");
 		map.put(sq2.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index");
 		
@@ -115,7 +116,7 @@ public class Test {
 				
 			}
 		
-		}
+		}*/
 
 	}
 

@@ -16,6 +16,8 @@ import edu.unika.aifb.graphindex.index.IndexReader;
 import edu.unika.aifb.graphindex.query.QNode;
 import edu.unika.aifb.graphindex.query.QueryEdge;
 import edu.unika.aifb.graphindex.query.StructuredQuery;
+import edu.unika.aifb.graphindex.searcher.structured.QueryEvaluator;
+import edu.unika.aifb.graphindex.searcher.structured.StructuredQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
@@ -55,6 +57,7 @@ public class MultiPartQueryEvaluator {
 			try {
 				IndexReader indexReader = new IndexReader(new IndexDirectory(e.getKey()));
 				VPEvaluator qe = new VPEvaluator(indexReader);
+				//QueryEvaluator qe = new QueryEvaluator(indexReader);
 				result.put(e.getKey(), qe.evaluate(e.getValue()));
 				
 			} catch (StorageException e1) {
@@ -88,7 +91,7 @@ public class MultiPartQueryEvaluator {
 							
 							if (n1.equals(n2)) {
 								//TODO: Join the result of these two subqueries
-								// join(e1.getKey(), e2.getKey, n1);
+								join(result, e1.getKey(), e2.getKey(), n1.getLabel());
 								System.out.println("Found node " + n1.getLabel() + " in subquerie for " + e1.getKey() + " and " + e2.getKey());
 							}
 						}
@@ -100,6 +103,37 @@ public class MultiPartQueryEvaluator {
 		
 		}
 
+	}
+	
+	private void join(Map<String, Table<String>> result, String ds1, String ds2, String node) {
+		MappingIndex midx = query.getMappingIndex();
+		// Get the mapping
+		try {
+			Table<String> mtable = midx.getStoTMapping(ds1, ds2);
+			mtable.setColumnName(0, node);
+			mtable.setColumnName(1, node+"tmp");
+			mtable.sort(node);
+			
+			result.get(ds1).sort(node);
+			
+			Table<String> tmpResult = Tables.mergeJoin(result.get(ds1), mtable, node);
+			tmpResult.sort(node+"tmp");
+			
+			result.get(ds2).sort(node);
+			result.get(ds2).setColumnName(result.get(ds2).getColumn(node), node+"tmp");
+			
+			result.put(ds1+ds2, Tables.mergeJoin(tmpResult, result.get(ds2), node+"tmp"));
+			result.remove(ds1);
+			result.remove(ds2);
+			
+			//System.out.println(mtable.toDataString());
+			//System.out.println(result.get(ds1).toDataString());
+			System.out.println(result.get(ds1+ds2).toDataString());
+			//System.out.println(tmpResult.toDataString());
+		} catch (StorageException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/*public Table<String> evaluate(){

@@ -42,8 +42,8 @@ public class Test {
 		// Add both queries to the multipartquery
 		/*mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", sq1);
 		mpq.addQuery("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", sq2);
-		// Set path for the mapping index
-		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");*/
+		// Set path for the mapping index*/
+		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");
 		
 		// Execute the query
 		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(mpq);

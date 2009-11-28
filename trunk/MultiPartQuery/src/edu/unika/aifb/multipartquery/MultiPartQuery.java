@@ -30,12 +30,20 @@ public class MultiPartQuery extends StructuredQuery{
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
 		
 		// Build up the query
-		sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
+		//sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
+		//sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "?z");
+		//sq1.addEdge("?z", "http://dbpedia.org/ontology/birthplace", "?x");
+		sq1.addEdge("?x", "http://dbpedia.org/ontology/governmenttype", "http://dbpedia.org/resource/Republic");
+		//sq1.setAsSelect("?x");
 		sq1.setAsSelect("?x");
 		
 		// Build up the other query
-		sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
+		//sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
+		sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Oman");
 		sq2.setAsSelect("?x");
+		//sq2.setAsSelect("$z");
+		System.out.println(sq2.getSelectVariableLabels().size());
+		
 		Map<QueryEdge, String> map = new HashMap<QueryEdge, String>();
 		map.put(sq1.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index");
 		map.put(sq2.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index");

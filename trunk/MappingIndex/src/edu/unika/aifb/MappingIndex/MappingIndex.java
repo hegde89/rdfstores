@@ -79,6 +79,12 @@ public class MappingIndex extends Index {
 				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target, DataField.E_SOURCE, e_source));
 	}
 	
+	public Table<String> getStoTMapping(String ds_source, String ds_target) throws StorageException {
+		IndexDescription index = IndexDescription.DSDTESET;
+		return  getIndexStorage(index).getTable(index, new DataField[] { DataField.E_SOURCE, DataField.E_TARGET }, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target));
+	}
+	
 	/**
 	 * 
 	 * @param ds_source

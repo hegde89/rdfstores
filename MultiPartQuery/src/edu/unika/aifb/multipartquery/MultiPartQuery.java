@@ -24,7 +24,7 @@ public class MultiPartQuery extends StructuredQuery{
 		queries.put(datasource, query);
 	}
 	
-	public Map<QueryEdge, String> getMap() {
+	private Map<QueryEdge, String> getMap() {
 		/* FOR TESTING */
 		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Germany");
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
@@ -48,6 +48,26 @@ public class MultiPartQuery extends StructuredQuery{
 		map.put(sq1.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index");
 		map.put(sq2.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index");
 		return map;
+	}
+	
+	public Map<String, StructuredQuery> getDatasetQueries() {
+		Map<QueryEdge, String> map = getMap();
+		
+		// Build subqueries for each dataset
+		Map<String, StructuredQuery> dsQuery = new HashMap<String, StructuredQuery>();
+		
+		for (Iterator<Entry<QueryEdge, String>> it = map.entrySet().iterator();it.hasNext();){
+			Entry<QueryEdge, String> e = it.next();
+			
+			if (dsQuery.containsKey(e.getValue())) {
+				dsQuery.get(e.getValue()).addEdge(e.getKey().getSource(), e.getKey().getProperty(), e.getKey().getTarget());
+			} else {
+				StructuredQuery sq = new StructuredQuery(e.getValue());
+				sq.addEdge(e.getKey().getSource(), e.getKey().getProperty(), e.getKey().getTarget());
+				dsQuery.put(e.getValue(), sq);
+			}
+		}
+		return dsQuery;
 	}
 	
 	public MappingIndex getMappingIndex () {

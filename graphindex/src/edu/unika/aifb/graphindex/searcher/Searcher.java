@@ -31,7 +31,7 @@ public abstract class Searcher {
 		m_idxReader = idxReader;
 		m_timings = new Timings();
 		m_counters = new Counters();
-		m_idxReader.getCollector().addTimings(m_timings);
-		m_idxReader.getCollector().addCounters(m_counters);
+		if(m_idxReader != null) m_idxReader.getCollector().addTimings(m_timings);
+		if (m_idxReader != null) m_idxReader.getCollector().addCounters(m_counters);
 	}
 }

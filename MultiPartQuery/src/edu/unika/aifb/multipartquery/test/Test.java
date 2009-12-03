@@ -50,6 +50,7 @@ public class Test {
 		try {
 			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index")));
 			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index")));
+			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index")));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -28,6 +28,7 @@ public class MultiPartQuery extends StructuredQuery{
 		/* FOR TESTING */
 		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Germany");
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
+		StructuredQuery sq3 = new StructuredQuery("Buraimi Airport");
 		
 		// Build up the query
 		//sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
@@ -44,9 +45,15 @@ public class MultiPartQuery extends StructuredQuery{
 		//sq2.setAsSelect("$z");
 		System.out.println(sq2.getSelectVariableLabels().size());
 		
+		//sq3.addEdge("?x", "http://www.w3.org/2000/01/rdf-schema#label", "Buraimi Airport");
+		//sq3.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://dbpedia.org/ontology/Country");
+		sq3.addEdge("?x", "http://airports.dataincubator.org/schema/airport", "http://airports.dataincubator.org/airports/OY75");
+		sq3.setAsSelect("?x");
+		
 		Map<QueryEdge, String> map = new HashMap<QueryEdge, String>();
 		map.put(sq1.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index");
 		map.put(sq2.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index");
+		map.put(sq3.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index");
 		return map;
 	}
 	

@@ -45,7 +45,7 @@ public class Test {
 		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(idxReaders);
 		Table<String> result = meq.evaluate(mpq);
 		//meq.evaluate();
-		System.out.println(result.toDataString());
+		System.out.println("\n" + result.toDataString());
 
 
 	}

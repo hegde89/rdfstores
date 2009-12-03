@@ -26,8 +26,8 @@ public class MultiPartQuery extends StructuredQuery{
 	
 	private Map<QueryEdge, String> getMap() {
 		/* FOR TESTING */
-		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Germany");
-		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
+		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Republic");
+		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Oman");
 		StructuredQuery sq3 = new StructuredQuery("http://airports.dataincubator.org/airports/OY75");
 		
 		// Build up the query

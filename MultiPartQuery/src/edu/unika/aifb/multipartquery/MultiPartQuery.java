@@ -28,25 +28,18 @@ public class MultiPartQuery extends StructuredQuery{
 		/* FOR TESTING */
 		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Germany");
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
-		StructuredQuery sq3 = new StructuredQuery("Buraimi Airport");
+		StructuredQuery sq3 = new StructuredQuery("http://airports.dataincubator.org/airports/OY75");
 		
 		// Build up the query
 		//sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "http://dbpedia.org/resource/Germany");
-		//sq1.addEdge("?x", "http://dbpedia.org/ontology/birthplace", "?z");
-		//sq1.addEdge("?z", "http://dbpedia.org/ontology/birthplace", "?x");
 		sq1.addEdge("?x", "http://dbpedia.org/ontology/governmenttype", "http://dbpedia.org/resource/Republic");
-		//sq1.setAsSelect("?x");
 		sq1.setAsSelect("?x");
 		
 		// Build up the other query
 		//sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Germany");
 		sq2.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Oman");
 		sq2.setAsSelect("?x");
-		//sq2.setAsSelect("$z");
-		System.out.println(sq2.getSelectVariableLabels().size());
 		
-		//sq3.addEdge("?x", "http://www.w3.org/2000/01/rdf-schema#label", "Buraimi Airport");
-		//sq3.addEdge("?x", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://dbpedia.org/ontology/Country");
 		sq3.addEdge("?x", "http://airports.dataincubator.org/schema/airport", "http://airports.dataincubator.org/airports/OY75");
 		sq3.setAsSelect("?x");
 		

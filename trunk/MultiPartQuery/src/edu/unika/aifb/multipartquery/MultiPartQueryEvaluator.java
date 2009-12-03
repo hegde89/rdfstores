@@ -21,20 +21,21 @@ import edu.unika.aifb.graphindex.searcher.structured.StructuredQueryEvaluator;
 import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
 
-public class MultiPartQueryEvaluator {
+public class MultiPartQueryEvaluator extends StructuredQueryEvaluator {
 	
 	private MultiPartQuery mpquery;
 	private Map<String, IndexReader> idxReaders;
 	
 	public MultiPartQueryEvaluator (Map<String, IndexReader> idxReaders) {
+		super(null);
 		this.idxReaders = idxReaders;
 	}
 	
-	public Table<String> evaluate(MultiPartQuery q) {
-		this.mpquery = q;
+	public Table<String> evaluate(StructuredQuery q) {
+		this.mpquery = (MultiPartQuery)q;
 		
 		// Get subqueries for each dataset
-		Map<String, StructuredQuery> dsQuery = q.getDatasetQueries();
+		Map<String, StructuredQuery> dsQuery = mpquery.getDatasetQueries();
 		
 		// Subquery execution
 		Map<String, Table<String>> result = new HashMap<String, Table<String>>();
@@ -82,8 +83,8 @@ public class MultiPartQueryEvaluator {
 							
 							if (n1.equals(n2)) {
 								//TODO: Join the result of these two subqueries								
-								join(result, datasets, e1.getKey(), e2.getKey(), n1.getLabel());
 								System.out.println("Found node " + n1.getLabel() + " in subquerie for " + e1.getKey() + " and " + e2.getKey());
+								join(result, datasets, e1.getKey(), e2.getKey(), n1.getLabel());
 							}
 						}
 					}
@@ -114,6 +115,7 @@ public class MultiPartQueryEvaluator {
 		if (result.get(ds2).hasColumn(node)) {
 			result.get(ds2).setColumnName(result.get(ds2).getColumn(node), node+"_"+ds2);
 		}
+		
 		// Get the mapping
 		try {
 			// Get mapping between ds1 and ds2
@@ -127,52 +129,40 @@ public class MultiPartQueryEvaluator {
 				ds2 = tmp;
 			}
 			
-			
-			//if (result.get(ds1).hasColumn(node+"_"+ds1)) {
+			// Set names of the nodes to join on
 			String joinNodeLeft = node+"_"+ds1;
-			//} else {
 			String joinNodeRight = node+"_"+ds2;
-			//}
+
 			// Set column names of the mapping result
-			//mtable.setColumnName(0, node);
-			//mtable.setColumnName(mtable.getColumn("e1"), joinNodeLeft);
 			mtable.setColumnName(mtable.getColumn("e1"), joinNodeLeft);
-			//mtable.setColumnName(mtable.getColumn("e2"), node+"_"+ds2);
 			mtable.setColumnName(mtable.getColumn("e2"), joinNodeRight);
+			
 			// Sort mapping table to prepare for merge join
-			//mtable.sort(node);
 			mtable.sort(joinNodeLeft);
+			
 			// Sort result of query of ds1 to prepare for merge join
-			//result.get(ds1).sort(node);
-			System.out.println(result.get(ds1).toDataString());
 			result.get(ds1).sort(joinNodeLeft);
-			System.out.println(result.get(ds1).toDataString());
-			// Join the result of ds1 with the mapping result
-			//Table<String> tmpResult = Tables.mergeJoin(result.get(ds1), mtable, node);
-			Table<String> tmpResult = Tables.mergeJoin(result.get(ds1), mtable, joinNodeLeft);
-			System.out.println(tmpResult.toDataString());
+			
 			// DEBUG
-			if (tmpResult.rowCount() == 0) {
-				System.out.println("ERROR: JoinResult is empty!");
-			} else {
-				//datasets.add(node+"_"+ds1);
-				//datasets.add(node+"_"+ds2);
+			// System.out.println(result.get(ds1).toDataString());
+
+			// Join the result of ds1 with the mapping result
+			Table<String> tmpResult = Tables.mergeJoin(result.get(ds1), mtable, joinNodeLeft);
+			// System.out.println(tmpResult.toDataString());
+			
+			// DEBUG
+			if (!(tmpResult.rowCount() == 0)) {
+
 				// Sort for the second join with ds2
-				//tmpResult.sort(node+"_"+ds2);
 				tmpResult.sort(joinNodeRight);
-				// Sort result of ds2
-				//result.get(ds2).sort(node);
-				// Rename variable of ds2 to match temporary variable of the mapping
-				//result.get(ds2).setColumnName(result.get(ds2).getColumn(node), node+"_"+ds2);
-				//result.get(ds2).setColumnName(result.get(ds2).getColumn(node), joinNodeRight);
+
 				result.get(ds2).sort(joinNodeRight);
-				System.out.println(result.get(ds2).toDataString());
+				//System.out.println(result.get(ds2).toDataString());
 				// Join the result of the previous join with ds2
 				Table<String> joinResult = Tables.mergeJoin(tmpResult, result.get(ds2), joinNodeRight);
-				// Rename the variable to the variable name without the leading question mark
-				// joinResult.setColumnName(joinResult.getColumn(node+"_"+ds2), node.substring(1));
-				// Remove the results of ds1 and ds2 to replace them with the joined result
-				
+
+				// Change the references of the datasets already contained in this result to the new
+				// reference
 				for (String name : joinResult.getColumnNames()) {
 					if (name.startsWith(node)) {
 						String t = name.substring(node.length()+1);
@@ -180,18 +170,8 @@ public class MultiPartQueryEvaluator {
 						result.put(t, joinResult);
 					}
 				}
-				//result.remove(ds1);
-				//result.remove(ds2);
-				//result.put(ds1+ds2, Tables.mergeJoin(tmpResult, result.get(ds2), node+"tmp"));
-				// Save the result under both keys to get easy
-				//result.put(ds1, joinResult);
-				//result.put(ds2, joinResult);
-				
-				//result.get(ds2).addRow(new String[]{"test", "test", "test", "test"});
-				//System.out.println(mtable.toDataString());
+				// DEBUG
 				//System.out.println(result.get(ds1).toDataString());
-				System.out.println(result.get(ds1).toDataString());
-				//System.out.println(tmpResult.toDataString());
 			}
 		} catch (StorageException e) {
 			// TODO Auto-generated catch block

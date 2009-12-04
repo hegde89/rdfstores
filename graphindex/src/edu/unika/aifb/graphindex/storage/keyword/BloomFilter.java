@@ -74,12 +74,32 @@ public class BloomFilter extends Filter {
         return true;
     }
 
+    public boolean contains(byte[] key)
+    {
+        for (int bucketIndex : getHashBuckets(key))
+        {
+            if (!filter_.get(bucketIndex))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /*
      param@ key -- value whose hash is used to fill
      the filter_.
      This is a general purpose API.
      */
     public void add(String key)
+    {
+        for (int bucketIndex : getHashBuckets(key))
+        {
+            filter_.set(bucketIndex);
+        }
+    }
+
+    public void add(byte[] key)
     {
         for (int bucketIndex : getHashBuckets(key))
         {

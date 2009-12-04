@@ -38,6 +38,11 @@ public abstract class Filter implements Serializable {
         return Filter.getHashBuckets(key, hashCount, buckets());
     }
 
+    public int[] getHashBuckets(byte[] key)
+    {
+        return Filter.getHashBuckets(key, hashCount, buckets());
+    }
+
     abstract int buckets();
 
     public abstract void add(String key);
@@ -63,6 +68,19 @@ public abstract class Filter implements Serializable {
         {
             throw new RuntimeException(e);
         }
+        int[] result = new int[hashCount];
+        int hash1 = hasher.hash(b, b.length, 0);
+        int hash2 = hasher.hash(b, b.length, hash1);
+        for (int i = 0; i < hashCount; i++)
+        {
+            result[i] = Math.abs((hash1 + i * hash2) % max);
+        }
+        return result;
+    }
+
+    static int[] getHashBuckets(byte[] key, int hashCount, int max)
+    {
+        byte[] b = key;
         int[] result = new int[hashCount];
         int hash1 = hasher.hash(b, b.length, 0);
         int hash2 = hasher.hash(b, b.length, hash1);

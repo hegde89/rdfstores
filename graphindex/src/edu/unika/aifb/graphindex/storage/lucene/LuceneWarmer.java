@@ -54,6 +54,8 @@ public class LuceneWarmer {
 		while (te.next());
 		te.close();
 		
+		numTerms = Math.max(1, numTerms);
+		
 		Random r = new Random();
 		Set<Integer> termIndexes = new HashSet<Integer>();
 		for (int i = 0; i < count; i++)

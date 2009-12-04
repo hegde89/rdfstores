@@ -125,7 +125,7 @@ public class IndexDirectory {
 		return new File(directory);
 	}
 	
-	private void emptyDirectory(File dir) {
+	public void emptyDirectory(File dir) {
 		for (File f : dir.listFiles()) {
 			if (f.isDirectory())
 				emptyDirectory(f);

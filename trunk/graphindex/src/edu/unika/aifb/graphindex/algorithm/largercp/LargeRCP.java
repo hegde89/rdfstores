@@ -286,10 +286,14 @@ public class LargeRCP {
 //				
 				Table<String> table = null;
 				if (!forward) {
-					table = m_gs.getIndexStorage(IndexDescription.POS).getTable(IndexDescription.POS, new DataField[] { DataField.OBJECT }, property);
+					IndexDescription idx = m_gs.getSuitableIndex(DataField.PROPERTY, DataField.OBJECT);
+					table = m_gs.getIndexStorage(idx).getTable(idx, new DataField[] { DataField.OBJECT }, property);
+//					table = m_gs.getIndexStorage(IndexDescription.POS).getTable(IndexDescription.POS, new DataField[] { DataField.OBJECT }, property);
 				}
 				else {
-					table = m_gs.getIndexStorage(IndexDescription.PSO).getTable(IndexDescription.PSO, new DataField[] { DataField.SUBJECT }, property);
+					IndexDescription idx = m_gs.getSuitableIndex(DataField.PROPERTY, DataField.SUBJECT);
+					table = m_gs.getIndexStorage(idx).getTable(idx, new DataField[] { DataField.SUBJECT }, property);
+//					table = m_gs.getIndexStorage(IndexDescription.PSO).getTable(IndexDescription.PSO, new DataField[] { DataField.SUBJECT }, property);
 				}
 				
 //				log.debug("image size: " + image.size());

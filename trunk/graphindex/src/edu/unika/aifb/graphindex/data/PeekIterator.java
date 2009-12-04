@@ -21,7 +21,7 @@ package edu.unika.aifb.graphindex.data;
 import java.util.Iterator;
 
 /**
- * PeekIterator wraps another iterator and provides a peek method, which returns
+ * PeekIterator wraps another iterator to provide a peek method, which returns
  * the next item in the iterator without advancing the iterator.
  * 
  * @author gla
@@ -54,7 +54,7 @@ public class PeekIterator<E> implements Iterator<E> {
 	}
 
 	public void remove() {
-		throw new UnsupportedOperationException("remove not suppored");
+		throw new UnsupportedOperationException("remove not supported");
 	}
 
 	public E peek() {

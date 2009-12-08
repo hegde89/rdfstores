@@ -1,8 +1,15 @@
 package edu.unika.aifb.multipartquery.test;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -17,6 +24,7 @@ import edu.unika.aifb.graphindex.searcher.structured.VPEvaluator;
 import edu.unika.aifb.graphindex.storage.StorageException;
 import edu.unika.aifb.multipartquery.MultiPartQuery;
 import edu.unika.aifb.multipartquery.MultiPartQueryEvaluator;
+import edu.unika.aifb.multipartquery.MultiPartQueryResolver;
 
 public class Test {
 
@@ -25,9 +33,9 @@ public class Test {
 	 */
 	public static void main(String[] args) {
 		// Set the name of the query
-		MultiPartQuery mpq = new MultiPartQuery("TestQuery");
+		/*MultiPartQuery mpq = new MultiPartQuery("TestQuery");
 
-		// Set path for the mapping index*/
+		// Set path for the mapping index
 		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");
 		
 		Map<String, IndexReader> idxReaders = new HashMap<String, IndexReader>();
@@ -45,9 +53,50 @@ public class Test {
 		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(idxReaders);
 		Table<String> result = meq.evaluate(mpq);
 		//meq.evaluate();
-		System.out.println("\n" + result.toDataString());
+		System.out.println("\n" + result.toDataString());*/
 
+		testResolver();
+	}
 
+	private static void testResolver() {
+		Map<String, List<String>> dsProperties = new HashMap<String, List<String>>();
+		String[] datasets = new String[3];
+		datasets[0] = "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index";
+		datasets[1] = "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index";
+		datasets[2] = "C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index";
+		
+		       
+		try{
+			//System.out.println("Number of properties read per dataset:");
+			for (int i=0; i<3; i++) {
+				FileInputStream fstream = new FileInputStream(datasets[i] + "\\properties");
+				DataInputStream in = new DataInputStream(fstream);
+				BufferedReader br = new BufferedReader(new InputStreamReader(in));
+				
+				List<String> properties = new LinkedList<String>();
+				String strLine;
+				
+				while ((strLine = br.readLine()) != null)   {
+					properties.add(strLine);
+				}
+				dsProperties.put(datasets[i], properties);
+				//System.out.println(datasets[i] + ": " + properties.size());
+				in.close();
+			}
+			
+		    
+	    }catch (Exception e){
+	    	System.err.println("Error: " + e.getMessage());
+	    }
+	    
+	    MultiPartQueryResolver mpqr = new MultiPartQueryResolver(dsProperties);
+	    
+	    StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Republic");
+	    sq1.addEdge("?x", "http://dbpedia.org/ontology/governmenttype", "http://dbpedia.org/resource/Republic");
+		sq1.setAsSelect("?x");
+		
+		mpqr.resolve(sq1);
+		
 	}
 
 }

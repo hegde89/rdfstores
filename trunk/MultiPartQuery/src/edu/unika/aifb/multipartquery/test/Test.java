@@ -32,33 +32,7 @@ public class Test {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// Set the name of the query
-		/*MultiPartQuery mpq = new MultiPartQuery("TestQuery");
-
-		// Set path for the mapping index
-		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");
 		
-		Map<String, IndexReader> idxReaders = new HashMap<String, IndexReader>();
-		
-		try {
-			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index")));
-			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index")));
-			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index")));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		// Execute the query
-		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(idxReaders);
-		Table<String> result = meq.evaluate(mpq);
-		//meq.evaluate();
-		System.out.println("\n" + result.toDataString());*/
-
-		testResolver();
-	}
-
-	private static void testResolver() {
 		Map<String, List<String>> dsProperties = new HashMap<String, List<String>>();
 		String[] datasets = new String[3];
 		datasets[0] = "C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index";
@@ -88,15 +62,34 @@ public class Test {
 	    }catch (Exception e){
 	    	System.err.println("Error: " + e.getMessage());
 	    }
-	    
-	    MultiPartQueryResolver mpqr = new MultiPartQueryResolver(dsProperties);
-	    
-	    StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Republic");
-	    sq1.addEdge("?x", "http://dbpedia.org/ontology/governmenttype", "http://dbpedia.org/resource/Republic");
+		
+	    StructuredQuery sq1 = new StructuredQuery("");
+		sq1.addEdge("?x", "http://dbpedia.org/ontology/governmenttype", "http://dbpedia.org/resource/Republic");
+		sq1.addEdge("?x", "http://www4.wiwiss.fu-berlin.de/factbook/ns#landboundary", "http://www4.wiwiss.fu-berlin.de/factbook/resource/Oman");
+		sq1.addEdge("?x", "http://airports.dataincubator.org/schema/airport", "http://airports.dataincubator.org/airports/OY75");
 		sq1.setAsSelect("?x");
 		
-		mpqr.resolve(sq1);
+		// Set the name of the query
+		MultiPartQuery mpq = new MultiPartQuery("TestQuery", dsProperties, sq1);
+
+		// Set path for the mapping index
+		mpq.setMappingIndex("C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings");
 		
+		Map<String, IndexReader> idxReaders = new HashMap<String, IndexReader>();
+		
+		try {
+			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index")));
+			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index")));
+			idxReaders.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index")));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		// Execute the query
+		MultiPartQueryEvaluator meq = new MultiPartQueryEvaluator(idxReaders);
+		Table<String> result = meq.evaluate(mpq);
+		System.out.println("\n" + result.toDataString());
 	}
 
 }

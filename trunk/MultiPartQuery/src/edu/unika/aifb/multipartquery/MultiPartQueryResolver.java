@@ -73,8 +73,9 @@ public class MultiPartQueryResolver {
 			
 			for (Iterator<QueryEdge> itQ = pQuery.iterator(); itQ.hasNext();) {
 				QueryEdge qe = itQ.next();
-				if (visitedEdges.add(qe) && p.contains(qe.getProperty())) {
+				if (!visitedEdges.contains(qe) && p.contains(qe.getProperty())) {
 					sq.addEdge(qe.getSource(), qe.getProperty(), qe.getTarget());
+					visitedEdges.add(qe);
 				}
 			}
 			

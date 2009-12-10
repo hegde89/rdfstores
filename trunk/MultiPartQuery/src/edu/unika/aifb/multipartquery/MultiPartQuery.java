@@ -12,20 +12,25 @@ import java.util.Map.Entry;
 
 public class MultiPartQuery extends StructuredQuery{
 
-	private Map<String, StructuredQuery>  queries = new HashMap<String, StructuredQuery>();
+	//private Map<String, StructuredQuery>  queries = new HashMap<String, StructuredQuery>();
+	StructuredQuery query = null;
 	// Path to Mapping index
-	MappingIndex midx = null;
+	private MappingIndex midx = null;
+	// Properties of each dataset
+	private Map<String, List<String>> dsProperties = null;
 	
-	public MultiPartQuery(String name) {
+	public MultiPartQuery(String name, Map<String, List<String>> dsProperties, StructuredQuery q) {
 		super(name);
+		this.dsProperties = dsProperties;
+		this.query = q;
 	}
 	
-	public void addQuery(String datasource, StructuredQuery query) {
+	/*public void addQuery(String datasource, StructuredQuery query) {
 		queries.put(datasource, query);
-	}
+	}*/
 	
-	private Map<QueryEdge, String> getMap() {
-		/* FOR TESTING */
+	/*private Map<QueryEdge, String> getMap() {
+		// FOR TESTING
 		StructuredQuery sq1 = new StructuredQuery("http://dbpedia.org/resource/Republic");
 		StructuredQuery sq2 = new StructuredQuery("http://www4.wiwiss.fu-berlin.de/factbook/resource/Oman");
 		StructuredQuery sq3 = new StructuredQuery("http://airports.dataincubator.org/airports/OY75");
@@ -48,10 +53,10 @@ public class MultiPartQuery extends StructuredQuery{
 		map.put(sq2.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index");
 		map.put(sq3.getQueryGraph().edgeSet().iterator().next(), "C:\\Users\\Christoph\\Desktop\\AIFB\\dibbaAirport\\index");
 		return map;
-	}
+	}*/
 	
 	public Map<String, StructuredQuery> getDatasetQueries() {
-		Map<QueryEdge, String> map = getMap();
+		/*Map<QueryEdge, String> map = getMap();
 		
 		// Build subqueries for each dataset
 		Map<String, StructuredQuery> dsQuery = new HashMap<String, StructuredQuery>();
@@ -67,7 +72,13 @@ public class MultiPartQuery extends StructuredQuery{
 				dsQuery.put(e.getValue(), sq);
 			}
 		}
-		return dsQuery;
+		return dsQuery;*/
+		
+		MultiPartQueryResolver mpqr = new MultiPartQueryResolver(dsProperties);
+		//Map<String, StructuredQuery> dsQuery = mpqr.resolve(query);
+		return mpqr.resolve(query);
+		
+		
 	}
 	
 	public MappingIndex getMappingIndex () {

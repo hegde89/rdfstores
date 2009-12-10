@@ -199,10 +199,9 @@ public class MappingIndexCreator implements TripleSink{
 		try {
 			// Get object extension
 			String objExt = o_idx.getExtension(o);
-			
+			//String objExt = "b35";
 			// Get subject extension
 			String subExt = s_idx.getExtension(s);
-			//String subExt = "b39";
 			
 			// Entity mapping index
 			m_mappingIndexes.get(IndexDescription.DSDTESET).addData(IndexDescription.DSDTESET, new String[] { m_ds_source, m_ds_destination, s}, o);

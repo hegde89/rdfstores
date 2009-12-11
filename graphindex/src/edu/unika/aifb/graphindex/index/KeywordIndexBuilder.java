@@ -87,14 +87,14 @@ public class KeywordIndexBuilder {
 	private IndexDirectory idxDirectory;
 	private IndexConfiguration idxConfig;
 	protected DataIndex dataIndex;
-	private BlockCache  blockSearcher;
+	protected BlockCache  blockSearcher;
 	private NeighborhoodStorage ns;
 	private Set<String> objectProperties;
 	private Set<String> relations;
 	private Set<String> attributes;
 	private boolean resume = false;
 	private Set<String> properties;
-	private IndexWriter valueWriter;
+	protected IndexWriter valueWriter;
 //	private Map<String,Double> propertyWeights;
 	
 	private static final Logger log = Logger.getLogger(KeywordIndexBuilder.class);

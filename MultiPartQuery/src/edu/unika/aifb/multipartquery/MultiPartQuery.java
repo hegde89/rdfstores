@@ -25,6 +25,10 @@ public class MultiPartQuery extends StructuredQuery{
 		this.query = q;
 	}
 	
+	public Set<String> getKeySet() {
+		return dsProperties.keySet();
+	}
+	
 	/*public void addQuery(String datasource, StructuredQuery query) {
 		queries.put(datasource, query);
 	}*/

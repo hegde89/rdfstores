@@ -84,7 +84,7 @@ public class MultiPartQueryEvaluator extends StructuredQueryEvaluator {
 							if (n1.equals(n2)) {
 								//TODO: Join the result of these two subqueries								
 								System.out.println("Found node " + n1.getLabel() + " in subquerie for " + e1.getKey() + " and " + e2.getKey());
-								join(result, datasets, e1.getKey(), e2.getKey(), n1.getLabel());
+								join(result, mpquery.getKeySet(), e1.getKey(), e2.getKey(), n1.getLabel());
 							}
 						}
 					}
@@ -166,13 +166,26 @@ public class MultiPartQueryEvaluator extends StructuredQueryEvaluator {
 	
 					// Change the references of the datasets already contained in this result to the new
 					// reference
-					for (String name : joinResult.getColumnNames()) {
-						if (name.startsWith(node)) {
-							String t = name.substring(node.length()+1);
-							result.remove(t);
-							result.put(t, joinResult);
+//					for (String name : joinResult.getColumnNames()) {
+//						if (name.startsWith(node)) {
+//							String t = name.substring(node.length()+1);
+//							result.remove(t);
+//							result.put(t, joinResult);
+//						}
+//					}
+					
+					for (Iterator<String> it = datasets.iterator();it.hasNext();) {
+						String s = it.next();
+						
+						for (String name : joinResult.getColumnNames()) {
+							if (name.endsWith(s)) {
+								//String t = name.substring(node.length()+1);
+								result.remove(s);
+								result.put(s, joinResult);
+							}
 						}
 					}
+					
 					// DEBUG
 					//System.out.println(result.get(ds1).toDataString());
 				}

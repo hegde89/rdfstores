@@ -31,7 +31,7 @@ public class IntegratedStructuredIndexGraph extends
 		this.structuredIndexes = stdIdx;
 		this.mIdx = mIdx;
 		createIExt();
-		getGraph();
+//		getGraph();
 		// TODO Auto-generated constructor stub
 	}
 	
@@ -59,10 +59,17 @@ public class IntegratedStructuredIndexGraph extends
 								if (iExts.containsKey(row[0]) && iExts.containsKey(row[1])) {
 //									IntegratedExtension iExt = iExts.get(row[0]);
 //									iExt.addExt(row[1]);
-									if (iExts.get(row[0]) == iExts.get(row[1])) {
-										System.out.println("Alreday done!");
+									if (iExts.get(row[0]) != iExts.get(row[1])) {
+										IntegratedExtension iExt = iExts.get(row[0]);
+										for (Iterator<String> listIt = iExts.get(row[1]).iterator(); listIt.hasNext();) {
+											String s = listIt.next();
+											iExt.addExt(s);
+											iExts.remove(s);
+											iExts.put(s, iExt);
+										}
+										
 									} else {
-										System.out.println("ERROR 1: This should not be! " + row[0] + " -> " + row[1]);
+										System.out.println("Mapping " + row[0] + " -> " + row[1] + " already in the same IExt.");
 									}
 									
 								} else if (iExts.containsKey(row[0]) && !iExts.containsKey(row[1])) {

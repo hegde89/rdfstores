@@ -123,6 +123,19 @@ public class MappingIndex extends Index {
 	 * 
 	 * @param ds_source
 	 * @param ds_target
+	 * @return
+	 * @throws StorageException
+	 */
+	public Table<String> getStoTExtMapping(String ds_source, String ds_target) throws StorageException {
+		IndexDescription index = IndexDescription.DSDTESXETX;
+		return  getIndexStorage(index).getTable(index, new DataField[] {DataField.E_SOURCE_EXT, DataField.E_TARGET_EXT }, 
+				index.createValueArray(DataField.DS_SOURCE, ds_source, DataField.DS_TARGET, ds_target));
+	}
+	
+	/**
+	 * 
+	 * @param ds_source
+	 * @param ds_target
 	 * @param ext_target
 	 * @return
 	 * @throws StorageException

@@ -145,7 +145,9 @@ public class IntegratedStructuredIndexGraph extends
 				
 				
 				// Iterate through the rows and add the new edge for each row to the ISIG. We check
-				// if the extension
+				// if the extension is already known we use the IntegratedExtension where extension was
+				// integrated into. If it is unknown, we create a new IntegratedExtension for this extension
+				// and add it to the list of known ones.
 				for (Iterator<String[]> rowIt = t.iterator(); rowIt.hasNext();) {
 					String[] row = rowIt.next();
 					

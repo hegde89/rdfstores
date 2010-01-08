@@ -17,4 +17,8 @@ public class IntegratedExtension {
 	public Iterator<String> iterator() {
 		return exts.iterator();
 	}
+	
+	public LinkedList getList() {
+		return this.exts;
+	}
 }

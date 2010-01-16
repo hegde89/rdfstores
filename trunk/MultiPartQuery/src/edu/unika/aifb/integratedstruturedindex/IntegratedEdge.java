@@ -12,6 +12,10 @@ public class IntegratedEdge {
 		this.label = s;
 	}
 	
+	public String getLabel() {
+		return this.label;
+	}
+	
 	public void setSrc(IntegratedExtension src) {
 		this.iSrc = src;
 	}
@@ -21,6 +25,10 @@ public class IntegratedEdge {
 	}
 	
 	public void addDS(String s) {
-		this.ds.add(s);
+		if (this.ds.contains(s)) {
+			System.out.println("DS " + s + " already in list of edge " + label + "!");
+		} else {
+			this.ds.add(s);
+		}
 	}
 }

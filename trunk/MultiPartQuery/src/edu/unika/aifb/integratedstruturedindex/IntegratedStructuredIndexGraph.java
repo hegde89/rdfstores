@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DirectedMultigraph;
 
 import edu.unika.aifb.MappingIndex.MappingIndex;
@@ -24,6 +25,7 @@ public class IntegratedStructuredIndexGraph extends
 	
 	private Map<String, IndexReader> structuredIndexes;
 	private Map<String, IntegratedExtension> iExts = new HashMap<String, IntegratedExtension>();
+	private Map<String, IntegratedEdge> iEdges = new HashMap<String, IntegratedEdge>();
 	MappingIndex mIdx;
 
 	public IntegratedStructuredIndexGraph(Map<String, IndexReader> stdIdx, MappingIndex mIdx) {
@@ -31,8 +33,7 @@ public class IntegratedStructuredIndexGraph extends
 		this.structuredIndexes = stdIdx;
 		this.mIdx = mIdx;
 		createIExt();
-//		getGraph();
-		// TODO Auto-generated constructor stub
+		getGraph();
 	}
 	
 	public void createIExt() {
@@ -59,6 +60,7 @@ public class IntegratedStructuredIndexGraph extends
 								if (iExts.containsKey(row[0]) && iExts.containsKey(row[1])) {
 //									IntegratedExtension iExt = iExts.get(row[0]);
 //									iExt.addExt(row[1]);
+									// Both extensions already integrated. Merge IExts, if they are not equal.
 									if (iExts.get(row[0]) != iExts.get(row[1])) {
 										IntegratedExtension iExt = iExts.get(row[0]);
 										for (Iterator<String> listIt = iExts.get(row[1]).iterator(); listIt.hasNext();) {
@@ -179,12 +181,34 @@ public class IntegratedStructuredIndexGraph extends
 						iObj.addExt(row[1]);
 						iExts.put(row[1], iObj);
 					}
-					System.out.println(this.addVertex(iSub) ? "true" : "false");
-					System.out.println(this.addVertex(iObj) ? "true" : "false");
+//					System.out.println(this.addVertex(iSub) ? "true" : "false");
+//					System.out.println(this.addVertex(iObj) ? "true" : "false");
+					this.addVertex(iSub);
+					this.addVertex(iObj);
 					
-					IntegratedEdge iEdge = this.addEdge(iSub, iObj);
-					iEdge.setLabel(p);
-					iEdge.addDS(ds);
+					//TODO: Check if property is already known. In this case the extensions
+					// have to be merged, if they are not already integrated into the same.
+					
+					IntegratedEdge iEdge = null;
+					
+//					System.out.println("Multiple Edges? " + (this.isAllowingMultipleEdges() ? "true" : "false"));
+					for (Iterator<IntegratedEdge> edgeIt = this.getAllEdges(iSub, iObj).iterator(); edgeIt.hasNext();) {
+						IntegratedEdge edge = edgeIt.next();
+						if (edge.getLabel() == p) {
+							System.out.println("Edge " + p + " already exists for " + sExt + "->" + oExt +"!");
+							iEdge = edge;
+						}
+					}
+					
+					if (iEdge != null) {
+						System.out.println("Add DS " + ds + " to edge " + p + " for " + sExt + "->" + oExt);
+						iEdge.addDS(ds);
+					} else {
+						System.out.println("Add new edge " + p + " to graph for " + sExt + "->" + oExt +"!");
+						iEdge = this.addEdge(iSub, iObj);
+						iEdge.setLabel(p);
+						iEdge.addDS(ds);
+					}
 				}
 			}
 		}

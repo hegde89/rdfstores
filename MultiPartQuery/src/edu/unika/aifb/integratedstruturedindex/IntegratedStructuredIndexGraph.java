@@ -1,6 +1,8 @@
 package edu.unika.aifb.integratedstruturedindex;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,7 +27,8 @@ public class IntegratedStructuredIndexGraph extends
 	
 	private Map<String, IndexReader> structuredIndexes;
 	private Map<String, IntegratedExtension> iExts = new HashMap<String, IntegratedExtension>();
-	private Map<String, IntegratedEdge> iEdges = new HashMap<String, IntegratedEdge>();
+//	private Map<String, IntegratedEdge> iEdges = new HashMap<String, IntegratedEdge>();
+	private long idCounter = 1;
 	MappingIndex mIdx;
 
 	public IntegratedStructuredIndexGraph(Map<String, IndexReader> stdIdx, MappingIndex mIdx) {
@@ -34,8 +37,50 @@ public class IntegratedStructuredIndexGraph extends
 		this.mIdx = mIdx;
 		createIExt();
 		getGraph();
+		exportGraph();
 	}
 	
+	private void exportGraph() {
+		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\ISIGraph.dot";
+		
+		try {
+			  FileWriter outFile = new FileWriter(path);
+			  PrintWriter out = new PrintWriter(outFile);
+			  
+			  out.println("digraph G {");
+			  // Also could be written as follows on one line
+			  // Printwriter out = new PrintWriter(new FileWriter(args[0]));
+			  for (Iterator<IntegratedEdge> it = this.edgeSet().iterator(); it.hasNext();) {
+				  IntegratedEdge e = it.next();
+				  out.println(e.getiSrc().getId() + " -> " + e.getiTrg().getId() + " [label=\"" + e.getLabel() + "\"]");
+				  String srcLabel = e.getiSrc().getId() + "[label=\"";
+				  for(Iterator<String> srcIt = e.getiSrc().iterator(); srcIt.hasNext();) {
+					  srcLabel += srcIt.next();
+					  if(srcIt.hasNext()) srcLabel+=", ";
+				  }
+				  srcLabel +=  "\"]";
+				  
+				  out.println(srcLabel);
+				  
+				  String trgLabel = e.getiTrg().getId() + "[label=\"";
+				  for(Iterator<String> trgIt = e.getiTrg().iterator(); trgIt.hasNext();) {
+					  trgLabel += trgIt.next();
+					  if(trgIt.hasNext()) trgLabel+=", ";
+				  }
+				  trgLabel +=  "\"]";
+				  
+				  out.println(trgLabel);
+				  
+		}
+			   // Write text to file
+			  out.println("}");
+			  out.close();
+			} catch (IOException e){
+			   e.printStackTrace();
+			 }
+		
+	}
+
 	public void createIExt() {
 		Set<String> processed = new HashSet<String>();
 		
@@ -83,7 +128,7 @@ public class IntegratedStructuredIndexGraph extends
 									iExt.addExt(row[0]);
 									iExts.put(row[0], iExt);
 								} else {
-									IntegratedExtension iExt = new IntegratedExtension();
+									IntegratedExtension iExt = new IntegratedExtension(idCounter++);
 									iExt.addExt(row[0]);
 									iExt.addExt(row[1]);
 									iExts.put(row[0], iExt);
@@ -169,7 +214,7 @@ public class IntegratedStructuredIndexGraph extends
 					if (iExts.containsKey(sExt)) {
 						iSub = iExts.get(sExt);
 					} else {
-						iSub = new IntegratedExtension();
+						iSub = new IntegratedExtension(idCounter++);
 						iSub.addExt(row[0]);
 						iExts.put(row[0], iSub);
 					}
@@ -177,7 +222,7 @@ public class IntegratedStructuredIndexGraph extends
 					if (iExts.containsKey(oExt)) {
 						iObj = iExts.get(row[1]);
 					} else {
-						iObj = new IntegratedExtension();
+						iObj = new IntegratedExtension(idCounter++);
 						iObj.addExt(row[1]);
 						iExts.put(row[1], iObj);
 					}

@@ -48,13 +48,15 @@ public class IntegratedStructuredIndexGraph extends
 			  PrintWriter out = new PrintWriter(outFile);
 			  
 			  out.println("digraph G {");
-			  // Also could be written as follows on one line
-			  // Printwriter out = new PrintWriter(new FileWriter(args[0]));
+
 			  for (Iterator<IntegratedEdge> it = this.edgeSet().iterator(); it.hasNext();) {
 				  IntegratedEdge e = it.next();
-				  out.println(e.getiSrc().getId() + " -> " + e.getiTrg().getId() + " [label=\"" + e.getLabel() + "\"]");
-				  String srcLabel = e.getiSrc().getId() + "[label=\"";
-				  for(Iterator<String> srcIt = e.getiSrc().iterator(); srcIt.hasNext();) {
+				  IntegratedExtension iSrc = this.getEdgeSource(e);
+				  IntegratedExtension iTrg = this.getEdgeTarget(e);
+				  
+				  out.println(iSrc.getId() + " -> " + iTrg.getId() + " [label=\"" + e.getLabel() + "\"]");
+				  String srcLabel = iSrc.getId() + "[label=\"";
+				  for(Iterator<String> srcIt = iSrc.iterator(); srcIt.hasNext();) {
 					  srcLabel += srcIt.next();
 					  if(srcIt.hasNext()) srcLabel+=", ";
 				  }
@@ -62,8 +64,8 @@ public class IntegratedStructuredIndexGraph extends
 				  
 				  out.println(srcLabel);
 				  
-				  String trgLabel = e.getiTrg().getId() + "[label=\"";
-				  for(Iterator<String> trgIt = e.getiTrg().iterator(); trgIt.hasNext();) {
+				  String trgLabel = iTrg.getId() + "[label=\"";
+				  for(Iterator<String> trgIt = iTrg.iterator(); trgIt.hasNext();) {
 					  trgLabel += trgIt.next();
 					  if(trgIt.hasNext()) trgLabel+=", ";
 				  }
@@ -102,6 +104,7 @@ public class IntegratedStructuredIndexGraph extends
 							
 							for (Iterator<String[]> rowIt = mapping.iterator(); rowIt.hasNext();) {
 								String[] row = rowIt.next();
+								System.out.println("Mapping " + row[0] + " -> " + row[1]);
 								if (iExts.containsKey(row[0]) && iExts.containsKey(row[1])) {
 //									IntegratedExtension iExt = iExts.get(row[0]);
 //									iExt.addExt(row[1]);
@@ -226,10 +229,18 @@ public class IntegratedStructuredIndexGraph extends
 						iObj.addExt(row[1]);
 						iExts.put(row[1], iObj);
 					}
-//					System.out.println(this.addVertex(iSub) ? "true" : "false");
-//					System.out.println(this.addVertex(iObj) ? "true" : "false");
-					this.addVertex(iSub);
-					this.addVertex(iObj);
+					
+					assert(iSub != null);
+					assert(iObj != null);
+					
+					System.out.println(this.addVertex(iSub) ? iSub.getId() + " true" : iSub.getId() + " false");
+					System.out.println(this.addVertex(iObj) ? iObj.getId() + " true" : iObj.getId() + " false");
+//					this.addVertex(iSub);
+//					this.addVertex(iObj);
+					
+					System.out.println(this.containsVertex(iSub) ? "Contains " + iSub.getId() + " true" : "Contains " + iSub.getId() + " false");
+					System.out.println(this.containsVertex(iObj) ? "Contains " + iObj.getId() + " true" : "Contains " + iObj.getId() + " false");
+					
 					
 					//TODO: Check if property is already known. In this case the extensions
 					// have to be merged, if they are not already integrated into the same.

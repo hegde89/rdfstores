@@ -18,19 +18,19 @@ public class TestISIG {
 	public static void main(String[] args) {
 		Map<String, IndexReader> stdIdx = new HashMap<String, IndexReader>();
 
-		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings";
-//		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings\\Example";
+//		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings";
+		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings\\Example";
 		
 		MappingIndex mIdx = null;
 		
 		try {
 			mIdx = new MappingIndex(path, new IndexReader(new IndexDirectory(path)).getIndexConfiguration());
 			
-			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index")));
-			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index")));
-//			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Arbeitgeber\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Arbeitgeber\\index")));
-//			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Example\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Example\\index")));
-//			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Kuehlschrank\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Kuehlschrank\\index")));
+//			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\dbpedia\\index")));
+//			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\factbook\\index")));
+			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Arbeitgeber\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Arbeitgeber\\index")));
+			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Example\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Example\\index")));
+			stdIdx.put("C:\\Users\\Christoph\\Desktop\\AIFB\\Kuehlschrank\\index", new IndexReader(new IndexDirectory("C:\\Users\\Christoph\\Desktop\\AIFB\\Kuehlschrank\\index")));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

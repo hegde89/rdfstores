@@ -26,12 +26,17 @@ public class IntegratedExtension {
 	public long getId() {
 		return id;
 	}
-	
+
+
+	public Iterator<String> iterator() {
+		return exts.iterator();
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((exts == null) ? 0 : exts.hashCode());
+		result = prime * result + (int) (id ^ (id >>> 32));
 		return result;
 	}
 
@@ -44,17 +49,14 @@ public class IntegratedExtension {
 		if (getClass() != obj.getClass())
 			return false;
 		IntegratedExtension other = (IntegratedExtension) obj;
-		if (exts == null) {
-			if (other.exts != null)
-				return false;
-		} else if (!exts.equals(other.exts))
+		if (id != other.id)
 			return false;
 		return true;
 	}
 
-	public Iterator<String> iterator() {
-		return exts.iterator();
-	}
+
+
+
 	
 //	public LinkedList getList() {
 //		return this.exts;

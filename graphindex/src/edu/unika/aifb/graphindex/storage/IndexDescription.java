@@ -117,6 +117,10 @@ public class IndexDescription {
 			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_SOURCE_EXT, DataField.E_TARGET_EXT);
 	public static final IndexDescription DSDTETXESX = new IndexDescription ("dsdtetxesx", "esx",
 			DataField.DS_SOURCE, DataField.DS_TARGET, DataField.E_TARGET_EXT, DataField.E_SOURCE_EXT);
+	public static final IndexDescription VIDEXT = new IndexDescription ("vidext", "ext",
+			DataField.VERTEX_ID, DataField.EXT);
+	public static final IndexDescription VSPVTDS = new IndexDescription ("vspvtds", "ds",
+			DataField.VERTEX_ID_SRC, DataField.PROPERTY, DataField.VERTEX_ID_TRG, DataField.DS_SOURCE);
 
 
 	// Facet indices

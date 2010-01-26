@@ -16,11 +16,8 @@ public class IntegratedExtension {
 		this.id = id;
 	}
 	
-	public void addExt(String ext) {
-//		if (!this.exts.contains(ext)) {
-			this.exts.add(ext);
-//		}
-		
+	public boolean addExt(String ext) {
+		return this.exts.add(ext);
 	}
 	
 	public long getId() {
@@ -54,11 +51,4 @@ public class IntegratedExtension {
 		return true;
 	}
 
-
-
-
-	
-//	public LinkedList getList() {
-//		return this.exts;
-//	}
 }

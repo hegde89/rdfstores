@@ -1,5 +1,6 @@
 package edu.unika.aifb.integratedstruturedindex;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,6 +22,8 @@ import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
 import edu.unika.aifb.graphindex.storage.IndexStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
+import edu.unika.aifb.graphindex.storage.lucene.LuceneIndexStorage;
+import edu.unika.aifb.graphindex.util.StatisticsCollector;
 
 public class IntegratedStructuredIndexGraph extends
 		DirectedMultigraph<IntegratedExtension, IntegratedEdge> {
@@ -30,11 +33,13 @@ public class IntegratedStructuredIndexGraph extends
 //	private Map<String, IntegratedEdge> iEdges = new HashMap<String, IntegratedEdge>();
 	private long idCounter = 1;
 	MappingIndex mIdx;
+	String m_root_dir;
 
-	public IntegratedStructuredIndexGraph(Map<String, IndexReader> stdIdx, MappingIndex mIdx) {
+	public IntegratedStructuredIndexGraph(Map<String, IndexReader> stdIdx, MappingIndex mIdx, String outputDirectory) throws IOException, StorageException {
 		super(IntegratedEdge.class);
 		this.structuredIndexes = stdIdx;
 		this.mIdx = mIdx;
+		this.m_root_dir = outputDirectory;
 		createIExt();
 		getGraph();
 		exportGraph();
@@ -161,7 +166,7 @@ public class IntegratedStructuredIndexGraph extends
 		
 	}
 	
-	public void getGraph() {
+	public void getGraph() throws IOException, StorageException {
 		for (Iterator<Entry<String, IndexReader>> it = structuredIndexes.entrySet().iterator();it.hasNext();) {
 			Entry<String, IndexReader> e = it.next();
 			String ds = e.getKey();
@@ -261,12 +266,83 @@ public class IntegratedStructuredIndexGraph extends
 						iEdge.addDS(ds);
 					} else {
 						System.out.println("Add new edge " + p + " to graph for " + sExt + "->" + oExt +"!");
-						iEdge = this.addEdge(iSub, iObj);
-						iEdge.setLabel(p);
+						iEdge = new IntegratedEdge(p);
+						assert(iEdge.getLabel() != null);
+//						iEdge.setLabel(p);
 						iEdge.addDS(ds);
+						this.addEdge(iSub, iObj, iEdge);
+//						iEdge = this.addEdge(iSub, iObj);
+//						iEdge.setLabel(p);
+//						iEdge.addDS(ds);
 					}
 				}
 			}
+		}
+		
+		IndexStorage graphStorage = new LuceneIndexStorage(new File(getDirectory("isp_graph", true).getAbsolutePath()), new StatisticsCollector());
+		graphStorage.initialize(true, false);
+		
+		Set<String> vertex = new HashSet<String>();
+		
+		for (Iterator<IntegratedEdge> it = this.edgeSet().iterator(); it.hasNext();) {
+			  IntegratedEdge e = it.next();
+			  IntegratedExtension iSrc = this.getEdgeSource(e);
+			  IntegratedExtension iTrg = this.getEdgeTarget(e);
+			  String property = e.getLabel();
+			  
+			  String iSrc_ID = String.valueOf(iSrc.getId());
+			  String iTrg_ID = String.valueOf(iTrg.getId());
+			  
+			  if (vertex.add(iSrc_ID)) {
+				  for(Iterator<String> vIt = iSrc.iterator(); vIt.hasNext();) {
+					  String ext = vIt.next();
+					  graphStorage.addData(IndexDescription.VIDEXT, new String[] { iSrc_ID }, ext);
+				  }				  
+			  }
+			  
+			  if (vertex.add(iTrg_ID)) {
+				  for(Iterator<String> vIt = iTrg.iterator(); vIt.hasNext();) {
+					  String ext = vIt.next();
+					  graphStorage.addData(IndexDescription.VIDEXT, new String[] { iTrg_ID }, ext);
+				  }				  
+			  }
+			  
+			  for (Iterator<String> dsIt = e.iterator(); dsIt.hasNext();) {
+				  String ds = dsIt.next();
+				  graphStorage.addData(IndexDescription.VSPVTDS, new String[] { iSrc_ID, property, iTrg_ID }, ds);
+			  }
+		}
+		
+		graphStorage.mergeIndex(IndexDescription.VIDEXT);
+		graphStorage.mergeIndex(IndexDescription.VSPVTDS);
+		graphStorage.optimize();
+		graphStorage.close();
+			  
+			  
+		
+		
+	}
+	
+	private File getDirectory(String dir, boolean empty) throws IOException {
+		String directory = m_root_dir + "/" + dir;
+		
+		if (empty) {
+			File f = new File(directory);
+			if (!f.exists())
+				f.mkdirs();
+			else
+				emptyDirectory(f);
+		}
+		
+		return new File(directory);
+	}
+	
+	private void emptyDirectory(File dir) {
+		for (File f : dir.listFiles()) {
+			if (f.isDirectory())
+				emptyDirectory(f);
+			else
+				f.delete();
 		}
 	}
 

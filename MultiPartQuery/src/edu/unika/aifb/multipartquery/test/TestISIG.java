@@ -20,6 +20,7 @@ public class TestISIG {
 
 //		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings";
 		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings\\Example";
+		String out = "C:\\Users\\Christoph\\Desktop\\AIFB\\Mappings\\";
 		
 		MappingIndex mIdx = null;
 		
@@ -39,7 +40,15 @@ public class TestISIG {
 			e.printStackTrace();
 		}
 		
-		IntegratedStructuredIndexGraph isig = new IntegratedStructuredIndexGraph(stdIdx, mIdx);
+		try {
+			IntegratedStructuredIndexGraph isig = new IntegratedStructuredIndexGraph(stdIdx, mIdx, out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (StorageException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 //		isig.createIExt();
 //		isig.getGraph();
 	}

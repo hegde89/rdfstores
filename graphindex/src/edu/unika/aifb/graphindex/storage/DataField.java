@@ -57,6 +57,10 @@ public class DataField {
 	public static final DataField E_TARGET_EXT = new DataField("etx");
 	public static final DataField E_SOURCE_EXT = new DataField("esx");
 	
+	public static final DataField VERTEX_ID = new DataField("vid");
+	public static final DataField VERTEX_ID_SRC = new DataField("vids");
+	public static final DataField VERTEX_ID_TRG = new DataField("vidt");
+	
 	private String m_type;
 	
 	private DataField(String type) {

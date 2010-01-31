@@ -43,6 +43,7 @@ public class ExportGraph {
 			  PrintWriter out = new PrintWriter(outFile);
 			  
 			  out.println("digraph G {");
+			  System.out.println("digraph G {");
 					
 //					IndexReader m_idxReader = e.getValue();
 //					Map<String, Table<String>> m_p2to = new HashMap<String, Table<String>>();
@@ -73,6 +74,7 @@ public class ExportGraph {
 				String p = te.getKey();
 				Table<String> t = te.getValue();
 				
+				System.out.println(p);
 				System.out.println(t.toDataString());
 				
 				
@@ -85,11 +87,12 @@ public class ExportGraph {
 					String[] row = rowIt.next();
 		  
 					out.println(row[0] + " -> " + row[1] + " [label=\"" + p + "\"]");
+					System.out.println(row[0] + " -> " + row[1] + " [label=\"" + p + "\"]");
 				}
-				
-				out.println("}");
-				out.close();
 			}
+			out.println("}");
+			System.out.println("}");
+			out.close();
 		} catch (IOException e){
 		   e.printStackTrace();
 		}	

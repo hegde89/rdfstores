@@ -293,6 +293,11 @@ public class IntegratedStructuredIndexGraph extends
 			  String iSrc_ID = String.valueOf(iSrc.getId());
 			  String iTrg_ID = String.valueOf(iTrg.getId());
 			  
+			  graphStorage.addData(IndexDescription.PSO, new String[] { property, iSrc_ID }, iTrg_ID);
+			  graphStorage.addData(IndexDescription.POS, new String[] { property, iTrg_ID }, iSrc_ID);
+			  graphStorage.addData(IndexDescription.SOP, new String[] { iSrc_ID, iTrg_ID }, property);
+			  graphStorage.addData(IndexDescription.OPS, new String[] { iTrg_ID, property }, iSrc_ID);
+			  
 			  if (vertex.add(iSrc_ID)) {
 				  for(Iterator<String> vIt = iSrc.iterator(); vIt.hasNext();) {
 					  String ext = vIt.next();
@@ -313,6 +318,8 @@ public class IntegratedStructuredIndexGraph extends
 			  }
 		}
 		
+		graphStorage.mergeIndex(IndexDescription.PSO);
+		graphStorage.mergeIndex(IndexDescription.POS);
 		graphStorage.mergeIndex(IndexDescription.VIDEXT);
 		graphStorage.mergeIndex(IndexDescription.VSPVTDS);
 		graphStorage.optimize();

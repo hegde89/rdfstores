@@ -8,6 +8,7 @@ import java.util.Set;
 public class IntegratedExtension {
 	
 	private Set<String> exts = new HashSet<String>();
+	private Set<String> ds = new HashSet<String>();
 	private long id = -1;
 	
 	
@@ -20,13 +21,21 @@ public class IntegratedExtension {
 		return this.exts.add(ext);
 	}
 	
+	public boolean addDs(String ds) {
+		return this.ds.add(ds);
+	}
+	
 	public long getId() {
 		return id;
 	}
 
 
-	public Iterator<String> iterator() {
+	public Iterator<String> extIterator() {
 		return exts.iterator();
+	}
+	
+	public Iterator<String> dsIterator() {
+		return ds.iterator();
 	}
 
 	@Override

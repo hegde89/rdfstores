@@ -100,9 +100,12 @@ public class IntegratedStructuredIndexGraph extends
 				if (processed.add(ds1+ds2) && processed.add(ds2+ds1) && !ds1.equals(ds2)) {
 					try {
 						Table<String> mapping = mIdx.getStoTExtMapping(ds1, ds2);
-						
+						String key0 = ds1;
+						String key1 = ds2;
 						if (mapping.rowCount() == 0) {
 							mapping = mIdx.getStoTExtMapping(ds2, ds1);
+							key0 = ds2;
+							key1 = ds1;
 						}
 						
 						if (mapping.rowCount() > 0) {
@@ -110,37 +113,37 @@ public class IntegratedStructuredIndexGraph extends
 							for (Iterator<String[]> rowIt = mapping.iterator(); rowIt.hasNext();) {
 								String[] row = rowIt.next();
 								System.out.println("Mapping " + row[0] + " -> " + row[1]);
-								if (iExts.containsKey(row[0]) && iExts.containsKey(row[1])) {
+								if (iExts.containsKey(key0 + "_" +row[0]) && iExts.containsKey(key1 + "_" + row[1])) {
 //									IntegratedExtension iExt = iExts.get(row[0]);
 //									iExt.addExt(row[1]);
 									// Both extensions already integrated. Merge IExts, if they are not equal.
-									if (iExts.get(row[0]) != iExts.get(row[1])) {
-										IntegratedExtension iExt = iExts.get(row[0]);
-										for (Iterator<String> listIt = iExts.get(row[1]).iterator(); listIt.hasNext();) {
+									if (iExts.get(key0 + "_" + row[0]) != iExts.get(key1 + "_" + row[1])) {
+										IntegratedExtension iExt = iExts.get(key0 + "_" + row[0]);
+										for (Iterator<String> listIt = iExts.get(key1 + "_" + row[1]).iterator(); listIt.hasNext();) {
 											String s = listIt.next();
 											iExt.addExt(s);
-											iExts.remove(s);
-											iExts.put(s, iExt);
+											iExts.remove(key1 + "_" + s);
+											iExts.put(key1 + "_" + s, iExt);
 										}
 										
 									} else {
 										System.out.println("Mapping " + row[0] + " -> " + row[1] + " already in the same IExt.");
 									}
 									
-								} else if (iExts.containsKey(row[0]) && !iExts.containsKey(row[1])) {
-									IntegratedExtension iExt = iExts.get(row[0]);
+								} else if (iExts.containsKey(key0 + "_" + row[0]) && !iExts.containsKey(key1 + "_" + row[1])) {
+									IntegratedExtension iExt = iExts.get(key0 + "_" + row[0]);
 									iExt.addExt(row[1]);
-									iExts.put(row[1], iExt);
-								} else if (iExts.containsKey(row[1]) && !iExts.containsKey(row[0])) {
-									IntegratedExtension iExt = iExts.get(row[1]);
+									iExts.put(key1 + "_" + row[1], iExt);
+								} else if (iExts.containsKey(key1 + "_" + row[1]) && !iExts.containsKey(key0 + "_" + row[0])) {
+									IntegratedExtension iExt = iExts.get(key1 + "_" + row[1]);
 									iExt.addExt(row[0]);
-									iExts.put(row[0], iExt);
+									iExts.put(key0 + "_" + row[0], iExt);
 								} else {
 									IntegratedExtension iExt = new IntegratedExtension(idCounter++);
 									iExt.addExt(row[0]);
 									iExt.addExt(row[1]);
-									iExts.put(row[0], iExt);
-									iExts.put(row[1], iExt);
+									iExts.put(key0 + "_" + row[0], iExt);
+									iExts.put(key1 + "_" + row[1], iExt);
 								}
 							}
 						}
@@ -219,20 +222,20 @@ public class IntegratedStructuredIndexGraph extends
 					IntegratedExtension iSub;
 					IntegratedExtension iObj;
 					
-					if (iExts.containsKey(sExt)) {
-						iSub = iExts.get(sExt);
+					if (iExts.containsKey(ds + "_" + sExt)) {
+						iSub = iExts.get(ds + "_" + sExt);
 					} else {
 						iSub = new IntegratedExtension(idCounter++);
 						iSub.addExt(row[0]);
-						iExts.put(row[0], iSub);
+						iExts.put(ds + "_" + row[0], iSub);
 					}
 					
 					if (iExts.containsKey(oExt)) {
-						iObj = iExts.get(row[1]);
+						iObj = iExts.get(ds + "_" + row[1]);
 					} else {
 						iObj = new IntegratedExtension(idCounter++);
 						iObj.addExt(row[1]);
-						iExts.put(row[1], iObj);
+						iExts.put(ds + "_" + row[1], iObj);
 					}
 					
 					assert(iSub != null);

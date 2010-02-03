@@ -47,6 +47,7 @@ public class IntegratedStructuredIndexGraph extends
 	
 	private void exportGraph() {
 		String path = "C:\\Users\\Christoph\\Desktop\\AIFB\\ISIGraph.dot";
+		Set<String> done = new HashSet<String>();
 		
 		try {
 			  FileWriter outFile = new FileWriter(path);
@@ -61,16 +62,18 @@ public class IntegratedStructuredIndexGraph extends
 				  
 				  out.println(iSrc.getId() + " -> " + iTrg.getId() + " [label=\"" + e.getLabel() + "\"]");
 				  String srcLabel = iSrc.getId() + "[label=\"";
-				  for(Iterator<String> srcIt = iSrc.iterator(); srcIt.hasNext();) {
+				  for(Iterator<String> srcIt = iSrc.extIterator(); srcIt.hasNext();) {
 					  srcLabel += srcIt.next();
 					  if(srcIt.hasNext()) srcLabel+=", ";
 				  }
 				  srcLabel +=  "\"]";
 				  
-				  out.println(srcLabel);
+				  if (done.add(srcLabel)) {
+					  out.println(srcLabel);
+				  }
 				  
 				  String trgLabel = iTrg.getId() + "[label=\"";
-				  for(Iterator<String> trgIt = iTrg.iterator(); trgIt.hasNext();) {
+				  for(Iterator<String> trgIt = iTrg.extIterator(); trgIt.hasNext();) {
 					  trgLabel += trgIt.next();
 					  if(trgIt.hasNext()) trgLabel+=", ";
 				  }
@@ -112,18 +115,22 @@ public class IntegratedStructuredIndexGraph extends
 							
 							for (Iterator<String[]> rowIt = mapping.iterator(); rowIt.hasNext();) {
 								String[] row = rowIt.next();
-								System.out.println("Mapping " + row[0] + " -> " + row[1]);
-								if (iExts.containsKey(key0 + "_" +row[0]) && iExts.containsKey(key1 + "_" + row[1])) {
+								System.out.println("Mapping " + key0 + " " + row[0] + " -> " + key1 + " " + row[1]);
+								if (iExts.containsKey(key0 + "_" + row[0]) && iExts.containsKey(key1 + "_" + row[1])) {
 //									IntegratedExtension iExt = iExts.get(row[0]);
 //									iExt.addExt(row[1]);
 									// Both extensions already integrated. Merge IExts, if they are not equal.
 									if (iExts.get(key0 + "_" + row[0]) != iExts.get(key1 + "_" + row[1])) {
 										IntegratedExtension iExt = iExts.get(key0 + "_" + row[0]);
-										for (Iterator<String> listIt = iExts.get(key1 + "_" + row[1]).iterator(); listIt.hasNext();) {
+										for (Iterator<String> listIt = iExts.get(key1 + "_" + row[1]).extIterator(); listIt.hasNext();) {
 											String s = listIt.next();
 											iExt.addExt(s);
-											iExts.remove(key1 + "_" + s);
-											iExts.put(key1 + "_" + s, iExt);
+										}
+										for (Iterator<String> listIt = iExts.get(key1 + "_" + row[1]).dsIterator(); listIt.hasNext();) {
+											String ds = listIt.next();
+											iExt.addDs(ds);
+											iExts.remove(ds);
+											iExts.put(ds, iExt);
 										}
 										
 									} else {
@@ -133,15 +140,19 @@ public class IntegratedStructuredIndexGraph extends
 								} else if (iExts.containsKey(key0 + "_" + row[0]) && !iExts.containsKey(key1 + "_" + row[1])) {
 									IntegratedExtension iExt = iExts.get(key0 + "_" + row[0]);
 									iExt.addExt(row[1]);
+									iExt.addDs(key1 + "_" + row[1]);
 									iExts.put(key1 + "_" + row[1], iExt);
 								} else if (iExts.containsKey(key1 + "_" + row[1]) && !iExts.containsKey(key0 + "_" + row[0])) {
 									IntegratedExtension iExt = iExts.get(key1 + "_" + row[1]);
 									iExt.addExt(row[0]);
+									iExt.addDs(key0 + "_" + row[0]);
 									iExts.put(key0 + "_" + row[0], iExt);
 								} else {
 									IntegratedExtension iExt = new IntegratedExtension(idCounter++);
 									iExt.addExt(row[0]);
 									iExt.addExt(row[1]);
+									iExt.addDs(key0 + "_" + row[0]);
+									iExt.addDs(key1 + "_" + row[1]);
 									iExts.put(key0 + "_" + row[0], iExt);
 									iExts.put(key1 + "_" + row[1], iExt);
 								}
@@ -160,7 +171,7 @@ public class IntegratedStructuredIndexGraph extends
 			IntegratedExtension iExt = it.next();
 			if (nodes.add(iExt)) {
 				System.out.println("\n");
-				for (Iterator<String> extIt = iExt.iterator(); extIt.hasNext();) {
+				for (Iterator<String> extIt = iExt.extIterator(); extIt.hasNext();) {
 					System.out.print(extIt.next() + " ");
 				}
 				System.out.println("\n");
@@ -175,7 +186,6 @@ public class IntegratedStructuredIndexGraph extends
 			String ds = e.getKey();
 			
 			IndexReader m_idxReader = e.getValue();
-//			Map<String, Table<String>> m_p2to = new HashMap<String, Table<String>>();
 			Map<String, Table<String>> m_p2ts = new HashMap<String, Table<String>>();
 			
 			try {
@@ -183,23 +193,17 @@ public class IntegratedStructuredIndexGraph extends
 				
 				for (String property : m_idxReader.getObjectProperties()) {
 					m_p2ts.put(property, gs.getIndexTable(IndexDescription.POS, DataField.SUBJECT, DataField.OBJECT, property));
-//					m_p2to.put(property, gs.getIndexTable(IndexDescription.PSO, DataField.SUBJECT, DataField.OBJECT, property));
 				}
 			
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			} catch (StorageException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 			
 			for (Table<String> t : m_p2ts.values()) {
 				t.sort(0);
 			}
-//			for (Table<String> t : m_p2to.values()) {
-//				t.sort(1);
-//			}
 			
 			for (Iterator<Entry<String, Table<String>>> tit = m_p2ts.entrySet().iterator(); tit.hasNext();) {
 				Entry<String, Table<String>> te = tit.next();
@@ -226,16 +230,18 @@ public class IntegratedStructuredIndexGraph extends
 						iSub = iExts.get(ds + "_" + sExt);
 					} else {
 						iSub = new IntegratedExtension(idCounter++);
-						iSub.addExt(row[0]);
-						iExts.put(ds + "_" + row[0], iSub);
+						iSub.addExt(sExt);
+						iSub.addDs(ds + "_" + sExt);
+						iExts.put(ds + "_" + sExt, iSub);
 					}
 					
-					if (iExts.containsKey(oExt)) {
-						iObj = iExts.get(ds + "_" + row[1]);
+					if (iExts.containsKey(ds + "_" + oExt)) {
+						iObj = iExts.get(ds + "_" + oExt);
 					} else {
 						iObj = new IntegratedExtension(idCounter++);
-						iObj.addExt(row[1]);
-						iExts.put(ds + "_" + row[1], iObj);
+						iObj.addExt(oExt);
+						iObj.addDs(ds + "_" + oExt);
+						iExts.put(ds + "_" + oExt, iObj);
 					}
 					
 					assert(iSub != null);
@@ -255,7 +261,6 @@ public class IntegratedStructuredIndexGraph extends
 					
 					IntegratedEdge iEdge = null;
 					
-//					System.out.println("Multiple Edges? " + (this.isAllowingMultipleEdges() ? "true" : "false"));
 					for (Iterator<IntegratedEdge> edgeIt = this.getAllEdges(iSub, iObj).iterator(); edgeIt.hasNext();) {
 						IntegratedEdge edge = edgeIt.next();
 						if (edge.getLabel() == p) {
@@ -269,14 +274,11 @@ public class IntegratedStructuredIndexGraph extends
 						iEdge.addDS(ds);
 					} else {
 						System.out.println("Add new edge " + p + " to graph for " + sExt + "->" + oExt +"!");
-						iEdge = new IntegratedEdge(p);
+						iEdge = new IntegratedEdge(p, String.valueOf(iSub.getId()), String.valueOf(iObj.getId()));
 						assert(iEdge.getLabel() != null);
-//						iEdge.setLabel(p);
+
 						iEdge.addDS(ds);
-						this.addEdge(iSub, iObj, iEdge);
-//						iEdge = this.addEdge(iSub, iObj);
-//						iEdge.setLabel(p);
-//						iEdge.addDS(ds);
+						System.out.println(this.addEdge(iSub, iObj, iEdge) ? "Add new edge " + p + " to graph for " + sExt + "->" + oExt + " successfully!" : "Can't add new edge " + p + " to graph for " + sExt + "->" + oExt);
 					}
 				}
 			}
@@ -302,14 +304,14 @@ public class IntegratedStructuredIndexGraph extends
 			  graphStorage.addData(IndexDescription.OPS, new String[] { iTrg_ID, property }, iSrc_ID);
 			  
 			  if (vertex.add(iSrc_ID)) {
-				  for(Iterator<String> vIt = iSrc.iterator(); vIt.hasNext();) {
+				  for(Iterator<String> vIt = iSrc.extIterator(); vIt.hasNext();) {
 					  String ext = vIt.next();
 					  graphStorage.addData(IndexDescription.VIDEXT, new String[] { iSrc_ID }, ext);
 				  }				  
 			  }
 			  
 			  if (vertex.add(iTrg_ID)) {
-				  for(Iterator<String> vIt = iTrg.iterator(); vIt.hasNext();) {
+				  for(Iterator<String> vIt = iTrg.extIterator(); vIt.hasNext();) {
 					  String ext = vIt.next();
 					  graphStorage.addData(IndexDescription.VIDEXT, new String[] { iTrg_ID }, ext);
 				  }				  

@@ -1,0 +1,347 @@
+<http://www.w3.org/2008/05/skos> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/title> "SKOS Core Vocabulary"@en .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/contributor> "Dave Beckett" .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/contributor> "Nikki Rogers" .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/contributor> "Participants in W3C's Semantic Web Deployment Working Group." .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/description> "An RDF vocabulary for describing the basic structure and content of concept schemes such as thesauri, classification schemes, subject heading lists, taxonomies, 'folksonomies', other types of controlled vocabulary, and also concept schemes embedded in glossaries and terminologies."@en .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/creator> "Alistair Miles" .
+<http://www.w3.org/2008/05/skos> <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+<http://www.w3.org/2008/05/skos#Concept> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://www.w3.org/2008/05/skos#Concept> <http://www.w3.org/2000/01/rdf-schema#label> "Concept"@en .
+_:genid1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid1 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid1 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#Concept> <http://www.w3.org/2008/05/skos#changeNote> _:genid1 .
+<http://www.w3.org/2008/05/skos#Concept> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#Concept> <http://www.w3.org/2008/05/skos#definition> "An abstract idea or notion; a unit of thought."@en .
+<http://www.w3.org/2008/05/skos#Concept> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2000/01/rdf-schema#label> "Concept Scheme"@en .
+_:genid2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid2 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid2 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2008/05/skos#changeNote> _:genid2 .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2000/01/rdf-schema#comment> "A concept scheme may be defined to include concepts from different sources."@en .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2000/01/rdf-schema#comment> "Thesauri, classification schemes, subject heading lists, taxonomies, 'folksonomies', and other types of controlled vocabulary are all examples of concept schemes.  Concept schemes are also embedded in glossaries and terminologies."@en .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2002/07/owl#disjointWith> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://www.w3.org/2008/05/skos#definition> "A set of concepts, optionally including statements about semantic relationships between those concepts."@en .
+<http://www.w3.org/2008/05/skos#ConceptScheme> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2000/01/rdf-schema#label> "Collection"@en .
+_:genid3 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid3 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid3 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2008/05/skos#changeNote> _:genid3 .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2000/01/rdf-schema#comment> "Labelled collections can be used with collectable semantic relation properties e.g. skos:narrower, where you would like a set of concepts to be displayed under a 'node label' in the hierarchy."@en .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2002/07/owl#disjointWith> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2002/07/owl#disjointWith> <http://www.w3.org/2008/05/skos#ConceptScheme> .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#Collection> <http://www.w3.org/2008/05/skos#definition> "A meaningful collection of concepts."@en .
+<http://www.w3.org/2008/05/skos#Collection> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2000/01/rdf-schema#label> "Ordered Collection"@en .
+_:genid4 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid4 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid4 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2008/05/skos#changeNote> _:genid4 .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2000/01/rdf-schema#comment> "Ordered collections can be used with collectable semantic relation properties, where you would like a set of concepts to be displayed in a specific order, and optionally under a 'node label'."@en .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://www.w3.org/2008/05/skos#Collection> .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://www.w3.org/2008/05/skos#definition> "An ordered collection of concepts, where both the grouping and the ordering are meaningful."@en .
+<http://www.w3.org/2008/05/skos#OrderedCollection> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2000/01/rdf-schema#label> "in scheme"@en .
+_:genid5 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid5 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid5 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2008/05/skos#changeNote> _:genid5 .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2000/01/rdf-schema#comment> "A concept may be a member of more than one concept scheme."@en .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2008/05/skos#ConceptScheme> .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#inScheme> <http://www.w3.org/2008/05/skos#definition> "A concept scheme in which the concept is included."@en .
+<http://www.w3.org/2008/05/skos#inScheme> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2000/01/rdf-schema#label> "has top concept"@en .
+_:genid6 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid6 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid6 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2008/05/skos#changeNote> _:genid6 .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2000/01/rdf-schema#domain> <http://www.w3.org/2008/05/skos#ConceptScheme> .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://www.w3.org/2008/05/skos#definition> "A top level concept in the concept scheme."@en .
+<http://www.w3.org/2008/05/skos#hasTopConcept> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2000/01/rdf-schema#label> "preferred label"@en .
+_:genid7 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid7 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid7 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2008/05/skos#changeNote> _:genid7 .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "No two concepts in the same concept scheme may have the same value for skos:prefLabel in a given language."@en .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "The range of skos:prefLabel is the class of RDF plain literals."@en .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise disjoint properties."@en .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://www.w3.org/2008/05/skos#definition> "The preferred lexical label for a resource, in a given language."@en .
+<http://www.w3.org/2008/05/skos#prefLabel> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2000/01/rdf-schema#label> "alternative label"@en .
+_:genid8 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid8 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid8 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2008/05/skos#changeNote> _:genid8 .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "Acronyms, abbreviations, spelling variants, and irregular plural/singular forms may be included among the alternative labels for a concept.  Mis-spelled terms are normally included as hidden labels (see skos:hiddenLabel)."@en .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "The range of skos:altLabel is the class of RDF plain literals."@en .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise disjoint properties."@en .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#altLabel> <http://www.w3.org/2008/05/skos#definition> "An alternative lexical label for a resource."@en .
+<http://www.w3.org/2008/05/skos#altLabel> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2000/01/rdf-schema#label> "hidden label"@en .
+_:genid9 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid9 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid9 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2008/05/skos#changeNote> _:genid9 .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "The range of skos:hiddenLabel is the class of RDF plain literals."@en .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2000/01/rdf-schema#comment> "skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise disjoint properties."@en .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://www.w3.org/2008/05/skos#definition> "A lexical label for a resource that should be hidden when generating visual displays of the resource, but should still be accessible to free text search operations."@en .
+<http://www.w3.org/2008/05/skos#hiddenLabel> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/2000/01/rdf-schema#label> "notation"@en .
+_:genid10 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid10 <http://purl.org/dc/elements/1.1/creator> "Alistair Miles" .
+_:genid10 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/2008/05/skos#changeNote> _:genid10 .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/2000/01/rdf-schema#comment> "By convention, skos:notation is used with a typed literal in the object position of the triple."@en .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#notation> <http://www.w3.org/2008/05/skos#definition> "A notation, also known as classification code, is a string of characters such as \"T58.5\" or \"303.4833\" used to uniquely identify a concept within the scope of a given concept scheme."@en .
+<http://www.w3.org/2008/05/skos#notation> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/2000/01/rdf-schema#label> "note"@en .
+_:genid11 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid11 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid11 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/2008/05/skos#changeNote> _:genid11 .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/2000/01/rdf-schema#comment> "This property may be used directly, or as a super-property for more specific note types."@en .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#note> <http://www.w3.org/2008/05/skos#definition> "A general note, for any purpose."@en .
+<http://www.w3.org/2008/05/skos#note> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/2000/01/rdf-schema#label> "change note"@en .
+_:genid12 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid12 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid12 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/2008/05/skos#changeNote> _:genid12 .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#changeNote> <http://www.w3.org/2008/05/skos#definition> "A note about a modification to a concept."@en .
+<http://www.w3.org/2008/05/skos#changeNote> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/2000/01/rdf-schema#label> "definition"@en .
+_:genid13 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid13 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid13 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/2008/05/skos#changeNote> _:genid13 .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#definition> <http://www.w3.org/2008/05/skos#definition> "A statement or formal explanation of the meaning of a concept."@en .
+<http://www.w3.org/2008/05/skos#definition> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/2000/01/rdf-schema#label> "editorial note"@en .
+_:genid14 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid14 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid14 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/2008/05/skos#changeNote> _:genid14 .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://www.w3.org/2008/05/skos#definition> "A note for an editor, translator or maintainer of the vocabulary."@en .
+<http://www.w3.org/2008/05/skos#editorialNote> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/2000/01/rdf-schema#label> "example"@en .
+_:genid15 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid15 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid15 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/2008/05/skos#changeNote> _:genid15 .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#example> <http://www.w3.org/2008/05/skos#definition> "An example of the use of a concept."@en .
+<http://www.w3.org/2008/05/skos#example> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/2000/01/rdf-schema#label> "history note"@en .
+_:genid16 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid16 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid16 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/2008/05/skos#changeNote> _:genid16 .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#historyNote> <http://www.w3.org/2008/05/skos#definition> "A note about the past state/use/meaning of a concept."@en .
+<http://www.w3.org/2008/05/skos#historyNote> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/2000/01/rdf-schema#label> "scope note"@en .
+_:genid17 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid17 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid17 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/2008/05/skos#changeNote> _:genid17 .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#note> .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://www.w3.org/2008/05/skos#definition> "A note that helps to clarify the meaning of a concept."@en .
+<http://www.w3.org/2008/05/skos#scopeNote> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2000/01/rdf-schema#label> "semantic relation"@en .
+_:genid18 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid18 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid18 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2008/05/skos#changeNote> _:genid18 .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2000/01/rdf-schema#domain> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2000/01/rdf-schema#comment> "This property should not be used directly, but as a super-property for all properties denoting a relationship of meaning between concepts."@en .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://www.w3.org/2008/05/skos#definition> "A concept related by meaning."@en .
+<http://www.w3.org/2008/05/skos#semanticRelation> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2000/01/rdf-schema#label> "has broader"@en .
+_:genid19 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid19 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid19 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2008/05/skos#changeNote> _:genid19 .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#broaderTransitive> .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2000/01/rdf-schema#comment> "Broader concepts are typically rendered as parents in a concept hierarchy (tree)."@en .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2000/01/rdf-schema#comment> "By convention, skos:broader is only used to assert an immediate (i.e. direct) hierarchical link between two conceptual resources."@en .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#narrower> .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#broader> <http://www.w3.org/2008/05/skos#definition> "A concept that is more general in meaning."@en .
+<http://www.w3.org/2008/05/skos#broader> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2000/01/rdf-schema#label> "has narrower"@en .
+_:genid20 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid20 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid20 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2008/05/skos#changeNote> _:genid20 .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#narrowerTransitive> .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2000/01/rdf-schema#comment> "By convention, skos:broader is only used to assert an immediate (i.e. direct) hierarchical link between two conceptual resources."@en .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2000/01/rdf-schema#comment> "Narrower concepts are typically rendered as children in a concept hierarchy (tree)."@en .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#broader> .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#narrower> <http://www.w3.org/2008/05/skos#definition> "A concept that is more specific in meaning."@en .
+<http://www.w3.org/2008/05/skos#narrower> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2000/01/rdf-schema#label> "related to"@en .
+_:genid21 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid21 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid21 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2008/05/skos#changeNote> _:genid21 .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#semanticRelation> .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#SymmetricProperty> .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2000/01/rdf-schema#comment> "skos:related is disjoint with skos:broaderTransitive"@en .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#related> <http://www.w3.org/2008/05/skos#definition> "A concept with which there is an associative semantic relationship."@en .
+<http://www.w3.org/2008/05/skos#related> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2000/01/rdf-schema#label> "broader transitive"@en .
+_:genid22 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid22 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid22 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2008/05/skos#changeNote> _:genid22 .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#semanticRelation> .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#TransitiveProperty> .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2000/01/rdf-schema#comment> "By convention, skos:broaderTransitive is not used to make assertions. Rather, the properties can be used to draw inferences about the transitive closure of the hierarchical relation, which is useful e.g. when implementing a simple query expansion algorithm in a search application."@en .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#narrowerTransitive> .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://www.w3.org/2008/05/skos#definition> "skos:broaderTransitive is a transitive superproperty of skos:broader." .
+<http://www.w3.org/2008/05/skos#broaderTransitive> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2000/01/rdf-schema#label> "narrower transitive"@en .
+_:genid23 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid23 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid23 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2008/05/skos#changeNote> _:genid23 .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#semanticRelation> .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#TransitiveProperty> .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2000/01/rdf-schema#comment> "By convention, skos:narrowerTransitive is not used to make assertions. Rather, the properties can be used to draw inferences about the transitive closure of the hierarchical relation, which is useful e.g. when implementing a simple query expansion algorithm in a search application."@en .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#broaderTransitive> .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://www.w3.org/2008/05/skos#definition> "skos:narrowerTransitive is a transitive superproperty of skos:broader. By convention, skos:narrowerTransitive is not intended to be used in assertions, but provides a mechanism whereby the transitive closure of skos:narrower can be queried." .
+<http://www.w3.org/2008/05/skos#narrowerTransitive> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/2000/01/rdf-schema#label> "member"@en .
+_:genid24 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid24 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid24 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/2008/05/skos#changeNote> _:genid24 .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/2000/01/rdf-schema#domain> <http://www.w3.org/2008/05/skos#Collection> .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#member> <http://www.w3.org/2008/05/skos#definition> "A member of a collection."@en .
+<http://www.w3.org/2008/05/skos#member> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2000/01/rdf-schema#label> "member list"@en .
+_:genid25 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid25 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid25 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2008/05/skos#changeNote> _:genid25 .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2000/01/rdf-schema#domain> <http://www.w3.org/2008/05/skos#OrderedCollection> .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#FunctionalProperty> .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2000/01/rdf-schema#comment> "For any resource, every item in the list given as the value of the skos:memberList property is also a value of the skos:member property."@en .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/1999/02/22-rdf-syntax-ns#List> .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#memberList> <http://www.w3.org/2008/05/skos#definition> "An RDF list containing the members of an ordered collection."@en .
+<http://www.w3.org/2008/05/skos#memberList> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2000/01/rdf-schema#label> "mapping relation"@en .
+_:genid26 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid26 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid26 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2008/05/skos#changeNote> _:genid26 .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2000/01/rdf-schema#domain> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2000/01/rdf-schema#comment> "These concept mapping relations mirror semantic relations, and the data model defined below is similar (with the exception of skos:exactMatch) to the data model defined for semantic relations. A distinct vocabulary is provided for concept mapping relations, to provide a convenient way to differentiate links within a concept scheme from links between concept schemes. However, this pattern of usage is not a formal requirement of the SKOS data model, and relies on informal definitions of best practice."@en .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2008/05/skos#Concept> .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://www.w3.org/2008/05/skos#definition> "Definition"@en .
+<http://www.w3.org/2008/05/skos#mappingRelation> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2000/01/rdf-schema#label> "broader match"@en .
+_:genid27 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid27 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid27 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2008/05/skos#changeNote> _:genid27 .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#mappingRelation> .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#broader> .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#narrowMatch> .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://www.w3.org/2008/05/skos#definition> "skos:broadMatch is used to state a hierarchical mapping link between two conceptual resources in different concept schemes."@en .
+<http://www.w3.org/2008/05/skos#broadMatch> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#mappingRelation> .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#narrower> .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2002/07/owl#inverseOf> <http://www.w3.org/2008/05/skos#broadMatch> .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+_:genid28 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid28 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid28 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2008/05/skos#changeNote> _:genid28 .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2008/05/skos#definition> "skos:narrowMatch is used to state a hierarchical mapping link between two conceptual resources in different concept schemes."@en .
+<http://www.w3.org/2008/05/skos#narrowMatch> <http://www.w3.org/2000/01/rdf-schema#label> "narrower match"@en .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2000/01/rdf-schema#label> "related match"@en .
+_:genid29 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid29 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid29 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2008/05/skos#changeNote> _:genid29 .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#mappingRelation> .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#related> .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#SymmetricProperty> .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://www.w3.org/2008/05/skos#definition> "skos:relatedMatch is used to state an associative mapping link between two conceptual resources in different concept schemes."@en .
+<http://www.w3.org/2008/05/skos#relatedMatch> <http://purl.org/dc/terms/issued> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/2000/01/rdf-schema#label> "exact match"@en .
+_:genid30 <http://www.w3.org/1999/02/22-rdf-syntax-ns#value> "Initial description." .
+_:genid30 <http://purl.org/dc/elements/1.1/creator> "Sean Bechhofer" .
+_:genid30 <http://purl.org/dc/elements/1.1/date> "2008-05-xx" .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/2008/05/skos#changeNote> _:genid30 .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/2000/01/rdf-schema#subPropertyOf> <http://www.w3.org/2008/05/skos#mappingRelation> .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#SymmetricProperty> .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/2000/01/rdf-schema#isDefinedBy> <http://www.w3.org/2008/05/skos> .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://www.w3.org/2008/05/skos#definition> "skos:exactMatch is used to indicate that two conceptual resources in different concept schemes are sufficiently similar that they can be used interchangeably in an information retrieval application."@en .
+<http://www.w3.org/2008/05/skos#exactMatch> <http://purl.org/dc/terms/issued> "2008-05-xx" .

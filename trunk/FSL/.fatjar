@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Wed Oct 21 00:25:17 CEST 2009
+onejar.license.required=false
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=true
+jarname=D\:\\fsl.jar
+manifest.mergeall=true
+manifest.mainclass=edu.unika.aifb.facetedSearch.build.CommandlineBuilder
+manifest.file=<createnew>
+jarname.isextern=true
+onejar.expand=
+excludes=<po|graphindex>~log4j.properties;<jar|commons-collections-3.2.1.jar>;<jar|junit.jar>;<jar|openrdf-model-2.0.1.jar>;<jar|openrdf-rio-api-2.0.1.jar>;<jar|openrdf-rio-ntriples-2.0.1.jar>;<jar|openrdf-rio-rdfxml-2.0.1.jar>;<jar|colt-1.2.0.jar>;<jar|je-3.3.82.jar>;<jar|nxparser-1.1.jar>;<jar|openrdf-rio-n3-2.0.1.jar>;<jar|openrdf-rio-turtle-2.0.1.jar>
+includes=

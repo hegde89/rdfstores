@@ -43,6 +43,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
 public class Demo {
+	
 	public static void main(String[] args) throws Exception {
 		OptionParser op = new OptionParser();
 		op.accepts("a", "action to perform, comma separated list of: import")
@@ -94,23 +95,23 @@ public class Demo {
 			ic.setCreateDataIndex(true);
 			
 			// create structure index (default: true)
-			ic.setCreateStructureIndex(true);
+			ic.setCreateStructureIndex(false);
 			
 			// create keyword index (default: true)
 			ic.setCreateKeywordIndex(true);
 						
 			// set neighborhood size to 2 (default: 0)
-			ic.setKWNeighborhoodSize(2);
+	//		ic.setKWNeighborhoodSize(2);
 			
 			// set structure index path length to 1 (default: 1)
-			ic.setSIPathLength(1);
+	//		ic.setSIPathLength(1);
 			
 			// include data values in structure index (not graph) (default: true)
-			ic.setStructureBasedDataPartitioning(true);
+	//		ic.setStructureBasedDataPartitioning(true);
 			
-			ic.setSICreateDataExtensions(true);
+	//		ic.setSICreateDataExtensions(true);
 			
-			ic.setOption(IndexConfiguration.TRIPLES_ONLY, true);
+	//		ic.setOption(IndexConfiguration.TRIPLES_ONLY, true);
 			
 			// create index
 			ic.create();
@@ -150,17 +151,17 @@ public class Demo {
 			// use an CombinedEvaluator to execute the query
 			// CombinedEvaluator uses both the data and the structure index and
 			// will automatically prune queries
-			CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
-			System.out.println(cqe.evaluate(q));
+	//		CombinedQueryEvaluator cqe = new CombinedQueryEvaluator(ir);
+	//		System.out.println(cqe.evaluate(q));
 			
 			// retrieve only matches on the index graph
-			StructureIndexGraphMatcher sigm = new StructureIndexGraphMatcher(ir);
-			System.out.println(sigm.evaluate(q));
+	//		StructureIndexGraphMatcher sigm = new StructureIndexGraphMatcher(ir);
+	//		System.out.println(sigm.evaluate(q));
 			
 			// queries can be pruned like this
 			// pruning is dependent on the structure index and the path length used
-			PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
-			System.out.println(pq.getQueryGraph().edgeCount() + " -> " + pq.getPrunedQueryGraph().edgeCount());
+	//		PrunedQuery pq = new PrunedQuery(q, ir.getStructureIndex());
+	//		System.out.println(pq.getQueryGraph().edgeCount() + " -> " + pq.getPrunedQueryGraph().edgeCount());
 			
 			// a keyword query, DirectExploringQueryEvaluator is the only currently usable for keyword queries
 			KeywordQuery kq = new KeywordQuery("q1", "Publication0 publicationAuthor GraduateStudent1@Department10.University0.edu");

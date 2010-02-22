@@ -96,8 +96,8 @@ public class Main {
 		else if (files.get(0).contains(".n3"))
 			importer = new N3Importer();
 		else if (files.get(0).endsWith(".rdf") || files.get(0).endsWith(".xml"))
-			importer = new RDFImporter();
-		else  {
+			importer = new RDFImporter();	
+		else {
 			log.warn("unknown extension, assuming n-triples format");
 			importer = new NxImporter();
 		}

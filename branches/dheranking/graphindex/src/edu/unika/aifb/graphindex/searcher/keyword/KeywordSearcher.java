@@ -641,6 +641,8 @@ public class KeywordSearcher {
 	   		
 	   		String uri = valueDoc.getFieldable(Constant.URI_FIELD).stringValue();
 	   		attributeUri = valueDoc.getFieldable(Constant.ATTRIBUTE_FIELD).stringValue();
+	   		if(attributeUri.contains("label"))
+	   			System.out.println("AttributeURI "+attributeUri+" of "+uri);
 	   		String ext = valueDoc.getFieldable(Constant.EXTENSION_FIELD).stringValue();
 //	   		float score = docHits[i].score / maxScore;
 	   		float score = docHits[i].score;

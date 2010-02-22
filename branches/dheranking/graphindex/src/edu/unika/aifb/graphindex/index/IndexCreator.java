@@ -286,8 +286,8 @@ public class IndexCreator implements TripleSink {
 			importData();
 		
 		}
-		if (startFrom <= STEP_ANALYZE)
-			analyzeData();
+	//	if (startFrom <= STEP_ANALYZE)
+	//		analyzeData();
 
 		try {
 			if (m_idxConfig.getBoolean(IndexConfiguration.HAS_SP) && startFrom <= STEP_STRUCTURE) {
@@ -335,11 +335,11 @@ public class IndexCreator implements TripleSink {
 
 		for (IndexDescription idx : m_idxConfig.getIndexes(IndexConfiguration.DI_INDEXES)) {
 			log.debug("merging " + idx.toString());
-			m_dataIndexes.get(idx).mergeSingleIndex(idx);
+	//		m_dataIndexes.get(idx).mergeSingleIndex(idx);
 			m_dataIndexes.get(idx).close();
 			
-			Util.writeEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName() + "_warmup", 
-				LuceneWarmer.getWarmupTerms(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName(), 10));
+	//		Util.writeEdgeSet(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName() + "_warmup", 
+	//			LuceneWarmer.getWarmupTerms(m_idxDirectory.getDirectory(IndexDirectory.VP_DIR, false) + "/" + idx.getIndexFieldName(), 10));
 		}
 	}
 	

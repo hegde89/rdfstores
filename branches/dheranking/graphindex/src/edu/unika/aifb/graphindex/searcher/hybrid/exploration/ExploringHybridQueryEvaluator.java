@@ -97,8 +97,8 @@ public class ExploringHybridQueryEvaluator extends HybridQueryEvaluator {
 	
 	
 	private String getKeywordElementId(String ext, KeywordElement ele) throws StorageException, IOException {
-		if (ele.getAttributeUri().equals("http://xmlns.com/foaf/0.1/name"))
-			ele.setAttributeUri(RDFS.LABEL.toString());
+	//	if (ele.getAttributeUri().equals("http://xmlns.com/foaf/0.1/name"))
+	//		ele.setAttributeUri(RDFS.LABEL.toString());
 		
 		String id = ext + "__" + ele.getAttributeUri();
 		

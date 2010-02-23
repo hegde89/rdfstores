@@ -1,6 +1,8 @@
 package edu.unika.aifb.ease.index;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.PreparedStatement;
@@ -254,24 +256,6 @@ public class DBIndexService {
 				" and " +  Environment.TRIPLE_DS_COLUMN + " = " + Environment.DATASOURCE_NAME_COLUMN;
 			stmt.executeUpdate(insertSql + selectSql);
 			
-//			selectSql = "select distinct " + 
-//				Environment.TRIPLE_PROPERTY_COLUMN + ", " + 
-//				Environment.OBJECT_PROPERTY + ", " +
-//				Environment.DATASOURCE_ID_COLUMN +
-//				" from " + Environment.TRIPLE_TABLE + ", " + Environment.DATASOURCE_TABLE + 
-//				" where " + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.OBJECT_PROPERTY + 
-//				" and " +  Environment.TRIPLE_DS_COLUMN + " = " + Environment.DATASOURCE_NAME_COLUMN;
-//			stmt.executeUpdate(insertSql + selectSql);
-//			
-//			selectSql = "select distinct " + 
-//				Environment.TRIPLE_PROPERTY_COLUMN + ", " + 
-//				Environment.DATA_PROPERTY + ", " +
-//				Environment.DATASOURCE_ID_COLUMN +
-//				" from " + Environment.TRIPLE_TABLE + ", " + Environment.DATASOURCE_TABLE + 
-//				" where " + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.DATA_PROPERTY + 
-//				" and " +  Environment.TRIPLE_DS_COLUMN + " = " + Environment.DATASOURCE_NAME_COLUMN;
-//			stmt.executeUpdate(insertSql + selectSql);
-			
 			insertSql = "insert into " + Environment.SCHEMA_TABLE + "(" + 
 				Environment.SCHEMA_URI_COLUMN + ", " +
 				Environment.SCHEMA_TYPE_COLUMN + ") ";  
@@ -336,6 +320,7 @@ public class DBIndexService {
 				" where " + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.OBJECT_PROPERTY +
 				" and " + Environment.TRIPLE_DS_COLUMN + " = " + Environment.DATASOURCE_NAME_COLUMN;
 			String insertSelectSql = insertSql + selectSql;
+			log.info("Step 1: inserting entities into entity table");
 			stmt.executeUpdate(insertSelectSql);
 			
 			String updateSql = "update " + Environment.TRIPLE_TABLE + " as A, " + 
@@ -347,17 +332,20 @@ public class DBIndexService {
 				" and " + "A." + Environment.TRIPLE_OBJECT_COLUMN + " = " + "B." + Environment.SCHEMA_URI_COLUMN + 
 				" and " + "A." + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.ENTITY_MEMBERSHIP_PROPERTY + 
 				" and " + "B." + Environment.SCHEMA_TYPE_COLUMN + " = " + Environment.CONCEPT; 
+			log.info("Step 2: updating concept, concept id, ds id columns of entity table"); 
 			stmt.executeUpdate(updateSql);
 			
 			updateSql = "update " + Environment.TRIPLE_TABLE + " as A, " + Environment.ENTITY_TABLE + " as B " +
 				" set " + "A." + Environment.TRIPLE_SUBJECT_ID_COLUMN + " = " + "B." + Environment.ENTITY_ID_COLUMN + 
 				" where " + "A." + Environment.TRIPLE_SUBJECT_COLUMN + " = " + "B." + Environment.ENTITY_URI_COLUMN;
+			log.info("Step 3: updating subject id column of triple table"); 
 			stmt.executeUpdate(updateSql);
 			 
 			updateSql = "update " + Environment.TRIPLE_TABLE + " as A, " + 	Environment.ENTITY_TABLE + " as B " +
 				" set " + "A." + Environment.TRIPLE_OBJECT_ID_COLUMN + " = " + "B." + Environment.ENTITY_ID_COLUMN + 
 				" where " + "A." + Environment.TRIPLE_OBJECT_COLUMN + " = " + "B." + Environment.ENTITY_URI_COLUMN + 
 				" and " + "A." + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.OBJECT_PROPERTY; 
+			log.info("Step 4: updating object id column (entity) of triple table"); 
 			stmt.executeUpdate(updateSql);
 			
 			if(stmt != null)
@@ -372,9 +360,9 @@ public class DBIndexService {
 	} 
 	
 	public void createEntityRelationTable() {
-		log.info("---- Creating Entity Relation Table ----");
+		log.info("-------------------- Creating Entity Relation Table --------------------");
 		long start = System.currentTimeMillis();
-        Statement stmt = m_dbService.createStatement(ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
+		Statement stmt = m_dbService.createStatement();
         String R_1 = Environment.ENTITY_RELATION_TABLE + 1; 
         try {
         	// Create Entity Relation Table 
@@ -387,35 +375,50 @@ public class DBIndexService {
 				"primary key("	+ Environment.ENTITY_RELATION_UID_COLUMN + ", " + Environment.ENTITY_RELATION_VID_COLUMN + ")) " + 
 				"ENGINE=MyISAM";
 			stmt.execute(createSql);
-			stmt.execute("alter table " + R_1 + " add index (" + Environment.ENTITY_RELATION_UID_COLUMN + ")");
-			stmt.execute("alter table " + R_1 + " add index (" + Environment.ENTITY_RELATION_VID_COLUMN + ")");
 			
-			log.info("---- Populating Entity Relation Table ----");
+			log.info("-------------------- Populating Entity Relation Table --------------------");
 			// Populate Entity Relation Table 
-			String insertSql = "insert IGNORE into " + R_1 + " values(?, ?)"; 
-			PreparedStatement ps = m_dbService.createPreparedStatement(insertSql,ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
-			String selectSql = "select " + Environment.TRIPLE_SUBJECT_ID_COLUMN + ", " + Environment.TRIPLE_OBJECT_ID_COLUMN +
+			String selectSql = "select distinct " + Environment.TRIPLE_SUBJECT_ID_COLUMN + ", " + Environment.TRIPLE_OBJECT_ID_COLUMN +
 				" from " + Environment.TRIPLE_TABLE +  
-				" where " + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.OBJECT_PROPERTY + 
-				" group by " + Environment.TRIPLE_SUBJECT_ID_COLUMN + ", " + Environment.TRIPLE_OBJECT_ID_COLUMN;  
+				" where " + Environment.TRIPLE_PROPERTY_TYPE + " = " + Environment.OBJECT_PROPERTY; 
 			ResultSet rs = stmt.executeQuery(selectSql);
-            while (rs.next()){
+			
+			String temp = m_config.getTemporaryDirectory() + "/entityRelation"; 
+			BufferedWriter out = new BufferedWriter(new FileWriter(temp));
+			
+			int numTriples = 0;
+			while (rs.next()) {
+				if(++numTriples % 100000 == 0)
+					log.debug("Processed Triples: " + numTriples);
             	int entityId1 = rs.getInt(1);
             	int entityId2 = rs.getInt(2);
             	if(entityId1 < entityId2){
-            		ps.setInt(1, entityId1);
-            		ps.setInt(2, entityId2);
-            	} 
-            	else {
-            		ps.setInt(1, entityId2);
-            		ps.setInt(2, entityId1);
+            		String str = entityId1 + "," + entityId2;
+                    out.write(str, 0, str.length());
+                    out.newLine();
             	}
-                ps.executeUpdate();
+            	else {
+            		String str = entityId2 + "," + entityId1;
+                    out.write(str, 0, str.length());
+                    out.newLine();
+            	}
             }
             if(rs != null)
             	rs.close();
-            if(ps != null)
-            	ps.close();
+            out.close();
+            
+			String tempAlt = m_dbService.getMySQLFilepath(temp);
+
+            stmt.executeUpdate("load data local infile '" + tempAlt + "' " + 
+            			" ignore into table " + R_1 + " fields terminated by ','");
+            File f = new File(temp);
+            if(!f.delete()) {
+                System.out.println("Unable to delete tempdump");
+                System.exit(1);
+            }
+            
+            stmt.execute("alter table " + R_1 + " add index (" + Environment.ENTITY_RELATION_UID_COLUMN + ")");
+			stmt.execute("alter table " + R_1 + " add index (" + Environment.ENTITY_RELATION_VID_COLUMN + ")");
             
 			if(stmt != null)
             	stmt.close();
@@ -425,13 +428,16 @@ public class DBIndexService {
 		} catch (SQLException ex) {
 			log.warn("A warning in the process of creating entity relation table:");
 			log.warn(ex.getMessage());
+		} catch (IOException ex) {
+			log.warn("A warning in the process of creating entity relation table:");
+			log.warn(ex.getMessage());
 		}  
 	} 
 	
 	public void createEntityRelationTable(int distance) {
-		log.info("---- Creating Entity Relation Table at distance " + distance + " ----");
+		log.info("-------------------- Creating Entity Relation Table at distance " + distance + " --------------------");
 		long start = System.currentTimeMillis();
-        Statement stmt = m_dbService.createStatement(ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
+        Statement stmt = m_dbService.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
         String R_d = Environment.ENTITY_RELATION_TABLE + distance; 
         try {
         	// Create Entity Relation Table at distance d
@@ -444,181 +450,123 @@ public class DBIndexService {
 				"primary key("	+ Environment.ENTITY_RELATION_UID_COLUMN + ", " + Environment.ENTITY_RELATION_VID_COLUMN + ")) " + 
 				"ENGINE=MyISAM";
 			stmt.execute(createSql);
-			stmt.execute("alter table " + R_d + " add index (" + Environment.ENTITY_RELATION_UID_COLUMN + ")");
+//			stmt.execute("alter table " + R_d + " add index (" + Environment.ENTITY_RELATION_UID_COLUMN + ")");
 			stmt.execute("alter table " + R_d + " add index (" + Environment.ENTITY_RELATION_VID_COLUMN + ")");
 			
-			log.info("---- Populating Entity Relation Table at distance " + distance + " ----");
+			log.info("-------------------- Populating Entity Relation Table at distance " + distance + " --------------------");
 			// Populate Temporal Entity Relation Table at distance d
 			int num = 0;
+			long t1, t2;
 			if(distance == 2){
-				String insertSql = "insert IGNORE into " + R_d + " values(?, ?)"; 
-				PreparedStatement ps = m_dbService.createPreparedStatement(insertSql, ResultSet.FETCH_FORWARD, ResultSet.CONCUR_UPDATABLE);
+				String insertSql = "insert IGNORE into " + R_d + " "; 
 				String R_1 = Environment.ENTITY_RELATION_TABLE + 1;
 				
 				// R_1(u, v), R_1(u', v') -> R_2(u, v') where v = u'
-				String selectSql = 	"select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN +
+				t1 = System.currentTimeMillis(); 
+				String selectSql = "select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + 
+					"B." + Environment.ENTITY_RELATION_VID_COLUMN +
 					" from " + R_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + 
-					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
-				ResultSet rs = stmt.executeQuery(selectSql);
-				while (rs.next()){
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if(rs != null)
-					rs.close();
+					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 1: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
 				// R_1(u, v), R_1(u', v') -> R_2(u, u') where v = v'
-				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN +
+				t1 = System.currentTimeMillis(); 
+				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + 
+					"B." + Environment.ENTITY_RELATION_UID_COLUMN +
 					" from " + R_1 + " as A, " + R_1 + " as B " +
 					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + 
-					" and " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_UID_COLUMN +
-					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
-				rs = stmt.executeQuery(selectSql);
-				while (rs.next()){
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if(rs != null)
-					rs.close();
+					" and " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 2: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
 				// R_1(u, v), R_1(u', v') -> R_2(v, v') where u = u'
-				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN +
+				t1 = System.currentTimeMillis(); 
+				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + 
+					"B." + Environment.ENTITY_RELATION_VID_COLUMN +
 					" from " + R_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + " and " +
-					"A." + Environment.ENTITY_RELATION_VID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_VID_COLUMN +
-					" group by " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
-				rs = stmt.executeQuery(selectSql);
-				while (rs.next()) {
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if(rs != null)
-					rs.close();
-				if(ps != null)
-					ps.close();
+					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + 
+					" and " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_VID_COLUMN; 
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 3: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
-//				int deletedRows = 0;
-//				for(int i=1; i<distance; i++){
-//					String R_i = Environment.ENTITY_RELATION_TABLE + i;
-//					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
-//						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
-//						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + " and " + 
-//						R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
-//						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
-//					deletedRows += stmt.executeUpdate(deleteSql);
-//				}
-//				log.info("Number of duplicated rows that are deleted: " + deletedRows);
+				int deletedRows = 0;
+				for(int i=1; i<distance; i++){
+					String R_i = Environment.ENTITY_RELATION_TABLE + i;
+					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
+						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
+						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + 
+						" and " + R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
+						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
+					deletedRows += stmt.executeUpdate(deleteSql);
+				}
+				log.info("Number of duplicated rows that are deleted: " + deletedRows);
 			}
 			
 			if(distance >= 3){	
-				String insertSql = "insert IGNORE into " + R_d + " values(?, ?)"; 
-				PreparedStatement ps = m_dbService.createPreparedStatement(insertSql);
+				String insertSql = "insert IGNORE into " + R_d + " "; 
 				String R_1 = Environment.ENTITY_RELATION_TABLE + 1;
 				String R_d_minus_1 = Environment.ENTITY_RELATION_TABLE + (distance - 1);
 				
 				// R_(d-1)(u, v), R_1(u', v') -> R_d(u, v') where v = u'
+				t1 = System.currentTimeMillis(); 
 				String selectSql = 	"select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + 
 					" from " + R_d_minus_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + 
-					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
-				ResultSet rs = stmt.executeQuery(selectSql);
-				while (rs.next()){
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if(rs != null)
-					rs.close();
+					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 1: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
 				// R_(d-1)(u, v), R_1(u', v') -> R_d(u', v) where u = v'
+				t1 = System.currentTimeMillis(); 
 				selectSql = "select " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + 
 					" from " + R_d_minus_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + 
-					" group by " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "A." + Environment.ENTITY_RELATION_VID_COLUMN;  
-				rs = stmt.executeQuery(selectSql);
-				while (rs.next()) {
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if (rs != null)
-					rs.close();
+					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 2: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
 				// R_(d-1)(u, v), R_1(u', v') -> R_d(u, u') where v = v'
+				t1 = System.currentTimeMillis(); 
 				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + 
 					" from " + R_d_minus_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + " and " +
-					"A." + Environment.ENTITY_RELATION_UID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_UID_COLUMN +
-					" group by " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_UID_COLUMN;  
-				rs = stmt.executeQuery(selectSql);
-				while (rs.next()){
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
-				}
-				if(rs != null)
-					rs.close();
+					" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + 
+					" and " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_UID_COLUMN; 
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 3: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
 				// R_(d-1)(u, v), R_1(u', v') -> R_d(v, v') where u = u'
+				t1 = System.currentTimeMillis(); 
 				selectSql =	"select " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN + 
 					" from " + R_d_minus_1 + " as A, " + R_1 + " as B " +
-					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + " and " +
-					"A." + Environment.ENTITY_RELATION_VID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_VID_COLUMN +
-					" group by " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + ", " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;  
-				rs = stmt.executeQuery(selectSql);
-				while (rs.next()) {
-					if(++num % 10000 == 0)
-						log.info(num);
-					int entityId1 = rs.getInt(1);
-					int entityId2 = rs.getInt(2);
-					ps.setInt(1, entityId1);
-					ps.setInt(2, entityId2);
-					ps.executeUpdate();
+					" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.ENTITY_RELATION_UID_COLUMN + 
+					" and " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " < " + "B." + Environment.ENTITY_RELATION_VID_COLUMN;
+				num += stmt.executeUpdate(insertSql + selectSql);
+				t2 = System.currentTimeMillis(); 
+				log.info("Part 4: " + num + " entity relations of distance " + distance + " computed");
+				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
+
+				int deletedRows = 0;
+				for(int i=1; i<distance; i++){
+					String R_i = Environment.ENTITY_RELATION_TABLE + i;
+					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
+						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
+						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + " and " + 
+						R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
+						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
+					deletedRows += stmt.executeUpdate(deleteSql);
 				}
-				if(rs != null)
-					rs.close();
-				if(ps != null)
-					ps.close();
-	
-//				int deletedRows = 0;
-//				for(int i=1; i<distance; i++){
-//					String R_i = Environment.ENTITY_RELATION_TABLE + i;
-//					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
-//						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
-//						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + " and " + 
-//						R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
-//						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
-//					deletedRows += stmt.executeUpdate(deleteSql);
-//				}
-//				log.info("Number of duplicated rows that are deleted: " + deletedRows);
+				log.info("Number of duplicated rows that are deleted: " + deletedRows);
 			}
 			
 			stmt.execute("flush tables");

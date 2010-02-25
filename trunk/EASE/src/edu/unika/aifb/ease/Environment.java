@@ -61,17 +61,19 @@ public class Environment {
 	
 	/* Types of keywords */
 	public static final int KEYWORD_OF_LITERAL = 1; 
-	public static final int KEYWORD_OF_DATA_PROPERTY = 1;
-	public static final int KEYWORD_OF_OBJECT_PROPERTY = 2;
-	public static final int KEYWORD_OF_CONCEPT = 3;
-	public static final int KEYWORD_OF_LOCALNAME = 4;
-	public static final int KEYWORD_OF_LABEL = 5;
-	public static final int KEYWORD_OF_NAME = 6;
+	public static final int KEYWORD_OF_DATA_PROPERTY = 2;
+	public static final int KEYWORD_OF_OBJECT_PROPERTY = 3;
+	public static final int KEYWORD_OF_CONCEPT = 4;
+	public static final int KEYWORD_OF_LOCALNAME = 5;
+	public static final int KEYWORD_OF_LABEL = 6;
+	public static final int KEYWORD_OF_NAME = 7;
 	
 	/* Types of r-Radius Graph */
-	public static final int IS_MAX_GRAPH_UNKOWN = -1; 
-	public static final int IS_NOT_MAX_GRAPH = 0;
-	public static final int IS_MAX_GRAPH = 1;
+	public static final int IS_R_RADIUS_GRAPH_UNKOWN = 0; 
+	public static final int IS_NOT_R_RADIUS_GRAPH = 1;
+	public static final int IS_R_RADIUS_GRAPH = 2;
+	public static final int IS_NOT_MAX_R_RADIUS_GRAPH = 3;
+	public static final int IS_MAX_R_RADIUS_GRAPH = 4;
 	
 	/* Table names and column names */
 	// Triple table
@@ -128,7 +130,7 @@ public class Environment {
 	public static final String GRAPH_CENTER_URI_COLUMN = "graph_center_uri";			// column 2
 	// 'GRAPH_SIZE_COLUMN' represents the number of vertices contained in the graph
 	public static final String GRAPH_SIZE_COLUMN = "graph_size"; 						// column 3
-	public static final String GRAPH_IS_MAX_COLUMN = "is_max_graph";					// column 4
+	public static final String GRAPH_IS_MAX_R_RADIUS_COLUMN = "is_max_r_radius_graph";					// column 4
 	
 	// Max r-Radius Graph Table
 	public static final String MAX_R_RADIUS_GRAPH_TABLE = "max_graph_table";

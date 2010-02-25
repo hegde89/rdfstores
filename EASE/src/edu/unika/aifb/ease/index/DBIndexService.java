@@ -496,17 +496,13 @@ public class DBIndexService {
 				log.info("Part 3: " + num + " entity relations of distance " + distance + " computed");
 				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 				
-				int deletedRows = 0;
 				for(int i=1; i<distance; i++){
 					String R_i = Environment.ENTITY_RELATION_TABLE + i;
-					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
-						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
-						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + 
-						" and " + R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
-						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
-					deletedRows += stmt.executeUpdate(deleteSql);
+					selectSql = "select * from " + R_i;    
+					stmt.executeUpdate(insertSql + selectSql);
+					log.info("Entity relations of distance " + i + "into" + 
+							"entity relations of distance " + distance + "imported");
 				}
-				log.info("Number of duplicated rows that are deleted: " + deletedRows);
 			}
 			
 			if(distance >= 3){	
@@ -556,17 +552,13 @@ public class DBIndexService {
 				log.info("Part 4: " + num + " entity relations of distance " + distance + " computed");
 				log.info("time: " + (double)(t2 - t1)/(double)1000 + "(sec)");
 
-				int deletedRows = 0;
 				for(int i=1; i<distance; i++){
 					String R_i = Environment.ENTITY_RELATION_TABLE + i;
-					String deleteSql = "delete " + R_d + " from " + R_d + ", " + R_i +
-						" where " + R_d + "." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + 
-						R_i + "." + Environment.ENTITY_RELATION_UID_COLUMN + " and " + 
-						R_d + "." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + 
-						R_i + "." + Environment.ENTITY_RELATION_VID_COLUMN;
-					deletedRows += stmt.executeUpdate(deleteSql);
+					selectSql = "select * from " + R_i;    
+					stmt.executeUpdate(insertSql + selectSql);
+					log.info("Entity relations of distance " + i + "into" + 
+							"entity relations of distance " + distance + "imported");
 				}
-				log.info("Number of duplicated rows that are deleted: " + deletedRows);
 			}
 			
 			stmt.execute("flush tables");
@@ -598,12 +590,12 @@ public class DBIndexService {
 				Environment.GRAPH_CENTER_ID_COLUMN + " int unsigned not null primary key, " + 
 				Environment.GRAPH_CENTER_URI_COLUMN + " varchar(100) not null, " +
 				Environment.GRAPH_SIZE_COLUMN + " mediumint unsigned not null default 1, " +
-				Environment.GRAPH_IS_MAX_COLUMN + " tinyint not null default " + Environment.IS_MAX_GRAPH_UNKOWN + ") " + 
+				Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " tinyint not null default " + Environment.IS_R_RADIUS_GRAPH_UNKOWN + ") " + 
 				"ENGINE=MyISAM";
 			stmt.execute(createSql);
 			stmt.execute("alter table " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " add index (" + Environment.GRAPH_CENTER_ID_COLUMN + ")");
 			stmt.execute("alter table " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " add index (" + Environment.GRAPH_SIZE_COLUMN + ")");
-			stmt.execute("alter table " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " add index (" + Environment.GRAPH_IS_MAX_COLUMN + ")");
+			stmt.execute("alter table " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " add index (" + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + ")");
 			
 			log.info("---- Populating r-Radius Graph Table ----");
 			// Populate r-Radius Graph Center Table 
@@ -659,6 +651,10 @@ public class DBIndexService {
 		}  
 	}
 	
+	public void findRRadiusGraphCenterTable() {
+		
+	}
+	
 	public void findMaxRRadiusGraphCenter() {
 		long start = System.currentTimeMillis();
 		
@@ -668,14 +664,14 @@ public class DBIndexService {
 			log.info("---- Finding Max r-Radius Graphs ----");
 			// Find the max r-Radius Graph Center
 			String updateSql = "update " + Environment.R_RADIUS_GRAPH_CENTER_TABLE +
-				" set " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH + 
+				" set " + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_MAX_R_RADIUS_GRAPH + 
 				" where " + Environment.GRAPH_SIZE_COLUMN + " >= " + m_config.getSizeOfGraphWithoutCheck();
 			int numCenters = stmt.executeUpdate(updateSql);
 			log.info("Processed Centers: " + numCenters + "\t" + "Processed Graph Size: " + m_config.getSizeOfGraphWithoutCheck());
 			
 			String selectCenterSql = "select " + Environment.GRAPH_CENTER_ID_COLUMN + ", " + Environment.GRAPH_SIZE_COLUMN +
 				" from " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
-				" where " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH_UNKOWN + 
+				" where " + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_R_RADIUS_GRAPH + 
 				" order by " + Environment.GRAPH_SIZE_COLUMN + " desc " + 
 				" limit 1";
 			
@@ -688,7 +684,7 @@ public class DBIndexService {
 			PreparedStatement psSelectNeighborhood = m_dbService.createPreparedStatement(selectNeighborhoodSql);
 			
 			updateSql = "update " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
-				" set " + Environment.GRAPH_IS_MAX_COLUMN + " = " + "?" + 
+				" set " + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + "?" + 
 				" where " + Environment.GRAPH_CENTER_ID_COLUMN + " = " + "?";
 			PreparedStatement psUpdate = m_dbService.createPreparedStatement(updateSql);	
 			
@@ -719,7 +715,7 @@ public class DBIndexService {
 						neighbors2.add(rs.getInt(1));
 					rs.close();
 					if(neighbors1.containsAll(neighbors2)) {
-						psUpdate.setInt(1, Environment.IS_NOT_MAX_GRAPH);
+						psUpdate.setInt(1, Environment.IS_NOT_MAX_R_RADIUS_GRAPH);
 						psUpdate.setInt(2, centerId2);
 						psUpdate.executeUpdate();
 					}
@@ -728,12 +724,12 @@ public class DBIndexService {
 					}
 				}
 				if(isMaxGraph) {
-					psUpdate.setInt(1, Environment.IS_MAX_GRAPH);
+					psUpdate.setInt(1, Environment.IS_MAX_R_RADIUS_GRAPH);
 					psUpdate.setInt(2, centerId1);
 					psUpdate.executeUpdate();
 				}
 				else {
-					psUpdate.setInt(1, Environment.IS_NOT_MAX_GRAPH);
+					psUpdate.setInt(1, Environment.IS_NOT_MAX_R_RADIUS_GRAPH);
 					psUpdate.setInt(2, centerId1);
 					psUpdate.executeUpdate();
 				}
@@ -785,18 +781,18 @@ public class DBIndexService {
 			String selectSql = "select distinct " + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_VID_COLUMN + 
 				" from " + R_max_d + " as A, " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " as B " +
 				" where " + "A." + Environment.ENTITY_RELATION_UID_COLUMN + " = " + "B." + Environment.GRAPH_CENTER_ID_COLUMN +
-				" and " + "B." + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH;
+				" and " + "B." + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_MAX_R_RADIUS_GRAPH;
 			stmt.executeUpdate(insertSql + selectSql);
 			
 			selectSql = "select distinct " + "B." + Environment.GRAPH_CENTER_ID_COLUMN + ", A." + Environment.ENTITY_RELATION_UID_COLUMN + 
 				" from " + R_max_d + " as A, " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + " as B " +
 				" where " + "A." + Environment.ENTITY_RELATION_VID_COLUMN + " = " + "B." + Environment.GRAPH_CENTER_ID_COLUMN +
-				" and " + "B." + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH; 
+				" and " + "B." + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_MAX_R_RADIUS_GRAPH; 
 			stmt.executeUpdate(insertSql + selectSql);
 			
 			selectSql = "select " + Environment.GRAPH_CENTER_ID_COLUMN + ", " + Environment.GRAPH_CENTER_ID_COLUMN +
 				" from " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
-				" where " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH; 
+				" where " + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_MAX_R_RADIUS_GRAPH; 
 			stmt.executeUpdate(insertSql + selectSql);
 			
 			if(stmt != null)
@@ -1106,7 +1102,7 @@ public class DBIndexService {
 			// Statement for r-Radius Graph Table
 			String selectCenterSql = "select " + Environment.GRAPH_CENTER_ID_COLUMN + ", " + Environment.GRAPH_CENTER_URI_COLUMN +  
 				" from " + Environment.R_RADIUS_GRAPH_CENTER_TABLE + 
-				" where " + Environment.GRAPH_IS_MAX_COLUMN + " = " + Environment.IS_MAX_GRAPH;
+				" where " + Environment.GRAPH_IS_MAX_R_RADIUS_COLUMN + " = " + Environment.IS_MAX_R_RADIUS_GRAPH;
 			ResultSet rsCenter = stmt.executeQuery(selectCenterSql);
 			
 			// Statement for Entity Relationship Table

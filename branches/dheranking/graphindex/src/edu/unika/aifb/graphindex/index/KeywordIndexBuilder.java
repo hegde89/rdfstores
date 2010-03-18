@@ -20,16 +20,12 @@ package edu.unika.aifb.graphindex.index;
  */
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -41,54 +37,44 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.Hit;
-import org.apache.lucene.search.Hits;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.FSDirectory;
-import org.ho.yaml.Yaml;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.Environment;
 
 import edu.unika.aifb.graphindex.algorithm.largercp.BlockCache;
 import edu.unika.aifb.graphindex.data.Table;
+import edu.unika.aifb.graphindex.ranking.TSSimilarity;
 import edu.unika.aifb.graphindex.searcher.keyword.analyzer.CapitalizationSplitterAnalyzer;
-import edu.unika.aifb.graphindex.searcher.keyword.analyzer.DictionaryCompoundWordAnalyzer;
-import edu.unika.aifb.graphindex.searcher.keyword.analyzer.HyphenationCompoundWordAnalyzer;
 import edu.unika.aifb.graphindex.searcher.keyword.model.Constant;
 import edu.unika.aifb.graphindex.storage.DataField;
 import edu.unika.aifb.graphindex.storage.IndexDescription;
-import edu.unika.aifb.graphindex.storage.NeighborhoodStorage;
 import edu.unika.aifb.graphindex.storage.StorageException;
-import edu.unika.aifb.graphindex.storage.keyword.BloomFilter;
-import edu.unika.aifb.graphindex.storage.lucene.LuceneNeighborhoodStorage;
+import edu.unika.aifb.graphindex.storage.ThreadListener;
 import edu.unika.aifb.graphindex.util.TypeUtil;
 import edu.unika.aifb.graphindex.util.Util;
 
-public class KeywordIndexBuilder {
+public class KeywordIndexBuilder implements ThreadListener {
 
-	private static final float CONCEPT_BOOST = 2.0f;
-	private static final float RELATION_BOOST = 1.0f;
-	private static final float ATTRIBUTE_BOOST = 1.0f;
-	private static final float ENTITY_BOOST = 1.0f;
-	private static final float ENTITY_DISCRIMINATIVE_BOOST = 5.0f;
-	private static final float ENTITY_DESCRIPTIVE_BOOST = 1.0f;
+	public static final float CONCEPT_BOOST = 2.0f;
+	public static final float RELATION_BOOST = 1.0f;
+	public static final float ATTRIBUTE_BOOST = 1.0f;
+	public static final float ENTITY_BOOST = 1.0f;
+	public static final float ENTITY_DISCRIMINATIVE_BOOST = 5.0f;
+	public static final float ENTITY_DESCRIPTIVE_BOOST = 1.0f;
 
-	private static int HOP;
-	private static int MAXFIELDLENGTH = 100;
+	public static int HOP;
+	public static int MAXFIELDLENGTH = 100;
 
-	private static double FALSE_POSITIVE = 0.001;
+	public static double FALSE_POSITIVE = 0.001;
 
 	private IndexDirectory idxDirectory;
 	private IndexConfiguration idxConfig;
 	protected DataIndex dataIndex;
+
 	protected BlockCache blockSearcher;
-	private NeighborhoodStorage ns;
+	// private NeighborhoodStorage ns;
 	private Set<String> objectProperties;
 	private Set<String> relations;
 	private Set<String> attributes;
@@ -108,9 +94,9 @@ public class KeywordIndexBuilder {
 		this.dataIndex = idxReader.getDataIndex();
 		this.resume = resume;
 
-		this.ns = new LuceneNeighborhoodStorage(idxDirectory.getDirectory(
-				IndexDirectory.NEIGHBORHOOD_DIR, !resume));
-		this.ns.initialize(!resume, false);
+		// this.ns = new LuceneNeighborhoodStorage(idxDirectory.getDirectory(
+		// IndexDirectory.NEIGHBORHOOD_DIR, !resume));
+		// this.ns.initialize(!resume, false);
 
 		// this.propertyWeights =
 		// (Map<String,Double>)Yaml.load(idxDirectory.getFile(IndexDirectory.PROPERTY_FREQ_FILE));
@@ -128,6 +114,26 @@ public class KeywordIndexBuilder {
 			}
 		}
 
+	}
+
+	public Set<String> getRelations() {
+		return relations;
+	}
+
+	public Set<String> getAttributes() {
+		return attributes;
+	}
+
+	public Set<String> getProperties() {
+		return properties;
+	}
+
+	public Set<String> getObjectProperties() {
+		return objectProperties;
+	}
+
+	public DataIndex getDataIndex() {
+		return dataIndex;
 	}
 
 	public void indexKeywords() throws StorageException, IOException {
@@ -159,12 +165,22 @@ public class KeywordIndexBuilder {
 			StandardAnalyzer valueAnalyzer = new StandardAnalyzer();
 			IndexWriter indexWriter = new IndexWriter(indexDir, analyzer,
 					!resume, new MaxFieldLength(MAXFIELDLENGTH));
+			if (idxConfig.getBoolean(IndexConfiguration.TSRANKING)) {
+				log.debug("Using TSRanking for Keywordindex.");
+				indexWriter.setSimilarity(new TSSimilarity());
+			}
+
 			log
 					.debug("max terms per field: "
 							+ indexWriter.getMaxFieldLength());
 
 			valueWriter = new IndexWriter(valueDir, valueAnalyzer, !resume,
 					new MaxFieldLength(MAXFIELDLENGTH));
+
+			if (idxConfig.getBoolean(IndexConfiguration.TSRANKING)) {
+				log.debug("Using TSRanking for Valueindex.");
+				indexWriter.setSimilarity(new TSSimilarity());
+			}
 
 			org.apache.lucene.index.IndexReader reader = null;
 			if (resume) {
@@ -188,9 +204,31 @@ public class KeywordIndexBuilder {
 			}
 
 			log.info("Indexing entities");
-			indexEntity(indexWriter, idxDirectory
-					.getTempFile("entities", false), reader);
+			// split entities into smaller files
+			// index each in parallel...
 
+			
+			//	  indexEntity(indexWriter, idxDirectory .getTempFile("entitiesALL",
+			//	  false), reader);
+			  
+			 // indexEntity(indexWriter, idxDirectory .getTempFile("entities2",
+			 // false), reader);
+			 
+
+			EntityIndexThread et = new EntityIndexThread(this,indexWriter, idxDirectory
+					.getTempFile("entities", false), reader, valueWriter);
+			et.start();
+						
+			EntityIndexThread et2 = new EntityIndexThread(this,indexWriter, idxDirectory
+					.getTempFile("entities2", false), reader, valueWriter);
+			et2.start();
+			
+			
+			
+			log.debug("Waiting for Thread "+et+" to finish");
+			et.join();
+			et2.join();
+			
 			indexWriter.commit();
 			valueWriter.commit();
 
@@ -203,8 +241,8 @@ public class KeywordIndexBuilder {
 
 			if (blockSearcher != null)
 				blockSearcher.close();
-			ns.optimize();
-			ns.close();
+			// ns.optimize();
+			// ns.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (DatabaseException e) {
@@ -214,6 +252,10 @@ public class KeywordIndexBuilder {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	public void threadFinished(Object Result) {
+		log.debug("Thread finished "+Result);
 	}
 
 	protected void indexSchema(IndexWriter indexWriter, File file, String type,
@@ -313,20 +355,20 @@ public class KeywordIndexBuilder {
 		fields.addAll(propertyFields);
 
 		// indexing reachable entities
-		Set<String> reachableEntities = computeReachableEntities(uri);
+		// Set<String> reachableEntities = computeReachableEntities(uri);
 		// BloomFilter bf = new BloomFilter(reachableEntities.size(),
 		// NUMBER_HASHFUNCTION);
-		BloomFilter bf = new BloomFilter(reachableEntities.size(),
-				FALSE_POSITIVE);
-		for (String entity : reachableEntities) {
-			if (entity.startsWith("http://www."))
-				entity = entity.substring(11);
-			else if (entity.startsWith("http://"))
-				entity = entity.substring(7);
-			bf.add(entity);
-		}
+		// BloomFilter bf = new BloomFilter(reachableEntities.size(),
+		// FALSE_POSITIVE);
+		// for (String entity : reachableEntities) {
+		// if (entity.startsWith("http://www."))
+		// entity = entity.substring(11);
+		// else if (entity.startsWith("http://"))
+		// entity = entity.substring(7);
+		// bf.add(entity);
+		// }
 
-		ns.addNeighborhoodBloomFilter(uri, bf);
+		// ns.addNeighborhoodBloomFilter(uri, bf);
 
 		return fields;
 	}
@@ -366,12 +408,15 @@ public class KeywordIndexBuilder {
 				if (entities % 100000 == 0) {
 					indexWriter.commit();
 					valueWriter.commit();
-					ns.commit();
+					// ns.commit();
 					log.debug("entities indexed: " + entities + " avg: "
-							+ ((System.currentTimeMillis() - time) / 100000.0));
+							+ ((System.currentTimeMillis() - time) / 100000.0)
+							+ " milliseconds per entity.");
 					time = System.currentTimeMillis();
 				}
 			}
+			indexWriter.commit();
+			valueWriter.commit();
 			br.close();
 
 			log.debug(entities + " entities indexed");
@@ -412,9 +457,9 @@ public class KeywordIndexBuilder {
 
 	private void computeEntityDescriptions(String entityUri)
 			throws IOException, StorageException {
-	
+
 		String ext = "no structure index created";
-		
+
 		// check if structure index exists
 		if (idxConfig.getBoolean(IndexConfiguration.HAS_SP)) {
 			ext = blockSearcher.getBlockName(entityUri);
@@ -436,6 +481,9 @@ public class KeywordIndexBuilder {
 		// valueWriter.addDocument(doc);
 
 		Table<String> table = dataIndex.getTriples(entityUri, null, null);
+
+		// TODO Duplicate aus table rausfiltern!!
+
 		if (table.rowCount() == 0)
 			return;
 		for (String[] row : table) {
@@ -443,9 +491,10 @@ public class KeywordIndexBuilder {
 			String object = row[2];
 
 			if (!properties.contains(predicate)
-					|| relations.contains(predicate)) // TODO maybe index
+					|| relations.contains(predicate)) { // TODO maybe index
 				// relations
 				continue;
+			}
 
 			Document doc = new Document();
 			doc.add(new Field(Constant.URI_FIELD, entityUri, Field.Store.YES,

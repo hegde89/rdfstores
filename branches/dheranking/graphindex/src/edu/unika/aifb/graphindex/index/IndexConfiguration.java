@@ -106,6 +106,8 @@ public class IndexConfiguration {
 	public static final Option DP_SP_BASED = addOption("dp_sp_based", true);
 	
 	public static final Option KW_NSIZE = addOption("kw_nsize", 0);
+	
+	public static final Option TSRANKING = addOption("tsrank", false);
 
 	
 	private List<Option> m_options;

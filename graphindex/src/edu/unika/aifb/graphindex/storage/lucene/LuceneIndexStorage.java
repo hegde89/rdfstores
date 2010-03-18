@@ -79,6 +79,7 @@ public class LuceneIndexStorage implements IndexStorage {
 	private Counters m_counters;
 	
 	private static final String KEY_DELIM = Character.toString((char)31);
+	public static final int MAX_TERMS_WARMUP = 10;
 	
 	private static final Logger log = Logger.getLogger(LuceneIndexStorage.class);
 
@@ -550,9 +551,16 @@ public class LuceneIndexStorage implements IndexStorage {
 	
 	public void warmup(IndexDescription index, Set<String> terms) throws StorageException {
 		log.debug("warmup " + index + " with " + terms.size() + " terms");
+		int i = 0;
 		for (String term : terms) {
 			getDocumentIds(new TermQuery(new Term(index.getIndexFieldName(), term)));
+			++i;
+			if(i>MAX_TERMS_WARMUP){
+				log.debug("warmup max of "+MAX_TERMS_WARMUP+" terms reached.");
+				continue;
+			}
 		}
+		
 	}
 	
 	public int numDocs(String field) throws StorageException {

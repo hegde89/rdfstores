@@ -1,0 +1,98 @@
+digraph G {
+        d2toptions="--figpreamble='\LARGE' --docpreamble='\usepackage{latexsym}"
+        rankdir=BT
+        ranksep=0.4
+        nodesep=0.6
+        ordering=in
+
+        node [texmode="raw"]
+        edge [style="-triangle 45"]
+
+#        node [style="rectangle"]
+#        s1 [label="retrieve $d_1$",ordering=out]
+#        s2 [label="retrieve $d_2$",ordering=out]
+
+        node [style="rectangle"]
+        # s1p1 [texlbl="$\begin{matrix}scan_1^{t_1}\\ r=5 \end{matrix}$"]
+        # s2p1 [texlbl="$\begin{matrix}scan_2^{t_1}\\ r=1 \end{matrix}$"]
+
+        # s1p2 [texlbl="$\begin{matrix}scan_1^{t_2}\\ r=2 \end{matrix}$"]
+        # s2p2 [texlbl="$\begin{matrix}scan_2^{t_2}\\ r=6 \end{matrix}$"]
+
+        # s1p3 [texlbl="$\begin{matrix}scan_1^{t_3}\\ r=3 \end{matrix}$"]
+        # s2p3 [texlbl="$\begin{matrix}scan_2^{t_3}\\ r=4 \end{matrix}$"]
+
+        node [style="rectangle"]
+        s1 [texlbl="$scan_1$"]
+        s2 [texlbl="$scan_2$"]
+                
+        node [style="rectangle"]
+        sel1p1 [label="$\sigma^{t_1}$"]
+        sel2p1 [label="$\sigma^{t_1}$"]
+
+        node [style="rounded rectangle"]
+        u1 [label="$union$"]
+
+
+#        node [style="rectangle"]
+#        s1p2 [texlbl="$scan_1^{t_2}$"]
+#        s2p2 [texlbl="$scan_2^{t_2}$"]
+
+        node [style="rectangle"]
+        sel1p2 [label="$\sigma^{t_2}$"]
+#        sel2p2 [label="$\sigma^{t_2}$"]
+
+        node [style="rounded rectangle"]
+        u2 [label="$union$"]
+
+
+#        node [style="rectangle"]
+#        s1p3 [texlbl="$scan_1^{t_3}$"]
+#        s2p3 [texlbl="$scan_2^{t_3}$"]
+
+        node [style="rectangle"]
+        sel1p3 [label="$\sigma^{t_3}$"]
+        sel2p3 [label="$\sigma^{t_3}$"]
+
+        node [style="rounded rectangle"]
+        u3 [label="$union$"]
+
+        j1 [style="trapezium", label="$t_1 \Join t_2$"]
+        j2 [style="trapezium", label="$t_1 t_2 \Join t_3$"]
+
+
+        s1 -> sel1p1;
+        s2 -> sel2p1;
+        s1 -> sel1p2;
+#        s2 -> sel2p2;
+        s1 -> sel1p3;
+        s2 -> sel2p3;
+
+        sel1p1 -> u1;
+        sel2p1 -> u1;
+        sel2p1 -> u2 [style="white"];
+ #       sel1p1 -> u1;
+ #       sel2p1 -> u1;
+ #       sel1p1 -> u2 [style="white",weight=0];
+ #       sel2p1 -> u2 [style="white",weight=0];
+
+        sel1p2 -> u2;
+#        s2p2 -> u2;
+#        s2p2 -> u3 [style="white"];
+ #       sel1p2 -> u2;
+ #       sel2p2 -> u2;
+ #       sel1p2 -> u3 [style="white",weight=0];
+ #       sel2p2 -> u3 [style="white",weight=0];
+
+        sel1p3 -> u3;
+        sel2p3 -> u3;
+#        sel1p3 -> u3;
+#        sel2p3 -> u3;
+
+        u1 -> j1;
+        u2 -> j1;
+
+        j1 -> j2;
+        u3 -> j2;
+        
+}

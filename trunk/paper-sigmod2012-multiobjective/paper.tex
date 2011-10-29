@@ -17,7 +17,21 @@
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{amssymb}
 \usepackage{rotating}
+\usepackage{color}
 
+\usepackage{subfig}
+ \makeatletter
+ \let\@copyrightspace\relax
+ \makeatother
+
+\definecolor{olivegreen}{rgb}{0.2,0.8,0.5}
+\definecolor{grey}{rgb}{0.5,0.5,0.5}
+\lstdefinelanguage{ttl}{
+sensitive=true,
+morecomment=[l][\color{grey}]{@},
+morecomment=[l][\color{olivegreen}]{\#},
+morestring=[b][\color{blue}]\",
+}
 
 %\usepackage[top=4cm, bottom=4cm, left=4.5cm, right=4.5cm]{geometry}
 %\renewcommand{\baselinestretch}{0.990}

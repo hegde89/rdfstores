@@ -26,9 +26,23 @@ lookups. According to the Linked Data principles
 \cite{bizer_linked_2009}, dereferencing a Linked Data URI via HTTP
 should return a machine-readable description (usually, in RDF) of the
 entity identified by the URI. Each URI therefore represents a virtual
-``data source''. \dtr{need example which illustrate what is linked
-  data query processing, and why it is really useful, e.g. freshness
-  of results important due fast update rates of data, what else?}
+``data source''. 
+
+Figs.~\ref{fig:sources} \& \ref{fig:query} show examples of Linked
+Data sources with their data and a Linked Data query,
+respectively. During processing of such Linked Data queries over
+Linked Data sources, sources are not stored or cached locally, but
+they are retrieved at run-time via HTTP dereferencing. In this way,
+Linked Data query processing deals with the rapidly evolving nature of
+the Web of data and is able to deliver results that are always
+up-to-date. In this example, the query engine might dereference the
+URIs \emph{ex:beatles}, \emph{ex:sgt\_pepper} and \emph{ex:lucy} to
+produce a single result binding \emph{``Lucy...''} for query variable
+$?name$.
+% \dtr{need example which illustrate what is linked
+%   data query processing, and why it is really useful, e.g. freshness
+%   of results important due fast update rates of data, what else?}
+
 Thus, processing structured queries against Linked Data can be seen as
 a special case of federated query processing. However, the restricted
 access pattern based on HTTP lookup and the highly distributed nature
@@ -83,6 +97,7 @@ ex:lucy
 
   \caption{Example Linked Data sources. The prefix \emph{ex:} expands
     to ``http://example.org/''.}
+  \label{fig:sources}
 \end{figure*}
 
 \begin{itemize}
@@ -176,14 +191,21 @@ Further, all these approaches \emph{optimize towards one single
 
 \begin{figure}[htb]
   \centering
-\begin{lstlisting}[language=ttl]
-SELECT ?aname ?sname WHERE {
-  ex:beatles ex:album  ?album .
-  ?album     ex:song   ?song .
-  ?song      foaf:name ?sname .
+  \begin{minipage}{0.75\linewidth}
+\begin{lstlisting}[language=ttl,numbers=left,escapeinside={(*@}{@*)}]
+SELECT ?name WHERE {
+  ex:beatles ex:album  ?album . (*@\label{query:q1}@*)
+  ?album     ex:song   ?song . (*@\label{query:q2}@*)
+  ?song      foaf:name ?name . (*@\label{query:q3}@*)
 }
 \end{lstlisting}
-  \caption{Example query asking for all albums and songs of the Beatles.}
+  \end{minipage}
+  \includegraphics[width=0.7\linewidth]{figs/query-crop.pdf}
+  \caption{Example query asking for names of songs on albums of the
+    Beatles. The query consists of three triple patterns $q_1$ (line
+    \ref{query:q1}), $q_2$ (line \ref{query:q2}), and $q_3$ (line
+    \ref{query:q3}).}
+  \label{fig:query}
 \end{figure}
 
 \textbf{Contributions.} Aiming at the challenges presented above, we

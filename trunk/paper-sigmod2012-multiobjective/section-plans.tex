@@ -1,0 +1,234 @@
+\section{Linked Data Query Optimization Framework}
+\label{sec:framework}
+These existing ad-hoc strategies for selecting Linked Data sources have shown to improve the performance of Linked Data query processing. However, there exists no optimization technique that goes beyond source selection to consider the entire process of Linked Data querying. In this section, we provide a systematic study of existing Linked Data querying approaches~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010} to model the querying process in terms of operators of a query plan. The goal is to provide the first \emph{systematic solution towards Linked Data query optimization}, which considers the effect of query operators to compute and guarantee the optimality of query plans. 
+
+%For optimizing Linked Data queries, we systematically captures all operators needed, incorporate them into a query plan, and briefly, discuss how to estimate their impacts on the optimization objectives cost and outputs. 
+
+\subsection{Query Operators}
+\label{sec:ops}
+%For processing linked data queries, sources containing data for query triple patterns have to be retrieved (possibly from remote sources). We use a \emph{source scan} operator to represent sources. Then, standard query operators are adopted to process triples retrieved from these sources.
+%Triples in the same source however, can be used to answer different patterns. Selecting triples from sources is captured by the \emph{selection} operator. Triples for a pattern retrieved from all sources are then combined via the \emph{union} operator, and finally, combined with triples retrieved for other patterns via \emph{join}: 
+% when these patterns share a common variable, via union otherwise. 
+The standard query operators table scan, selection, union and join can be used to model the Linked Data querying process. The main difference to traditional query processing is that the availability of data indexes cannot be assumed in the general case. Only some basic statistics about sources can be assumed to available such that given a triple pattern, relevant sources can be determined~\cite{harth_data_2010,ladwig_linked_2010}. However, entire sources have to be retrieved. This is conceptually same to table scans. The difference is that often, sources have to be retrieved from remote sites via HTTP URI lookup. Moreover, several sources may contain answers for one single query predicate (triple pattern in this case).  
+
+\begin{definition}[Source Scan] The input of a source scan operator $scan(d)$ is the source URI $d$.
+% consists of the data contained in
+%such a source. 
+Executing this operator outputs all triples in $d$, i.e. $scan(d) = T^d$.
+\end{definition}
+
+\begin{definition}[Selection]  A selection $\sigma_t(T_d)$ is performed on the input $T_d$ to output
+triples in $T_d$ that match $t$, i.e. $\sigma_t(T_d) = \mu_{T_d}(t)$. 
+\end{definition}
+
+Outputs from two triple patterns $t_i$ and $t_j$ that share a common variable are combined through a standard join operator $\mu(t_i)\Join\mu(t_j)$. 
+
+\begin{definition}[Union] As usual, $\bigcup(I_1,\ldots,I_n)$
+outputs the union of its inputs $I_i$, $1\leq i < \leq n$, where every input $I_i$ stands for results for one triple pattern, $I_i = \mu_{T_d}(t)$, or several triple patterns, e.g. $I_i = \mu_{T_d}(t_i)\Join\mu_{T_d}(t_j)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
+$\bigcup(\sigma_t(T_{d_1}),\ldots,\sigma_t(T_{d_n}))$ combines results from several selection operators.   
+\end{definition}
+
+For clarity of presentation, we assume query triple patterns form a connected graph such that join is the only operator used to combine triples from different patterns. 
+
+
+\subsection{Query Plan}
+\label{sec:basicshape}
+Query plans for relational databases generally consist of access plans
+for individual relations whose output is then processed by join and
+other operators. We take a similar approach for Linked Data query
+plans. For each triple pattern a Linked Data query plan contains an
+access plan, which consists of source scan, selection and union
+operators:
+
+\begin{definition}[Access Plan]
+  Given a query $Q$, let $q_i \in Q$ be a singleton subexpression of
+  $Q$ and $D$ be the set of relevant sources (as retrieved from the
+  source index). An access plan for $q_i$ then is constructed in the
+  following way:
+  \begin{itemize}
+  \item At the lowest level, there is one source scan operator
+    $scan_d$ for each $d \in D$.
+  \item At the next level there is a set of selection operators, one
+    for each source scan operator whose output are all triples
+    matching $q_i$ in their respective source.
+  \item Finally, there is a single union operator whose inputs are all
+    selection operator.
+  \end{itemize}
+\end{definition}
+
+\begin{definition}[Plans, Cost and Cardinality]
+  Let $T \subseteq$ be a subexpression of $Q$. The set of all plans
+  for $T$ is denoted as $P(T)$, the set of optimal plans as
+  $P^+(T)$. The cost and cardinality of a plan $p$ is defined as the
+  cost and cardinality of its root operators, respectively.
+\end{definition}
+
+At the next levels, the output of an access plan is then sucessively
+joined with the output of other access plans, forming a tree of query
+operators. 
+
+\begin{definition}[Plan Combination]
+  Given two query subexpressions $T_1,T_2 \subset Q$ with $T_1 \cap
+  T_2 = \emptyset$ and two plans $p_1 \in P(T_1), p_2 \in P(T_2)$, we
+  combine the plans in a new plan $p'$ by joining their outputs. We
+  write $p' = \mathtt{cmb}(p_1, p_2) = p_1 \Join p_2$. The set of all
+  plans for $T_1 \cup T_2$ is then $P(T_1 \cup T_2) =
+  \{\mathtt{cmb}(p_1,p_2) | p_1 \in P(T_1), p_2 \in P(T_2)\}$.
+\end{definition}
+
+In Linked Data query processing, it is often the case that a single
+Linked Data source contains data matching several triple patterns. It
+is therefore possible that a data source is used for more than one
+query triple pattern. In this case it is detrimental to execute the
+scan operator more than once as this will incur network costs that can
+be avoided. We therefore perform \emph{operator sharing}, where the
+output of a single operator is used as input for more than one
+operator, i.e., the output is shared. This means that access plans may
+overlap and the query plan is no longer a simple tree, but a directed
+acyclic graph (DAG) \cite{Neumann_2005}.
+
+\begin{definition}[Linked Data Query Plan]
+  A \emph{Linked Data query plans} $p$ for a query $Q$ is a DAG with
+  nodes representing query operators, and edges representing the data
+  flow between operators. A Linked Data query plan is constructed from
+  access plans for single triple patterns for all $q_i \in Q$, whose
+  outputs are then combined using join operators.We use $P(Q)$ and
+  $P^+(Q)$ to denote the set of all query plans and the set of optimal
+  plans, respectively, which produce results for a query $Q$.
+\end{definition}
+
+% At the first level, a Linked Data query plan consists of source scan
+% operators, one for each source that has to be processed. Because
+% entire sources have to be retrieved, often at very high costs due to
+% network latency, selecting the right sources is critical in Linked
+% Data query optimization. At the next level, selection operators
+% process source data to output triples that match the query triple
+% patterns. Selection operators are connected to union operators, which
+% combine results for every query triple pattern. There is one union
+% operator for every triple pattern. They act as base inputs for the
+% join operators.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figs/plan.pdf}
+  \caption{Query plan for a query with three triple patterns and two
+    sources.}
+\label{fig:plan}
+\end{figure}
+
+% In Linked Data query processing, it is often the case that a single
+% data source contains data matching several triple patterns. It is
+% therefore possible that a data source is used for more than one query
+% triple pattern. In this case it is detrimental to execute the scan
+% operator more than once as this will incur network costs that can be
+% avoided. It has been shown that for scenarios like this one, a
+% tree-structured query evaluation plan is not expressive enough for
+% some optimizations like factoring common algebraic subexpressions. In
+% this case, DAG-structured query plans should be used where operators
+% can be shared~\cite{Neumann_2005}. Considering its relatively high
+% cost, we employ this kind of query plan where the output of a source
+% scan operator may feed into multiple selection operator.
+% %As a result, Linked Data query plans are graph-shaped in the general case: 
+
+% \dtr{formalize notion of query plans, talk about order... push-based
+%   execution to support DAG-based query plans?}
+% \begin{definition}
+%   A \emph{Linked Data query plan} $p$ is a graph with nodes
+%   representing query operators, and edges representing the data flow
+%   between operators. We use $P(Q)$ and $P^+(Q)$ to denote the set of
+%   all query plans and the set of optimal plans, respectively, which
+%   produce results for a query $Q$.
+% \end{definition}
+
+\begin{example}
+  Fig.~\ref{fig:plan} shows an example query plan for a query
+  consisting of three triple patterns $t_1,t_2,t_3$ and two 
+  sources $s_1,s_2$. There are six source scan operators $s_1^{t_1},
+  s_2^{t_1}, s_1^{t_2}, \ldots$ for all combinations of triple
+  patterns and sources. The source scan operators also have a rank,
+  determining their processing order (here $s_2^{t_1}$ is processed
+  first). The output of the unions for each triple pattern are joined
+  using two symmetric hash joins. \dtr{Fig. not clear}
+\end{example}
+
+
+\subsection{Pareto Optimal Plans} 
+Optimality is not clearly defined in the Linked Data context. Traditionally, completeness is assumed such that all results have to be computed. Optimality in this case is defined with respect to processing cost, and optimization techniques aim to find plans that are cost-optimal, i.e. produce all results at lowest costs. As discussed, completeness is not practical in Linked Data query processing and existing approaches (select and) process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}. Not only cost but also the number of results have to be considered here. Further, other criteria such as the trustworthy of sources and the quality of data may play an important role. This results in a \emph{multi-objective} optimization problem. 
+
+For a query $Q$, % = \{t_1, \ldots, t_n\}
+the goal is to compute the skyline (Pareto set) of query plans that represent different trade-offs between multiple objectives. For clarity of presentation, we will focus on the two main objectives of maximizing \emph{output cardinality}, $card(\cdot)$, and \emph{processing cost} $cost(\cdot)$. Further, we define cost as $score(\cdot) = \frac{1}{cost(\cdot)}$ such that the objective is to maximize the score and output cardinality.  \todo{use cost instead of score everywhere}
+The skyline of a set of solutions is defined using a \emph{dominance}
+relation that relates the multiple objectives. A query plan is considered to dominate another plan, if it is at least as good in all objectives and better in at least one objective:
+
+\begin{definition}[Dominance]
+  Given two query plans $p_1,p_2$, $p_1 \mbox{ \textnormal{dominates}
+  } p_2$ ($p_1 > p_2$) if both, score and cardinality, of $p_1$ are greater or equal
+  to the score and cardinalty of $p_2$ and either score or
+  cardinality is strictly greater than the score or cardinality of
+  $p_2$, i.e. $score(p_1) \geq score(p_2) \wedge card(p_1) \geq
+  card(p_2) \wedge ((score(p_1) > score(p_2) \vee card(p_1) >
+  card(p_2)) \Rightarrow p_1 > p_2$.
+\end{definition}
+
+
+\begin{definition}[Pareto Optimal Plans]
+  Given an query $Q$ and a set of query plans $P(Q)$, the \emph{Pareto}
+  set $P^*(Q) \subseteq P(Q)$ comprises all plans that are not
+  dominated by any other plan in $P(Q)$, i.e. $P^*(Q) = \{p_i \in P(Q) | \neg\exists p_j\in P(Q), p_j  > p_i\}$. We denote the set of
+  dominated plans as $P^-(Q) = P(Q) \setminus P^*(Q)$. The set of \emph{optimal plans} for a query $Q$, denoted as $P^+(Q)$, is the Pareto set of plans for $Q$, i.e. $P^+(Q) = P^*(Q)$.
+\end{definition}
+
+\subsection{Cost and Cardinality Estimation}
+\label{sec:estimation}
+For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \dtr{cite}. An essential factor for cost estimation is cardinality. While not only \emph{input cardinality} but also \emph{output cardinality} may be used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. Instead of cardinality, the work discussed here is also applicable to other optimization objectives such as quality and relevance that have smaller overlap with cost. 
+%For certain operators, input cardinality is not the same as 
+
+%In this case, not only the cost but also the output cardinality are associated with query operators. 
+We will now discuss straightforward estimates for cost and cardinality that will be needed in this work (and refer the readers to more specific work on cost and join size estimations \dtr{cite}):
+
+\textbf{Source Scan.} The output cardinality of this operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
+% If the source is not locally available, it will be
+%retrieved remotely. 
+%A Linked Data source may contain arbitrary
+%data and may therefore contain inputs for other triple
+%patterns. If the source scan is an input for more than one operator,
+%the data will only be retrieved once and will then either be kept in a
+%local buffer for subsequent scans or, in the case of push-based
+%execution, immediately be pushed to all subsequent operators.
+This source size statistics can be directly obtained from the source index discussed before. As each triple is retrieved exactly once, $cost(scan_d)$ is proportional to the site of $d$, $|T^d|$. 
+%However, a source may contain inputs for several triple patterns such that a source scan operators may be shared by subsequent operators. 
+In case of operator sharing, separate cost
+models for the first access (when the data is retrieved over the
+network) and subsequent accesses (when the data has already been
+retrieved) are used. The cost for the first access is defined as
+$cost_1(scan_d) = h_s \times |T^d|$, where $h_s$ is the weight factor
+used to reflect the relative cost of processing a source tuple. The cost for each subsequent access is
+defined as $cost_2(scan_d) = (1 - b) \times cost_1(scan_d)$, where $b$
+is a parameter to control the benefit achievable through operator sharing.
+
+\textbf{Selection.} The output cardinality
+of this operator depends on the selectivity $sel(t)$ of $t$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$. The cost of the 
+operator is determined by its weight factor and the input cardinality, i.e. $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$.
+
+\textbf{Union.} For this operator, output cardinality is the sum of the cardinalities of its inputs:
+$card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. The cost of the
+operator is proportional to the output cardinality: $cost(\cup) =
+h_\cup \times card(\cup)$, where $h_\cup$ is the weight factor for union. 
+%processing an input tuple.
+
+\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: $card(t_i \Join t_j) =
+sel(t_i \Join t_j) \times card(\mu(t_i)) \times card(\mu(t_j))$. 
+%, where $|t_i|$ and
+%$|t_j|$ are the number of triples matching $t_i$ and $_j$,
+%respectively. 
+Also here, cost is proportional to the output cardinality: $cost(\Join) =
+h_\Join \times card(\Join)$: The weight factor $h_\Join$ for instance, depends on the
+join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. 
+
+
+\dtr{Based on formalization of query plan we say how to compute cost and cardinality of $p$ based on cost of its query operators, also say it is important to distinguish first time usage and subsequent usage of source scan operators}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "paper"
+%%% End: 

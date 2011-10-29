@@ -1,0 +1,106 @@
+%\documentclass{llncs}
+\documentclass{sig-alternate}
+\usepackage{amsmath}
+\usepackage{graphicx}
+%\usepackage{url}
+\usepackage{epic,url}
+\usepackage{latexsym}
+\usepackage{eepic}
+\usepackage{epsfig}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\makeatletter
+\newif\if@restonecol
+\makeatother
+\let\algorithm\relax
+\let\endalgorithm\relax
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{amssymb}
+\usepackage{rotating}
+
+
+%\usepackage[top=4cm, bottom=4cm, left=4.5cm, right=4.5cm]{geometry}
+%\renewcommand{\baselinestretch}{0.990}
+
+
+\sloppy
+
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+%\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+%\newtheorem{property}{Property}
+\newtheorem{myproof}{Proof}
+\newtheorem{goal}{Goal}
+
+\newcommand{\dtr}[1]{(\textbf{dtr: #1})}
+\newcommand{\sem}[1]{\mbox{ $[\![ #1 ]\!]$}}
+\newcommand{\gla}[1]{(\textbf{gla: #1})}
+\newcommand{\todo}[1]{(\textbf{TODO: #1})}
+
+
+\title{Multi-objective Optimization of Queries over Linked Data}
+
+\numberofauthors{2}
+\author{
+  % \alignauthor
+  % Günter Ladwig \\
+  % \affaddr{Institute AIFB} \\
+  % \affaddr{Karlsruhe Institute of Technology, Germany} \\
+  % \affaddr{D-76128 Karlsruhe} \\
+  % \email{guenter.ladwig@kit.edu}
+  % \alignauthor
+  % Thanh Tran \\
+  % \affaddr{Institute AIFB} \\
+  % \affaddr{Karlsruhe Institute of Technology, Germany} \\
+  % \affaddr{D-76128 Karlsruhe} \\
+  % \email{ducthanh.tran@kit.edu}
+}
+
+% \author{Günter Ladwig, Thanh Tran}
+% \authorrunning{Ladwig et al.}
+% \institute{
+% Institute AIFB, Karlsruhe Institute of Technology, Germany\\
+% \email{\{guenter.ladwig,ducthanh.tran\}@kit.edu}
+% }
+
+\setlength{\algomargin}{0.4cm}
+\SetAlgoSkip{}
+
+\begin{document}
+\maketitle
+\begin{abstract} 
+  With the proliferation of the Web of data and Linked Data in
+  general, approaches for processing queries directly over remote
+  Linked Data have recently gained attention. These approaches address
+  new challenges such as the large amount of data sources and the
+  highly distributed nature of Linked Data. However, all approaches
+  have in common that, for a variety of reasons, they are usually not
+  able to answer queries completely. We argue that completeness is no
+  longer a requirement when processing queries over Linked Data and
+  observe an inherit trade-off between completeness and execution
+  cost. We propose to employ multi-objective optimization in order to
+  simultaneously optimize for the conflicting objectives completeness
+  and cost. In order to achieve this, we integrate source selection
+  into the query optimization process, define a cost model for Linked
+  Data query plans and adapt the traditional dynamic programming
+  algorithm for query optimization to perform \emph{multi-objective
+    query optimization}. 
+
+\end{abstract}
+
+\input{section-intro}
+\input{section-prelim}
+\input{section-plans}
+\input{section-optimization}
+%\input{section-processing}
+\input{section-related}
+\input{section-evaluation}
+\input{section-con}
+
+\bibliographystyle{abbrv}
+\bibliography{paper}
+
+\input{section-appendix}
+
+\end{document}

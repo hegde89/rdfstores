@@ -1,0 +1,80 @@
+\section{Related Work}
+\label{sec:related}
+
+\textbf{Linked Data Query Processing.} The concept of executing SPARQL
+queries directly over Linked Data instead of a locally indexed copy
+was first introduced in \cite{hartig_executing_2009}, where link
+traversal is used to discover sources at runtime. In
+\cite{harth_data_2010} a local source index based on QTrees is used to
+speed up the discovery of relevant sources. Our previous work
+\cite{ladwig_linked_2010,sihjoin_2011} proposes methods for
+ranking sources at runtime according to their relevancy and a mixed
+execution strategy that combines both, link traversal and source
+indexes, to report results early. In this work we adopt the approach
+from \cite{harth_data_2010} and employ a source index without any
+runtime source discovery along with the push-based Symmetric Hash Join
+operator from \cite{ladwig_linked_2010,sihjoin_2011}.
+
+
+% \textbf{Dynamic Programming.}
+
+% Faster enumeration of plans: \cite{moerkotte_analysis_2006,moerkotte_dynamic_2008}
+
+% Iterative Dynamic Programming (approx): \cite{kossmann_iterative_2000}
+
+\textbf{Multiobjective Query Optimization.} Multi-objective query
+optimization was previously proposed in
+\cite{papadimitriou_multiobjective_2001}, where it is discussed in the
+context of Mariposa, a wide-area database system. The Mariposa
+optimizer splits the query tree into subqueries and then obtains
+\emph{bids} from participating database sites that specify a delay and
+cost for delivering the result of a subquery. The goal of the optimzer
+is to obtain the Pareto optimal set of plans with respect to cost and
+delay. While the authors do employ dynamic programming to show that
+the Pareto set can be approximated in polynomial time, it is not based
+on the classic dynamic programming algorithm for query optimization
+proposed in \cite{selinger_access_1979}. The problem is slightly
+different as there is only a single query operation tree and for each
+operation node the optimizer is provided a list of alternatives for
+implementing the operation. In contrast, the classic dynamic
+programming \cite{selinger_access_1979} does not consider only a
+single query tree (and therefore a single order of operations), but
+builds and optimizes physical query plans from the bottom up and
+considers all valid query trees. In this work we extend the classic
+algorithm to support multi-objective query optimization.
+
+
+The approach presented in \cite{nie_joint_2001} optimizes query plans
+not only for cost, but also for coverage (i.e. output cardinality) and
+thereby integrates source selection into the query optimization
+process. However, the optimization is performed by combining
+(weighted) cost and coverage into a utility function that provides a
+single measure to assess query plans. Using a single measure means
+that traditional query optimization algorithms, such as dynamic
+programming \cite{selinger_access_1979}, are directly
+applicable. However, no true multi-objective optimization is
+performed.
+
+
+\textbf{Data Integration.}
+
+Bucket algorithm: \cite{levy_querying_1996}
+
+MiniCon algorithm: \cite{pottinger_minicon:_2001}
+
+Optimization of cost and coverage (utility function):
+\cite{nie_joint_2001}
+
+Source selection: \cite{pomares_source_2010}
+
+Query Planning in the Presence of Overlapping Sources:
+\cite{bleiholder_query_2006}
+
+survey materialized views: \cite{halevy_answering_2001}
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "paper"
+%%% End: 

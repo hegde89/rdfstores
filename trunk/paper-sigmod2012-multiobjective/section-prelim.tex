@@ -1,0 +1,183 @@
+\section{Problem Definition}
+\label{sec:problem}
+We first define the data and query model and then
+introduce the problem of processing queries over Linked Data.
+
+\subsection{Linked Data and Queries} 
+RDF~\cite{klyne_resource_2004} is used
+as the data model, but for clarity of presentation, we do not consider
+special RDF semantics (e.g. RDF blank nodes) and focus on the main characteristic of RDF. 
+%However, all methods presented in this paper can easily
+%be extended to deal with blank nodes. 
+Namely, it can be considered as a general model for
+graph-structured data encoded as $\langle subject, predicate, object
+\rangle$ triples. These triples are composed of unique identifiers
+(URI references) and literals (e.g., strings or other data values) as
+follows:
+
+% As usual~\cite{hartig_executing_2009,ladwig_linked_2010}, we
+% conceive Linked Data sources as interlinked sets of RDF triples
+% \cite{klyne_resource_2004}.
+
+\begin{definition}[RDF Triple, RDF Term, RDF Graph]
+  Given a set of URI references $\mathcal{U}$ and a set of literals
+  $\mathcal{L}$, elements in $\mathcal{U} \cup
+  \mathcal{L}$ are called \emph{RDF terms},
+  $\langle s, p, o\rangle \in \mathcal{U}
+  \times \mathcal{U} \times (\mathcal{U} \cup \mathcal{L})$ is 
+  an \emph{RDF triple}, and sets of RDF triples are called
+  \emph{RDF graphs}.
+\end{definition}
+
+They are called graphs because RDF triples can be seen 
+as graph edges connecting nodes that stand for RDF terms. URI references in RDF are used to uniquely identify resources captured by the data. 
+%(instances, concepts, properties) and allow assertions to be made about their attributes and
+%relationships. 
+The Linked Data principles \cite{bizer_linked_2009} commonly used on the Web to access and publish RDF data (as Linked Data) mandate
+that HTTP URIs shall be used and that dereferencing such an URI returns a
+description of the resource identified by the URI. While this is also applicable to other types of data, 
+the large amount of descriptions published this way on the Web represent RDF graphs, each is a set of triples where the dereferenced URI appears as subject or object.
+
+Therefore, a HTTP URI reference can be seen as a data source, whose content can be obtained by
+dereferencing the HTTP URI. Triples in these \emph{Linked Data sources} contain other HTTP URI references. Following these URIs lead to other sources. When it is clear from the context, we will make no distinction between the resource identified by an URI and the Linked Data source that can be retrieved by dereferencing that URI. \todo{do we really want this?}
+
+\begin{definition}[Linked Data Source]
+  A \emph{Linked Data source}, identified by an HTTP URI $d$, is a set of RDF triples $\langle s^d,p^d,o^d \rangle$ . Dereferencing an
+  HTTP URI $d$ can be seen as a function $deref : \mathcal{U} \rightarrow \mathcal{T}$, which maps a URI to a set of triples such that the set of triples $T^d$ for $d$ can be obtained as $T^d = \mathit{deref}(d)$. There is a \emph{link} between two Linked Data
+  sources $d_i, d_j$ if $d_j$ appears as the subject or object in at
+  least one triple of $d_i$, i.e. $\exists t\in T^{d_i},t=\langle d_j,p,o \rangle \vee t=\langle s,p,d_j \rangle$ or vice versa, $\exists t\in T^{d_j},t=\langle d_i,p,o \rangle \vee t=\langle s,p,d_i \rangle$. The union set of
+  sources $d_i \in D$ constitutes the \emph{Linked Data} graph
+  $T^D=\{t| t \in T^{d_i}, d_i \in D\}$.
+
+  % A \emph{source} $d$ is a set of RDF triples $\langle s^d,p^d,o^d
+  % \rangle \in T^d$ where $s^d$ is called the subject, $p^d$ the
+  % predicate and $o^d$ the object. There is a function $ID$ which
+  % associates a source $d$ with a unique URI. There is a \emph{link}
+  % between two sources $d_i$ and $d_j$ if the URI of $d_i$ appears as
+  % the subject or object in at least one triple of $d_j$, i.e.,
+  % $\exists t \in T^{d_j}: s^d(t) = ID(d_i) \vee o^d(t) = ID(d_i)$; or
+  % vice versa, i.e., $\exists t \in T^{d_i}: s^d(t) = ID(d_j) \vee
+  % o^d(t) = ID(d_j)$ (then $d_i$ and $d_j$ are said to be
+  % \emph{interlinked}). The union set of interlinked sources $d_i \in
+  % D$ constitutes the \emph{Linked Data} $T^D=\{t| t \in T^{d_i}, d_i
+  % \in D\}$.
+\end{definition}
+
+The standard language for querying RDF data is SPARQL
+\cite{prudhommeaux_sparql_2008}. An important feature of SPARQL 
+is basic graph pattern (BGP). Work on RDF and Linked Data query processing
+so far focused on the task of answering BGP queries: 
+%, i.e., queries
+%that consist of a single BGP.
+
+\begin{definition}[Triple Pattern, Basic Graph Pattern]
+  A \emph{triple pattern} $q=\langle s,p,o \rangle$, where each $s$,$p$ and $o$ is either a RDF term (called \emph{constant}) or a variable. A \emph{basic graph pattern} is a set of triple patterns $Q= \{t_i,\ldots,t_n\}$. 
+\end{definition}
+
+Typically, the same variable is used in more than one triple pattern such that $Q$ forms a connected graph. Computing answers to a BGP query over the Linked Data graph amounts to the
+task of graph pattern matching. A result to a BGP query can be defined as
+follows:
+
+\begin{definition}[Result]
+Let $T^D$ be the Linked Data graph, $TERM$ be the set of RDF terms in $T^D$, $Q$ be a BGP query, and $V$ be the set of variables in $Q$. Then a mapping
+$\mu_{T_D}: V \to TERM$ from the variables in $Q$ to RDF terms
+in $T_D$ will be called a \emph{result} to $Q$, if the function
+\[
+\mu'_{T_D}: V \cap TERM \to TERM \left\{
+\begin{array}{ll}
+v \mapsto \mu_{T_D}(v) & \mbox{ if } v\in V \\
+t \mapsto t & \mbox{ if } t \in TERM\\
+\end{array}\right.
+\]
+satisfies $\langle \mu'_{T_D}(s),\mu'_{T_D}(p), \mu'_{T_D}(o) \rangle \in T^D$ for any $\langle s,p,o \rangle \in Q$. 
+\end{definition}
+
+For clarity of notation, we will use $\mu_{T_D}$ not only to refer to result nodes in ${T_D}$ that match the query variables but also the triples (subgraphs) that match a triple pattern (a BGP). 
+% Since Linked Data triples in $T_D$ also form a graph, processing
+% queries in this context amounts to the task of graph pattern
+% matching. In particular, an \emph{answer} (also called a \emph{query
+% binding}) to a BGP query is given by $\mu$ which maps the query
+% graph pattern $T^q$ to subgraphs $T^D_q \in T^D$. By applying such a
+% mapping, each variable in $T^q$ is replaced by the corresponding
+% subject, predicate or object of the matching triples in $T^D$. The
+% mapping of a triple pattern $t^q \in T^q$ to triples $T^D_{t^q}
+% \subseteq T^D$ are called \emph{triple bindings}; and $T^D_{t^q}(v)$
+% denotes the set of matches found for the variable $v$ of $t^q$
+% called \emph{variable bindings}.
+
+%In the context of Linked Data query processing, the RDF graph over
+%which queries are executed is the Linked Data graph $T^D$, the union
+%set of all Linked Data sources $d \in D$. 
+
+\subsection{Processing Linked Data Queries} A BGP query is evaluated by
+first obtaining bindings for each of its constituent triple patterns $q
+\in Q$ and then performing a series of joins between the bindings. This is done for every two triple patterns that share a
+variable, forming a \emph{join pattern} (that variable is referred to
+as the \emph{join variable}). 
+%For most queries there are multiple ways to obtain results, e.g.,
+%joins can be executed in different orders or different methods might
+%be used to access input data. Some ways might be more efficient than
+%others. It is the task of the \emph{query optimizer} to find an
+In the Linked Data context, BGP queries are 
+%not
+%%evaluated on a single source, but, in order to obtain all results,
+%%they have to be matched against the combined graph 
+evaluated against the set of all sources in the Linked Data graph $T^D$. 
+While some sources may be available locally, others have
+to be \emph{retrieved via HTTP dereferencing during query processing}. \dtr{either motivate here why this is needed or in the intro}
+
+Previous work on Linked Data query processing
+%, two main approaches
+%to discover sources were described. 
+implements exploration-based \emph{link traversal} 
+%  does not rely on having complete knowledge about all
+%Linked Data sources
+\cite{hartig_executing_2009,hartig_zero_2011}. 
+%These approaches take
+%advantage of links between sources and discover new sources at
+%run-time by traversing these links. 
+%In \cite{hartig_executing_2009},
+%no knowledge is available at all, and 
+For this, the query is assumed to contain at least one constant that is a URI. This URI is used for retrieving
+the first source, representing the ``entry point'' to Linked Data. Triples in this entry point represent links to other sources. By following these links, new
+sources are discovered and retrieved. When retrieved sources contain data matching the query triple patterns, they are selected and joined to produce query results. 
+
+Knowledge about (previously processed) Linked Data sources in the form of statistics has been exploited 
+%to 
+%assumes that all source descriptions are available and based on that,
+%compiles a query evaluation plan that specifies 
+to determine and rank relevant sources~\cite{harth_data_2010}. 
+%and the order for retrieving and processing these sources. Source
+%discovery and query optimization is an offline process and no new
+%sources are discovered at run-time.
+The authors of that work~\cite{harth_data_2010} focus on the efficient encoding and processing of these statistics. Instead of ranking sources at compile time, adaptive re-ranking of sources at runtime has also been proposed~\cite{ladwig_linked_2010}. Common statistics used for processing Linked Data sources include a \emph{source index}:
+
+
+\begin{definition}[Source Index]
+  \label{def:index}
+  Given the Linked Data sources $D$, the \emph{source index} can be conceived as a function $source : \mathcal{T} \to 2^\mathcal{URI}$, which maps a triple pattern $t$ to URIs representing sources that contain results for $t$, i.e. $source(t) =
+  \{d| d \in D \wedge, \mu_{T_d}(t) \in T_d\}$. 
+\end{definition}
+%
+%\begin{definition}
+%  source description, statistics
+%\end{definition}
+
+In practice, the source index used by existing work not only returns the URIs but also basic source descriptions that provide selectivity information for triple and join patterns. For instance, these statistics are stored for previously discovered sources, or collected from catalogs of Linked Data sources such as CKAN\footnote{\url{http://ckan.net}}.
+%As mentioned before, there are sourcces previous work, additional knowledge about sources captured by the VoiD vocabulary (common standard\footnote{\url{http://semanticweb.org/wiki/VoiD }} used to describe interlinked datasets) and   
+%Given a query, we use the source index to
+%discover all relevant known sources, i.e., all sources that contain
+%triples matching query triple patterns. While there might be relevant
+%sources that are not discovered because they are not part of the
+%source index, query processing can be complete with regard to the data
+%in sources indexed by the source index.
+
+Given the large number of Linked Data sources and their high retrieval costs, it is often not practical to process all relevant sources. The heavily skewed data
+distribution in the Web of Data exacerbates this problem, as there are
+triple patterns that match all or many sources and therefore do not
+serve to discriminate sources \cite{ladwig_linked_2010}. For example, 
+the pattern $\langle ?x, \mbox{\emph{rdf:type}}, ?y \rangle$ matches most Linked Data sources. Thus, existing work rank and process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}.
+
+%\subsection{Pareto Optimal Linked Data Query Optimization} 
+%While these existing ad-hoc strategies for processing Linked Data sources can improve performance, there exists no query optimization technique that compute and guarantee the optimality of query plans. We provide the first attempt towards Linked Data query optimization, 
+

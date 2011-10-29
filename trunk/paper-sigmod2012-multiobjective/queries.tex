@@ -1,0 +1,167 @@
+
+\section{Appendix}
+\label{sec:app}
+\begin{figure}[htb]
+  \centering
+\begin{verbatim}
+Q2
+SELECT * WHERE {
+  ?p dbowl:stateOfOrigin dbpedia:Italy .
+  ?p owl:sameAs ?o .
+  ?o a foaf:Person .
+}
+\end{verbatim}
+ 
+\begin{verbatim}
+Q5
+SELECT * WHERE {
+  ?n dcterms:subject dbpedia:Category:Western_Europe .
+  ?n owl:sameAs ?p .
+  ?p factbook:birthrate ?a .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q15
+SELECT * WHERE {
+  ?a dbowl:artist dbpedia:Michael_Jackson .
+  ?a owl:sameAs ?a2 .
+  ?a2 rdfs:label ?n .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q19
+SELECT * WHERE {
+  ?x dbprop:country dbpedia:Germany .
+  ?x owl:sameAs ?o .
+  ?o rdfs:label ?n
+}
+\end{verbatim}
+
+  \caption{Queries Q2, Q5, Q15, and Q19}
+\label{fig:qtp3}
+\end{figure}
+
+
+\begin{figure}[htb]
+  \centering
+\begin{verbatim}
+Q1
+SELECT * WHERE {
+  ?x dcterms:subject dbpedia:Category:Liberal_democracies .
+  ?x rdfs:label "Germany"@en .
+  ?x owl:sameAs ?p .
+  ?p rdfs:label ?n .
+}
+\end{verbatim}
+ 
+\begin{verbatim}
+Q3
+SELECT * WHERE {
+  ?n a dbowl:PopulatedPlace .
+  ?n rdfs:label "Estonia"@en .
+  ?n owl:sameAs ?a .
+  ?a foaf:name ?t .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q4
+SELECT * WHERE {
+  ?drug drugbank:drugCategory drugcategory:micronutrient .
+  ?drug drugbank:casRegistryNumber ?id .
+  ?drug owl:sameAs ?s .
+  ?s sider:sideEffect ?eff .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q6
+SELECT * WHERE {
+  ?n dcterms:subject dbpedia:Category:Chancellors_of_Germany .
+  ?p owl:sameAs ?n .
+  ?p nyt:first_use ?u .
+  ?p nyt:topicPage ?page .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q7
+SELECT * WHERE {
+  mdb:director/8477 foaf:made ?film .
+  ?film dcterms:date ?date .
+  ?film foaf:page ?page .
+  ?film owl:sameAs ?f2 .
+}
+\end{verbatim}
+
+  \caption{Queries Q1, Q3, Q4, Q6, and Q7}
+\label{fig:qtp4}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+\begin{verbatim}
+Q9
+SELECT * WHERE {
+  dailymed_orga:Mylan_Pharmaceuticals_Inc dailymed:producesDrug ?bd . 
+  ?bd dailymed:genericDrug ?gd .
+  ?gd drugbank:possibleDiseaseTarget ?dt . 
+  ?dt owl:sameAs ?o .
+  ?o rdfs:seeAlso ?n .
+}
+\end{verbatim}
+ 
+\begin{verbatim}
+Q14
+SELECT * WHERE {
+  ?a dbowl:artist dbpedia:The_Beatles .
+  ?a rdfs:label "Yesterday"@de .
+  ?a foaf:depiction ?img .
+  ?b dbowl:previousWork ?a .
+  ?b rdfs:label ?n .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q16
+SELECT * WHERE {
+  ?country a dbowl:Country .
+  ?country rdfs:label "Monaco"@en .
+  ?country owl:sameAs ?c2 .
+  ?c2 factbook:unemploymentrate> ?n .
+  ?c2 factbook:literacy_totalpopulation> ?l .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q17
+SELECT * WHERE {
+  ?film mdb:movie/actor mdb:actor/30064 .
+  ?film mdb:movie/featured_film_location ?loc .
+  ?loc rdfs:label "Hawaii (Film Location)" .
+  ?film owl:sameAs ?f2 .
+  ?f2 dbowl:music dbpedia:John_Williams .
+}
+\end{verbatim}
+
+\begin{verbatim}
+Q18
+SELECT * WHERE {
+  ?child geo-ont:parentFeature geonames:6269131 .
+  ?child geo-ont:officialName "Cornwall" .
+  ?child geo-ont:nearby ?n .
+  ?n geo-ont:name ?nn .
+  ?n a ?t .
+}
+\end{verbatim}
+
+  \caption{Queries Q5, Q14, Q16, Q17, and Q18}
+\label{fig:qtp5}
+\end{figure}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "paper"
+%%% End: 

@@ -1,0 +1,630 @@
+\section{Dynamic Programming Based Optimization}
+\label{sec:opt}
+
+% In classic query optimization, the query optimizer only determines
+% how the data is processed, e.g., by choosing a particular join order,
+% but not which data is processed. Therefore, all query plans are equal
+% in terms of the results they produce and differ only in their
+% cost. However, in the Linked Data query processing setting, the query
+% optimizer also directly chooses the data to be processed, by
+% scheduling source scan operations. 
+
+In this section we propose how to adopt the dynamic
+programming (DP) solution~\cite{selinger_access_1979} to the 
+multi-objective Linked Data query optimization problem. 
+
+DP for query optimization works in a
+bottom-up fashion, constructing the query plan starting from the
+leaves, which are scan operators to access
+relations. DP is is used to deal with the
+exponentially large search space of possible query plans. It takes
+advantage of the \emph{optimal substructure} of the query optimization
+problem, i.e., the optimal query plan can be constructed from
+optimal subplans. Non-optimal subplans can be
+discarded during the process to reduce the search space.
+
+Applied to Linked Data query processing, we propose to construct \emph{access plans} $P(t)$ for every triple patterns $t \in Q$. These atomic plans are then successively combined using join operators to create plans for larger subexpressions $T \subseteq Q$. For instance, to construct a query plan for $Q$, the optimizer may consider
+combining subplans for all possible pairs $T_1,T_2 \subset Q$ such that
+$T_1,T_2 \neq \emptyset, T_1 \cap T_2 = \emptyset$ and $T_1 \cup T_2 =
+Q$. When combining two plans $p_1,p_2$ to form a new plan $p$, we
+write $p = \mathtt{cmb}(p_1,p_2)$. At each stage, the optimizer 
+try to reduce candidates subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T_i) \subseteq
+P(T_i)$, the set of optimal plans for every subexpression $T_i$. In the case of Linked Data
+query processing, the optimality of a plan is determined according to
+multiple objectives. 
+
+%, i.e., the set of optimal plans is the set of
+%Pareto-optimal plans, $P^+(T) = P^*(T)$.
+
+In the following, we firstly discuss how to estimate the optimality of atomic plans as well as plans for any expressions $T \subseteq Q$. Then we discuss the main problems that arise when applying the DP solution to this problem of multi-objective Linked Data query optimization.  Because query plans are no longer required to produce all results, we will
+discuss a relaxation of the comparability constraint. Then, we study the effect of operator sharing on query optimization and introduce upper and lower bounds on plan
+costs. Finally, we prove that the multi-objective query optimization problem still has optimal
+substructure and that the dynamic programming solution constructs the
+optimal solution, i.e., the skyline of query plans.
+
+\subsection{Estimating Cost and Cardinality of Plans}
+\label{sec:estimation}
+For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \dtr{cite}. An essential factor for cost estimation is cardinality. While not only input cardinality but also output cardinality may be used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. 
+%Instead of cardinality, the work discussed here is also applicable to other 
+%In fact, not 
+%%Further, other optimization objectives such as 
+%only cost and cardinality but other objectives such as quality and relevance, which may have even smaller overlap with cost, have 
+%Thus, estimating the optimality of a plan requires 
+%For certain operators, input cardinality is not the same as 
+
+%In this case, not only the cost but also the output cardinality are associated with query operators. 
+We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations \dtr{cite}):
+
+\textbf{Source Scan.} The output cardinality of this operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
+% If the source is not locally available, it will be
+%retrieved remotely. 
+%A Linked Data source may contain arbitrary
+%data and may therefore contain inputs for other triple
+%patterns. If the source scan is an input for more than one operator,
+%the data will only be retrieved once and will then either be kept in a
+%local buffer for subsequent scans or, in the case of push-based
+%execution, immediately be pushed to all subsequent operators.
+This source size statistics can be directly obtained from the source index discussed before. As each triple is retrieved exactly once, $cost(scan_d)$ is proportional to the site of $d$, $|T^d|$. 
+%However, a source may contain inputs for several triple patterns such that a source scan operators may be shared by subsequent operators. 
+In case of operator sharing, separate cost
+models for the first access (when the data is retrieved over the
+network) and subsequent accesses (when the data has already been
+retrieved) are used. The cost for the first access is defined as
+$cost_1(scan_d) = h_s \times |T^d|$, where $h_s$ is the weight factor
+used to reflect the relative cost of processing a source tuple. The cost for each subsequent access is
+defined as $cost_2(scan_d) = (1 - b) \times cost_1(scan_d)$, where $b$
+is a parameter to control the benefit achievable through operator sharing.
+
+\textbf{Selection.} The output cardinality
+of this operator depends on the selectivity $sel(t)$ of $t$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$. The cost of the 
+operator is determined by its weight factor and the input cardinality, i.e. $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$.
+
+\textbf{Union.} For this operator, output cardinality is the sum of the cardinalities of its inputs:
+$card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. The cost of the
+operator is proportional to the output cardinality: $cost(\cup) =
+h_\cup \times card(\cup)$, where $h_\cup$ is the weight factor for union. 
+%processing an input tuple.
+
+\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: $card(t_i \Join t_j) =
+sel(t_i \Join t_j) \times card(\mu(t_i)) \times card(\mu(t_j))$. 
+%, where $|t_i|$ and
+%$|t_j|$ are the number of triples matching $t_i$ and $_j$,
+%respectively. 
+Also here, cost is proportional to the output cardinality: $cost(\Join) =
+h_\Join \times card(\Join)$: The weight factor $h_\Join$ for instance, depends on the
+join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. 
+
+\textbf{Atomic Plan.} 
+
+\todo{should we add a section on how the access plans for single
+  triple patterns are generated here?}
+  
+\dtr{Based on formalization of query plan we say how to compute cost and cardinality of $p$ based on cost of its query operators, also say it is important to distinguish first time usage and subsequent usage of source scan operators}
+
+\textbf{Composite Plan.} 
+
+\subsection{Comparability}
+\label{sec:comparability}
+% The dynamic programming algorithm works in a bottom-up fashion,
+% constructing the query plan starting from the leaves, which in the
+% classic problem are scan operators to access relations. Dynamic
+% programming is used to deal with the exponentially large search space
+% of possible query plans. It takes advantage of the optimal
+% substructure of the classic query optimization problem, i.e., the
+% optimal query plan can be constructed from optimal sub-plans. This
+% enables the optimizer to prune non-optimal plans at each stage and
+% only retain optimal sub-plans, reducing the search space
+% significantly.
+
+Pruning suboptimal plans is an essential part of the dynamic programming solution to
+query optimization. 
+%However, the optimizer must take care not to
+%discard plans that may be part of an overall optimal solution, which
+%then would no longer be found. 
+For this, the notion of \emph{comparability} was introduced, which is an equivalence relation $\sim$ over plans. It determines which plans are comparable, based on which  
+% according
+%to some pre-defined properties. 
+the optimizer can decide which plans are suboptimal. The optimizer can prune all but the optimal plans for each of the equivalence classes that are induced by $\sim$. 
+
+In the traditional setting, atomic operators and plans comprising them are \emph{comparable when they produce the same output}. This comparability relation is applicable because input relations are determined by the query such that operators used to process them produce the same output and vary only with regard to cost. The optimizer than chooses how to process data (e.g. table or index
+scan) based on cost estimates. In Linked Data query processing, however, the selection of
+sources (represented by source scan operators) is part of query
+optimization. Thus, the optimizer decides both \emph{what and how data shall be processed}. 
+If we apply the comparability concept as defined
+previously, each unique combination of source scan operators may yield different results and thus, would be represented by a separate equivalence class of query plans. Given there
+are potentially hundreds of Linked Data sources for a single query, this may result in a search space where query optimization is no longer affordable.
+
+However, we note that given the objectives here are cardinality and cost, we are not interested in which results but how many results will be produced. 
+%is no longer required, 
+Accordingly, a relaxation of this comparability relation can be employed that enables the optimizer to prune plans
+more aggressively.
+
+\begin{definition}
+  \label{def:comparability}
+  Two query plans $p_i, p_j$ are \emph{comparable} if they produce results for the same expression, i.e. $p_i(T_i) \sim  p_j(T_j$ if $T_i = T_j$. 
+\end{definition}
+
+This relaxation means that comparable plans produce the same type of results (bindings for the same pattern), but may vary in the number as well as the actual results produced (different bindings). 
+
+Besides results, other aspects have been incorporated into the comparability relation. For instance, plans may be considered comparable when they produce same results (same type of results), and these results are ordered. 
+%when considering orders: a non-optimal sub-plan might produce ordered output, which can
+%be efficiently used by sort-merge joins later in the query plan and
+%should therefore not be discarded at the first possibility.
+%Considering other properties such as interesting orders, is of course
+%possible, but 
+Besides this aspect of interesting orders, the inclusion of other objectives such as relevance and quality would also require a different notion of comparability.  
+%For clarity, we omit additional constraints that may be added to. 
+
+\subsection{Monotonicity}
+\label{sec:sharing}
+% As discussed, the query optimization algorithm based on dynamic
+% programming constructs optimal plans for a given query $Q$ by starting
+% with plans for single triple patterns $t \in Q$ and successively
+% combining plans $P(T_1), P(T_2)$ for subexpressions $T_1,T_2 \subset
+% Q, T_1 \cap T_2 = \emptyset$ to create plans $P(T)$ for subexpressions
+% $T = T_1 \cup T_2$. In order to minimize the search space when
+% creating plans $P(T)$, we prune plans from $P(T_1), P(T_2)$ that
+% cannot be part of an optimal plan for $T$.
+
+% In query optimization for relational databases, a plan is usually
+% considered to be optimal if it has the lowest cost. Therefore it is
+% possible to prune all but one plan for each equivalence class (as
+% defined in the previous section) to obtain the set of optimal plans
+% $P^*(T)$ for a given expression $T$. For optimization of Linked Data
+% queries, however, there are two reasons why this is not as simple: 1)
+% we no longer use a single dimension (such as cost) to assess query
+% plans, but multiple dimensions (cost and cardinality) and 2) we employ
+% operator sharing, which means that the cost function is no longer
+% monotonic with regard to combining query plans. We tackle the problem
+% of constructing Pareto-optimal query plans in the next section. Here,
+% we consider each dimension separately and examine the effect of
+% operator sharing on query optimization using dynamic programming.
+
+A central requirement when applying dynamic programming for query
+optimization is that the scoring functions must be \emph{monotonic}
+with regard to plan combination. Without monotonic scoring functions,
+the problem no longer has optimal substructure \todo{find something we
+  can cite for this}. This still holds in the context of
+multi-objective query optimization, only that there now is more than
+one such function, namely cost and cardinality.
+
+The montonicity of the cardinality function is straightforward to
+establish, based on the monotonicity of multiplication.
+
+\begin{theorem}
+  Given a query $Q$, let $T,T' \subset Q$ be two subexpressions of
+  $Q$, such that $T \cap T' = \emptyset$. Let $p_1,p_2 \in P(T)$ and
+  $p' \in P(T')$ be plans for $T$ and $T'$. Then from $card(p_1) \leq
+  card(p_2)$ follows $card(\mathtt{cmb}(p_1,p')) \leq
+  card(\mathtt{cmb}(p_2,p'))$.
+\end{theorem}
+\begin{proof}
+  % The output cardinality of combined plan is determined by the input
+  % cardinality (i.e., the output cardinality of the two combined plans)
+  % and the selectivity of the join operator used to combined the two
+  % plans.
+  With Sec.~\ref{sec:estimation} we can write the condition in
+  the theorem as $card(p_1) \leq card(p_2) \Rightarrow card(p_1)
+  \times card(p') \times sel \leq card(p_2) \times card(p') \times
+  sel$ (where $sel$ is the selectivity of the join), which is true
+  because multiplication is monotonic.
+\end{proof}
+
+However, during cost estimation, we take operator sharing into account
+by assigning different costs to the first read and subsequent reads of
+the output of source scan operators (see Sec.~\ref{sec:ops}). The
+problem here is that the cost of an operator may change when a plan is
+combined with another plan that shares the operator, which may cause
+the optimizer to miss the overall optimal plan.
+
+Suppose we have two plans $p,p'$ for some subexpression $T \subset Q$
+and a plan $p_t$ for a triple pattern $t$, such that $Q = T \cup
+\{t\}$. Further, suppose that the cost of $p$ is higher than the cost
+of $p'$, i.e., $cost(p) > cost(p')$. The optimizer would consider $p'$
+to be the optimal plan for $T$ and discard $p$ to form
+$P^+(T)=\{p'\}$. Now, because of operator sharing it is possible that
+the cost of the combination of two plans is less than the sum of the
+cost of the two combined plans, i.e., it is possible that
+$cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if $p'$ and
+$p_t$ share operators. However, because the optimizer assumes that a
+sub-optimal plan for $T$ cannot be part of an optimal plan for $T \cup
+\{t\}$ it prunes $p$, the optimal plan is not found because $p'$ is
+not part of $P^+(T)$.
+
+% To avoid this problem, We need to make sure that the cost and
+% cardinality functions are \emph{monotonic} with regard to plan
+% combination, meaning that the following conditions must hold:
+% \[ cost(p_1) \leq cost(p_2) \Rightarrow cost(\mathtt{cmb}(p_1,p'))
+% \leq cost(\mathtt{cmb}(p_2,p')) \]
+% \[card(p_1) \leq card(p_2) \Rightarrow card(\mathtt{cmb}(p_1,p'))
+% \leq card(\mathtt{cmb}(p_2,p'))\]
+% \todo{should we add a proof that the monotonicity of the card function
+%   is not violated when employing operator sharing?}
+
+\textbf{Cost Bounds for Partial Plans.} In order to take the
+previously mentioned effect of operator sharing into account when
+calculating the cost of a partial plan $p$ for a subexpression $T$, we
+define upper and lower bounds on the plans that can be constructed for
+an expression $T'$ with $T \subset T'$ using $p$.
+
+\begin{definition}
+  \label{def:bounds}
+  Given a query $Q$ and a subexpression $T \subset Q$, let $p$ be a
+  plan in $P(T)$ and $P^p(Q) \subseteq P(Q)$ be the set of all plans
+  for $Q$ that are constructed as combination of $p$ with plans in
+  $P(Q \setminus T)$: $P^p(Q) = \{\mathtt{cmb}(p,p') | p' \in P(Q
+  \setminus T)\}$.  The lower bound $cost_L^Q(p)$ of $p$ w.r.t. $Q$
+  is then the minimum cost of plans in $P^p(Q)$ and the upper bound
+  $cost_U^Q(p)$ is the maximum cost of plans in $P^p(Q)$.
+\end{definition}
+
+Intuitively, a plan $p$ for a subexpression $T$ of $Q$ is ``worse''
+w.r.t. to cost than some other plan $p_u$ for $T$, if all plans for
+$Q$ that build on $p$ have higher cost than all plans for $Q$ that
+build on $p_u$, i.e., if $cost_L^Q(p) > cost_U^Q(p_u)$.
+
+\begin{theorem}
+  Given a query $Q$, let $T,T' \subset Q$ be two subexpressions of
+  $Q$, such that $T \cap T' = \emptyset$. Let $p_1,p_2 \in P(T)$ and
+  $p' \in P(T')$ be plans for $T$ and $T'$, respectively. With
+  Def.~\ref{def:bounds} we reestablish the monotonicity of plan cost
+    w.r.t. to plan combination, albeit in a less strict version:
+    \[ cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
+    cost^Q_U(\mathtt{cmb}(p_1,p')) \leq
+    cost^Q_L(\mathtt{cmb}(p_2,p')) \]
+\end{theorem}
+\begin{proof}
+  
+\end{proof}
+
+We now redefine the dominance relation for plans for strict
+subexpressions of $Q$ with regard to the upper and lower bounds on
+final plans:
+
+\begin{definition}
+  \label{def:dominates_bound}
+  Given a query $Q$, a subexpression $T \subset Q$ and two plans
+  $p_1,p_2$ for $T$, $p_1 \mbox{ \textnormal{dominates} } p_2$ if
+  $card(p_1) \geq card(p_1) \wedge cost_U^Q(p_1) \leq cost_T^Q(p_2)
+  \wedge (card(p_1) > card(p_2) \vee cost_U^Q(p_1) < cost_T^Q(p_2))$.
+\end{definition}
+
+% With the lower and upper bounds we can reestablish the monotonicity of
+% plan costs, however in a less restrictive form:
+
+% \begin{theorem}
+%   Given two plans $p_1,p_2$ for a subexpression $T$ and a plan $p'$
+%   for a subexpression $T'$, such that $T \cap T' = \emptyset$, the
+%   following condition holds:
+%   \[ cost_U^{T\cup T'}(p_1) \leq cost_L^{T\cup T'}(p_2) \Rightarrow 
+%   cost(\mathtt{cmb}(p_1,p') \leq cost(\mathtt{cmb}(p_2,p')) \]
+% \end{theorem}
+% \begin{proof}
+%   \todo{proof}
+% \end{proof}
+
+\textbf{Cost Bound Estimation.} In the form of
+Definition~\ref{def:bounds}, the calculation of the lower and upper
+bounds of a plan $p$ requires constructing all plans based on
+$p$. This is of course very cost intensive and defeats the purpose of
+pruning. We therefore try to estimate the bounds by determining the
+maximal possible benefit that is achievable through operator sharing
+for a particular plan. As the source scan operator is the only
+shareable operator, we can derive the maximal benefit of operator
+sharing by looking at the overlap of mapped sources for all triple
+patterns in the query.
+
+\begin{definition}
+  Given a query $Q$, a source index $I$, and two query plans $p,o \in
+  P(T), T \subset Q$, let $S_p,S_o$ be the sets of sources retrieved
+  by source scan operators in $p,o$, respectively. The maximal benefit
+  of $p$ w.r.t $o$ defined as $m_o(p) = \sum_{t \in Q \setminus T}
+  \sum_{(d,r_d) \in I(t), d \notin S_p \cap S_o } b \cdot
+  cost_1(scan_d)$, where $b$ is the sharing benefit and
+  $cost_1(scan_d)$ is the cost for the first read of the source scan
+  operator for source $d$, as introduced in Sec.~\ref{sec:ops}.
+\end{definition}
+
+\todo{explain rationale for disregarding sources that appear for both
+  plans p,o}
+
+With the maximal benefit, we again redefine the dominance relation for
+plans for partial plans:
+
+\begin{definition}
+  Given a query $Q$, a subexpression $T \subset Q$ and two plans
+  $p_1,p_2 \in P(T)$, $p_1 \mbox{ \textnormal{dominates} } p_2$ if
+  $card(p_1) \geq card(p_1) \wedge cost(p_1) \leq cost(p_2) -
+  m_{p_1}(p_2) \wedge (card(p_1) > card(p_2) \vee cost(p_1) <
+  cost(p_2) - m_{p_1}(p_2))$.
+\end{definition}
+
+\todo{we need to add a proof here that using the bound estimation
+  instead of the real bounds does not prune any plans that shouldn't
+  be pruned. then we can use the real bounds in the following section
+  for proving that we actually construct the skyline. I think using
+  the maximal benefit would be too awkward there.}
+
+\subsection{Pareto-optimality}
+\label{sec:pareto}
+
+The goal of the optimizer in the Linked Data query processing scenario
+is to find the overall skyline (or Pareto set) of query plans, while
+pruning as many plans as possible at each step. We will show that we
+can retain only non-dominated plans for each subexpression and still
+find the complete overall skyline, i.e., we show that the optimization
+problem still has optimal substructure.
+
+The goal is to find the optimal solution for query $Q$, in this case
+the optimal solution is the set of Pareto-optimal query plans $P^+(Q)
+= P^*(Q)$. To prove that the problem has optimal substructure, we need
+to show that we can construct $P^*(Q)$ by splitting $Q$ into
+subproblems $T \subset Q$ and then combining optimal solutions
+$P^*(T)$ for the subproblems. In particular, this means that a
+non-optimal solution for a subproblem must not be part of an optimal
+solution for a superproblem.
+
+% The smallest subproblem is a singleton subset of $Q$, i.e., a single
+% triple pattern $t$. An optimal solution for this problem is a set of
+% Pareto-optimal plans $P^*(\{t\})$. Each such plan $p_t$ is an access
+% plan, consisting of a set of source scan operators, whose output is
+% fed into separate selection operators and then into a single union
+% operator.
+
+% The first step where solutions for subproblems are combined is
+% constructing query plans for 2-element subsets of $Q$, i.e., joins
+% between base inputs. We show that we can construct $P^*(\{t_1,t_2\})$
+% by combining optimal solutions for $t_1$ and $t_2$, i.e.,
+% $P^*(\{t_1\})$ and $P^*(\{t_2\})$, for all $t_1,t_2 \in Q$ with $t_1
+% \neq t_2$. Let $S$ be the set of all plans constructed by combining
+% Pareto-optimal plans for $t_1$ and $t_2$: $S =\{\mathtt{cmb}(p_1,p_2)
+% | p_1 \in P^*(t_1), p_2 \in P^*(t_2)\}$. Then we need to show that
+% $P^*(\{t_1,t_2\}) = S^*$ or $P^*(\{t_1,t_2\}) \subseteq S$.
+
+% \begin{align*}
+%   P^*(\{t_1,t_2\}) \subseteq S &  \Leftrightarrow  \forall p^* \in
+%   P^*(\{t_1,t_2\}) : p^* \in S \\
+% &   \Leftrightarrow \forall p^* \in P^*(\{t_1,t_2\}) :
+%   p^* = \mathtt{cmb}(p^*_1, p^*_2) \;\mathrm{with}\; p^*_1 \in
+%   P^*(t_1), p^*_2 \in P^*(t_2)
+% \end{align*}
+
+% This means that all optimal, i.e., non-dominated, plans for $t_1,t_2$
+% are a combination of non-dominated plans for $t_1$ and $t_2$,
+% respectively.
+
+% \todo{benutz kosten ohne bounds hier, oben dann beweisen dass wir beim
+%   benutzen der bounds beim prunen irgendwas klappt}
+
+\begin{theorem}
+  Given a query $Q$ and two subexpressions $T_1,T_2 \subseteq Q$ with
+  $T_1 \cap T_2 = \emptyset$, the set of optimal plans for $T_1 \cap
+  T_2$ can be constructed from optimal plans for $T_1,T_2$, i.e.,
+  $P^+(T_1 \cup T_2) = P^*(T_1 \cup T_2) \subseteq C =
+  \{\mathtt{cmb}(p_1,p_2) | p_1 \in P^*(T_1), p_2 \in P^*(T_2)\}$.
+\end{theorem}
+\begin{proof}
+  Let $p^* \in P^*(T_1 \cup T_2)$ be a plan that is a combination of a
+  dominated plan for $T_1$ and a non-dominated plan for $T_2$, i.e.,
+  $p^* = \mathtt{cmb}(p^-_1,p^*_2),p^-_1 \in P^-(T_1),p^*_2 \in
+  P^*(T_2)$. This means that there is a non-dominated plan $p^*_1 \in
+  P^*(T_1)$ that dominates $p^-_1$, but the combination of $p^*_1$
+  with $p^*_2$ is dominated by the combination of $p^-_1$ and $p^*_2$:
+  \[ \exists p^*_1 \in P^*(T_1) : \mathtt{cmb}(p^-_1,p^*_2) \text{
+    dominates } \mathtt{cmb}(p^*_1,p^*_2)\] As $p^*_1$ dominates
+  $p^-_1$ and $\mathtt{cmb}(p^-_1,p^*_2)$ dominates
+  $\mathtt{cmb}(p^*_1,p^*_2)$, according to
+  Def.~\ref{def:dominates_bound}, this implies (without loss of
+  generality we assume that both objectives are strictly
+  lesser/greater):
+  \begin{eqnarray*}
+    card(p^-_1) < card(p^*_1) &\wedge& card (\mathtt{cmb}(p^-_1,p^*_2)) > card(\mathtt{cmb}(p^*_1,p^*_2)) \\
+    cost^Q_L(p^-_1) < cost^Q_U(p^*_1) &\wedge& cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) > cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))\\
+  \end{eqnarray*}
+  However, with the montonicity of both, the cost and the cardinality,
+  we have a contradiction, because $cost^Q_L(p^-_1) <
+  cost^Q_U(p^+_1)$, but $cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) >
+  cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))$ (the same holds for the
+  cardinality). With regard to our original proposition, this means
+  that there is no plan $p^* \in P^*(T_1 \cup T_2)$, such that $p^*$
+  is a combination of dominated plan $p^-_1$ and a non-dominated plan
+  $p^*_2$. The same holds when $p^*$ is a combination of two dominated
+  plans (we omit the proof for brevity). From this follows that all
+  $p^* \in P^*(T_1 \cup T_2)$ are combinations of the non-dominated
+  plans in $P^*(T_1)$ and $P^*(T_2)$ and therefore $P^*(T_1 \cup T_2)
+  \subseteq C$.
+\end{proof}
+
+% Proof by contradiction: Suppose there is a non-dominated plan $p^* \in
+% P^*(\{t_1,t_2\})$ that is a combination of a dominated plan for $t_1$ and
+% a non-dominated plan for $p_2$:
+% \[\exists p^* \in P^*(\{t_1,t_2\}) : p^* = \mathtt{cmb}(p^-_1,p^*_2),
+% p^-_1 \in P^-(t_1), p^*_2 \in P^*(t_2) \] 
+
+% This would mean that there is a non-dominated plan $p^*_1 \in
+% P^*(t_1)$ that naturally dominates $p^-_1$, but the combination of
+% $p^*_1$ with $p^*_2$ is dominated by the combination of $p^-_1$ and
+% $p^*_2$:
+% \[ \exists p^*_1 \in P^*(t_1) : \mathtt{cmb}(p^-_1,p^*_2)
+% \text{ dominates } \mathtt{cmb}(p^*_1,p^*_2)\]
+
+% This implies that the score and cardinality of
+% $\mathtt{cmb}(p^-_1,p^*_2)$ are greater or equal than the score and
+% cardinality of $\mathtt{cmb}(p^*_1,p^*_2)$, whereas the score and
+% cardinality of $p^-_1$ is less than the score and cardinality of
+% $p^*_1$ (because $p^*_1$ dominates $p^-_1$):
+
+% \begin{eqnarray*}
+%   score(p^-_1) < score(p^*_1) &\wedge& score(\mathtt{cmb}(p^-_1,p^*_2)) \geq score(\mathtt{cmb}(p^*_1,p^*_2))\\
+%   card(p^-_1) < card(p^*_1) &\wedge& card (\mathtt{cmb}(p^-_1,p^*_2)) \geq card(\mathtt{cmb}(p^*_1,p^*_2)) \\
+% \end{eqnarray*}
+
+% However, we postulate that $card$ and $score$ are monotonic with
+% regard to the combination of plans:
+% \begin{eqnarray*}
+%   score(p_1) \leq score(p'_1) &\Rightarrow& score(\mathtt{cmb}(p_1,p_2))
+%   \leq score(\mathtt{cmb}(p'_1,p_2)) \\
+%   card(p_1) \leq card(p'_1) &\Rightarrow& card(\mathtt{cmb}(p_1,p_2))
+%   \leq card(\mathtt{cmb}(p'_1,p_2)) \\
+% \end{eqnarray*}
+
+% where $p_1,p'_1$ are any plans for the same expression and $p_2$ is a
+% plan for a different, disjunct expression. 
+
+% \todo{add bounds here}
+
+% With the monotonicity of the $score$ and $card$ functions we have a
+% contradiction, because $score(p^-_1) < score(p^*_1)$, but
+% $score(\mathtt{cmb}(p^-_1,p^*_2)) \geq
+% score(\mathtt{cmb}(p^*_1,p^*_2))$ (the same holds for the
+% cardinality). With regard to our original proposition, this means that
+% there is no plan $p^* \in P^*_{t_1,t_2}$ such that $p^*$ is a
+% combination of a dominated plan $p^-_1$ and a non-dominated plan
+% $p^*_2$. \todo{show that this also holds when both plans are
+%   dominated} From this follows that all $p^* \in P^*_{t_1,t_2}$ are
+% combinations of the non-dominated plans in $P^*_{t1}$ and $P^*_{t_2}$.
+
+
+Although the relaxed comparability constraint allows the optimizer to
+prune more aggressively than otherwise possible, we observe that the
+goal of generating Pareto-optimal query plans again leads to a larger
+search space.
+
+\subsection{Optimizer Algorithm}
+
+With the relaxed comparability constraint and the Pareto-optimality
+in place, we can now present the query optimization algorithm for
+constructing Pareto-optimal Linked Data query plans.
+
+% \subsubsection{Pareto-optimal Access Plans for Triple Patterns}
+
+% The first step in the dynamic programming algorithm for query
+% optimization is creating Pareto-optimal access plans for single query
+% triple patterns. As described in Section~\ref{sec:basicshape} these
+% plans each consist of a set source scan operators whose output feeds
+% into selection operators and then in a single union operator. Given a
+% triple pattern $t$, we first use the source index to obtain the set of
+% relevant sources $D = I(t)$.
+
+% A naive solution to obtain the Pareto-optimal plans for $t$ would be
+% to first create the set of all possible plans and then prune all
+% dominated plans. However, we can construct a valid plan for $t$ from
+% any subset of $D$, i.e., there is one possible plan for each element
+% of the power set of $D$. As the size of the power set is $2^{|D|}$
+% this is infeasible even for triple patterns that appear in only
+% relatively few sources.
+
+% \todo{add short description of the algorithm we use}
+
+% \subsubsection{Pareto-optimal Dynamic Programming}
+
+\begin{algorithm}
+  \label{alg:plan}
+  \DontPrintSemicolon
+
+  \SetKwData{BestPlans}{bestPlans}\SetKwData{Null}{null}
+  \SetKwFunction{Combine}{combine}
+
+  \caption{\textsc{PlanGen}$(q)$}
+  \KwIn{Query $q = \{t_1,\ldots,t_n\}$, Source index $I$}
+  \KwOut{Pareto-optimal query plans \BestPlans{q}}
+
+  \ForEach{$t \in q$}{
+    $S \leftarrow \{ \cup(\{ \sigma_t(scan(d)) | d \in D \}) | D \in \mathcal{P}(I(t))\}$
+%    $S \leftarrow \{\cup(C) | C \in \mathcal{P}(\{\sigma_t(scan(d)) | d \in I(t)\})\}$ \;
+    \BestPlans{$\{t\}$}$\leftarrow \{p \in S| \nexists p' \in S : p'
+    \mbox{ dominates } p \}$\;
+  }
+
+  \For{$i \leftarrow 2$ \KwTo $|q|$}{
+    \ForEach{$T \subseteq q$ such that $|T| = i$}{
+      \ForEach{$t \subset T$}{
+        $S \leftarrow S \cup$ \Combine{\BestPlans{$\{t\}$},
+          \BestPlans{$T \setminus \{t\}$}}\;
+      }
+      \BestPlans{$T$}$\leftarrow \{p \in S | \nexists p' \in S : p'
+      \mbox{ dominates } p \}$\;
+    }
+  }
+  \Return \BestPlans{q}
+\end{algorithm}
+
+\todo{show generation of access plans}
+
+Algorithm~\ref{alg:plan} shows the method \textsc{PlanGen} that takes
+a query $q=\{t_1,\ldots,t_n\}$ as input and returns the Pareto-optimal
+plans to evaluate the query. During optimization, \textsf{bestPlans}
+stores the best plans for all subsets of $q$. 
+
+In the first step, the plans for single triple patterns are
+created. For each triple pattern $t$ in $q$, first the relevant
+sources are selected with help of the source index $I$. As we need to
+consider all possible combinations of sources, we create the power set
+$\mathcal{P}(I(t))$ of all sources. For each member $D$ of the power
+set, we create an access plan, consisting of a selection and scan
+operator $\sigma_t(scan(d))$ for each source $d \in D$ and a single
+union operator $\cup$ that has the selection operators as input. $S$
+then contains a set of access plans, one for each combination of
+relevant sources. From this set, we then select only the
+non-dominated, i.e., Pareto-optimal, access plans and store them in
+\textsf{bestPlans}$(\{t\})$.
+
+During the next iterations, joins between previously created plans are
+calculated until all query triple patterns are covered. For iteration
+$i$, we select all subsets $T \subset q$ with $|T|=i$. For each $t \in
+T$ the algorithm creates all possible joins between the best, i.e.,
+Pareto-optimal, plans for $t$ and $T\setminus \{t\}$. By selecting
+only a single triple pattern from $T$ we create only left-deep plans,
+but bushy plans would also be possible.  All these plans are stored in
+$S$ and are comparable since they cover the same triple patterns
+$T$. Finally, only the non-dominated plans from $S$ are selected and
+stored in \textsf{bestPlans}$(T)$. After the last iteration,
+\textsf{bestPlans}$(q)$ contains the Pareto-optimal left-deep plans
+for $q$.
+
+\todo{describe combine, duplicate source scan operators are combined
+  here; description of cost calculation for such a DAG is in earlier
+  section}
+
+
+% \subsection{Adaptivity}
+% The goal of adaptive query processing is to perform query optimization
+% in the case were no complete knowledge is available and adapt the
+% query processing at run-time by using newly available
+% knowledge. During processing of Linked Data queries, new information
+% about sources becomes available: 1) new sources may be discovered, 2)
+% state accumulated inside join operators can be used to perform better
+% estimates of join cardinalities for a particular source and 3) data
+% properties may be observer to deviate from previous estimates.
+
+% Here, we adopt techniques from previous research on adaptive query
+% processing.
+
+% \todo{what do we monitor? when is re-optimization done?}
+
+% Linked Data query processing requires ranking to be performed not only
+% at compile-time, but also continously at run-time in order to take
+% advantage of knowledge gained during query processing. Using
+% adaptive query processing techniques not only ranking can be
+% performed, but full query optimization at run-time. 
+
+% Weight distribution between cost and relevancy might change over time:
+% at first, relevancy is more important, while later on, after results
+% have been produced, cost becomes more important?
+
+
+% \subsection{Implementation}
+% \label{sec:impl}
+
+% \todo{describe concrete implementation, in particular methods used for
+% cost/result estimation and query strategies different from the optimal
+% ones}
+
+% \todo{dependencies between sources are not reflected by available
+%   statistics, but indirectly captured using run-time reestimation of
+%   result sizes using sampling etc.}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "paper"
+%%% End: 

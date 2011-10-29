@@ -70,9 +70,9 @@ In all of the plans that were created in this fashion, any source that
 contains data matching multiple triple patterns is always used as
 input for all triple patterns, which is not the case for our
 approach. In order to mimic this and thereby broaden the space of
-possible plans, we create an additional set of $m$ plans for each plan
-in $\mathcal{D}$ by randomly removing inputs from the unions at the
-root of access plans. In particular, to create a new plan from an
+possible plans, we create an additional set of $m$ plans for each
+previously created plan by randomly removing inputs from the unions at
+the root of access plans. In particular, to create a new plan from an
 existing plan, for each union that is root of an access plan, we
 remove a random subset of its input (selection) operators. If the
 source scan operator that is input for a removed selection operator is

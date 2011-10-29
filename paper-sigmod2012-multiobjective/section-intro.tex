@@ -123,6 +123,69 @@ of \emph{local optimization may lead to sub-optimal overall plans}.
 
 Further, all these approaches \emph{optimize towards one single
   criterion} (cost) only.
+\begin{figure*}[ht]
+  \centering
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=true,language=ttl,linewidth=0.98\linewidth,frame=single,title=http://example.org/beatles]
+ex:beatles 
+  foaf:name "The Beatles" ;
+  ex:album ex:help ;
+  ex:album ex:sgt_pepper  .
+\end{lstlisting}
+  \end{minipage}
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=true,language=ttl,linewidth=0.98\linewidth,frame=single,title=http://example.org/help]
+ex:help 
+  foaf:name "Help!" ;
+  ex:song ex:night ;
+  ex:song ex:girl .
+\end{lstlisting}
+  \end{minipage}
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=true,language=ttl,linewidth=0.98\linewidth,frame=single,title=http://example.org/sgt\_pepper]
+ex:sgt_pepper
+  foaf:name "Sgt. Pepper" ;
+  ex:song ex:lucy ;
+  ex:song ex:friends .
+\end{lstlisting}
+  \end{minipage}
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=false,language=ttl,frame=single,linewidth=0.98\linewidth,title=http://example.org/girl]
+ex:girl
+  foaf:name "Another Girl" .
+
+\end{lstlisting}
+  \label{fig:example}
+  \end{minipage}
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=true,language=ttl,frame=single,linewidth=0.98\linewidth,showlines=true,title=http://example.org/night]
+ex:night 
+  foaf:name "The Night..." .
+\end{lstlisting}
+  \end{minipage}
+  \begin{minipage}{0.32\linewidth}
+\begin{lstlisting}[breaklines=true,language=ttl,frame=single,showlines=true,title=http://example.org/lucy]
+ex:lucy
+  foaf:name "Lucy..." .
+\end{lstlisting}
+  \end{minipage}
+
+  \caption{Example Linked Data sources. The prefix \emph{ex:} expands
+    to ``http://example.org/''.}
+\end{figure*}
+
+\begin{figure}[htb]
+  \centering
+\begin{lstlisting}[language=ttl]
+SELECT ?aname ?sname WHERE {
+  ex:beatles ex:album  ?album .
+  ?album     foaf:name ?aname .
+  ?album     ex:song   ?song .
+  ?song      foaf:name ?sname .
+}
+\end{lstlisting}
+  \caption{Example query asking for all albums and songs of the Beatles.}
+\end{figure}
 
 \textbf{Contributions.} Aiming at the challenges presented above, we
 provide the following contributions:

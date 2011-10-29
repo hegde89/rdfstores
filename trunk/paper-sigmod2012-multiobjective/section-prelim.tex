@@ -80,20 +80,20 @@ follows:
 
 \begin{definition}[Result]
 Let $T^D$ be the Linked Data graph, $TERM$ be the set of RDF terms in $T^D$, $Q$ be a BGP query, and $V$ be the set of variables in $Q$. Then a mapping
-$\mu_{T_D}: V \to TERM$ from the variables in $Q$ to RDF terms
-in $T_D$ will be called a \emph{result} to $Q$, if the function
+$\mu_{T^D}: V \to TERM$ from the variables in $Q$ to RDF terms
+in $T^D$ will be called a \emph{result} to $Q$, if the function
 \[
-\mu'_{T_D}: V \cap TERM \to TERM \left\{
+\mu'_{T^D}: V \cap TERM \to TERM \left\{
 \begin{array}{ll}
-v \mapsto \mu_{T_D}(v) & \mbox{ if } v\in V \\
+v \mapsto \mu_{T^D}(v) & \mbox{ if } v\in V \\
 t \mapsto t & \mbox{ if } t \in TERM\\
 \end{array}\right.
 \]
-satisfies $\langle \mu'_{T_D}(s),\mu'_{T_D}(p), \mu'_{T_D}(o) \rangle \in T^D$ for any $\langle s,p,o \rangle \in Q$. 
+satisfies $\langle \mu'_{T^D}(s),\mu'_{T^D}(p), \mu'_{T^D}(o) \rangle \in T^D$ for any $\langle s,p,o \rangle \in Q$. 
 \end{definition}
 
-For clarity of notation, we will use $\mu_{T_D}$ not only to refer to result nodes in ${T_D}$ that match the query variables but also the triples (subgraphs) that match a triple pattern (a BGP). 
-% Since Linked Data triples in $T_D$ also form a graph, processing
+For clarity of notation, we will use $\mu_{T^D}$ not only to refer to result nodes in ${T^D}$ that match the query variables but also the triples (subgraphs) that match a triple pattern (a BGP). 
+% Since Linked Data triples in $T^D$ also form a graph, processing
 % queries in this context amounts to the task of graph pattern
 % matching. In particular, an \emph{answer} (also called a \emph{query
 % binding}) to a BGP query is given by $\mu$ which maps the query
@@ -156,7 +156,7 @@ The authors of that work~\cite{harth_data_2010} focus on the efficient encoding 
 \begin{definition}[Source Index]
   \label{def:index}
   Given the Linked Data sources $D$, the \emph{source index} can be conceived as a function $source : \mathcal{T} \to 2^\mathcal{URI}$, which maps a triple pattern $t$ to URIs representing sources that contain results for $t$, i.e. $source(t) =
-  \{d| d \in D \wedge, \mu_{T_d}(t) \in T_d\}$. 
+  \{d| d \in D \wedge, \mu_{T^D}(t) \in T^D\}$. 
 \end{definition}
 %
 %\begin{definition}

@@ -1,14 +1,5 @@
 \section{Dynamic Programming Based Optimization}
 \label{sec:opt}
-
-% In classic query optimization, the query optimizer only determines
-% how the data is processed, e.g., by choosing a particular join order,
-% but not which data is processed. Therefore, all query plans are equal
-% in terms of the results they produce and differ only in their
-% cost. However, in the Linked Data query processing setting, the query
-% optimizer also directly chooses the data to be processed, by
-% scheduling source scan operations. 
-
 In this section we propose how to adopt the dynamic
 programming (DP) solution~\cite{selinger_access_1979} to the 
 multi-objective Linked Data query optimization problem. 
@@ -23,24 +14,26 @@ problem, i.e., the optimal query plan can be constructed from
 optimal subplans. Non-optimal subplans can be
 discarded during the process to reduce the search space.
 
-Applied to Linked Data query processing, we propose to construct \emph{access plans} $P(t)$ for every triple patterns $t \in Q$. These atomic plans are then successively combined using join operators to create plans for larger subexpressions $T \subseteq Q$. For instance, to construct a query plan for $Q$, the optimizer may consider
-combining subplans for all possible pairs $T_1,T_2 \subset Q$ such that
-$T_1,T_2 \neq \emptyset, T_1 \cap T_2 = \emptyset$ and $T_1 \cup T_2 =
-Q$. When combining two plans $p_1,p_2$ to form a new plan $p$, we
+
+Applied to Linked Data query processing, we propose to construct \emph{access plans} $P(t)$ for every triple patterns $t \in Q$. These atomic plans are then successively combined 
+%using join operators 
+to create plans for larger subexpressions $T \subseteq Q$. 
+For instance, to construct a query plan for the expression $T=t_1\Join t_2$, the optimizer may consider all possible pairs $\{(p1,p_2), p_1 \in P(t_1),p_2 \in P(t_2)\}$ as possible combination of plans. When combining two plans $p_1,p_2$ to form a new plan $p$, we
 write $p = \mathtt{cmb}(p_1,p_2)$. At each stage, the optimizer 
-try to reduce candidates subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T_i) \subseteq
-P(T_i)$, the set of optimal plans for every subexpression $T_i$. In the case of Linked Data
-query processing, the optimality of a plan is determined according to
-multiple objectives. 
+try to reduce candidates subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T) \subseteq
+P(T)$, the set of optimal plans for every subexpression $T$. 
+%In the case of Linked Data
+%query processing, the optimality of a plan is determined according to
+%multiple objectives. 
 
 %, i.e., the set of optimal plans is the set of
 %Pareto-optimal plans, $P^+(T) = P^*(T)$.
 
-In the following, we firstly discuss how to estimate the optimality of atomic plans as well as plans for any expressions $T \subseteq Q$. Then we discuss the main problems that arise when applying the DP solution to this problem of multi-objective Linked Data query optimization.  Because query plans are no longer required to produce all results, we will
+In the following, we firstly discuss how to estimate the optimality of atomic plans as well as composite plans for any expressions $T \subseteq Q$. Then we discuss the main problems that arise when applying the DP solution to this problem of multi-objective Linked Data query optimization.  Because query plans are no longer required to produce all results, we will
 discuss a relaxation of the comparability constraint. Then, we study the effect of operator sharing on query optimization and introduce upper and lower bounds on plan
 costs. Finally, we prove that the multi-objective query optimization problem still has optimal
 substructure and that the dynamic programming solution constructs the
-optimal solution, i.e., the skyline of query plans.
+optimal solution, i.e. the skyline of query plans.
 
 \subsection{Estimating Cost and Cardinality of Plans}
 \label{sec:estimation}
@@ -53,9 +46,9 @@ For the presented structure of a Linked Data query plan and its operators, many 
 %For certain operators, input cardinality is not the same as 
 
 %In this case, not only the cost but also the output cardinality are associated with query operators. 
-We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations \dtr{cite}):
+We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations for more advanced techniques \dtr{cite}):
 
-\textbf{Source Scan.} The output cardinality of this operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
+\textbf{Operators.} The output cardinality of the source scan operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
 % If the source is not locally available, it will be
 %retrieved remotely. 
 %A Linked Data source may contain arbitrary
@@ -64,44 +57,25 @@ We will now discuss straightforward estimates that will be needed in this work (
 %the data will only be retrieved once and will then either be kept in a
 %local buffer for subsequent scans or, in the case of push-based
 %execution, immediately be pushed to all subsequent operators.
-This source size statistics can be directly obtained from the source index discussed before. As each triple is retrieved exactly once, $cost(scan_d)$ is proportional to the site of $d$, $|T^d|$. 
-%However, a source may contain inputs for several triple patterns such that a source scan operators may be shared by subsequent operators. 
-In case of operator sharing, separate cost
-models for the first access (when the data is retrieved over the
-network) and subsequent accesses (when the data has already been
-retrieved) are used. The cost for the first access is defined as
-$cost_1(scan_d) = h_s \times |T^d|$, where $h_s$ is the weight factor
-used to reflect the relative cost of processing a source tuple. The cost for each subsequent access is
-defined as $cost_2(scan_d) = (1 - b) \times cost_1(scan_d)$, where $b$
+This source size statistics can be directly obtained from the source index discussed before. 
+For union, cardinality is the sum of the cardinalities of its inputs: $card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. 
+The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$ and $card(t_i \Join t_j) =
+sel(t_i \Join t_j) \times card(\cup_{t_i}) \times card(\cup_{t_j})$, respectively. 
+%\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: 
+Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$, $cost(\cup) =
+h_\cup \times card(\cup)$, $cost(\Join) =
+h_\Join \times card(\Join)$. Thus, cost is assumed to be proportional to cardinality but different weights $h_s,h_\sigma,h_\cup,h_\Join$ are used for different operators. The weight factor $h_\Join$ for instance, depends on the
+join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. In case of operator sharing, separate cost
+models for the first source scan (when the data is retrieved over the
+network) and subsequent scans (when the data has already been
+retrieved) are used. We use $cost_2(scan_d) = (1 - b) \times cost_1(scan_d)$, where $cost_1$ denotes first time cost, $cost_2$ stands for cost for each subsequent scan, and $b$
 is a parameter to control the benefit achievable through operator sharing.
 
-\textbf{Selection.} The output cardinality
-of this operator depends on the selectivity $sel(t)$ of $t$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$. The cost of the 
-operator is determined by its weight factor and the input cardinality, i.e. $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$.
 
-\textbf{Union.} For this operator, output cardinality is the sum of the cardinalities of its inputs:
-$card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. The cost of the
-operator is proportional to the output cardinality: $cost(\cup) =
-h_\cup \times card(\cup)$, where $h_\cup$ is the weight factor for union. 
-%processing an input tuple.
+\textbf{Atomic Plan.} The cardinality of an access plan $p(t)$ is captured by its root node, i.e. $card(p(t)) = card(\cup_t)$. Its cost is calculated as the sum of the cost of its nodes. Source scan operators are marked after first time usage so that the right cost model can be determined for this calculation. 
 
-\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: $card(t_i \Join t_j) =
-sel(t_i \Join t_j) \times card(\mu(t_i)) \times card(\mu(t_j))$. 
-%, where $|t_i|$ and
-%$|t_j|$ are the number of triples matching $t_i$ and $_j$,
-%respectively. 
-Also here, cost is proportional to the output cardinality: $cost(\Join) =
-h_\Join \times card(\Join)$: The weight factor $h_\Join$ for instance, depends on the
-join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. 
+\textbf{Composite Plan.} Composite plans capture the joins between results obtained for several triple patterns (outputs of access plans). Thus, for an expression $T = t_i\Join t_j$, $card(p(T))  = card(t_i\Join t_j)$ and $cost(p(T))  = cost(t_i\Join t_j)$.
 
-\textbf{Atomic Plan.} 
-
-\todo{should we add a section on how the access plans for single
-  triple patterns are generated here?}
-  
-\dtr{Based on formalization of query plan we say how to compute cost and cardinality of $p$ based on cost of its query operators, also say it is important to distinguish first time usage and subsequent usage of source scan operators}
-
-\textbf{Composite Plan.} 
 
 \subsection{Comparability}
 \label{sec:comparability}
@@ -146,7 +120,7 @@ more aggressively.
 
 This relaxation means that comparable plans produce the same type of results (bindings for the same pattern), but may vary in the number as well as the actual results produced (different bindings). 
 
-Besides results, other aspects have been incorporated into the comparability relation. For instance, plans may be considered comparable when they produce same results (same type of results), and these results are ordered. 
+Besides results, other aspects have been incorporated into the comparability relation. For instance, plans may be considered comparable when they produce same results (same type of results), and these results are ordered \dtr{cite}. 
 %when considering orders: a non-optimal sub-plan might produce ordered output, which can
 %be efficiently used by sort-merge joins later in the query plan and
 %should therefore not be discarded at the first possibility.

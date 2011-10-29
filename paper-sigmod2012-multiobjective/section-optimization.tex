@@ -15,9 +15,9 @@ optimal subplans. Non-optimal subplans can be
 discarded during the process to reduce the search space.
 
 
-Applied to Linked Data query processing, we propose to construct \emph{access plans} $P(t)$ for every triple patterns $t \in Q$. These atomic plans are then successively combined 
+Applied to Linked Data query processing, we propose to construct access plans $P(t)$ for every triple patterns $t \in Q$. These \emph{atomic plans} are then successively combined 
 %using join operators 
-to create plans for larger subexpressions $T \subseteq Q$. 
+to create \emph{composite plans} for larger subexpressions $T \subseteq Q$. 
 For instance, to construct a query plan for the expression $T=t_1\Join t_2$, the optimizer may consider all possible pairs $\{(p1,p_2), p_1 \in P(t_1),p_2 \in P(t_2)\}$ as possible combination of plans. When combining two plans $p_1,p_2$ to form a new plan $p$, we
 write $p = \mathtt{cmb}(p_1,p_2)$. At each stage, the optimizer 
 try to reduce candidates subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T) \subseteq
@@ -60,7 +60,7 @@ We will now discuss straightforward estimates that will be needed in this work (
 This source size statistics can be directly obtained from the source index discussed before. 
 For union, cardinality is the sum of the cardinalities of its inputs: $card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. 
 The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$ and $card(t_i \Join t_j) =
-sel(t_i \Join t_j) \times card(\cup_{t_i}) \times card(\cup_{t_j})$, respectively. 
+sel(t_i \Join t_j) \times card(t_i) \times card(t_j)$, respectively. 
 %\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: 
 Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$, $cost(\cup) =
 h_\cup \times card(\cup)$, $cost(\Join) =
@@ -115,7 +115,7 @@ more aggressively.
 
 \begin{definition}
   \label{def:comparability}
-  Two query plans $p_i, p_j$ are \emph{comparable} if they produce results for the same expression, i.e. $p_i(T_i) \sim  p_j(T_j$ if $T_i = T_j$. 
+  Two query plans $p_i, p_j$ are \emph{comparable} if they produce results for the same expression, i.e. $p_i(T_i) \sim  p_j(T_j)$ if $T_i = T_j$. 
 \end{definition}
 
 This relaxation means that comparable plans produce the same type of results (bindings for the same pattern), but may vary in the number as well as the actual results produced (different bindings). 
@@ -154,16 +154,14 @@ Besides this aspect of interesting orders, the inclusion of other objectives suc
 % we consider each dimension separately and examine the effect of
 % operator sharing on query optimization using dynamic programming.
 
-A central requirement when applying dynamic programming for query
-optimization is that the scoring functions must be \emph{monotonic}
-with regard to plan combination. Without monotonic scoring functions,
-the problem no longer has optimal substructure \todo{find something we
-  can cite for this}. This still holds in the context of
-multi-objective query optimization, only that there now is more than
-one such function, namely cost and cardinality.
+A central requirement for the DP solution here is that the scoring function must be \emph{monotonic} with respect to plan combination. 
+%Without this, the problem no longer has optimal substructure \todo{find something we
+%  can cite for this}. 
+Only then, subplans can be pruned because it can be guaranteed that they cannot be part of optimal plans. Here, plans have to be compared with respect to different objectives. We will now discuss the monotonicity of the functions employed for cost and cardinality. 
+%Given monotonic functions for every 
+%This still holds in the context of
 
-The montonicity of the cardinality function is straightforward to
-establish, based on the monotonicity of multiplication.
+\textbf{Cardinality.} Atomic plans are combined to capture joins between results. The monotonicity of the cardinality function can be established because the cardinality function for join is monotonic:
 
 \begin{theorem}
   Given a query $Q$, let $T,T' \subset Q$ be two subexpressions of
@@ -177,30 +175,26 @@ establish, based on the monotonicity of multiplication.
   % cardinality (i.e., the output cardinality of the two combined plans)
   % and the selectivity of the join operator used to combined the two
   % plans.
-  With Sec.~\ref{sec:estimation} we can write the condition in
+  The plan combinations above capture the expression $T \Join T'$. According to the function $card(T \Join T')$, we can write the condition in
   the theorem as $card(p_1) \leq card(p_2) \Rightarrow card(p_1)
-  \times card(p') \times sel \leq card(p_2) \times card(p') \times
-  sel$ (where $sel$ is the selectivity of the join), which is true
-  because multiplication is monotonic.
+  \times card(p') \times sel(T \Join T') \leq card(p_2) \times card(p') \times
+  sel(T \Join T')$. This is true due to monotonicity of multiplication.
 \end{proof}
 
-However, during cost estimation, we take operator sharing into account
-by assigning different costs to the first read and subsequent reads of
-the output of source scan operators (see Sec.~\ref{sec:ops}). The
-problem here is that the cost of an operator may change when a plan is
-combined with another plan that shares the operator, which may cause
-the optimizer to miss the overall optimal plan.
-
-Suppose we have two plans $p,p'$ for some subexpression $T \subset Q$
+\textbf{Cost.} For cost estimation, operator sharing is taken into account. Because the costs of first and subsequent scans vary, the cost of the source scan operator changes when a plan is
+combined with another plan that shares that operator. 
+%Monotonicity is not clear which may cause
+%the optimizer to miss the overall optimal plan.
+Suppose we have two plans $p,p'$ for the subexpression $T \subset Q$
 and a plan $p_t$ for a triple pattern $t$, such that $Q = T \cup
-\{t\}$. Further, suppose that the cost of $p$ is higher than the cost
-of $p'$, i.e., $cost(p) > cost(p')$. The optimizer would consider $p'$
+\{t\}$, and $cost(p) > cost(p')$. The optimizer would consider $p'$
 to be the optimal plan for $T$ and discard $p$ to form
 $P^+(T)=\{p'\}$. Now, because of operator sharing it is possible that
 the cost of the combination of two plans is less than the sum of the
-cost of the two combined plans, i.e., it is possible that
-$cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if $p'$ and
-$p_t$ share operators. However, because the optimizer assumes that a
+cost of the two combined plans, i.e. it is possible that $cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if 
+$p$ and $p_t$ share the same source such that even for the same pattern $t$, the cost of $p_t$ when combined with $p$ is much lower than the cost of $p_t$ that is combined with $p'$. 
+
+. However, because the optimizer assumes that a
 sub-optimal plan for $T$ cannot be part of an optimal plan for $T \cup
 \{t\}$ it prunes $p$, the optimal plan is not found because $p'$ is
 not part of $P^+(T)$.

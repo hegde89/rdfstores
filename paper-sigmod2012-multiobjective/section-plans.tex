@@ -91,21 +91,24 @@ acyclic graph (DAG) \cite{Neumann_2005}. \dtr{discuss how to process such a grap
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.6\linewidth]{figs/plan.pdf}
-  \caption{Query plan for a query with three triple patterns and two
-    sources.}
+  \includegraphics[width=0.6\linewidth]{figs/plan-crop.pdf}
+  \caption{Query plan for the example query.}
 \label{fig:plan}
 \end{figure}
 
 \begin{example}
-  Fig.~\ref{fig:plan} shows an example query plan for a query
-  consisting of three triple patterns $t_1,t_2,t_3$ and two 
-  sources $s_1,s_2$. There are six source scan operators $s_1^{t_1},
-  s_2^{t_1}, s_1^{t_2}, \ldots$ for all combinations of triple
-  patterns and sources. The source scan operators also have a rank,
-  determining their processing order (here $s_2^{t_1}$ is processed
-  first). The output of the unions for each triple pattern are joined
-  using two symmetric hash joins. \dtr{Fig. not clear}
+  Fig.~\ref{fig:plan} shows an example query plan for the example
+  query from Fig.~\ref{fig:query}. There are three source scan
+  operator, one for each of the sources \emph{(1) ex:beatles},
+  \emph{(3) ex:sgt\_pepper}, and \emph{(6) ex:lucy}. Together with the
+  selection and union operators, the source scans form the access
+  plans for the three triple patterns $q_1, q_2$, and $q_3$.  The
+  outputs of the access plans are then joined in two join operators.
+
+  As sources \emph{ex:beatles} and \emph{ex:sgt\_pepper} contain
+  relevant data for more than one triple pattern ($q_1,q_3$ and
+  $q_2,q_3$, respectively), their source scans are shared, i.e., the
+  outputs of the scans feed into two access plans each.
 \end{example}
 
 

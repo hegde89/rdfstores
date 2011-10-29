@@ -18,14 +18,14 @@ Executing this operator outputs all triples in $d$, i.e. $scan(d) = T^d$.
 \end{definition}
 
 \begin{definition}[Selection]  A selection $\sigma_t(T^d)$ is performed on the input $T^d$ to output
-triples in $T^d$ that match $t$, i.e. $\sigma_t(T^d) = \mu_{T_d}(t)$. 
+triples in $T^d$ that match $t$, i.e. $\sigma_t(T^d) = \mu_{T^d}(t)$. 
 \end{definition}
 
 Outputs from two triple patterns $t_i$ and $t_j$ that share a common variable are combined through a standard join operator $\mu(t_i)\Join\mu(t_j)$. 
 
 \begin{definition}[Union] As usual, $\bigcup(I_1,\ldots,I_n)$
-outputs the union of its inputs $I_i$, $1\leq i < \leq n$, where every input $I_i$ stands for results for one triple pattern, $I_i = \mu_{T_d}(t)$, or several triple patterns, e.g. $I_i = \mu_{T_d}(t_i)\Join\mu_{T_d}(t_j)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
-$\bigcup(\sigma_t(T_{d_1}),\ldots,\sigma_t(T_{d_n}))$ combines results from several selection operators.   
+outputs the union of its inputs $I_i$, $1\leq i < \leq n$, where every input $I_i$ stands for results for one triple pattern, $I_i = \mu_{T^d}(t)$, or several triple patterns, e.g. $I_i = \mu_{T^d}(t_i)\Join\mu_{T^d}(t_j)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
+$\bigcup(\sigma_t(T^{d_1}),\ldots,\sigma_t(T^{d_n}))$ combines results from several selection operators.   
 \end{definition}
 
 For clarity of presentation, we assume query triple patterns form a connected graph such that join is the only operator used to combine triples from different patterns. 

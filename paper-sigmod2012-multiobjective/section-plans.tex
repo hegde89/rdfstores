@@ -47,7 +47,7 @@ operators:
     $scan_t(d_i) = T^{d_i}$ for each $d_i \in D$.
   \item The next level contains selection operators, one
     for processing the output of every scan operator, i.e. we have $\sigma_t(T^{d_i})$ for every $d_i \in D$.     
-   \item The root node is a union operator $\bigcup_t(\sigma_t(T_{d_1}),\ldots,\sigma_t(T_{d_{|D|}}))$ that combines the outputs of all selection operators for $t$.    
+   \item The root node is a union operator $\bigcup_t(\sigma_t(T^{d_1}),\ldots,\sigma_t(T^{d_{|D|}}))$ that combines the outputs of all selection operators for $t$.    
   \end{itemize}
 \end{definition}
 

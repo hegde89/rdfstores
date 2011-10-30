@@ -479,9 +479,11 @@ search space.
 
 \subsection{Optimizer Algorithm}
 
-With the relaxed comparability constraint and the Pareto-optimality
-in place, we can now present the query optimization algorithm for
-constructing Pareto-optimal Linked Data query plans.
+In this section we present the algorithm that performs multi-objective
+query optimization using a dynamic programming approach. It is a
+straightforward extension of the classic DP algorithm, the main
+difference is that at each step Pareto-optimality is used to prune
+plans according to the optimization objectives.
 
 % \subsubsection{Pareto-optimal Access Plans for Triple Patterns}
 
@@ -509,70 +511,62 @@ constructing Pareto-optimal Linked Data query plans.
   \label{alg:plan}
   \DontPrintSemicolon
 
-  \SetKwData{BestPlans}{bestPlans}\SetKwData{Null}{null}
-  \SetKwFunction{Combine}{combine}
+  \caption{\textsc{PlanGen}$(Q,I)$}
+  \KwIn{Query $Q = \{q_1,\ldots,q_n\}$, source index $I$}
+  \KwOut{Pareto-optimal query plans $P^+(Q)$}
 
-  \caption{\textsc{PlanGen}$(q)$}
-  \KwIn{Query $q = \{t_1,\ldots,t_n\}$, Source index $I$}
-  \KwOut{Pareto-optimal query plans \BestPlans{q}}
-
-  \ForEach{$t \in q$}{
-    $S \leftarrow \{ \cup(\{ \sigma_t(scan(d)) | d \in D \}) | D \in \mathcal{P}(I(t))\}$
-%    $S \leftarrow \{\cup(C) | C \in \mathcal{P}(\{\sigma_t(scan(d)) | d \in I(t)\})\}$ \;
-    \BestPlans{$\{t\}$}$\leftarrow \{p \in S| \nexists p' \in S : p'
-    \mbox{ dominates } p \}$\;
+  \ForEach{$q \in Q$}{
+    $S \leftarrow \{ \cup(\{ \sigma_t(scan(d)) | d \in D \}) | D \in
+    \mathcal{P}(I(q))\}$ \;
+    $P^+(\{q\}) \leftarrow \{p \in S| \nexists p' \in S : p' >_b p \}$
+    \; 
   }
 
-  \For{$i \leftarrow 2$ \KwTo $|q|$}{
-    \ForEach{$T \subseteq q$ such that $|T| = i$}{
-      \ForEach{$t \subset T$}{
-        $S \leftarrow S \cup$ \Combine{\BestPlans{$\{t\}$},
-          \BestPlans{$T \setminus \{t\}$}}\;
+  \For{$i \leftarrow 2$ \KwTo $|Q|$}{
+    \ForEach{$T \subseteq Q$ such that $|T| = i$}{
+      \ForEach{$q \in T$}{
+        $S \leftarrow S \cup \{\mathtt{cmb}(p_1,p_2) | p_1 \in
+        P^+(\{q\}), p_2 \in P^+(T \setminus \{q\})\}$ \;
       }
-      \BestPlans{$T$}$\leftarrow \{p \in S | \nexists p' \in S : p'
-      \mbox{ dominates } p \}$\;
+      $P^+(T) \leftarrow \{p \in S | \nexists p' \in S : p'
+      >_b p \}$\;
     }
   }
-  \Return \BestPlans{q}
+  \Return $P^+(Q)$
 \end{algorithm}
 
-\todo{show generation of access plans}
-
 Algorithm~\ref{alg:plan} shows the method \textsc{PlanGen} that takes
-a query $q=\{t_1,\ldots,t_n\}$ as input and returns the Pareto-optimal
-plans to evaluate the query. During optimization, \textsf{bestPlans}
-stores the best plans for all subsets of $q$. 
+a query $Q=\{q_1,\ldots,q_n\}$ and a source index $I$ as input and
+returns the Pareto-optimal plans for $Q$. During optimization, $P^+$
+stores the optimal plans for all subsets of $Q$.
 
-In the first step, the plans for single triple patterns are
-created. For each triple pattern $t$ in $q$, first the relevant
+In the first step, access plans for single triple patterns are created
+(lines 1-3). For each triple pattern $q$ in $Q$, first the relevant
 sources are selected with help of the source index $I$. As we need to
 consider all possible combinations of sources, we create the power set
-$\mathcal{P}(I(t))$ of all sources. For each member $D$ of the power
-set, we create an access plan, consisting of a selection and scan
-operator $\sigma_t(scan(d))$ for each source $d \in D$ and a single
-union operator $\cup$ that has the selection operators as input. $S$
-then contains a set of access plans, one for each combination of
-relevant sources. From this set, we then select only the
-non-dominated, i.e., Pareto-optimal, access plans and store them in
-\textsf{bestPlans}$(\{t\})$.
+$\mathcal{P}(I(q))$ of all sources (line 2). For each member $D$ of
+the power set, we create an access plan, consisting of a selection and
+scan operator $\sigma_t(scan(d))$ for each source $d \in D$ and a
+single union operator $\cup$ that has the selection operators as
+input. $S$ then contains a set of access plans, one for each
+combination of relevant sources. From this set, we then select only
+the non-dominated, i.e., Pareto-optimal, access plans and store them
+in $P^+(\{q\})$ (line 3).
 
-During the next iterations, joins between previously created plans are
-calculated until all query triple patterns are covered. For iteration
-$i$, we select all subsets $T \subset q$ with $|T|=i$. For each $t \in
-T$ the algorithm creates all possible joins between the best, i.e.,
-Pareto-optimal, plans for $t$ and $T\setminus \{t\}$. By selecting
-only a single triple pattern from $T$ we create only left-deep plans,
-but bushy plans would also be possible.  All these plans are stored in
-$S$ and are comparable since they cover the same triple patterns
-$T$. Finally, only the non-dominated plans from $S$ are selected and
-stored in \textsf{bestPlans}$(T)$. After the last iteration,
-\textsf{bestPlans}$(q)$ contains the Pareto-optimal left-deep plans
-for $q$.
+During the next iterations (line 4-8), joins between previously
+created plans are calculated until all query triple patterns are
+covered. For iteration $i$, we select all subsets $T \subset q$ with
+$|T|=i$. For each $q \in T$ the algorithm creates all possible joins
+between the best, i.e., Pareto-optimal, plans for $q$ and $T\setminus
+\{q\}$ (line 7). By selecting only a single triple pattern from $T$ we
+create only left-deep plans, but bushy plans would also be possible.
+All these plans are stored in $S$ and are comparable since they cover
+the same triple patterns $T$. Finally, only the non-dominated plans
+from $S$ are selected and stored in $P^+(T)$ (line 8). After the last
+iteration, $P^+(Q)$ contains the Pareto-optimal left-deep plans for
+$Q$ (line 9).
 
-\todo{describe combine, duplicate source scan operators are combined
-  here; description of cost calculation for such a DAG is in earlier
-  section}
-
+\textbf{Complexity.} 
 
 % \subsection{Adaptivity}
 % The goal of adaptive query processing is to perform query optimization

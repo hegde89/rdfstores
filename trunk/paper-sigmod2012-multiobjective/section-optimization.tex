@@ -37,7 +37,7 @@ optimal solution, i.e. the skyline of query plans.
 
 \subsection{Estimating Cost and Cardinality of Plans}
 \label{sec:estimation}
-For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \dtr{cite}. An essential factor for cost estimation is cardinality. While not only input cardinality but also output cardinality may be used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. 
+For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}. An essential factor for cost estimation is cardinality. While not only input cardinality but also output cardinality may be used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. 
 %Instead of cardinality, the work discussed here is also applicable to other 
 %In fact, not 
 %%Further, other optimization objectives such as 
@@ -46,7 +46,7 @@ For the presented structure of a Linked Data query plan and its operators, many 
 %For certain operators, input cardinality is not the same as 
 
 %In this case, not only the cost but also the output cardinality are associated with query operators. 
-We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations for more advanced techniques \dtr{cite}):
+We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations for more advanced techniques \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}):
 
 \textbf{Operators.} The output cardinality of the source scan operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
 % If the source is not locally available, it will be

@@ -38,8 +38,13 @@ that HTTP URIs shall be used and that dereferencing such an URI returns a
 description of the resource identified by the URI. While this is also applicable to other types of data, 
 the large amount of descriptions published this way on the Web represent RDF graphs, each is a set of triples where the dereferenced URI appears as subject or object.
 
-Therefore, a HTTP URI reference can be seen as a data source, whose content can be obtained by
-dereferencing the HTTP URI. Triples in these \emph{Linked Data sources} contain other HTTP URI references. Following these URIs lead to other sources. When it is clear from the context, we will make no distinction between the resource identified by an URI and the Linked Data source that can be retrieved by dereferencing that URI. \todo{do we really want this?}
+Therefore, a HTTP URI reference can be seen as a data source, whose
+content can be obtained by dereferencing the HTTP URI. Triples in
+these \emph{Linked Data sources} contain other HTTP URI
+references. Following these URIs lead to other sources. When it is
+clear from the context, we will make no distinction between the
+resource identified by an URI and the Linked Data source that can be
+retrieved by dereferencing that URI.
 
 \begin{definition}[Linked Data Source]
   A \emph{Linked Data source}, identified by an HTTP URI $d$, is a set of RDF triples $\langle s^d,p^d,o^d \rangle$ . Dereferencing an
@@ -92,7 +97,9 @@ t \mapsto t & \mbox{ if } t \in TERM\\
 satisfies $\langle \mu'_{T^D}(s),\mu'_{T^D}(p), \mu'_{T^D}(o) \rangle \in T^D$ for any $\langle s,p,o \rangle \in Q$. 
 \end{definition}
 
-For clarity of notation, we will use $\mu_{T^D}$ not only to refer to result nodes in ${T^D}$ that match the query variables but also the triples (subgraphs) that match a triple pattern (a BGP). 
+For clarity of notation, we will use $\mu_{T^D}$ not only to refer to
+result nodes in ${T^D}$ that match the query variables but also the
+triples (subgraphs) that match a triple pattern (a BGP).
 % Since Linked Data triples in $T^D$ also form a graph, processing
 % queries in this context amounts to the task of graph pattern
 % matching. In particular, an \emph{answer} (also called a \emph{query

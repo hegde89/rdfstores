@@ -181,19 +181,23 @@ Only then, subplans can be pruned because it can be guaranteed that they cannot 
   sel(T \Join T')$. This is true due to monotonicity of multiplication.
 \end{proof}
 
-\textbf{Cost.} For cost estimation, operator sharing is taken into account. Because the costs of first and subsequent scans vary, the cost of the source scan operator changes when a plan is
-combined with another plan that shares that operator. 
+\textbf{Cost.} For cost estimation, operator sharing is taken into
+account. Because the costs of first and subsequent scans vary, the
+cost of the source scan operator changes when a plan is combined with
+another plan that shares that operator.
 %Monotonicity is not clear which may cause
 %the optimizer to miss the overall optimal plan.
 Suppose we have two plans $p,p'$ for the subexpression $T \subset Q$
 and a plan $p_t$ for a triple pattern $t$ such that $Q = T \cup
-\{t\}$, and $cost(p) > cost(p')$. The optimizer would consider $p'$
-to be the optimal plan for $T$ and discard $p$ to form
+\{t\}$, and $cost(p) > cost(p')$. The optimizer would consider $p'$ to
+be the optimal plan for $T$ and discard $p$ to form
 $P^+(T)=\{p'\}$. Now, because of operator sharing it is possible that
 the cost of the combination of two plans is less than the sum of the
-cost of the two combined plans, i.e. it is possible that $cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if 
-$p$ and $p_t$ share the same source such that the cost of $p_t$ when combined with $p$ is much lower than the cost of $p_t$ that is combined with $p'$. In this case, $p'$ should not be
-part of $P^+(T)$.
+cost of the two combined plans, i.e. it is possible that
+$cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if $p$ and
+$p_t$ share the same source such that the cost of $p_t$ when combined
+with $p$ is much lower than the cost of $p_t$ that is combined with
+$p'$. In this case, $p'$ should not be part of $P^+(T)$.
 
 % To avoid this problem, We need to make sure that the cost and
 % cardinality functions are \emph{monotonic} with regard to plan
@@ -205,36 +209,53 @@ part of $P^+(T)$.
 % \todo{should we add a proof that the monotonicity of the card function
 %   is not violated when employing operator sharing?}
 
-\textbf{Cost Bounds for Partial Plans.} In order to this effect of operator sharing into account when calculating the cost of a partial plan $p$, we
-define upper and lower bounds for $p$ based on larger plans that use $p$ as subplans: 
+\textbf{Cost Bounds for Partial Plans.} In order to this effect of
+operator sharing into account when calculating the cost of a partial
+plan $p$, we define upper and lower bounds for $p$ based on larger
+plans that use $p$ as subplans:
 
 \begin{definition}[Lower and Upper Bound Cost]
   \label{def:bounds}
-  Given a query $Q$, the subexpressions $T \subset Q$, $T' = Q \setminus T$, a
-  plan $p \in P(T)$, and let $P^p(Q) \subseteq P(Q)$ be the set of all plans
-  for $Q$ that are constructed as combinations of $p$ and plans in
-  $P(T')$: $P^p(Q) = \{\mathtt{cmb}(p,p') | p' \in P(T')\}$.  Then, we have \emph{lower bound cost} for $p$ as $cost_L^Q(p)= MAX\{cost(p)| p \in P^p(Q)\}$ and \emph{upper bound cost} for $p$ as  
-  $cost_L^Q(p)= MIN\{cost(p)| p \in P^p(Q)\}$.
+  Given a query $Q$, the subexpressions $T \subset Q$, $T' = Q
+  \setminus T$, a plan $p \in P(T)$, and let $P^p(Q) \subseteq P(Q)$
+  be the set of all plans for $Q$ that are constructed as combinations
+  of $p$ and plans in $P(T')$: $P^p(Q) = \{\mathtt{cmb}(p,p') | p' \in
+  P(T')\}$.  Then, we have \emph{lower bound cost} for $p$ as
+  $cost_L^Q(p)= MAX\{cost(p)| p \in P^p(Q)\}$ and \emph{upper bound
+    cost} for $p$ as $cost_L^Q(p)= MIN\{cost(p)| p \in P^p(Q)\}$.
 \end{definition}
 
 Intuitively, a plan $p_i$ for a subexpression $T$ of $Q$ is ``worse''
-in terms of cost than one other plan $p_j$ for $T$, if all plans for
-$Q$ that is based on $p_i$ have higher cost than all plans for $Q$ that
-is based on $p_j$, i.e., if $cost_L^Q(p_i) > cost_U^Q(p_j)$. Based on these bounds, we can establish the monotonicity of plan cost with respect to plan combination as follows:
+in terms of cost than another plan $p_j$ for $T$, if all plans for $Q$
+that are based on $p_i$ have higher cost than all plans for $Q$ that
+are based on $p_j$, i.e., if $cost_L^Q(p_i) > cost_U^Q(p_j)$. Based on
+these bounds, we can establish the monotonicity of plan cost with
+respect to plan combination as follows:
   
 \begin{lemma}
-  Let $T,T' \subset Q$ be two subexpressions of
-  $Q$ such that $T \cap T' = \emptyset$ and $p_1,p_2 \in P(T)$ and
-  $p' \in P(T')$ be plans for $T$ and $T'$, respectively. We have 
+  Let $T,T' \subset Q$ be two subexpressions of $Q$ such that $T \cap
+  T' = \emptyset$ and $p_1,p_2 \in P(T)$ and $p' \in P(T')$ be plans
+  for $T$ and $T'$, respectively. We have
     \[ cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
     cost^Q_U(\mathtt{cmb}(p_1,p')) \leq
     cost^Q_L(\mathtt{cmb}(p_2,p')) \]
 \end{lemma}
 \begin{proof}
-  
+  This follows directly from the definition of $cost^Q_L$ and
+  $cost^Q_U$ in Def.~\ref{def:bounds}. Any plan for $Q$ that is
+  constructed as a combination of $p'_1 = \mathtt{cmb}(p_1,p')$, i.e.,
+  any plan in $P^{p'_1}(Q)$, is also a combination of $p_1$ (because
+  $p'_1$ is a combination of $p_1$). From this follows that
+  $P^{p'_1}(Q) \subseteq P^{p_1}(Q)$ and $cost^Q_U(p'_1) \leq
+  cost^Q_U(p_1)$. For $p_2$ and $p'_2 = \mathtt{cmb}(p_2,p')$ we get
+  in the same way that $cost^Q_L(p'_2) \geq cost^Q_L(p_2)$. With this
+  we see that $cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
+  cost^Q_U(p'_1) \leq cost^Q_L(p'_2)$, meaning the lemma is true.
 \end{proof}
 
-Based on these results for cardinality and cost monotonicity, we now refine the dominance relation to make it applicable to subplans, i.e. plans for strict subexpressions of $Q$: 
+Based on these results for cardinality and cost monotonicity, we now
+refine the dominance relation to make it applicable to subplans,
+i.e. plans for strict subexpressions of $Q$:
 
 \begin{theorem}
   \label{def:dominates_bound}
@@ -580,6 +601,8 @@ for $q$.
 % \todo{dependencies between sources are not reflected by available
 %   statistics, but indirectly captured using run-time reestimation of
 %   result sizes using sampling etc.}
+
+
 
 %%% Local Variables: 
 %%% mode: latex

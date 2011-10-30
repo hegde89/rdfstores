@@ -118,91 +118,99 @@ sources. The size of the virtual sources follows a Zipf distribution.
 
 \begin{table}[htb]
   \centering
-  \begin{tabular}{l|c|c|r|r}
-    Query & \#Pat. & Shared [kT] & \#Res. & Join-Sel. SD \\ 
+  \begin{tabular}{l|c|c|r}
+    Query & \#Pat. & Shared [kT] & \#Res. \\%& Join-Sel. SD \\ 
     \hline
 
-    Q2  & 3 & 1,175 & 24  & 2.36\textsc{e}-5 \\
-    Q5  & 3 & 633   & 13  & 5.73\textsc{e}-5 \\
-    Q15 & 3 & 1,245 & 11  & 3.95\textsc{e}-5 \\
-    Q19 & 3 & 1,329 & 918 & 4.36\textsc{e}-5 \\
+    Q2  & 3 & 1,393 & 24  \\%& 3.26\textsc{e}-5 \\
+    Q5  & 3 & 1,425 & 13  \\%& 4.95\textsc{e}-5 \\
+    Q15 & 3 & 1,401 & 11  \\%& 2.59\textsc{e}-5 \\
+    Q19 & 3 & 1,434 & 836 \\%& 4.36\textsc{e}-5 \\
     \hline
-    Q1  & 4 & 1,296 & 2   & 1.30\textsc{e}-3 \\
-    Q3  & 4 & 1,762 & 3   & 1.89\textsc{e}-5 \\
-    Q4  & 4 & 50    & 60  & 9.58\textsc{e}-3 \\
-    Q6  & 4 & 594   & 6   & 2.62\textsc{e}-3 \\
-    Q7  & 4 & 702   & 106 & 2.75\textsc{e}-3 \\
+    Q1  & 4 & 1,426 & 2   \\%& 1.30\textsc{e}-3 \\
+    Q3  & 4 & 1,892 & 3   \\%& 1.89\textsc{e}-5 \\
+    Q4  & 4 & 1,415 & 60  \\%& 9.58\textsc{e}-3 \\
+    Q6  & 4 & 2,081 & 6   \\%& 2.62\textsc{e}-3 \\
+    Q7  & 4 & 1,369 & 106 \\%& 2.75\textsc{e}-3 \\
     \hline
-    Q9  & 5 & 703   & 17  & 5.26\textsc{e}-3 \\
-    Q14 & 5 & 1729  & 20  & 3.71\textsc{e}-3 \\
-    Q16 & 5 & 951   & 1   & 2.10\textsc{e}-3 \\
-    Q17 & 5 & 599   & 1   & 8.92\textsc{e}-3 \\
-    Q18 & 5 & 970   & 2   & 1.21\textsc{e}-4 \\
+    Q9  & 5 & 1,405 & 17  \\%& 5.26\textsc{e}-3 \\
+    Q14 & 5 & 1,830 & 20  \\%& 3.71\textsc{e}-3 \\
+    Q16 & 5 & 2,396 & 1   \\%& 2.10\textsc{e}-3 \\
+    Q17 & 5 & 1,409 & 1   \\%& 8.92\textsc{e}-3 \\
+    Q18 & 5 & 1,007 & 2   \\%& 1.21\textsc{e}-4 \\
   \end{tabular}
-  \caption{Query statistics: query name, number of patterns, number of unique sources, average number of sources per pattern (standard deviation), number of triples (in thousands) contained in shared sources, number results, standard deviation of selectivies of all joins in query.}
+  \caption{Query statistics: query name, number of patterns, number of
+    triples (in thousands) contained in shared sources, number of results.}
   \label{tab:queries}
 \end{table}
 
-\begin{table*}[htb]
-  \centering
-  \begin{tabular}{l|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r}
- & RD & RK & DP & DPU & RD & RK & DP & DPU & RD & RK & DP & DPU & RD & RK & DP & DPU \\
-    \hline               
+% \begin{table*}[htb]
+%   \centering
+%   \begin{tabular}{l|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r|r}
+%  & RD & RK & DP & DPU & RD & RK & DP & DPU & RD & RK & DP & DPU & RD & RK & DP & DPU \\
+%     \hline               
                                                                                                                
- & \multicolumn{4}{c}{Q2} & \multicolumn{4}{|c|}{Q5} & \multicolumn{4}{c}{Q15} & \multicolumn{4}{|c}{Q19}  \\
+%  & \multicolumn{4}{c}{Q2} & \multicolumn{4}{|c|}{Q5} & \multicolumn{4}{c}{Q15} & \multicolumn{4}{|c}{Q19}  \\
 
-    \hline                                                                                                   
+%     \hline                                                                                                   
 
-    \#Plans   & 1702 & 1853 & 673   & 619  & 1382 & 1871 & 446   & 446   & 2376 & 3263 & 634   & 634   & 3817 & 3240 & 761   & 761   \\
-    \#Skyline & 153  & 155  & 673   & 575  & 106  & 176  & 446   & 446   & 13   & 40   & 634   & 634   & 41   & 46   & 761   & 761   \\ 
-    \%Skyline & 22.7 & 23.0 & 100.0 & 85.4 & 23.8 & 39.5 & 100.0 & 100.0 & 2.1  & 6.3  & 100.0 & 100.0 & 5.4  & 6.0  & 100.0 & 100.0 \\
-    Time [s]  & 1.06 & 0.92 & 1.14  & 0.62 & 0.78 & 1.03 & 0.75  & 0.53  & 1.05 & 1.14 & 1.21  & 0.64  & 1.07 & 1.05 & 1.58  & 0.77  \\
+%     \#Plans   & 1702 & 1853 & 673   & 619  & 1382 & 1871 & 446   & 446   & 2376 & 3263 & 634   & 634   & 3817 & 3240 & 761   & 761   \\
+%     \#Skyline & 153  & 155  & 673   & 575  & 106  & 176  & 446   & 446   & 13   & 40   & 634   & 634   & 41   & 46   & 761   & 761   \\ 
+%     \%Skyline & 22.7 & 23.0 & 100.0 & 85.4 & 23.8 & 39.5 & 100.0 & 100.0 & 2.1  & 6.3  & 100.0 & 100.0 & 5.4  & 6.0  & 100.0 & 100.0 \\
+%     Time [s]  & 1.06 & 0.92 & 1.14  & 0.62 & 0.78 & 1.03 & 0.75  & 0.53  & 1.05 & 1.14 & 1.21  & 0.64  & 1.07 & 1.05 & 1.58  & 0.77  \\
   
-    \hline
-    \hline
+%     \hline
+%     \hline
 
- & \multicolumn{4}{c}{Q1} & \multicolumn{4}{|c|}{Q3} & \multicolumn{4}{c|}{Q4} & \multicolumn{4}{c}{Q6} \\
+%  & \multicolumn{4}{c}{Q1} & \multicolumn{4}{|c|}{Q3} & \multicolumn{4}{c|}{Q4} & \multicolumn{4}{c}{Q6} \\
 
-    \hline
+%     \hline
 
-    \#Plans   & 3945 & 5362 & 866   & 832  & 4571 & 5153 & 901   & 847  & 1471 & 1306 & 453   & 465  & 954  & 1340 & 354   & 318  \\
-    \#Skyline & 0    & 0    & 866   & 689  & 0    & 0    & 901   & 699  & 1    & 0    & 453   & 434  & 0    & 1    & 354   & 283  \\ 
-    \%Skyline & 0.0  & 0.0  & 100.0 & 79.6 & 0.0  & 0.0  & 100.0 & 77.6 & 0.2  & 0.0  & 100.0 & 95.8 & 0.0  & 0.2  & 100.0 & 79.9 \\
-    Time [s]  & 1.53 & 1.67 & 7.64  & 1.60 & 1.53 & 1.62 & 10.05 & 1.80 & 1.61 & 1.29 & 1.37  & 0.75 & 1.14 & 1.33 & 1.35  & 0.70 \\
+%     \#Plans   & 3945 & 5362 & 866   & 832  & 4571 & 5153 & 901   & 847  & 1471 & 1306 & 453   & 465  & 954  & 1340 & 354   & 318  \\
+%     \#Skyline & 0    & 0    & 866   & 689  & 0    & 0    & 901   & 699  & 1    & 0    & 453   & 434  & 0    & 1    & 354   & 283  \\ 
+%     \%Skyline & 0.0  & 0.0  & 100.0 & 79.6 & 0.0  & 0.0  & 100.0 & 77.6 & 0.2  & 0.0  & 100.0 & 95.8 & 0.0  & 0.2  & 100.0 & 79.9 \\
+%     Time [s]  & 1.53 & 1.67 & 7.64  & 1.60 & 1.53 & 1.62 & 10.05 & 1.80 & 1.61 & 1.29 & 1.37  & 0.75 & 1.14 & 1.33 & 1.35  & 0.70 \\
 
-    \hline
-    \hline
+%     \hline
+%     \hline
 
- & \multicolumn{4}{c}{Q7} & \multicolumn{4}{|c|}{Q9} & \multicolumn{4}{c|}{Q14} & \multicolumn{4}{c}{Q16} \\
+%  & \multicolumn{4}{c}{Q7} & \multicolumn{4}{|c|}{Q9} & \multicolumn{4}{c|}{Q14} & \multicolumn{4}{c}{Q16} \\
 
-    \hline
+%     \hline
 
-    \#Plans   & 2566 & 3913 & 1035  & 813  & 2622 & 3450 & 689   & 655  & 429  & 436  & 284   & 281  & 1485 & 2265 & 685   & 663  \\
-    \#Skyline & 1    & 0    & 1035  & 781  & 0    & 0    & 689   & 637  & 0    & 0    & 284   & 281  & 0    & 0    & 685   & 583  \\ 
-    \%Skyline & 0.1  & 0.0  & 100.0 & 75.5 & 0.0  & 0.0  & 100.0 & 92.5 & 0.0  & 0.0  & 100.0 & 98.9 & 0.0  & 0.0  & 100.0 & 85.1 \\
-    Time [s]  & 1.91 & 1.50 & 20.88 & 2.28 & 1.80 & 1.64 & 23.64 & 2.56 & 1.33 & 1.21 & 0.91  & 0.41 & 1.82 & 1.99 & 14.31 & 2.38 \\
+%     \#Plans   & 2566 & 3913 & 1035  & 813  & 2622 & 3450 & 689   & 655  & 429  & 436  & 284   & 281  & 1485 & 2265 & 685   & 663  \\
+%     \#Skyline & 1    & 0    & 1035  & 781  & 0    & 0    & 689   & 637  & 0    & 0    & 284   & 281  & 0    & 0    & 685   & 583  \\ 
+%     \%Skyline & 0.1  & 0.0  & 100.0 & 75.5 & 0.0  & 0.0  & 100.0 & 92.5 & 0.0  & 0.0  & 100.0 & 98.9 & 0.0  & 0.0  & 100.0 & 85.1 \\
+%     Time [s]  & 1.91 & 1.50 & 20.88 & 2.28 & 1.80 & 1.64 & 23.64 & 2.56 & 1.33 & 1.21 & 0.91  & 0.41 & 1.82 & 1.99 & 14.31 & 2.38 \\
 
-    \hline
-    \hline
+%     \hline
+%     \hline
 
- & \multicolumn{4}{c}{Q17} & \multicolumn{4}{|c|}{Q18} & \multicolumn{8}{c}{} \\
+%  & \multicolumn{4}{c}{Q17} & \multicolumn{4}{|c|}{Q18} & \multicolumn{8}{c}{} \\
 
-    \hline
+%     \hline
 
-    \#Plans   & 837  & 1022 & 398   & 286   & 1021 & 1192 & 633   & 633   & \multicolumn{8}{c}{} \\
-    \#Skyline & 1    & 0    & 398   & 286   & 0    & 0    & 633   & 633   & \multicolumn{8}{c}{} \\ 
-    \%Skyline & 0.2  & 0.0  & 100.0 & 100.0 & 0.0  & 0.0  & 100.0 & 100.0 & \multicolumn{8}{c}{} \\
-    Time [ms] & 1.67 & 1.70 & 2.68  & 0.66  & 1.53 & 1.58 & 4.15  & 1.35  & \multicolumn{8}{c}{} \\
+%     \#Plans   & 837  & 1022 & 398   & 286   & 1021 & 1192 & 633   & 633   & \multicolumn{8}{c}{} \\
+%     \#Skyline & 1    & 0    & 398   & 286   & 0    & 0    & 633   & 633   & \multicolumn{8}{c}{} \\ 
+%     \%Skyline & 0.2  & 0.0  & 100.0 & 100.0 & 0.0  & 0.0  & 100.0 & 100.0 & \multicolumn{8}{c}{} \\
+%     Time [ms] & 1.67 & 1.70 & 2.68  & 0.66  & 1.53 & 1.58 & 4.15  & 1.35  & \multicolumn{8}{c}{} \\
 
-  \end{tabular}
-  \caption{Results for all queries, with $m=2000$ and $b=0.8$ for RD and RK.}
-  \label{tab:res}
-\end{table*}
+%   \end{tabular}
+%   \caption{Results for all queries, with $m=2000$ and $b=0.8$ for RD and RK.}
+%   \label{tab:res}
+% \end{table*}
+
+\subsubsection{Setting}
+All systems were implemented in Java. The query planner is
+single-threaded, whereas the execution engine uses multiple
+threads. All experiments were executed on a 2009 Macbook Pro with a
+2.4 GHz Intel Core 2 Duo processor, 4GB RAM (of which 1GB was assigned
+to the Java VM) and a Crucial m4 128GB solid-state disk.
+
 
 \subsubsection{Results}
 
-Table~\ref{tab:res} shows an overview of all queries for all systems
-with $b=0.8$ and $m=2000$. \todo{add averages here}
+
 
 \textbf{Effect of Query Size.} Figs.~\ref{fig:pareto_tp}a+b show the
 planning time and found skyline fraction for different query sizes
@@ -222,7 +230,8 @@ calculate for different query sizes.
   \centering
   \includegraphics[width=0.49\linewidth]{figs/pareto_plan_tp.pdf}
   \includegraphics[width=0.49\linewidth]{figs/plans_skyline_by_tp.pdf}
-  \caption{Effect of query size on a) planning time and b) skyline fractions.}
+  \caption{Effect of query size on a) planning time and b) skyline
+    fractions. Parameters: $b=0.8, m=2000$.}
   \label{fig:pareto_tp}
 \end{figure}
 
@@ -252,7 +261,7 @@ into account during planning.
   \includegraphics[width=0.49\linewidth]{figs/pareto_plan_b.pdf}
   \includegraphics[width=0.49\linewidth]{figs/plans_skyline_by_b.pdf}
   \caption{Effect of sharing benefit on a) planning time and b)
-    skyline fractions.}
+    skyline fractions. Parameters: $m=2000$.}
   \label{fig:pareto_sharing}
 \end{figure}
 
@@ -273,13 +282,29 @@ remain.
   \includegraphics[width=0.49\linewidth]{figs/plans_q2_all.pdf}
   \includegraphics[width=0.49\linewidth]{figs/plans_q2_sky.pdf}
   \caption{Plans for query Q2 on all systems: a) all plans and b)
-    skyline plans.}
+    skyline plans. Parameters: $b=0.8,m=2000$.}
   \label{fig:pareto_q2_skyline}
 \end{figure}
 
-\textbf{Execution Time.} \todo{execute several plans of some
-  queries and show that execution time is better with fewer sources}
+\textbf{Execution Time.}  Fig.~\ref{fig:exec_q7} shows the execution
+times and number of results for 10\% of plans (randomly chosen) for
+query Q7 generated by DP. We see that plans that produce less results
+in general have shorter execution times. In order to find all 106
+query results, the fastest plan takes 17.9 seconds; producing a subset
+of 46 results requires only 4.3 seconds.
 
+However, we can also see that some of the plans produce no results at
+all. This is due to the fact that the employed cardinality estimation
+procedure does not take dependencies between sources into
+account. Here, a more sophisticated method for cardinality estimation
+would help avoid generting empty plans.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figs/q7_execution.pdf}
+  \caption{Execution times of query plans for query Q7.}
+  \label{fig:exec_q7}
+\end{figure}
 %%% Local Variables: 
 %%% mode: latex
 %%% TeX-master: "paper"

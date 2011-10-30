@@ -287,10 +287,19 @@ bounds of a plan $p$ requires constructing all plans based on
 $p$. This is of course very cost intensive and defeats the purpose of
 pruning. We therefore try to estimate the bounds by determining the
 maximal possible benefit that is achievable through operator sharing
-for a particular plan. As the source scan operator is the only
-shareable operator, we can derive the maximal benefit of operator
-sharing by looking at the overlap of mapped sources for all triple
-patterns in the query.
+for a particular plan. 
+
+As the source scan operator is the only shareable operator, we can
+calculate the maximal possible benefit for a particular plan $p$ by
+using the source index to retrieve all sources for triple patterns not
+covered by $p$ and aggregating the benefit for all sources that are
+also used by $p$.
+
+We only use the maximal benefit when comparing two plans $p,o$ to decide
+whether one plan dominates the other. In this case, we can obtain more
+a more precise benefit $p$ by only aggregating the benefit for sources
+that are not part of $o$. We therefore define the maximal benefit of a
+plan $p \in P(T)$ in terms of another plan $o \in P(T)$:
 
 \begin{definition}
   Given a query $Q$, a source index $I$, and two query plans $p,o \in
@@ -303,25 +312,25 @@ patterns in the query.
   operator for source $d$, as introduced in Sec.~\ref{sec:ops}.
 \end{definition}
 
-\todo{explain rationale for disregarding sources that appear for both
-  plans p,o}
+With the maximal benefit, we again define a more strict dominance
+relation $>_b$ using the maximal benefit:
 
-With the maximal benefit, we again redefine the dominance relation for
-plans for partial plans:
-
-\begin{definition}
+\begin{theorem}
   Given a query $Q$, a subexpression $T \subset Q$ and two plans
-  $p_1,p_2 \in P(T)$, $p_1 \mbox{ \textnormal{dominates} } p_2$ if
-  $card(p_1) \geq card(p_1) \wedge cost(p_1) \leq cost(p_2) -
-  m_{p_1}(p_2) \wedge (card(p_1) > card(p_2) \vee cost(p_1) <
-  cost(p_2) - m_{p_1}(p_2))$.
-\end{definition}
+  $p_1,p_2 \in P(T)$, then $p_1 \mbox{\textnormal{ strictly dominates
+    }} p_2$ ($p_1 >_b p_2$) if $card(p_1) \geq card(p_1) \wedge
+  cost(p_1) \leq cost(p_2) - m_{p_1}(p_2) \wedge (card(p_1) >
+  card(p_2) \vee cost(p_1) < cost(p_2) - m_{p_1}(p_2))$.
 
-\todo{we need to add a proof here that using the bound estimation
-  instead of the real bounds does not prune any plans that shouldn't
-  be pruned. then we can use the real bounds in the following section
-  for proving that we actually construct the skyline. I think using
-  the maximal benefit would be too awkward there.}
+  Whenever $p_1$ strictly dominates $p_2$ then $p_1$ dominates $p_2$:
+  $p_1 >_b p_2 \Rightarrow p_1 > p_2$.
+\end{theorem}
+\begin{proof}
+  
+\end{proof}
+
+With this theorem we can use the maximal benefit to perform pruning
+and be sure that no optimal plan is discarded.
 
 \subsection{Pareto-optimality}
 \label{sec:pareto}

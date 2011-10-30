@@ -265,7 +265,9 @@ i.e. plans for strict subexpressions of $Q$:
   \wedge (card(p_1) > card(p_2) \vee cost_U^Q(p_1) < cost_T^Q(p_2))$.
 \end{theorem}
 
-This is the main result needed for pruning. A subplan is suboptimal and thus can be pruned if it is dominated in the sense specified above. 
+This is the main result needed for pruning. A subplan is suboptimal
+and thus can be pruned if it is dominated in the sense specified
+above.
 
 % With the lower and upper bounds we can reestablish the monotonicity of
 % plan costs, however in a less restrictive form:
@@ -325,7 +327,9 @@ relation $>_b$ using the maximal benefit:
   p_2 \Rightarrow p_1 > p_2$.
 \end{theorem}
 \begin{proof}
-  
+  We show that if $p_1 >_b p_2$, then $cost^Q_U(p_1) \leq
+  cost^Q_L(p_2)$. If $p_1$ strictly dominates $p_2$ then $cost(p_1)
+  \leq cost(p_2) - m_{p_1}(p_2)$.
 \end{proof}
 
 With this theorem we can use the maximal benefit to perform pruning

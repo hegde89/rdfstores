@@ -152,22 +152,24 @@ ex:lucy
 
 \emph{Federated databases} are able to process queries over data that
 managed by several networked database systems, either centralized
-\cite{} or in a distributed, peer-to-peer fashioned \cite{}. Every
-node in this federated setting (system or peer), hosts its data, and
-provides structured querying capabilities such that query processing
-in this setting breaks down to finding the right systems to execute
-part of the queries and merging results. For optimization, the main
-strategy is to leverage the capabilities of the nodes, i.e. pushing
-the processing to the nodes, and to minimize cost for transferring
-data (partial results) \cite{}. In the case where nodes provide
-materialized views, this problem amounts to finding the cost-optimal
-composition of views \cite{pottinger_minicon:_2001}. These solutions
-are not applicable to our setting because instead of partial results
-and views, nodes return entire sources. That is, they possess only one
-capability, namely ``source scan'' (we choose this term to make clear
-the analogy of HTTP source lookup and table scan). More precisely,
-\emph{not the composition of views or joins but the order of source
-  scans is crucial in this setting.} \todo{not order}
+\cite{zsu_principles_2011} or in a distributed, peer-to-peer fashion
+\cite{huebsch_architecture_2005}. Every node in this federated setting
+(system or peer), hosts its data, and provides structured querying
+capabilities such that query processing in this setting breaks down to
+finding the right systems to execute part of the queries and merging
+results. For optimization, the main strategy is to leverage the
+capabilities of the nodes, i.e. pushing the processing to the nodes,
+and to minimize cost for transferring data (partial results)
+\cite{kossmann_iterative_2000,zsu_principles_2011}. In the case where
+nodes provide materialized views, this problem amounts to finding the
+cost-optimal composition of views
+\cite{pottinger_minicon:_2001}. These solutions are not applicable to
+our setting because instead of partial results and views, nodes return
+entire sources. That is, they possess only one capability, namely
+``source scan'' (we choose this term to make clear the analogy of HTTP
+source lookup and table scan). More precisely, \emph{not the
+  composition of views or joins but the order of source scans is
+  crucial in this setting.} \todo{not order}
 %Standard query optimization can be adopted to produce an optimal query plan. 
 
 Further, as completeness is not required, not only the order but also
@@ -189,7 +191,7 @@ of \emph{local optimization may lead to sub-optimal overall plans}.
 Further, all these approaches \emph{optimize towards one single
   criterion} (cost) only.
 
-\begin{figure}[htb]
+\begin{figure}[ht]
   \centering
   \begin{minipage}{0.75\linewidth}
 \begin{lstlisting}[language=ttl,numbers=left,escapeinside={(*@}{@*)}]

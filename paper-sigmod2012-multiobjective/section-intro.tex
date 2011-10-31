@@ -1,16 +1,16 @@
 \section{Introduction}
 \label{sec:linked_data} 
 
-In recent years, the amount of Linked Data on the Web is increasing
-rapidly. This is largely due to community efforts such as the Linking
-Open Data project, and enhightened interests of enterprises and
-governments. Datasets made publicly available on the Web as Linked
-Data covers different domains, including life sciences (e.g. DrugBank,
+In recent years, the amount of Linked Data on the Web has been
+increasing rapidly. This is largely due to community efforts such as
+the Linking Open Data project, and increasing interests of enterprises
+and governments. Datasets made publicly available on the Web as Linked
+Data cover different domains, including life sciences (e.g. DrugBank,
 UniProt, PudMed), geographic locations (e.g. World Factbook, Geo
 Names), media and entertainment (MusicBrainz, Last.FM, BBC
 Programmes). There are also cross-domain encyclopedic ones such as
 Freebase and DBpedia (the structured data counterpart of
-Wikipedia). Besides enterprises such as media companies like BBC and
+Wikipedia). Besides enterprises, such as media companies like BBC and
 Last.FM, many governments (e.g. US, UK) recently started to make data
 of public interests available to citizens, including CO2, Mortality,
 Energy, Postcodes. We refer to the public
@@ -26,7 +26,7 @@ lookups. According to the Linked Data principles
 \cite{bizer_linked_2009}, dereferencing a Linked Data URI via HTTP
 should return a machine-readable description (usually, in RDF) of the
 entity identified by the URI. Each URI therefore represents a virtual
-``data source''. 
+``data source''.
 
 Figs.~\ref{fig:sources} \& \ref{fig:query} show examples of Linked
 Data sources with their data and a Linked Data query,
@@ -133,9 +133,9 @@ ex:lucy
   processing cost lead to long execution times such that \emph{result
     completeness} might no longer be affordable in practical
   usage. Thus, addressing this requirement has not been the main goal:
-  Previous work on Linked Data query
+  previous work on Linked Data query
   processing~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010}
-  employs various termination criteria such as maximum number of
+  employs various termination criteria such as a maximum number of
   retrieved sources \cite{harth_data_2010}. In fact, completeness has
   never been crucial on the Web but rather, the goal of Web search for
   instance, is to obtain some (best) results in a given amount of
@@ -145,13 +145,13 @@ ex:lucy
   considered in the various Linked Data use cases that are
   possible. This is problematic because these criteria are not always
   complementary. For instance, there is an inherent trade-off between
-  output cardinality and cost: To produce more results, we have to
+  output cardinality and cost: to produce more results, we have to
   retrieve more sources, which in turn increases processing cost (and
   vice versa).
 \end{itemize}
 
 \emph{Federated databases} are able to process queries over data that
-managed by several networked database systems, either centralized
+is managed by several networked database systems, either centralized
 \cite{zsu_principles_2011} or in a distributed, peer-to-peer fashion
 \cite{huebsch_architecture_2005}. Every node in this federated setting
 (system or peer), hosts its data, and provides structured querying
@@ -168,17 +168,17 @@ our setting because instead of partial results and views, nodes return
 entire sources. That is, they possess only one capability, namely
 ``source scan'' (we choose this term to make clear the analogy of HTTP
 source lookup and table scan). More precisely, \emph{not the
-  composition of views or joins but the order of source scans is
-  crucial in this setting.} \todo{not order}
+  composition of views or joins but the selection of source scans is
+  crucial in this setting.}
 %Standard query optimization can be adopted to produce an optimal query plan. 
 
-Further, as completeness is not required, not only the order but also
-the selection of sources is critical for query optimization. Selecting
-relevant sources for a given query has been a topic in database and
-data integration research. There, sources are described not only by
-their content, but also by their capabilities, and algorithms that
-efficiently perform \emph{source selection} by using source
-characteristics to prune the search space have been
+% Further, as completeness is not required, not only the order but also
+% the selection of sources is critical for query optimization.
+Selecting relevant sources for a given query has been a topic in
+database and data integration research. There, sources are described
+not only by their content, but also by their capabilities, and
+algorithms that efficiently perform \emph{source selection} by using
+source characteristics to prune the search space have been
 proposed~\cite{levy_querying_1996}. However, source selection is
 performed as a separate step. Also decoupled from query optimization
 are the source ranking strategies recently applied in Linked Data
@@ -213,7 +213,6 @@ SELECT ?name WHERE {
 \textbf{Contributions.} Aiming at the challenges presented above, we
 provide the following contributions:
 
-
 \begin{itemize}
 \item Solutions related to Linked Data query processing include Linked
   Data indexing~\cite{harth_data_2010}, query processing
@@ -223,15 +222,15 @@ provide the following contributions:
   knowledge, this work is the \emph{first solution towards a
     systematic optimization of Linked Data queries}.
 
-\item In particular, we propose an optimization framework \dtr{weaken it} for Linked
-  Data query processing, which incorporates \emph{both standard query
-    operators} and \emph{source selection}. That is, we propose to
-  extend the scope of query optimization from how to process data to
-  which data to process. This is necessary to reflect the nature of
-  Linked Data query processing, where source selection and scanning
-  become an essential part. Further, this framework supports the
-  \emph{joint optimization of several objectives}, cost and output
-  cardinality in particular.
+\item In particular, we propose an optimization framework \dtr{weaken
+    it} for Linked Data query processing, which incorporates
+  \emph{both standard query operators} and \emph{source
+    selection}. That is, we propose to extend the scope of query
+  optimization from how to process data to which data to process. This
+  is necessary to reflect the nature of Linked Data query processing,
+  where source selection and scanning become an essential
+  part. Further, this framework supports the \emph{joint optimization
+    of several objectives}, cost and output cardinality in particular.
 
 \item We propose a dynamic programming algorithm for the
   multi-objective optimization of this integrated process of source
@@ -243,8 +242,8 @@ provide the following contributions:
   the query. Essentially, this means that the \emph{sharing of source
     scan operators} is possible. While this provides more room for
   optimization, it also makes dynamic programming technically more
-  challenging: The cost function is no longer monotonic with regard to
-  plan combination which is due to the fact that the cost of subplans
+  challenging: the cost function is no longer monotonic with regard to
+  plan combination, which is due to the fact that the cost of subplans
   may vary, depending on the reusability of their sources. We provide
   \emph{tight bounds} for costs that take this effect into account.
 \end{itemize}

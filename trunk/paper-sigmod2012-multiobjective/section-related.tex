@@ -20,20 +20,71 @@ source discovery. %  along with the push-based Symmetric Hash Join
 
 % Faster enumeration of plans: \cite{moerkotte_analysis_2006,moerkotte_dynamic_2008}
 
-% Iterative Dynamic Programming (approx): \cite{kossmann_iterative_2000}
+% Iterative Dynamic Programming (approx):
+% \cite{kossmann_iterative_2000}
 
-\textbf{Multiobjective Query Optimization.} Multi-objective query
-optimization was previously proposed in
-\cite{papadimitriou_multiobjective_2001}, where it is discussed in the
-context of Mariposa \cite{stonebraker_mariposa:_1996}, a wide-area
-database system. The Mariposa optimizer splits the query tree into
-subqueries and then obtains \emph{bids} from participating database
-sites that specify a delay and cost for delivering the result of a
-subquery. The goal of the optimzer is to obtain the Pareto optimal set
-of plans with respect to cost and delay. While the authors do employ
-dynamic programming to show that the Pareto set can be approximated in
-polynomial time, it is not based on the classic dynamic programming
-algorithm for query optimization proposed in
+%\textbf{Federated Databases and Data Integration.} 
+
+\textbf{Query Optimization and Execution.} There is a large amount of
+database research on query optimization. The dynamic programming
+solution was first proposed in \cite{selinger_access_1979} and remains a
+popular approach for query optimization
+\cite{moerkotte_analysis_2006,moerkotte_dynamic_2008}. There has also
+been work on approximating the DP approach to increase run-time
+performance in the context of distributed query processing
+\cite{kossmann_iterative_2000}.
+
+Efficiently generating optimal DAG-shaped query plans when performing
+operator sharing has been addressed in
+\cite{neumann_generating_2009}. In our work we also apply operator
+sharing, although in a more limited fashion as we only consider the
+sharing of source scan operators. We also adopt the technique for cost
+calculation from \cite{neumann_generating_2009}. The efficient
+execution of DAG-shaped query plans was discussed in
+\cite{Neumann_2005}, where several approaches were proposed, such as
+temporary tables and push-based execution. In this work we use a
+push-based execution mode, which was also used by previous work on
+Linked Data query processing \cite{ladwig_linked_2010,sihjoin_2011}.
+
+% state of the art distributed kossmann_state_2000
+
+\textbf{Source Selection.} The problem of selecting relevant sources
+has also been a topic in database and data integration research. In
+this setting, sources are described not only by their content, but
+also their capabilities. Algorithms have been proposed to efficiently
+perform source selection by using the source characteristics to prune
+the search space \cite{levy_querying_1996}. However, in these
+approaches, source selection is a separate step, decoupled from query
+optimization.
+
+In \cite{nie_joint_2001} the authors recognize that the decoupling of
+source selection and query optimization might lead to overall
+sub-optimal plans and propose a solution that optimizes not only for
+cost, but also for coverage (i.e., output cardinality). This is
+achieved by combining cost and coverage into a single measure by means
+of a (weighted) utility function. Then, classic query optimization
+algorithms, such as dynamic programming, can be applied. In our work,
+we do not use a utility function to combine multiple objectives, but
+instead produce a set of Pareto-optimal plans that truly represent the
+trade-off between the optimization objectives.
+
+
+%\textbf{Query Optimization.} 
+
+
+\textbf{Multiobjective Query Optimization.} To the best of our
+knowledge, \cite{papadimitriou_multiobjective_2001} is the only work
+addressing multi-objective query optimization, where it is discussed
+in the context of Mariposa \cite{stonebraker_mariposa:_1996}, a
+wide-area database system. The Mariposa optimizer splits the query
+tree into subqueries and then obtains \emph{bids} from participating
+database sites that specify a delay and cost for delivering the result
+of a subquery. The goal of the proposed multi-objective optimzer
+\cite{papadimitriou_multiobjective_2001} is to obtain the Pareto
+optimal set of plans with respect to cost and delay. While the authors
+do employ dynamic programming to show that the Pareto set can be
+approximated in polynomial time, it is not based on the classic
+dynamic programming algorithm for query optimization proposed in
 \cite{selinger_access_1979}. The problem is slightly different as
 there is only a single query operation tree and for each operation
 node the optimizer is provided a list of alternatives for implementing
@@ -44,33 +95,23 @@ physical query plans from the bottom up and considers all valid query
 trees. In this work we extend the classic algorithm to support
 multi-objective query optimization.
 
-The approach presented in \cite{nie_joint_2001} optimizes query plans
-not only for cost, but also for coverage (i.e. output cardinality) and
-thereby integrates source selection into the query optimization
-process. However, the optimization is performed by combining
-(weighted) cost and coverage into a utility function that provides a
-single measure to assess query plans. Using a single measure means
-that traditional query optimization algorithms, such as dynamic
-programming \cite{selinger_access_1979}, are directly
-applicable. However, no true multi-objective optimization is
-performed.
 
 
-\textbf{Data Integration.}
+% \textbf{Data Integration.}
 
-Bucket algorithm: \cite{levy_querying_1996}
+% Bucket algorithm: \cite{levy_querying_1996}
 
-MiniCon algorithm: \cite{pottinger_minicon:_2001}
+% MiniCon algorithm: \cite{pottinger_minicon:_2001}
 
-Optimization of cost and coverage (utility function):
-\cite{nie_joint_2001}
+% Optimization of cost and coverage (utility function):
+% \cite{nie_joint_2001}
 
-Source selection: \cite{pomares_source_2010}
+% Source selection: \cite{pomares_source_2010}
 
-Query Planning in the Presence of Overlapping Sources:
-\cite{bleiholder_query_2006}
+% Query Planning in the Presence of Overlapping Sources:
+% \cite{bleiholder_query_2006}
 
-survey materialized views: \cite{halevy_answering_2001}
+% survey materialized views: \cite{halevy_answering_2001}
 
 
 

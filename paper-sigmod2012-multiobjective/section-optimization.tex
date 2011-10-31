@@ -578,7 +578,14 @@ $Q$ (line 9).
 \textbf{Complexity.} The join order optimization problem has been
 shown to be NP-complete \cite{vance_rapid_1996} and the classic
 dynamic programming algorithm for query optimization has a time
-complexity of $O(3^n)$ \cite{kossmann_iterative_2000}.
+complexity of $O(3^n)$ \cite{kossmann_iterative_2000}, where $n$ is
+the number of relations (triple patterns in the case of Linked Data
+queries) to be joined. Our approach for multi-objective query
+optimization adds the dimension of source selection to the query
+optimization problem. Given a set of $m$ source, we can think of the
+problem as, in the worst case, creating a query plan for each unique
+combination of sources, of which there are $2^m$, leading to a
+complexity of $O(2^m \cdot 3^n)$.
 
 % \subsection{Adaptivity}
 % The goal of adaptive query processing is to perform query optimization

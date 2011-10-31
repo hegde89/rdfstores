@@ -59,11 +59,11 @@ We will now discuss straightforward estimates that will be needed in this work (
 %execution, immediately be pushed to all subsequent operators.
 This source size statistics can be directly obtained from the source index discussed before. 
 For union, cardinality is the sum of the cardinalities of its inputs: $card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. 
-The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_t(T_d)) = sel(t) \times |T_d|$ and $card(t_i \Join t_j) =
+The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_t(T^d)) = sel(t) \times |T^d|$ and $card(t_i \Join t_j) =
 sel(t_i \Join t_j) \times card(t_i) \times card(t_j)$, respectively. 
 %\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: 
-Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_t(T_d))=h_\sigma \times |T_d|$, $cost(\cup) =
-h_\cup \times card(\cup)$, $cost(\Join) =
+Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_t(T^d))=h_\sigma \times |T^d|$, $cost(\cup) =
+h_\cup \times card(\cup)$, $cost(\Join)$ $=
 h_\Join \times card(\Join)$. Thus, cost is assumed to be proportional to cardinality but different weights $h_s,h_\sigma,h_\cup,h_\Join$ are used for different operators. The weight factor $h_\Join$ for instance, depends on the
 join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. In case of operator sharing, separate cost
 models for the first source scan (when the data is retrieved over the
@@ -241,16 +241,16 @@ respect to plan combination as follows:
     cost^Q_L(\mathtt{cmb}(p_2,p')) \]
 \end{lemma}
 \begin{proof}
-  This follows directly from the definition of $cost^Q_L$ and
-  $cost^Q_U$ in Def.~\ref{def:bounds}. Any plan for $Q$ that is
-  constructed as a combination of $p'_1 = \mathtt{cmb}(p_1,p')$, i.e.,
-  any plan in $P^{p'_1}(Q)$, is also a combination of $p_1$ (because
-  $p'_1$ is a combination of $p_1$). From this follows that
-  $P^{p'_1}(Q) \subseteq P^{p_1}(Q)$ and $cost^Q_U(p'_1) \leq
-  cost^Q_U(p_1)$. For $p_2$ and $p'_2 = \mathtt{cmb}(p_2,p')$ we get
-  in the same way that $cost^Q_L(p'_2) \geq cost^Q_L(p_2)$. With this
-  we see that $cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
-  cost^Q_U(p'_1) \leq cost^Q_L(p'_2)$, meaning the lemma is true.
+%  This follows directly from the definition of $cost^Q_L$ and
+%  $cost^Q_U$ in Def.~\ref{def:bounds}. 
+  Any plan for $Q$ that is
+  constructed as the combination $p'_1 = \mathtt{cmb}(p_1,p')$, i.e.,
+  any plan in $P^{p'_1}(Q)$, is also a $p_1$-combination %  (because
+%  $p'_1$ is a combination of $p_1$). From this follows 
+such that $P^{p'_1}(Q) \subseteq P^{p_1}(Q)$ and thus, $cost^Q_U(p'_1) \leq
+  cost^Q_U(p_1)$. Analogously, for $p_2$ and $p'_2 = \mathtt{cmb}(p_2,p')$, we have $cost^Q_L(p'_2) \geq cost^Q_L(p_2)$. Hence, $cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
+  cost^Q_U(p'_1) \leq cost^Q_L(p'_2)$. 
+%  , meaning the lemma is true.
 \end{proof}
 
 Based on these results for cardinality and cost monotonicity, we now
@@ -261,8 +261,8 @@ i.e. plans for strict subexpressions of $Q$:
   \label{def:dominates_bound}
   Given a query $Q$, a subexpression $T \subset Q$ and two plans
   $p_1,p_2$ for $T$, $p_1 > p_2$ if
-  $card(p_1) \geq card(p_1) \wedge cost_U^Q(p_1) \leq cost_T^Q(p_2)
-  \wedge (card(p_1) > card(p_2) \vee cost_U^Q(p_1) < cost_T^Q(p_2))$.
+  $card(p_1) \geq card(p_2) \wedge cost_U^Q(p_1) \leq cost_L^Q(p_2)
+  \wedge (card(p_1) > card(p_2) \vee cost_U^Q(p_1) < cost_L^Q(p_2))$.
 \end{theorem}
 
 This is the main result needed for pruning. A subplan is suboptimal
@@ -283,77 +283,83 @@ above.
 %   \todo{proof}
 % \end{proof}
 
-\textbf{Cost Bound Estimation.} In the form of
-Definition~\ref{def:bounds}, the calculation of the lower and upper
-bounds of a plan $p$ requires constructing all plans based on
-$p$. This is of course very cost intensive and defeats the purpose of
-pruning. We therefore try to estimate the bounds by determining the
-maximal possible benefit that is achievable through operator sharing
-for a particular plan. 
+\textbf{Cost Bound Estimation.} 
+%In the form of
+%Definition~\ref{def:bounds}, 
+A basic strategy to compute the lower and upper
+bounds of a plan $p$ presented above is to construct all plans based on
+$p$. This is of course very cost intensive and defeats the purpose of pruning. Observe that for pruning, we need only to compare the upper and lower bounds between a pair of plans $p_1,p_2$ for the subexpression $T \subset Q$. Given, $p_1$, $p_2$ can be pruned if it has higher cost when used to process $T$, and further, when its benefit that may arise when processing other parts of the query cannot outweigh this difference in cost. If exists, this benefit can be completely attributed to operator sharing. Hence, for the efficient estimation of bounds, we propose to focus on the maximal possible benefit that is achievable through operator sharing. As source scan is the only shareable operator, we can derive the maximal benefit by looking at the overlap among all sources that contain data for the query. In particular, only those source scans captured by $p_2$ that are not covered by $p_1$ (i.e. the potential lost when $p_2$ is discarded) have to be considered: 
 
-As the source scan operator is the only shareable operator, we can
-calculate the maximal possible benefit for a particular plan $p$ by
-using the source index to retrieve all sources for triple patterns not
-covered by $p$ and aggregating the benefit for all sources that are
-also used by $p$.
+%As the source scan operator is the only shareable operator, we can
+%calculate the maximal possible benefit for a particular plan $p$ by
+%using the source index to retrieve all sources for triple patterns not
+%covered by $p$ and aggregating the benefit for all sources that are
+%also used by $p$.
+%
+%We only use the maximal benefit when comparing two plans $p,o$ to decide
+%whether one plan dominates the other. In this case, we can obtain more
+%a more precise benefit $p$ by only aggregating the benefit for sources
+%that are not part of $o$. We therefore define the maximal benefit of a
+%plan $p \in P(T)$ in terms of another plan $o \in P(T)$:
 
-We only use the maximal benefit when comparing two plans $p,o$ to decide
-whether one plan dominates the other. In this case, we can obtain more
-a more precise benefit $p$ by only aggregating the benefit for sources
-that are not part of $o$. We therefore define the maximal benefit of a
-plan $p \in P(T)$ in terms of another plan $o \in P(T)$:
-
-\begin{definition}
-  Given a query $Q$, a source index $I$, and two query plans $p,o \in
-  P(T), T \subset Q$, let $S_p,S_o$ be the sets of sources retrieved
-  by source scan operators in $p,o$, respectively. The maximal benefit
-  of $p$ w.r.t $o$ defined as $m_o(p) = \sum_{t \in Q \setminus T}
-  \sum_{(d,r_d) \in I(t), d \notin S_p \cap S_o } b \cdot
-  cost_1(scan_d)$, where $b$ is the sharing benefit and
-  $cost_1(scan_d)$ is the cost for the first read of the source scan
-  operator for source $d$, as introduced in Sec.~\ref{sec:ops}.
+\todo{we need to add a proof here that using the bound estimation
+  instead of the real bounds does not prune any plans that shouldn't
+  be pruned. This can be done by saying using the benefits as presented above equals to using bounds. This is the case because the gap between bounds and actual cost express equals benefit, and the only benefit that exists is due to source scan, which is captured above.}
+  
+  
+\begin{definition}[Maximal Benefit]
+  Given a query $Q$, two query plans $p_1,p_2 \in P(T), T \subset Q$, let $D_{p_1},D_{p_2}$ be the sets of sources (i.e. the source scan operators) used by $p_1$ and $p_2$, respectively, $D'_{p_2}$ be the set of sources used by $p_2$ not covered by $p_1$, i.e. $D'_{p_2} = D_{p_2} \setminus D_{p_1}$, $Q'$ bet the set of triple patterns not covered by $p_1$ and $p_2$, i.e. $Q' = Q \setminus T$, the \emph{maximal benefit} of $p_2$ given $p_1$ is calculated as $mb(p_2|p_1) = \sum_{t \in Q'}
+  \sum_{d \in source(t), d \in D'_{p_2} } b \cdot cost_1(scan_d)$, where $b$ is the sharing benefit and
+  $cost_1(scan_d)$ is the cost for the first scan
+  of $d$.
 \end{definition}
 
-With the maximal benefit, we again define a more strict dominance
-relation $>_b$ using the maximal benefit:
+\begin{lemma}
+  \label{def:estimated_bound}
+  Given a query $Q$, a subexpression $T \subset Q$ and two plans $p_1,p_2$, if $cost(p_1) \leq cost(p_2) - mb(p_2|p_1)$ then $cost_U^Q(p_1) \leq cost_L^Q(p_2)$.
+\end{lemma}
+
+%  $p_1,p_2 \in P(T)$, then $p_1 \mbox{\textnormal{ strictly dominates
+%    }} p_2$ ($p_1 >_b p_2$) if $card(p_1) \geq card(p_1) \wedge
+%  cost(p_1) \leq cost(p_2) - m_{p_1}(p_2) \wedge (card(p_1) >
+%  card(p_2) \vee cost(p_1) < cost(p_2) - m_{p_1}(p_2))$.  Whenever
+%  $p_1$ strictly dominates $p_2$ then $p_1$ dominates $p_2$: $p_1 >_b
+%  p_2 \Rightarrow p_1 > p_2$.
+%\end{theorem}
+%\begin{proof}
+%  We show that if $p_1 >_b p_2$, then $cost^Q_U(p_1) \leq
+%  cost^Q_L(p_2)$. If $p_1$ strictly dominates $p_2$ then $cost(p_1)
+%  \leq cost(p_2) - m_{p_1}(p_2)$.
+%\end{proof}
+%>>>>>>> .r564
+%
+%<<<<<<< .mine
+  
+Based on these bounds defined with respect to the maximal benefit, we finally obtain the dominance relation for
+pruning subplans as follows:
 
 \begin{theorem}
   Given a query $Q$, a subexpression $T \subset Q$ and two plans
-  $p_1,p_2 \in P(T)$, then $p_1 \mbox{\textnormal{ strictly dominates
-    }} p_2$ ($p_1 >_b p_2$) if $card(p_1) \geq card(p_1) \wedge
-  cost(p_1) \leq cost(p_2) - m_{p_1}(p_2) \wedge (card(p_1) >
-  card(p_2) \vee cost(p_1) < cost(p_2) - m_{p_1}(p_2))$.  Whenever
-  $p_1$ strictly dominates $p_2$ then $p_1$ dominates $p_2$: $p_1 >_b
-  p_2 \Rightarrow p_1 > p_2$.
+  $p_1,p_2 \in P(T)$, $p_1 > p_2$ if
+  $card(p_1) \geq card(p_2) \wedge cost(p_1) \leq cost(p_2) -
+  mb(p_2|p_1) \wedge (card(p_1) > card(p_2) \vee cost(p_1) <
+  cost(p_2) - mb(p_2|p_1))$.
 \end{theorem}
-\begin{proof}
-  We show that if $p_1 >_b p_2$, then $cost^Q_U(p_1) \leq
-  cost^Q_L(p_2)$. If $p_1$ strictly dominates $p_2$ then $cost(p_1)
-  \leq cost(p_2) - m_{p_1}(p_2)$.
-\end{proof}
 
-With this theorem we can use the maximal benefit to perform pruning
-and be sure that no optimal plan is discarded.
 
 \subsection{Pareto-optimality}
 \label{sec:pareto}
 
-The goal of the optimizer in the Linked Data query processing scenario
+The goal of the optimizer in Linked Data query processing 
 is to find the overall skyline (or Pareto set) of query plans, while
-pruning as many plans as possible at each step. We will show that we
-can retain only non-dominated plans for each subexpression and still
-find the complete overall skyline, i.e., we show that the optimization
+pruning as many plans as possible at each step. We show that pruning suboptimal plans based on the dominance relation established previously yields the complete Pareto set $P^*(Q)$, i.e., we show that the optimization
 problem still has optimal substructure.
-
-The goal is to find the optimal solution for query $Q$, in this case
-the optimal solution is the set of Pareto-optimal query plans $P^+(Q)
-= P^*(Q)$. To prove that the problem has optimal substructure, we need
-to show that we can construct $P^*(Q)$ by splitting $Q$ into
-subproblems $T \subset Q$ and then combining optimal solutions
-$P^*(T)$ for the subproblems. In particular, this means that a
-non-optimal solution for a subproblem must not be part of an optimal
-solution for a superproblem.
-
+%The goal is to find the optimal solution for query $Q$, in this case
+%the optimal solution is the set of Pareto-optimal query plans $P^+(Q)
+%= P^*(Q)$. 
+Given the decomposition of $Q$ into the subproblems $T \subset Q$, we show that we can construct $P^*(Q)$ as a combination of optimal subsolutions $P^*(T)$.  This means a
+non-optimal solution for a subproblem $T$ must not be part of an optimal
+solution for $Q$:
 % The smallest subproblem is a singleton subset of $Q$, i.e., a single
 % triple pattern $t$. An optimal solution for this problem is a set of
 % Pareto-optimal plans $P^*(\{t\})$. Each such plan $p_t$ is an access
@@ -388,9 +394,9 @@ solution for a superproblem.
 
 \begin{theorem}
   Given a query $Q$ and two subexpressions $T_1,T_2 \subseteq Q$ with
-  $T_1 \cap T_2 = \emptyset$, the set of optimal plans for $T_1 \cap
+  $T_1 \cap T_2 = \emptyset$, the set of optimal plans for $T_1 \cup
   T_2$ can be constructed from optimal plans for $T_1,T_2$, i.e.,
-  $P^+(T_1 \cup T_2) = P^*(T_1 \cup T_2) \subseteq C =
+  $P^*(T_1 \cup T_2) \subseteq C =
   \{\mathtt{cmb}(p_1,p_2) | p_1 \in P^*(T_1), p_2 \in P^*(T_2)\}$.
 \end{theorem}
 \begin{proof}

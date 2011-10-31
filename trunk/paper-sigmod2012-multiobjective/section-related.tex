@@ -25,7 +25,7 @@ source discovery. %  along with the push-based Symmetric Hash Join
 
 %\textbf{Federated Databases and Data Integration.} 
 
-\textbf{Query Optimization and Execution.} There is a large amount of
+\textbf{Query Optimization and Processing.} There is a large amount of
 database research on query optimization. The dynamic programming
 solution was first proposed in \cite{selinger_access_1979} and remains a
 popular approach for query optimization
@@ -45,6 +45,19 @@ execution of DAG-shaped query plans was discussed in
 temporary tables and push-based execution. In this work we use a
 push-based execution mode, which was also used by previous work on
 Linked Data query processing \cite{ladwig_linked_2010,sihjoin_2011}.
+
+Top-k query processing is concerned with efficiently reporting only
+the most important (top-k) answers to a given query and connects to
+many fields of database research, such as join algorithms, query
+optimization and indexing methods. A survey of top-k processing
+techniques is provided in \cite{ilyas_survey_2008}. Our approach for
+multi-objective optimization differs from top-k processing in two
+important ways: 1) while our approach also focuses on reporting only a
+subset of all results, this subset is not fixed as in top-k
+processing, but the output is whole set of query plans, representing
+the trade-off between cost and cardinality; 2) top-k processing
+focuses on optimizing a single objective, whereas our approach
+supports optimization of several, conflicting objectives.
 
 % state of the art distributed kossmann_state_2000
 

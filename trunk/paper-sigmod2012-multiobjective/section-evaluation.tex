@@ -266,11 +266,10 @@ As queries, we focus on 14 BGP queries that have non-empty results. The result s
 % \end{table*}
 
 %\subsection{Setting}
-All systems were implemented in Java. The query planner is
-single-threaded, whereas the execution engine uses multiple
-threads. All experiments were executed on a 2009 Macbook Pro with a
-2.4 GHz Intel Core 2 Duo processor, 4GB RAM (of which 1GB was assigned
-to the Java VM) and a Crucial m4 128GB solid-state disk.
+All systems were implemented in Java.  All experiments were executed
+on a 2009 Macbook Pro with a 2.4 GHz Intel Core 2 Duo processor, 4GB
+RAM (of which 1GB was assigned to the Java VM) and a Crucial m4 128GB
+SSD.
 \begin{figure*}[htb]
   \centering
   \includegraphics[width=0.24\linewidth]{figs/pareto_plan_tp.pdf}
@@ -278,7 +277,8 @@ to the Java VM) and a Crucial m4 128GB solid-state disk.
   \includegraphics[width=0.24\linewidth]{figs/pareto_plan_b.pdf}
   \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_b.pdf}
   \caption{Effect of sharing benefit on a) planning time and b)
-    skyline fractions ($m=2000$).}
+    skyline fractions ($m=2000$). Effect of query size on c) planning time and d) skyline
+     fractions ($b=0.8, m=2000$).}
   \label{fig:pareto_sharing}
 \end{figure*}
 
@@ -315,7 +315,7 @@ Note that RD simply reflects the number of plans that are randomly generated. Ou
 Ranking sources based on cardinality only does not help to produce Pareto-optimal plans. In fact, we can see that this bias towards cardinality as reflected by the RK baseline actually leads to a smaller amount of optimal plans, compared to the random strategy (Fig.~\ref{fig:queries}b). DPU optimizes for both objectives, thus is able to produce better trade-offs than RK and RD in most cases (Fig.~\ref{fig:pareto_q2_skyline}a). However, because it systematically uses the wrong estimate for cost, the resulting plans are relatively ``good'' but rarely optimal. 
 
 
-\textbf{Effect of Query Complexity.} Figs.~\ref{fig:pareto_tp}a+b show 
+\textbf{Effect of Query Complexity.} Figs.~\ref{fig:pareto_sharing}c+d show 
 planning time and skyline fraction for different number of triple patterns. 
 
 An increased number of triple

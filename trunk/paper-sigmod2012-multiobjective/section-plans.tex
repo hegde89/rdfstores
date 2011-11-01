@@ -40,15 +40,28 @@ access plan for each triple pattern, which consists of source scan, selection an
 operators:
 
 \begin{definition}[Access Plan]
-  Given a query $Q$, let $t \in Q$ be a triple pattern in $Q$ and $D = source(t)$ be the set of sources for $t$. An \emph{access plan} $p(t)$ for $t$ is a tree-structured query plan constructed in the
-  following way:
-  \begin{itemize}
-  \item At the lowest level, the leaf nodes of $p(t)$ are source scan operators, one
-    $scan_{d_i} = T^{d_i}$ for each $d_i \in D$.
-  \item The next level contains selection operators, one
-    for processing the output of every scan operator, i.e. we have $\sigma_{T^{d_i}}(t)$ for every $d_i \in D$.     
-   \item The root node is a union operator $\bigcup_t(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_{|D|}}}(t))$ that combines the outputs of all selection operators for $t$.    
-  \end{itemize}
+  Given a query $Q$, let $t \in Q$ be a triple pattern in $Q$ and $D =
+  source(t)$ be the set of sources for $t$. An \emph{access plan}
+  $p(t)$ for $t$ is a tree-structured query plan constructed in the
+  following way: 1) At the lowest level, the leaf nodes of $p(t)$ are
+  source scan operators, one $scan_{d_i} = T^{d_i}$ for each $d_i \in
+  D$; 2) the next level contains selection operators, one for
+  processing the output of every scan operator, i.e. we have
+  $\sigma_{T^{d_i}}(t)$ for every $d_i \in D$; 3) the root node is a
+  union operator
+  $\bigcup_t(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_{|D|}}}(t))$ that
+  combines the outputs of all selection operators for $t$.
+
+  % \begin{itemize}
+  % \item At the lowest level, the leaf nodes of $p(t)$ are source scan
+  %   operators, one $scan_{d_i} = T^{d_i}$ for each $d_i \in D$.
+  % \item The next level contains selection operators, one for
+  %   processing the output of every scan operator, i.e. we have
+  %   $\sigma_{T^{d_i}}(t)$ for every $d_i \in D$.
+  % \item The root node is a union operator
+  %   $\bigcup_t(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_{|D|}}}(t))$
+  %   that combines the outputs of all selection operators for $t$.
+  % \end{itemize}
 \end{definition}
 
 At the next levels, the outputs of access plans' root operators are
@@ -65,22 +78,22 @@ selection operator, i.e. the output is shared. This means that access
 plans may overlap and the query plan is no longer a tree, but
 has the form of a directed acyclic graph (DAG) \cite{Neumann_2005}.
 
-In a DAG-shaped query plan the outputs of shared operators are 
-read multiple times, which is not possible if the data is only passed
-between operators. However, there are several possible strategies for
-executing DAG-shaped query plans \cite{Neumann_2005}. One strategy is
-to store the outputs of shared operators in temporary buffers (on disk
-or in memory), from which subsequent reads are served. This strategy
-incurs the often not inconsiderable overhead for writing and storing
-the temporary buffer. A different strategy uses a push-based execution
-mode, where operators push their output to subsequent operators
-in the DAG, resulting in a reversed control flow (compared
-to the classic iterator model). Instead of having several
-operators consuming their shared input independently, any output of a
-shared operator is processed by its consumers at the same time. This
-push-based execution (using symmetric hash join) was employed in previous work on Linked Data query processing
-\cite{ladwig_linked_2010,sihjoin_2011} and is also used in our
-implementation.
+In a DAG-shaped plan the outputs of shared operators are read multiple
+times, which is not possible if the data is only passed between
+operators. There are several possible strategies for executing
+DAG-shaped plans \cite{Neumann_2005}. One strategy is to store the
+outputs of shared operators in temporary buffers (on disk or in
+memory), from which subsequent reads are served. This strategy incurs
+the often not inconsiderable overhead for writing and storing the
+temporary buffer. A different strategy uses a push-based execution
+mode, where operators push their output to subsequent operators in the
+DAG, resulting in a reversed control flow (compared to the classic
+iterator model). Instead of having several operators consuming their
+shared input independently, any output of a shared operator is
+processed by its consumers at the same time. This push-based execution
+(using symmetric hash join) was employed in previous work on Linked
+Data query processing \cite{ladwig_linked_2010,sihjoin_2011} and is
+also used in our implementation.
 
 %\begin{definition}[Linked Data Query Plan]
 %  Given the query $Q=\{t_1,\ldots,t_n\}$ and the corresponding access plans for every triple pattern $A(Q) = \{p(t_i),\ldots,p(t_n)\}$, a \emph{Linked Data query plan} $p(Q)$ for the query $Q$ represents the sequence of joins $\langle Join_1\ldots\Join_n \rangle$ such that 
@@ -113,8 +126,8 @@ implementation.
   \includegraphics[width=0.6\linewidth]{figs/plan-crop.pdf}
   \caption{Query plan for the example query.}
 \label{fig:plan}
+\vspace{-0.5cm}
 \end{figure}
-
 \begin{example}
   Fig.~\ref{fig:plan} shows an example query plan for the 
   query from Fig.~\ref{fig:query}. There are three source scan

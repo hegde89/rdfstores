@@ -1,5 +1,5 @@
 \begin{figure*}[htb]
-%  \vspace{-0.5cm}
+  \vspace{-0.5cm}
   \centering
   \includegraphics[width=0.75\linewidth]{figs/all_queries.pdf}
   \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_m.pdf}
@@ -7,7 +7,7 @@
     and systems ($b=0.8, m=2000$), b) Skyline fraction for RD, RK for
     different value of $m$ ($b=0.8$).}
   \label{fig:queries}
-%  \vspace{-0.5cm}
+  \vspace{-0.5cm}
 \end{figure*}
 
 \section{Evaluation}
@@ -155,12 +155,14 @@ in terms of results (of which only $|D|$ plans actually vary in cost).
 %operators.
 
 \begin{figure}[htb]
+  \vspace{-0.1cm}
   \centering
   \includegraphics[width=0.48\linewidth]{figs/plans_q2_all.pdf}
   \includegraphics[width=0.48\linewidth]{figs/plans_q2_sky.pdf}
   \caption{Plans for query Q2 on all systems: a) all plans and b)
     skyline plans ($b=0.8,m=2000$).}
   \label{fig:pareto_q2_skyline}
+  \vspace{-0.5cm}
 \end{figure}
 
 \subsection{Setting} As data, we use real-world Linked Data currently available on the Web. We generate queries and process them against Linked Data sources on the Web to obtain a total of 1,909,109 triples from various popular datasets such as DBpedia, Freebase, New York Times, GeoNames and LinkedMDB. The number of Linked Data sources from which all data were retrieved is 516,293. During this process, we observed that network latency greatly varies. In order to systematically study the effects of query processing, we thus decided to download these data, and to simulate Linked Data query processing on one single machine. To reflect network cost, we tried different settings, including the average of 1.5s that we could observed on real-world sources. Performance differences between systems were however not sensitive to these settings. 
@@ -271,15 +273,17 @@ on a 2009 Macbook Pro with a 2.4 GHz Intel Core 2 Duo processor, 4GB
 RAM (of which 1GB was assigned to the Java VM) and a Crucial m4 128GB
 SSD.
 \begin{figure*}[htb]
+  \vspace{-0.5cm}
   \centering
-  \includegraphics[width=0.24\linewidth]{figs/pareto_plan_tp.pdf}
-  \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_tp.pdf}
   \includegraphics[width=0.24\linewidth]{figs/pareto_plan_b.pdf}
   \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_b.pdf}
+  \includegraphics[width=0.24\linewidth]{figs/pareto_plan_tp.pdf}
+  \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_tp.pdf}
   \caption{Effect of sharing benefit on a) planning time and b)
     skyline fractions ($m=2000$). Effect of query size on c) planning time and d) skyline
      fractions ($b=0.8, m=2000$).}
   \label{fig:pareto_sharing}
+  \vspace{-0.5cm}
 \end{figure*}
 
 
@@ -376,12 +380,14 @@ The negative effect of not taking precise bounds into account is evident in Fig.
 %taken into account during planning.
 
 \begin{figure*}[htb]
+  \vspace{-0.5cm}
   \centering
   \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q2.pdf}
   \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q7.pdf}
   \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q19.pdf}
   \caption{Execution times of query plans for queries Q2, Q7 and Q19.}
   \label{fig:exec}
+  \vspace{-0.5cm}
 \end{figure*}
 
 

@@ -70,7 +70,11 @@ given query~\cite{ilyas_survey_2008}.
 %join algorithms, query optimization and indexing methods
 %\cite{ilyas_survey_2008}. 
 Clearly, multi-objective optimization is different from top-k
-processing in that instead of a fixed number of results, a range of plans representing different trade-offs is computed. One of this plan may yield the same effect as top-k processing. However, the overall problem here is finding optimal plans, instead of computing results.
+processing in that instead of a fixed number of results, a range of
+plans representing different trade-offs is computed. One of these
+plans may yield the same effect as top-k processing. However, the
+overall problem here is finding optimal plans, instead of computing
+results.
 
 \textbf{Skyline Queries.} The skyline operation finds the Pareto
 set from a potentially large set of points and is used in conjunction
@@ -85,24 +89,24 @@ different in that instead of computing Pareto-optimal results, it computes query
 
 \textbf{Multiobjective Query Optimization.} To the best of our
 knowledge, \cite{papadimitriou_multiobjective_2001} is the only work
-addressing multi-objective query optimization, where it is studied
-in the context of Mariposa \cite{stonebraker_mariposa:_1996}, a
-wide-area database system. The Mariposa optimizer splits the query
-tree into subqueries and then obtains bids from participating sites
-that specify a delay and cost for delivering the result of a
-subquery. The goal of the proposed multi-objective optimizer
+addressing multi-objective query optimization, where it is studied in
+the context of Mariposa \cite{stonebraker_mariposa:_1996}, a wide-area
+database. The optimizer splits the query tree into subqueries
+and then obtains bids from participating sites that specify a delay
+and cost for delivering the result of a subquery. The goal of the
+proposed multi-objective optimizer
 \cite{papadimitriou_multiobjective_2001} is to obtain the Pareto
 optimal set of plans with respect to cost and delay. While dynamic
-programming is employed to show that the Pareto set can be
-computed in polynomial time, it is not based on the classic DP
-algorithm \cite{selinger_access_1979}. The problem studied there is different
-because there is only one single query operation tree and for each operation
-node, the optimizer has a list of alternatives for implementing
-the operation. In contrast, the classic DP algorithm does not consider
-only a single query tree (i.e. a single order of operations), but
-builds and optimizes query plans in a bottom up fashion and considers all
-possible query trees. In this work, we extend the classic DP algorithm to
-support multi-objective query optimization.
+programming is employed to show that the Pareto set can be computed in
+polynomial time, it is not based on the classic DP algorithm
+\cite{selinger_access_1979}. The problem studied there is different
+because there is only a single query operation tree and for each
+operation node, the optimizer has a list of alternatives for
+implementing the operation. In contrast, the classic DP algorithm does
+not consider only a single query tree (i.e. a single order of
+operations), but builds and optimizes plans in a bottom-up fashion and
+considers all possible query trees. In this work, we extend the
+classic DP algorithm to support multi-objective query optimization.
 
 
 

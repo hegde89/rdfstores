@@ -6,7 +6,7 @@ introduce the problem of processing queries over Linked Data.
 \subsection{Linked Data and Queries} 
 RDF~\cite{klyne_resource_2004} is used
 as the data model, but for clarity of presentation, we do not consider
-special RDF semantics (e.g. RDF blank nodes) and focus on the main characteristic of RDF. 
+the special RDF semantics (e.g. RDF blank nodes) and focus on the main characteristic of RDF. 
 %However, all methods presented in this paper can easily
 %be extended to deal with blank nodes. 
 Namely, it can be considered as a general model for
@@ -25,17 +25,17 @@ follows:
   \mathcal{L}$ are called \emph{RDF terms},
   $\langle s, p, o\rangle \in \mathcal{U}
   \times \mathcal{U} \times (\mathcal{U} \cup \mathcal{L})$ is 
-  an \emph{RDF triple}, and sets of RDF triples are called
-  \emph{RDF graphs}.
+  an \emph{RDF triple}, and every set of RDF triples is also called
+  a \emph{RDF graph}.
 \end{definition}
 
-They are called graphs because RDF triples can be seen 
-as graph edges connecting nodes that stand for RDF terms. URI references in RDF are used to uniquely identify resources captured by the data. 
+It is a graph because RDF triples can be seen 
+as edges connecting nodes that stand for RDF terms. URI references in RDF are used to uniquely identify resources captured by the data. 
 %(instances, concepts, properties) and allow assertions to be made about their attributes and
 %relationships. 
 The Linked Data principles \cite{bizer_linked_2009} commonly used on the Web to access and publish RDF data (as Linked Data) mandate
 that HTTP URIs shall be used and that dereferencing such an URI returns a
-description of the resource identified by the URI. While this is also applicable to other types of data, 
+description of the resource identified by the URI. While these principles are also applicable to other types of data, 
 the large amount of descriptions published this way on the Web represent RDF graphs, each is a set of triples where the dereferenced URI appears as subject or object.
 
 Therefore, a HTTP URI reference can be seen as a data source, whose
@@ -47,7 +47,7 @@ resource identified by an URI and the Linked Data source that can be
 retrieved by dereferencing that URI.
 
 \begin{definition}[Linked Data Source]
-  A \emph{Linked Data source}, identified by an HTTP URI $d$, is a set of RDF triples $\langle s^d,p^d,o^d \rangle$ . Dereferencing an
+  A \emph{Linked Data source}, identified by an HTTP URI $d$, is a set of RDF triples $\langle s,p,o \rangle$ . Dereferencing an
   HTTP URI $d$ can be seen as a function $deref : \mathcal{U} \rightarrow \mathcal{T}$, which maps a URI to a set of triples such that the set of triples $T^d$ for $d$ can be obtained as $T^d = \mathit{deref}(d)$. There is a \emph{link} between two Linked Data
   sources $d_i, d_j$ if $d_j$ appears as the subject or object in at
   least one triple of $d_i$, i.e. $\exists t\in T^{d_i},t=\langle d_j,p,o \rangle \vee t=\langle s,p,d_j \rangle$ or vice versa, $\exists t\in T^{d_j},t=\langle d_i,p,o \rangle \vee t=\langle s,p,d_i \rangle$. The union set of
@@ -71,34 +71,34 @@ retrieved by dereferencing that URI.
 The standard language for querying RDF data is SPARQL
 \cite{prudhommeaux_sparql_2008}. An important feature of SPARQL 
 is basic graph pattern (BGP). Work on RDF and Linked Data query processing
-so far focused on the task of answering BGP queries: 
+so far focused on the task of answering BGP queries. For ease of notation, we use $t$ both to denote triples and triple patterns: 
 %, i.e., queries
 %that consist of a single BGP.
 
 \begin{definition}[Triple Pattern, Basic Graph Pattern]
-  A \emph{triple pattern} $q=\langle s,p,o \rangle$, where each $s$,$p$ and $o$ is either a RDF term (called \emph{constant}) or a variable. A \emph{basic graph pattern} is a set of triple patterns $Q= \{t_i,\ldots,t_n\}$. 
+  A \emph{triple pattern} $t=\langle s,p,o \rangle$, where each $s$, $p$ and $o$ is either a RDF term (called \emph{constant}) or a variable. A \emph{basic graph pattern} is a set of triple patterns $Q= \{t_i,\ldots,t_n\}$. 
 \end{definition}
 
-Typically, the same variable is used in more than one triple pattern such that $Q$ forms a connected graph. Computing answers to a BGP query over the Linked Data graph amounts to the
-task of graph pattern matching. A result to a BGP query can be defined as
+Typically, every triple pattern in $Q$ shares one common variable with at least one other pattern in $Q$ such that $Q$ forms a connected graph. Computing answers to a BGP query over the Linked Data graph amounts to the
+task of \emph{graph pattern matching}. A result to a BGP query can be defined as
 follows:
 
 \begin{definition}[Result]
-Let $T^D$ be the Linked Data graph, $TERM$ be the set of RDF terms in $T^D$, $Q$ be a BGP query, and $V$ be the set of variables in $Q$. Then a mapping
+Let $T^D$ be the Linked Data graph, $TERM$ be the set of RDF terms in $T^D$, $Q$ be a BGP query, and $V$ be the set of all variables in $Q$. Then a mapping
 $\mu_{T^D}: V \to TERM$ from the variables in $Q$ to RDF terms
 in $T^D$ will be called a \emph{result} to $Q$, if the function
 \[
-\mu'_{T^D}: V \cap TERM \to TERM \left\{
+\mu'_{T^D}: V \cup TERM \to TERM \left\{
 \begin{array}{ll}
 v \mapsto \mu_{T^D}(v) & \mbox{ if } v\in V \\
-t \mapsto t & \mbox{ if } t \in TERM\\
+l \mapsto l & \mbox{ if } l \in TERM\\
 \end{array}\right.
 \]
 satisfies $\langle \mu'_{T^D}(s),\mu'_{T^D}(p), \mu'_{T^D}(o) \rangle \in T^D$ for any $\langle s,p,o \rangle \in Q$. 
 \end{definition}
 
-For clarity of notation, we will use $\mu_{T^D}$ not only to refer to
-result nodes in ${T^D}$ that match the query variables but also the
+We will use $\mu_{T^D}$ not only to refer to
+the result nodes in ${T^D}$ that match the query variables but also the
 triples (subgraphs) that match a triple pattern (a BGP).
 % Since Linked Data triples in $T^D$ also form a graph, processing
 % queries in this context amounts to the task of graph pattern
@@ -118,7 +118,7 @@ triples (subgraphs) that match a triple pattern (a BGP).
 
 \subsection{Processing Linked Data Queries} A BGP query is evaluated by
 first obtaining bindings for each of its constituent triple patterns $q
-\in Q$ and then performing a series of joins between the bindings. This is done for every two triple patterns that share a
+\in Q$ and then performing a series of joins between the bindings. This is done for every two patterns that share a
 variable, forming a \emph{join pattern} (that variable is referred to
 as the \emph{join variable}). 
 %For most queries there are multiple ways to obtain results, e.g.,
@@ -131,7 +131,7 @@ In the Linked Data context, BGP queries are
 %%they have to be matched against the combined graph 
 evaluated against the set of all sources in the Linked Data graph $T^D$. 
 While some sources may be available locally, others have
-to be \emph{retrieved via HTTP dereferencing during query processing}. \dtr{either motivate here why this is needed or in the intro}
+to be \emph{retrieved via HTTP dereferencing during query processing}. 
 
 Previous work on Linked Data query processing
 %, two main approaches
@@ -163,7 +163,7 @@ The authors of that work~\cite{harth_data_2010} focus on the efficient encoding 
 \begin{definition}[Source Index]
   \label{def:index}
   Given the Linked Data sources $D$, the \emph{source index} can be conceived as a function $source : \mathcal{T} \to 2^\mathcal{URI}$, which maps a triple pattern $t$ to URIs representing sources that contain results for $t$, i.e. $source(t) =
-  \{d| d \in D \wedge, \mu_{T^D}(t) \in T^D\}$. 
+  \{d| d \in D \wedge, \mu_{T^d}(t) \neq \emptyset \}$. 
 \end{definition}
 %
 %\begin{definition}
@@ -180,9 +180,9 @@ In practice, the source index used by existing work not only returns the URIs bu
 %in sources indexed by the source index.
 
 Given the large number of Linked Data sources and their high retrieval costs, it is often not practical to process all relevant sources. The heavily skewed data
-distribution in the Web of Data exacerbates this problem, as there are
+distribution of Linked Data exacerbates this problem, as there are
 triple patterns that match all or many sources and therefore do not
-serve to discriminate sources \cite{ladwig_linked_2010}. For example, 
+help to discriminate sources \cite{ladwig_linked_2010}. For example, 
 the pattern $\langle ?x, \mbox{\emph{rdf:type}}, ?y \rangle$ matches most Linked Data sources. Thus, existing work rank and process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}.
 
 %\subsection{Pareto Optimal Linked Data Query Optimization} 

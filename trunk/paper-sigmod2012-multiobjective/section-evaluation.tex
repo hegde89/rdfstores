@@ -1,13 +1,12 @@
 \section{Evaluation}
 \label{sec:eva}
-%Existing work on Linked Data query processing performs source ranking without further optimization. We implements a baseline, which uses the source ranking strategy to select sources first, and then uses dynamic programming for optimizing the cost of subsequent query operators. 
+Existing work on Linked Data query processing performs source ranking without further optimization. We implement this source ranking strategy to select sources first, and then use the dynamic programming solution as proposed for Linked Data query optimization to optimize the subsequent process. That is, the proposed query plan as well as the operator sharing mechanism are employed to optimize cost. This is to obtain a best-effort baseline, based on which we aim the study of effect of the holistic treatment of source selection and query processing, and the multi-objective optimization we propose. The experiment shows that as opposed to our approach, the baseline yields only a small fraction of the complete set of Pareto-optimal plans, and the resulting suboptimal plans lead to much higher cost when producing the same number of results. 
 
-
-The evaluation of our approach consists of two parts. In the first, we
-evalute the benefit of using the dynamic programming query
-optimization algorithm for Linked Data query processing in a
-single-objective scenario. In the second part, we focus on the
-multi-objective optimization approach proposed in this paper.
+%The evaluation of our approach consists of two parts. In the first, we
+%evalute the benefit of using the dynamic programming query
+%optimization algorithm for Linked Data query processing in a
+%single-objective scenario. In the second part, we focus on the
+%multi-objective optimization approach proposed in this paper.
 
 % \subsection{Single-objective Optimization with Dynamic Programming}
 
@@ -35,14 +34,6 @@ multi-objective optimization approach proposed in this paper.
     different value of $m$ ($b=0.8$).}
   \label{fig:queries}
 \end{figure*}
-
-%\subsection{Multi-objective Optimization with Dynamic Programming}
-
-In the second part of the evaluation we examine the approach for
-multi-objective optimization of Linked Data queries that was presented
-in this paper. We will examine whether the dynamic programming
-approach is effective and compare it with two baselines to assess the
-quality of the generated plans.
 
 \subsection{Systems}
 \textbf{Our Approach.} We implemented two versions of our

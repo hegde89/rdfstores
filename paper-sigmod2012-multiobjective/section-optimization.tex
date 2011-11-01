@@ -7,20 +7,20 @@ multi-objective Linked Data query optimization problem.
 DP for query optimization works in a
 bottom-up fashion, constructing the query plan starting from the
 leaves, which are scan operators to access
-relations. DP is is used to deal with the
+relations. DP is used to deal with the
 exponentially large search space of possible query plans. It takes
 advantage of the \emph{optimal substructure} of the query optimization
-problem, i.e., the optimal query plan can be constructed from
-optimal subplans. Non-optimal subplans can be
+problem, i.e. the optimal query plan can be constructed from
+optimal subplans such that non-optimal subplans can be
 discarded during the process to reduce the search space.
 
 
-Applied to Linked Data query processing, we propose to construct access plans $P(t)$ for every triple patterns $t \in Q$. These \emph{atomic plans} are then successively combined 
+Applied to Linked Data query processing, we propose to construct access plans $P(t)$ for every triple pattern $t \in Q$. These \emph{atomic plans} are then successively combined 
 %using join operators 
 to create \emph{composite plans} for larger subexpressions $T \subseteq Q$. 
-For instance, to construct a query plan for the expression $T=t_1\Join t_2$, the optimizer may consider all possible pairs $\{(p1,p_2), p_1 \in P(t_1),p_2 \in P(t_2)\}$ as possible combination of plans. When combining two plans $p_1,p_2$ to form a new plan $p$, we
+For instance, to construct a query plan for the expression $T=t_1\Join t_2$, the optimizer may consider all possible pairs $\{(p_1,p_2) | p_1 \in P(t_1),p_2 \in P(t_2)\}$ as possible combinations of plans. When combining two plans $p_1,p_2$ to form a new plan $p$, we
 write $p = \mathtt{cmb}(p_1,p_2)$. At each stage, the optimizer 
-try to reduce candidates subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T) \subseteq
+tries to reduce candidate subplans by discarding those that cannot be part of an optimal solution. That is, before constructing plans for larger subexpressions the optimizer creates $P^+(T) \subseteq
 P(T)$, the set of optimal plans for every subexpression $T$. 
 %In the case of Linked Data
 %query processing, the optimality of a plan is determined according to
@@ -30,14 +30,14 @@ P(T)$, the set of optimal plans for every subexpression $T$.
 %Pareto-optimal plans, $P^+(T) = P^*(T)$.
 
 In the following, we firstly discuss how to estimate the optimality of atomic plans as well as composite plans for any expressions $T \subseteq Q$. Then we discuss the main problems that arise when applying the DP solution to this problem of multi-objective Linked Data query optimization.  Because query plans are no longer required to produce all results, we will
-discuss a relaxation of the comparability constraint. Then, we study the effect of operator sharing on query optimization and introduce upper and lower bounds on plan
-costs. Finally, we prove that the multi-objective query optimization problem still has optimal
-substructure and that the dynamic programming solution constructs the
+discuss a \emph{relaxation of the comparability constraint}. Then, we study the effect of \emph{operator sharing} on query optimization and introduce upper and lower bounds on subplans'
+costs. Finally, we prove that the resulting multi-objective query optimization problem still has optimal
+substructure and that the proposed dynamic programming solution constructs the
 optimal solution, i.e. the skyline of query plans.
 
 \subsection{Estimating Cost and Cardinality of Plans}
 \label{sec:estimation}
-For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}. An essential factor for cost estimation is cardinality. While not only input cardinality but also output cardinality may be used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. 
+For the presented structure of a Linked Data query plan and its operators, many existing techniques can be used to systematically estimate cost \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}. An essential factor for cost estimation is cardinality. While not only input cardinality but also output cardinality are actually used for estimating the cost of some operators, optimizing based on cost alone does not guarantee that the resulting plans are also optimal with respect to output cardinality. 
 %Instead of cardinality, the work discussed here is also applicable to other 
 %In fact, not 
 %%Further, other optimization objectives such as 
@@ -46,7 +46,7 @@ For the presented structure of a Linked Data query plan and its operators, many 
 %For certain operators, input cardinality is not the same as 
 
 %In this case, not only the cost but also the output cardinality are associated with query operators. 
-We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimations for more advanced techniques \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}):
+We will now discuss straightforward estimates that will be needed in this work (and refer the readers to more specific work on cost and join size estimation for more advanced techniques \cite{stocker_sparql_2008,neumann_scalable_2009,huang_selectivity_2010}):
 
 \textbf{Operators.} The output cardinality of the source scan operator is the same as the size of the source, i.e. $card(scan_d) = |T^d|$. 
 % If the source is not locally available, it will be
@@ -59,12 +59,12 @@ We will now discuss straightforward estimates that will be needed in this work (
 %execution, immediately be pushed to all subsequent operators.
 This source size statistics can be directly obtained from the source index discussed before. 
 For union, cardinality is the sum of the cardinalities of its inputs: $card(\cup(I_1,...,I_n)) = \sum_{i=1}^n card(I_i)$. 
-The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_t(T^d)) = sel(t) \times |T^d|$ and $card(t_i \Join t_j) =
+The cardinality for selection and join depends on selectivity estimates $sel(\cdot)$, i.e. $card(\sigma_{T^d}(t)) = sel(t) \times |T^d|$ and $card(t_i \Join t_j) =
 sel(t_i \Join t_j) \times card(t_i) \times card(t_j)$, respectively. 
 %\textbf{Join.} The output cardinality of a join between triples obtained for the two patterns $t_i,t_j$ is given by its selectivity: 
-Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_t(T^d))=h_\sigma \times |T^d|$, $cost(\cup) =
-h_\cup \times card(\cup)$, $cost(\Join)$ $=
-h_\Join \times card(\Join)$. Thus, cost is assumed to be proportional to cardinality but different weights $h_s,h_\sigma,h_\cup,h_\Join$ are used for different operators. The weight factor $h_\Join$ for instance, depends on the
+Costs for scan, selection, union and join are $cost(scan_d) = h_s \times |T^d|$, $cost(\sigma_{T^d}(t))=h_\sigma \times |T^d|$, $cost(\cup) =
+h_\cup \times card(\cup)$, and $cost(\Join)$ $=
+h_\Join \times card(\Join)$, respectively. Thus, cost is assumed to be proportional to cardinality but different weights $h_s,h_\sigma,h_\cup$, and $h_\Join$ are used for different operators. The weight factor $h_\Join$ for instance, depends on the
 join algorithm employed. As in previous work on Linked Data query processing, we use symmetric hash join~\cite{ladwig_linked_2010,sihjoin_2011}. In case of operator sharing, separate cost
 models for the first source scan (when the data is retrieved over the
 network) and subsequent scans (when the data has already been
@@ -106,7 +106,8 @@ sources (represented by source scan operators) is part of query
 optimization. Thus, the optimizer decides both \emph{what and how data shall be processed}. 
 If we apply the comparability concept as defined
 previously, each unique combination of source scan operators may yield different results and thus, would be represented by a separate equivalence class of query plans. Given there
-are potentially hundreds of Linked Data sources for a single query, this may result in a search space where query optimization is no longer affordable.
+are potentially hundreds of Linked Data sources for a single query, this may result in a very large search space. 
+% where query optimization is no longer affordable.
 
 However, we note that given the objectives here are cardinality and cost, we are not interested in which results but how many results will be produced. 
 %is no longer required, 
@@ -187,9 +188,9 @@ cost of the source scan operator changes when a plan is combined with
 another plan that shares that operator.
 %Monotonicity is not clear which may cause
 %the optimizer to miss the overall optimal plan.
-Suppose we have two plans $p,p'$ for the subexpression $T \subset Q$
+Suppose we have two plans $p,p'$ for the subexpression $T \subset Q$, $cost(p) > cost(p')$,
 and a plan $p_t$ for a triple pattern $t$ such that $Q = T \cup
-\{t\}$, and $cost(p) > cost(p')$. The optimizer would consider $p'$ to
+\{t\}$. The optimizer would consider $p'$ to
 be the optimal plan for $T$ and discard $p$ to form
 $P^+(T)=\{p'\}$. Now, because of operator sharing it is possible that
 the cost of the combination of two plans is less than the sum of the
@@ -197,7 +198,7 @@ cost of the two combined plans, i.e. it is possible that
 $cost(\mathtt{cmb}(p,p_t)) < cost(\mathtt{cmb}(p',p_t))$ if $p$ and
 $p_t$ share the same source such that the cost of $p_t$ when combined
 with $p$ is much lower than the cost of $p_t$ that is combined with
-$p'$. In this case, $p'$ should not be part of $P^+(T)$.
+$p'$. In this case, $p'$ is not part of $P^+(T)$.
 
 % To avoid this problem, We need to make sure that the cost and
 % cardinality functions are \emph{monotonic} with regard to plan
@@ -234,7 +235,7 @@ respect to plan combination as follows:
   
 \begin{lemma}
   Let $T,T' \subset Q$ be two subexpressions of $Q$ such that $T \cap
-  T' = \emptyset$ and $p_1,p_2 \in P(T)$ and $p' \in P(T')$ be plans
+  T' = \emptyset$, and $p_1,p_2 \in P(T)$ and $p' \in P(T')$ be plans
   for $T$ and $T'$, respectively. We have
     \[ cost^Q_U(p_1) \leq cost^Q_L(p_2) \Rightarrow
     cost^Q_U(\mathtt{cmb}(p_1,p')) \leq
@@ -288,7 +289,7 @@ above.
 %Definition~\ref{def:bounds}, 
 A basic strategy to compute the lower and upper
 bounds of a plan $p$ presented above is to construct all plans based on
-$p$. This is of course very cost intensive and defeats the purpose of pruning. Observe that for pruning, we need only to compare the upper and lower bounds between a pair of plans $p_1,p_2$ for the subexpression $T \subset Q$. Given, $p_1$, $p_2$ can be pruned if it has higher cost when used to process $T$, and further, when its benefit that may arise when processing other parts of the query cannot outweigh this difference in cost. If exists, this benefit can be completely attributed to operator sharing. Hence, for the efficient estimation of bounds, we propose to focus on the maximal possible benefit that is achievable through operator sharing. As source scan is the only shareable operator, we can derive the maximal benefit by looking at the overlap among all sources that contain data for the query. In particular, only those source scans captured by $p_2$ that are not covered by $p_1$ (i.e. the potential lost when $p_2$ is discarded) have to be considered: 
+$p$. This is of course very cost intensive and defeats the purpose of pruning. Observe that for pruning, we need only to compare the upper and lower bounds between pairs of plans $p_1,p_2$ for the subexpression $T \subset Q$. Given $p_1$, $p_2$ can be pruned if it has higher cost when used to process $T$, and further, when its benefit that may arise when processing other parts of the query cannot outweigh this difference in cost. If exists, this benefit can be completely attributed to operator sharing. Hence, for the efficient estimation of bounds, we propose to focus on the maximal possible benefit that is achievable through operator sharing. As source scan is the only shareable operator, we can derive the maximal benefit by looking at the overlap among all sources that contain data for the query. In particular, only those source scans captured by $p_2$ that are not covered by $p_1$ (i.e. the potential lost when $p_2$ is discarded) have to be considered: 
 
 %As the source scan operator is the only shareable operator, we can
 %calculate the maximal possible benefit for a particular plan $p$ by
@@ -308,10 +309,11 @@ $p$. This is of course very cost intensive and defeats the purpose of pruning. O
   
   
 \begin{definition}[Maximal Benefit]
-  Given a query $Q$, two query plans $p_1,p_2 \in P(T), T \subset Q$, let $D_{p_1},D_{p_2}$ be the sets of sources (i.e. the source scan operators) used by $p_1$ and $p_2$, respectively, $D'_{p_2}$ be the set of sources used by $p_2$ not covered by $p_1$, i.e. $D'_{p_2} = D_{p_2} \setminus D_{p_1}$, $Q'$ bet the set of triple patterns not covered by $p_1$ and $p_2$, i.e. $Q' = Q \setminus T$, the \emph{maximal benefit} of $p_2$ given $p_1$ is calculated as $mb(p_2|p_1) = \sum_{t \in Q'}
-  \sum_{d \in source(t), d \in D'_{p_2} } b \cdot cost_1(scan_d)$, where $b$ is the sharing benefit and
-  $cost_1(scan_d)$ is the cost for the first scan
-  of $d$.
+  Given a query $Q$ and two query plans $p_1,p_2 \in P(T), T \subset Q$, let $D_{p_1},D_{p_2}$ be the sets of sources (i.e. the source scan operators) used by $p_1$ and $p_2$, respectively, $D'_{p_2}$ be the set of sources used by $p_2$ not covered by $p_1$, i.e. $D'_{p_2} = D_{p_2} \setminus D_{p_1}$ and $Q'$ be the set of triple patterns not covered by $p_1$ and $p_2$, i.e. $Q' = Q \setminus T$, the \emph{maximal benefit} of $p_2$ given $p_1$ is $mb(p_2|p_1) = \sum_{t \in Q'}
+  \sum_{d \in source(t), d \in D'_{p_2} } b \cdot cost_1(scan_d)$.
+%  , where $b$ is the sharing benefit and
+%  $cost_1(scan_d)$ is the cost for the first scan
+%  of $d$.
 \end{definition}
 
 \begin{lemma}
@@ -335,8 +337,8 @@ $p$. This is of course very cost intensive and defeats the purpose of pruning. O
 %
 %<<<<<<< .mine
   
-Based on these bounds defined with respect to the maximal benefit, we finally obtain the dominance relation for
-pruning subplans as follows:
+Based on these bounds defined with respect to the maximal benefit, we finally obtain the following dominance relation for
+pruning subplans:
 
 \begin{theorem}
   Given a query $Q$, a subexpression $T \subset Q$ and two plans
@@ -525,7 +527,7 @@ plans according to the optimization objectives.
   \KwOut{Pareto-optimal query plans $P^+(Q)$}
 
   \ForEach{$q \in Q$}{
-    $S \leftarrow \{ \cup(\{ \sigma_t(scan(d)) | d \in D \}) | D \in
+    $S \leftarrow \{ \cup(\{ \sigma_{T^d}(t) | d \in D \}) | D \in
     \mathcal{P}(I(q))\}$ \;
     $P^+(\{q\}) \leftarrow \{p \in S| \nexists p' \in S : p' >_b p \}$
     \; 
@@ -555,7 +557,7 @@ sources are selected with help of the source index $I$. As we need to
 consider all possible combinations of sources, we create the power set
 $\mathcal{P}(I(q))$ of all sources (line 2). For each member $D$ of
 the power set, we create an access plan, consisting of a selection and
-scan operator $\sigma_t(scan(d))$ for each source $d \in D$ and a
+scan operator $\sigma_{T^d}(t)$ for each source $d \in D$ and a
 single union operator $\cup$ that has the selection operators as
 input. $S$ then contains a set of access plans, one for each
 combination of relevant sources. From this set, we then select only

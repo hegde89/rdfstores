@@ -1,6 +1,6 @@
 \section{Linked Data Query Optimization Framework}
 \label{sec:framework}
-These existing ad-hoc strategies for selecting Linked Data sources have shown to improve the performance of Linked Data query processing. However, there exists no optimization technique that goes beyond source selection to consider the entire process of Linked Data querying. In this section, we provide a systematic study of existing Linked Data querying approaches~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010} to model the querying process in terms of operators of a query plan. The goal is to provide the first \emph{systematic solution towards Linked Data query optimization}, which considers the effect of query operators to compute and guarantee the optimality of query plans. 
+These existing ad-hoc strategies for selecting Linked Data sources have shown to improve the performance of Linked Data query processing. However, there exists no optimization technique that goes beyond source selection to consider the entire process of Linked Data querying. In this section, we provide a systematic study of existing Linked Data querying approaches~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010} to model the querying process in terms of operators of a query plan. The goal is to provide the first \emph{systematic solution towards Linked Data query optimization}, which considers the effect of query operators to compute and guarantee the (Pareto-)optimality of query plans. 
 
 %For optimizing Linked Data queries, we systematically captures all operators needed, incorporate them into a query plan, and briefly, discuss how to estimate their impacts on the optimization objectives cost and outputs. 
 
@@ -9,23 +9,23 @@ These existing ad-hoc strategies for selecting Linked Data sources have shown to
 %For processing linked data queries, sources containing data for query triple patterns have to be retrieved (possibly from remote sources). We use a \emph{source scan} operator to represent sources. Then, standard query operators are adopted to process triples retrieved from these sources.
 %Triples in the same source however, can be used to answer different patterns. Selecting triples from sources is captured by the \emph{selection} operator. Triples for a pattern retrieved from all sources are then combined via the \emph{union} operator, and finally, combined with triples retrieved for other patterns via \emph{join}: 
 % when these patterns share a common variable, via union otherwise. 
-The standard query operators table scan, selection, union and join can be used to model the Linked Data querying process. The main difference to traditional query processing is that the availability of data indexes cannot be assumed in the general case. Only some basic statistics about sources can be assumed to available such that given a triple pattern, relevant sources can be determined~\cite{harth_data_2010,ladwig_linked_2010}. However, entire sources have to be retrieved. This is conceptually same to table scans. The difference is that often, sources have to be retrieved from remote sites via HTTP URI lookup. Moreover, several sources may contain answers for one single query predicate (triple pattern in this case).  
+The standard query operators table scan, selection, union and join are adopted to model the Linked Data querying process. The main difference to traditional query processing is that the availability of data indexes cannot be assumed in the general case. Only some basic statistics about sources can be assumed to be available such that given a triple pattern, relevant sources can be determined~\cite{harth_data_2010,ladwig_linked_2010}. However, entire sources have to be retrieved. This is conceptually similar to a table scan. The difference is that often, sources have to be retrieved from remote sites via HTTP URI lookup. Moreover, several sources may contain answers for one single query predicate (triple pattern), and vice versa, one single source source may be used for several predicates.  
 
-\begin{definition}[Source Scan] The input of a source scan operator $scan(d)$ is the source URI $d$.
+\begin{definition}[Source Scan] The input of a source scan operator $scan_d$ is the source URI $d$.
 % consists of the data contained in
 %such a source. 
-Executing this operator outputs all triples in $d$, i.e. $scan(d) = T^d$.
+Executing this operator outputs all triples in $d$, i.e. $scan_d = T^d$.
 \end{definition}
 
-\begin{definition}[Selection]  A selection $\sigma_t(T^d)$ is performed on the input $T^d$ to output
-triples in $T^d$ that match $t$, i.e. $\sigma_t(T^d) = \mu_{T^d}(t)$. 
+\begin{definition}[Selection]  A selection $\sigma_{T^d}(t)$ is performed on the input $T^d$ to output
+triples in $T^d$ that match $t$, i.e. $\sigma_{T^d}(t) = \mu_{T^d}(t)$. 
 \end{definition}
 
-Outputs from two triple patterns $t_i$ and $t_j$ that share a common variable are combined through a standard join operator $\mu(t_i)\Join\mu(t_j)$. 
+Two triple patterns $t_i$ and $t_j$ (their outputs to be more precise) that share a common variable are combined through a standard join operator $t_i\Join t_j$. In general, $T_i\Join T_j$ joins any subexpression $T_i \subset Q$ with one other $T_j \subset Q$. 
 
 \begin{definition}[Union] As usual, $\bigcup(I_1,\ldots,I_n)$
-outputs the union of its inputs $I_i$, $1\leq i < \leq n$, where every input $I_i$ stands for results for one triple pattern, $I_i = \mu_{T^d}(t)$, or several triple patterns, e.g. $I_i = \mu_{T^d}(t_i)\Join\mu_{T^d}(t_j)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
-$\bigcup(\sigma_t(T^{d_1}),\ldots,\sigma_t(T^{d_n}))$ combines results from several selection operators.   
+outputs the union of its inputs $I_i$, $1\leq i \leq n$, where every input $I_i$ may stand for results for one triple pattern, $I_i = \mu(t)$, or subexpression, e.g. $I_i = \mu(T)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
+$\bigcup(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_n}}(t))$ combines results from several selection operators.   
 \end{definition}
 
 For clarity of presentation, we assume query triple patterns form a connected graph such that join is the only operator used to combine triples from different patterns. 
@@ -40,14 +40,14 @@ access plan for each triple pattern, which consists of source scan, selection an
 operators:
 
 \begin{definition}[Access Plan]
-  Given a query $Q$, let $t \in Q$ be a triple pattern in $Q$ and $D = source(t)$ be the set of sources for $t$. An access plan $p(t)$ for $t$ is a tree-structured query plan constructed in the
+  Given a query $Q$, let $t \in Q$ be a triple pattern in $Q$ and $D = source(t)$ be the set of sources for $t$. An \emph{access plan} $p(t)$ for $t$ is a tree-structured query plan constructed in the
   following way:
   \begin{itemize}
   \item At the lowest level, the leaf nodes of $p(t)$ are source scan operators, one
-    $scan_t(d_i) = T^{d_i}$ for each $d_i \in D$.
+    $scan_{d_i} = T^{d_i}$ for each $d_i \in D$.
   \item The next level contains selection operators, one
-    for processing the output of every scan operator, i.e. we have $\sigma_t(T^{d_i})$ for every $d_i \in D$.     
-   \item The root node is a union operator $\bigcup_t(\sigma_t(T^{d_1}),\ldots,\sigma_t(T^{d_{|D|}}))$ that combines the outputs of all selection operators for $t$.    
+    for processing the output of every scan operator, i.e. we have $\sigma_{T^{d_i}}(t)$ for every $d_i \in D$.     
+   \item The root node is a union operator $\bigcup_t(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_{|D|}}}(t))$ that combines the outputs of all selection operators for $t$.    
   \end{itemize}
 \end{definition}
 
@@ -61,24 +61,24 @@ pattern. In this case it is detrimental to execute the scan operator
 more than once as this will incur network costs that can be
 avoided. We therefore perform \emph{operator sharing}, where the
 output of a source scan operator is used as input for more than one
-selection operators, i.e. the output is shared. This means that access
-plans may overlap and the overall query plan is no longer a tree, but
+selection operator, i.e. the output is shared. This means that access
+plans may overlap and the query plan is no longer a tree, but
 has the form of a directed acyclic graph (DAG) \cite{Neumann_2005}.
 
-In a DAG-shaped query plan the output of shared operators has to be
+In a DAG-shaped query plan the outputs of shared operators are 
 read multiple times, which is not possible if the data is only passed
 between operators. However, there are several possible strategies for
 executing DAG-shaped query plans \cite{Neumann_2005}. One strategy is
-to store the output of shared operators in temporary buffers (on disk
+to store the outputs of shared operators in temporary buffers (on disk
 or in memory), from which subsequent reads are served. This strategy
-incurs the often not inconsiderabe overhead for writing and storing
+incurs the often not inconsiderable overhead for writing and storing
 the temporary buffer. A different strategy uses a push-based execution
 mode, where operators push their output to subsequent operators
-upwards in the DAG, effectively reversing the control flow (compared
-to the classic iterator model) \cite{Neumann_2005}. Instead of several
-operator consuming their shared input independently, any output of a
+in the DAG, resulting in a reversed control flow (compared
+to the classic iterator model). Instead of having several
+operators consuming their shared input independently, any output of a
 shared operator is processed by its consumers at the same time. This
-strategy was employed in previous work on Linked Data query processing
+push-based execution (using symmetric hash join) was employed in previous work on Linked Data query processing
 \cite{ladwig_linked_2010,sihjoin_2011} and is also used in our
 implementation.
 
@@ -116,45 +116,46 @@ implementation.
 \end{figure}
 
 \begin{example}
-  Fig.~\ref{fig:plan} shows an example query plan for the example
+  Fig.~\ref{fig:plan} shows an example query plan for the 
   query from Fig.~\ref{fig:query}. There are three source scan
-  operator, one for each of the sources \emph{(1) ex:beatles},
-  \emph{(3) ex:sgt\_pepper}, and \emph{(6) ex:lucy}. Together with the
-  selection and union operators, the source scans form the access
-  plans for the three triple patterns $q_1, q_2$, and $q_3$.  The
-  outputs of the access plans are then joined in two join operators.
+  operators, one for each of the sources \emph{(1) ex:beatles},
+  \emph{(3) ex:sgt\_pepper}, and \emph{(6) ex:lucy}. Together with 
+  selection and union operators, the source scans form 3 access
+  plans for the 3 triple patterns $q_1, q_2$, and $q_3$.  The
+  outputs of the access plans are then combined using 2 join operators.
 
-  As sources \emph{ex:beatles} and \emph{ex:sgt\_pepper} contain
+  As the sources \emph{ex:beatles} and \emph{ex:sgt\_pepper} contain
   relevant data for more than one triple pattern ($q_1,q_3$ and
-  $q_2,q_3$, respectively), their source scans are shared, i.e., the
-  outputs of the scans feed into two access plans each.
+  $q_2,q_3$, respectively), their source scans are shared, i.e. the
+  outputs of the these operators feed into 2 access plans.
 \end{example}
 
 
 \subsection{Pareto Optimal Plans} 
-Optimality is not clearly defined in the Linked Data context. Traditionally, completeness is assumed such that all results have to be computed. Optimality in this case is defined with respect to processing cost, and optimization techniques aim to find plans that are cost-optimal, i.e. produce all results at lowest costs. As discussed, completeness is not practical in Linked Data query processing and existing approaches (select and) process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}. Not only cost but also the number of results have to be considered here. Further, other criteria such as the trustworthy of sources and the quality of data may play an important role. This results in a \emph{multi-objective} optimization problem. 
+Optimality is not clearly defined in the Linked Data context. Traditionally, completeness is assumed such that all results have to be computed. Optimality in this case is defined with respect to processing cost, and optimization techniques aim to find plans that are cost-optimal, i.e. produce all results at lowest cost. As discussed, completeness is not practical in Linked Data query processing and existing approaches (select and) process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}. Not only cost but also the number of results have to be considered here. Further, other criteria such as the trustworthy of sources and the quality of data may play an important role. This results in a \emph{multi-objective} optimization problem. 
 
 For a query $Q$, % = \{t_1, \ldots, t_n\}
-the goal is to compute the skyline (Pareto set) of query plans that represent different trade-offs between multiple objectives. For clarity of presentation, we will focus on the two main objectives of maximizing \emph{output cardinality}, $card(\cdot)$, and \emph{processing cost} $cost(\cdot)$. Further, we define cost as $score(\cdot) = \frac{1}{cost(\cdot)}$ such that the objective is to maximize the score and output cardinality.  \todo{use cost instead of score everywhere}
+the goal is to compute the skyline (Pareto set) of query plans that represent different trade-offs between multiple objectives. For clarity of presentation, we will focus on the two main objectives of maximizing \emph{output cardinality}, $card(\cdot)$, and \emph{processing cost}, $cost(\cdot)$. 
+%Further, we define cost as $score(\cdot) = \frac{1}{cost(\cdot)}$ such that the objective is to maximize the score and output cardinality.  \todo{use cost instead of score everywhere}
 The skyline of a set of solutions is defined using a \emph{dominance}
-relation that relates the multiple objectives. A query plan is considered to dominate another plan, if it is at least as good in all objectives and better in at least one objective:
+relation that relates the multiple objectives. A query plan is considered to dominate one other plan, if it is at least as good in all objectives and better in at least one objective:
 
 \begin{definition}[Dominance]
-  Given two query plans $p_1,p_2$, $p_1 \mbox{ \textnormal{dominates}
-  } p_2$ ($p_1 > p_2$) if both, score and cardinality, of $p_1$ are greater or equal
-  to the score and cardinalty of $p_2$ and either score or
-  cardinality is strictly greater than the score or cardinality of
-  $p_2$, i.e. $score(p_1) \geq score(p_2) \wedge card(p_1) \geq
-  card(p_2) \wedge ((score(p_1) > score(p_2) \vee card(p_1) >
+  Given two query plans $p_1$ and $p_2$, $p_1 \mbox{ \textnormal{dominates}
+  } p_2$ ($p_1 > p_2$) if both the cost and cardinality of $p_1$ are ``better'' or equal
+  to the score and cardinality of $p_2$, and either the score or
+  cardinality is strictly ``better'' than the score or cardinality of
+  $p_2$, i.e. $cost(p_1) \leq cost(p_2) \wedge card(p_1) \geq
+  card(p_2) \wedge ((cost(p_1) < score(p_2) \vee card(p_1) >
   card(p_2)) \Rightarrow p_1 > p_2$.
 \end{definition}
 
 
 \begin{definition}[Pareto Optimal Plans]
-  Given an query $Q$ and a set of query plans $P(Q)$, the \emph{Pareto}
+  Given a query $Q$ and a set of query plans $P(Q)$ for $Q$, the \emph{Pareto}
   set $P^*(Q) \subseteq P(Q)$ comprises all plans that are not
   dominated by any other plan in $P(Q)$, i.e. $P^*(Q) = \{p_i \in P(Q) | \neg\exists p_j\in P(Q), p_j  > p_i\}$. We denote the set of
-  dominated plans as $P^-(Q) = P(Q) \setminus P^*(Q)$. The set of \emph{optimal plans} for a query $Q$, denoted as $P^+(Q)$, is the Pareto set of plans for $Q$, i.e. $P^+(Q) = P^*(Q)$.
+  dominated plans as $P^-(Q) = P(Q) \setminus P^*(Q)$. The set of \emph{optimal plans} for $Q$, denoted as $P^+(Q)$, is the Pareto set of plans for $Q$, i.e. $P^+(Q) = P^*(Q)$.
 \end{definition}
 
 

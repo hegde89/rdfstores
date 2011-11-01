@@ -6,38 +6,36 @@ increasing rapidly. This is largely due to community efforts such as
 the Linking Open Data project, and increasing interests of enterprises
 and governments. Datasets made publicly available on the Web as Linked
 Data cover different domains, including life sciences (e.g. DrugBank,
-UniProt, PudMed), geographic locations (e.g. World Factbook, Geo
-Names), media and entertainment (MusicBrainz, Last.FM, BBC
-Programmes). There are also cross-domain encyclopedic ones such as
+UniProt, PubMed), geographic locations (e.g. World Factbook, Geo Names), media and entertainment (MusicBrainz, Last.FM, BBC
+Programmes). There are also cross-domain encyclopedic datasets such as
 Freebase and DBpedia (the structured data counterpart of
 Wikipedia). Besides enterprises, such as media companies like BBC and
 Last.FM, many governments (e.g. US, UK) recently started to make data
-of public interests available to citizens, including CO2, Mortality,
-Energy, Postcodes. We refer to the public
+of public interest available to citizens, including CO2, Mortality,
+Energy and Postcodes. We refer to the public
 Website~\footnote{\url{http://linkeddata.org/}} for an overview of
 concepts, activities, projects, and datasets related to Linked Data.
 
-Aiming at exploiting Linked Data and making them available to
+Aiming at making Linked Data available to
 data-intensive processes and Web users, researchers recently started
 to study the problem of Linked Data query
-processing~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010}. Just
+processing~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010,hartig_zero_2011,sihjoin_2011}. Just
 like Web pages, Linked Data on the Web are accessible through URI
 lookups. According to the Linked Data principles
 \cite{bizer_linked_2009}, dereferencing a Linked Data URI via HTTP
-should return a machine-readable description (usually, in RDF) of the
+should return a machine-readable description (usually in RDF) of the
 entity identified by the URI. Each URI therefore represents a virtual
 ``data source''.
 
 Figs.~\ref{fig:sources} \& \ref{fig:query} show examples of Linked
 Data sources with their data and a Linked Data query,
-respectively. During processing of such Linked Data queries over
-Linked Data sources, sources are not stored or cached locally, but
-they are retrieved at run-time via HTTP dereferencing. In this way,
-Linked Data query processing deals with the rapidly evolving nature of
-the Web of data and is able to deliver results that are always
-up-to-date. In this example, the query engine might dereference the
+respectively. For processing such a query, Linked Data sources to be used may not be stored or cached locally, but
+are retrieved at run-time via dereferencing the URIs mentioned in the sources. In this way,
+Linked Data query processing specifically aim to deal with the rapidly evolving nature of
+the Web of data and to deliver results that are always
+up-to-date. In this example, the query engine may dereference the
 URIs \emph{ex:beatles}, \emph{ex:sgt\_pepper} and \emph{ex:lucy} to
-produce a single result binding \emph{``Lucy...''} for query variable
+produce the result \emph{``Lucy...''} for the query variable
 $?name$.
 % \dtr{need example which illustrate what is linked
 %   data query processing, and why it is really useful, e.g. freshness
@@ -46,7 +44,7 @@ $?name$.
 Thus, processing structured queries against Linked Data can be seen as
 a special case of federated query processing. However, the restricted
 access pattern based on HTTP lookup and the highly distributed nature
-of Linked Data sources resulting from it, presents unique challenges:
+of Linked Data sources resulting from it, present unique challenges:
 
 \begin{figure*}[ht]
   \centering
@@ -110,8 +108,8 @@ ex:lucy
 \item \textbf{High cost for source retrieval.} Typically, while basic
   source statistics have been assumed to exist (especially for sources
   that have been processed before~\cite{ladwig_linked_2010}), it is
-  not practical to assume that all data is available
-  locally. Processing queries against remote Linked Data sources in
+  not practical or desirable to assume that all data is available
+  locally. Processing queries in
   this distributed setting however requires Linked Data sources to be
   \emph{retrieved as a whole}. This is because as opposed to standard
   federated query processing, where remote sources are actually
@@ -128,24 +126,26 @@ ex:lucy
 
 \item \textbf{Different, conflicting optimization criteria.}
   Typically, the optimization of queries is based on one single goal,
-  aiming to minimize the \emph{cost} for computing all results. The
+  namely to minimize the \emph{cost} for computing all results. The
   large number of potentially relevant sources and their high
-  processing cost lead to long execution times such that \emph{result
-    completeness} might no longer be affordable in practical
-  usage. Thus, addressing this requirement has not been the main goal:
+  processing costs lead to long execution times such that \emph{result
+    completeness} is often no longer affordable in practical
+  usage. Thus, addressing this requirement has not been the main goal in
   previous work on Linked Data query
-  processing~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010}
+  processing~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010}, which
   employs various termination criteria such as a maximum number of
-  retrieved sources \cite{harth_data_2010}. In fact, completeness has
-  never been crucial on the Web but rather, the goal of Web search for
-  instance, is to obtain some (best) results in a given amount of
-  time. In other words, not only the cost of processing but also the
-  amount of results (\emph{output cardinality}) play a role. Further
-  criteria such as the relevance and quality of results may be
-  considered in the various Linked Data use cases that are
+  retrieved sources \cite{harth_data_2010}, and strategies to select only the best few sources~\cite{ladwig_linked_2010}. 
+%  In 
+%  fact, completeness has
+%  never been crucial on the Web but rather, the goal of Web search for
+%  instance, is to obtain some (best) results in a given amount of
+%  time. In other words, not only the cost of processing but also the
+%  amount of results (\emph{output cardinality}) play a role. 
+  Instead of assuming completeness and optimizing exclusively for cost, other 
+  criteria such as relevance, quality and cardinality of results, and trustworthy of sources may be considered in the various Linked Data use cases that are
   possible. This is problematic because these criteria are not always
   complementary. For instance, there is an inherent trade-off between
-  output cardinality and cost: to produce more results, we have to
+  output cardinality and cost: To produce more results, we have to
   retrieve more sources, which in turn increases processing cost (and
   vice versa).
 \end{itemize}
@@ -153,10 +153,10 @@ ex:lucy
 \emph{Federated databases} are able to process queries over data that
 is managed by several networked database systems, either centralized
 \cite{zsu_principles_2011} or in a distributed, peer-to-peer fashion
-\cite{huebsch_architecture_2005}. Every node in this federated setting
-(system or peer), hosts its data, and provides structured querying
+\cite{huebsch_architecture_2005}. Every node in this federated setting 
+hosts its data, and provides structured querying
 capabilities such that query processing in this setting breaks down to
-finding the right systems to execute part of the queries and merging
+finding the right nodes to execute part of the queries and merging
 results. For optimization, the main strategy is to leverage the
 capabilities of the nodes, i.e. pushing the processing to the nodes,
 and to minimize cost for transferring data (partial results)
@@ -168,14 +168,13 @@ our setting because instead of partial results and views, nodes return
 entire sources. That is, they possess only one capability, namely
 ``source scan'' (we choose this term to make clear the analogy of HTTP
 source lookup and table scan). More precisely, \emph{not the
-  composition of views or joins but the selection of source scans is
-  crucial in this setting.}
+  composition of views or joined results but the selection of source scans and processing the resulting sources are crucial tasks in this setting.}
 %Standard query optimization can be adopted to produce an optimal query plan. 
 
 % Further, as completeness is not required, not only the order but also
 % the selection of sources is critical for query optimization.
 Selecting relevant sources for a given query has been a topic in
-database and data integration research. There, sources are described
+data integration research. There, sources are described
 not only by their content, but also by their capabilities, and
 algorithms that efficiently perform \emph{source selection} by using
 source characteristics to prune the search space have been
@@ -203,7 +202,7 @@ SELECT ?name WHERE {
 \end{lstlisting}
   \end{minipage}
   \includegraphics[width=0.7\linewidth]{figs/query-crop.pdf}
-  \caption{Example query asking for names of songs on albums of the
+  \caption{Example query asking for names of songs in albums of the
     Beatles. The query consists of three triple patterns $q_1$ (line
     \ref{query:q1}), $q_2$ (line \ref{query:q2}), and $q_3$ (line
     \ref{query:q3}).}
@@ -220,10 +219,9 @@ provide the following contributions:
   using heuristics for adaptive ranking to select only the few best
   sources~\cite{ladwig_linked_2010}. However, to the best of our
   knowledge, this work is the \emph{first solution towards a
-    systematic optimization of Linked Data queries}.
+    systematic optimization of Linked Data query processing}.
 
-\item In particular, we propose an optimization framework \dtr{weaken
-    it} for Linked Data query processing, which incorporates
+\item In particular, we propose an optimization framework for Linked Data query processing, which incorporates
   \emph{both standard query operators} and \emph{source
     selection}. That is, we propose to extend the scope of query
   optimization from how to process data to which data to process. This
@@ -235,11 +233,11 @@ provide the following contributions:
 \item We propose a dynamic programming algorithm for the
   multi-objective optimization of this integrated process of source
   selection and query processing. It produces a set of Pareto-optimal
-  query plans, which represent the trade-off between optimization
+  query plans, which represent different trade-offs between optimization
   objectives.
   
 \item After retrieval, sources can be re-used in different parts of
-  the query. Essentially, this means that the \emph{sharing of source
+  the query. Essentially, this means that \emph{sharing of source
     scan operators} is possible. While this provides more room for
   optimization, it also makes dynamic programming technically more
   challenging: the cost function is no longer monotonic with regard to

@@ -95,10 +95,13 @@ query optimization.
 %However, the optimizer must take care not to
 %discard plans that may be part of an overall optimal solution, which
 %then would no longer be found. 
-For this, the notion of \emph{comparability} was introduced, which is an equivalence relation $\sim$ over plans. It determines which plans are comparable, based on which  
+For this, the notion of \emph{comparability} was introduced, an
+equivalence relation $\sim$ over plans. It determines which plans are
+comparable, based on which
 % according
 %to some pre-defined properties. 
-the optimizer can decide which plans are suboptimal. The optimizer can prune all but the optimal plans for each of the equivalence classes that are induced by $\sim$. 
+the optimizer decides which plans are suboptimal and then prunes all
+but the optimal plans for each equivalence class induced by $\sim$.
 
 In the traditional setting, atomic operators and plans comprising them are \emph{comparable when they produce the same output}. This comparability relation is applicable because input relations are determined by the query such that operators used to process them produce the same output and vary only with regard to cost. The optimizer than chooses how to process data (e.g. table or index
 scan) based on cost estimates. In Linked Data query processing, however, the selection of
@@ -431,10 +434,12 @@ solution for $Q$:
   $p^-_1$ and $\mathtt{cmb}(p^-_1,p^*_2)$ dominates
   $\mathtt{cmb}(p^*_1,p^*_2)$, it follows from the established dominance relation that
   (without loss of generality, we use strictly lesser/greater relations):
-  \begin{eqnarray*}
-    card(p^-_1) < card(p^*_1) &\wedge& card (\mathtt{cmb}(p^-_1,p^*_2)) > card(\mathtt{cmb}(p^*_1,p^*_2)) \\
-    cost^Q_L(p^-_1) > cost^Q_U(p^*_1) &\wedge& cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) < cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))\\
-  \end{eqnarray*}
+  \begin{align*}
+    card(p^-_1) < card(p^*_1) & \wedge card(\mathtt{cmb}(p^-_1,p^*_2)) > card(\mathtt{cmb}(p^*_1,p^*_2)) \\
+    cost^Q_L(p^-_1) > cost^Q_U(p^*_1) & \wedge
+    cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) <
+    cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))  
+  \end{align*}
   However, this contradicts with the monotonicity property established for cost, because $cost^Q_L(p^-_1) >
   cost^Q_U(p^+_1)$, but $cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) <
   cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))$. Analogously, a contradiction also follows from the monotonicity of cardinality. With regard to our original proposition, this means

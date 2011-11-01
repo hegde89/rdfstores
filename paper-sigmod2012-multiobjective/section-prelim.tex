@@ -81,16 +81,16 @@ retrieved by dereferencing that URI.
 The standard language for querying RDF data is SPARQL
 \cite{prudhommeaux_sparql_2008}. An important feature of SPARQL are
 basic graph patterns (BGP). Work on RDF and Linked Data query
-processing so far focused on the task of answering BGP queries.% For
-% ease of notation, we use $t$ both to denote triples and triple
-% patterns:
+processing so far focused on the task of answering BGP queries. For
+ ease of notation, we use $t$ both to denote triples and triple
+ patterns:
 
 
 \begin{definition}[Triple Pattern, Basic Graph Pattern]
-  A \emph{triple pattern} $q=\langle s,p,o \rangle$, where each $s$,
+  A \emph{triple pattern} $t=\langle s,p,o \rangle$, where each $s$,
   $p$ and $o$ is either a RDF term (called \emph{constant}) or a
   variable. A \emph{basic graph pattern} is a set of triple patterns
-  $Q= \{q_i,\ldots,q_n\}$.
+  $Q=\{t_i,\ldots,t_n\}$.
 \end{definition}
 
 Typically, every triple pattern in $Q$ shares one common variable with

@@ -1,6 +1,6 @@
 \section{Linked Data Query Optimization Framework}
 \label{sec:framework}
-These existing ad-hoc strategies for selecting Linked Data sources have shown to improve the performance of Linked Data query processing. However, there exists no optimization technique that goes beyond source selection to consider the entire process of Linked Data querying. In this section, we provide a systematic study of existing Linked Data querying approaches~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010} to model the querying process in terms of operators of a query plan. The goal is to provide the first \emph{systematic solution towards Linked Data query optimization}, which considers the effect of query operators to compute and guarantee the (Pareto-)optimality of query plans. 
+The existing ad-hoc strategies for selecting Linked Data sources have shown to improve the performance of Linked Data query processing. However, there exists no optimization technique that goes beyond source selection to consider the entire process of Linked Data querying. In this section, we provide a systematic study of existing Linked Data querying approaches~\cite{hartig_executing_2009,harth_data_2010,ladwig_linked_2010} to model the querying process in terms of operators of a query plan. The goal is to provide the first \emph{systematic solution towards Linked Data query optimization}, which considers the effect of query operators to compute and guarantee the (Pareto-)optimality of query plans. 
 
 %For optimizing Linked Data queries, we systematically captures all operators needed, incorporate them into a query plan, and briefly, discuss how to estimate their impacts on the optimization objectives cost and outputs. 
 
@@ -18,7 +18,7 @@ Executing this operator outputs all triples in $d$, i.e. $scan_d = T^d$.
 \end{definition}
 
 \begin{definition}[Selection]  A selection $\sigma_{T^d}(t)$ is performed on the input $T^d$ to output
-triples in $T^d$ that match $t$, i.e. $\sigma_{T^d}(t) = \mu_{T^d}(t)$. 
+triples in $T^d$ that match triple pattern $t$, i.e. $\sigma_{T^d}(t) = \mu_{T^d}(t)$. 
 \end{definition}
 
 Two triple patterns $t_i$ and $t_j$ (their outputs to be more precise) that share a common variable are combined through a standard join operator $t_i\Join t_j$. In general, $T_i\Join T_j$ joins any subexpression $T_i \subset Q$ with one other $T_j \subset Q$. 

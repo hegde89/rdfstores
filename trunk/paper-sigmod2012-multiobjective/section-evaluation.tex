@@ -1,6 +1,18 @@
 \section{Evaluation}
 \label{sec:eva}
-Existing work on Linked Data query processing performs source ranking without further optimization. We implement this source ranking strategy to select sources first, and then use the dynamic programming solution as proposed for Linked Data query optimization to optimize the subsequent process. That is, the proposed query plan as well as the operator sharing mechanism are employed to optimize cost. This is to obtain a best-effort baseline, based on which we aim the study of effect of the holistic treatment of source selection and query processing, and the multi-objective optimization we propose. The experiment shows that as opposed to our approach, the baseline yields only a small fraction of the complete set of Pareto-optimal plans, and the resulting suboptimal plans lead to much higher cost when producing the same number of results. 
+Existing work on Linked Data query processing performs source ranking
+without further optimization. We implement this source ranking
+strategy to select sources first, and then use the dynamic programming
+solution as proposed for Linked Data query optimization to optimize
+the subsequent process. That is, the proposed query plan as well as
+the operator sharing mechanism are employed to optimize cost. This is
+to obtain a best-effort baseline, based on which we aim the study of
+effect of the holistic treatment of source selection and query
+processing, and the multi-objective optimization we propose. The
+experiment shows that as opposed to our approach, the baseline yields
+only a small fraction of the complete set of Pareto-optimal plans, and
+the resulting suboptimal plans lead to much higher cost when producing
+the same number of results.
 
 %The evaluation of our approach consists of two parts. In the first, we
 %evalute the benefit of using the dynamic programming query
@@ -36,15 +48,44 @@ Existing work on Linked Data query processing performs source ranking without fu
 \end{figure*}
 
 \subsection{Systems}
-\textbf{Our Approach.} We implemented two versions of our
-approach. The first version (DP) implements all the proposed techniques to produce the complete set of Pareto-optimal plans. The second
-version (DPU) also uses operator sharing such that for subsequent source accesses, the refined cost model applies. However, the effect of this is not taken into account during pruning.  That is, it uses directly the cost instead of the lower and upper bounds that have been established to guarantee monotonicity of cost. Thus, at the cost of compromising Pareto-optimality, DPU can prune more aggressively and thus, is expected to exhibit better performance. With this baseline, we aim to study the positive effect of using the proposed bounds on Pareto-optimality, and to find out whether the proposed technique for estimating the bounds is effective in reducing the overhead resulting from that.
+\textbf{Our Approach.} We implemented three versions of our
+approach. The first version (DP) implements all the proposed
+techniques to produce the complete set of Pareto-optimal plans. The
+second version (DPU) also uses operator sharing such that for
+subsequent source accesses, the refined cost model applies. However,
+the effect of this is not taken into account during pruning.  That is,
+it uses directly the cost instead of the lower and upper bounds that
+have been established to guarantee monotonicity of cost. Thus, at the
+cost of compromising Pareto-optimality, DPU can prune more
+aggressively and thus, is expected to exhibit better performance. With
+this baseline, we aim to study the positive effect of using the
+proposed bounds on Pareto-optimality, and to find out whether the
+proposed technique for estimating the bounds is effective in reducing
+the overhead resulting from that. The third version (DPS) does not use
+operator sharing at all, i.e., if a source is used for more than one
+triple pattern it is retrieved multiple times. We use DPS to show that
+operator sharing in general is beneficial.
 
 
-\textbf{Baselines.} Existing Linked Data approaches implement ad-hoc source ranking to select few best sources~\cite{harth_data_2010,ladwig_linked_2010}, and then process these sources without further optimization. This processing represents one single plan, whose optimality is unknown. We implement this source ranking (RK) and a random source selection strategy (RD). Given the selected sources, the standard DP solution is applied on top to optimize the cost these baselines need to produce results from these sources. In the same way proposed for our approach, this DP solution applies operator sharing so that sources can be reused. Instead of one single cost-optimized plan, our approach however yields a Pareto-set of query plans that represents the trade-off between cost and cardinality. Thus, we further extend these baselines to use different combinations of sources that yield different plans. 
+\textbf{Baselines.} Existing Linked Data approaches implement ad-hoc
+source ranking to select few best
+sources~\cite{harth_data_2010,ladwig_linked_2010}, and then process
+these sources without further optimization. This processing represents
+one single plan, whose optimality is unknown. We implement this source
+ranking (RK) and a random source selection strategy (RD). Given the
+selected sources, the standard DP solution is applied on top to
+optimize the cost these baselines need to produce results from these
+sources. In the same way proposed for our approach, this DP solution
+applies operator sharing so that sources can be reused. Instead of one
+single cost-optimized plan, our approach however yields a Pareto-set
+of query plans that represents the trade-off between cost and
+cardinality. Thus, we further extend these baselines to use different
+combinations of sources that yield different plans.
 
 Both baselines first retrieve all relevant sources $D$ for a query $Q$
-from the source index, i.e., $D = \bigcup_{t \in Q} source(t)$. Then, a set $\mathcal{D}$ containing $|D|$ different subsets of $D$, each with size in the range $[1,|D|]$ is created. 
+from the source index, i.e., $D = \bigcup_{t \in Q} source(t)$. Then,
+a set $\mathcal{D}$ containing $|D|$ different subsets of $D$, each
+with size in the range $[1,|D|]$ is created.
 %The number of  captured by and $|\mathcal{D}| = |D|$. 
 The baselines differ in how these
 subsets are selected:
@@ -59,23 +100,40 @@ subsets are selected:
 \end{itemize}
 Each element in $\mathcal{D}$ is a subset of all relevant source and
 represents a combination of sources. For each of the source
-combinations, we create a single cost-optimized query plan. As a result, we have a set of plans, which vary in the number of results as well as because different combination of sources are used. 
+combinations, we create a single cost-optimized query plan. As a
+result, we have a set of plans, which vary in the number of results as
+well as because different combination of sources are used.
 % using a standard dynamic
 %programming optimizer (i.e., no multi-objective optimization). Sharing
 %of source scan operators is also employed where possible.
 
-Note that our approach not only selects sources (source scan operators) but also for which triple patterns these sources are used (selection operators), while the sources selected for the baselines are used for all triple patterns. In order to obtain even more plans that further vary in the number of results they produce, we create an additional set of $m$ plans for each
-previously created plan by randomly removing a subset of the inputs (selection operators) from the unions at the root of their access plans. 
+Note that our approach not only selects sources (source scan
+operators) but also for which triple patterns these sources are used
+(selection operators), while the sources selected for the baselines
+are used for all triple patterns. In order to obtain even more plans
+that further vary in the number of results they produce, we create an
+additional set of $m$ plans for each previously created plan by
+randomly removing a subset of the inputs (selection operators) from
+the unions at the root of their access plans.
 %In particular, to create a new plan from an
 %existing plan, for each union that is root of an access plan, we
 %remove a random subset of its input (selection) operators. 
 %If the source scan operator that is input for a removed selection operator is
 %not shared it is also remove from the plan.
 %Any invalid plans that are constructed in this way (e.g., all inputs of an union might have been) are discarded. 
-In the end, each baseline
-has at most of $m \cdot |D|$ plans that vary in terms of results (where only $|D|$ plans actually vary in terms of cost). 
+In the end, each baseline has at most of $m \cdot |D|$ plans that vary
+in terms of results (where only $|D|$ plans actually vary in terms of
+cost).
 
-These baselines optimize source selection independent from the subsequent computation of results. While the goal of source selection is to choose those that contribute many results, the subsequent optimization focuses on cost. Compared to them, our approach not only jointly optimize sources section and result computation but also, considers cardinality and cost at the same time. Our goal is to study the effect of this joint optimization on the Pareto-optimality of plans. Further, we will investigate the effect of using non-optimal plans on the result....
+These baselines optimize source selection independent from the
+subsequent computation of results. While the goal of source selection
+is to choose those that contribute many results, the subsequent
+optimization focuses on cost. Compared to them, our approach not only
+jointly optimize sources section and result computation but also,
+considers cardinality and cost at the same time. Our goal is to study
+the effect of this joint optimization on the Pareto-optimality of
+plans. Further, we will investigate the effect of using non-optimal
+plans on the result....
 %While this effect is expected to be positive, the increased complexity of the planning problem also leads to additional cost. Thus, we will also investigate whether this overhead can be justified by looking at the total processing time needed for producing several fixed fraction of results.  
 
 
@@ -103,7 +161,8 @@ statistics for all evaluation queries.
 As the source index contained too many sources for the multi-objective
 optimization approach to deal with, we randomly aggregated sources
 during the creation of access plans into a set of $k=5$ virtual
-sources. The size of the virtual sources follows a Zipf distribution.
+sources. The size of the virtual sources follows a Zipf distribution
+with exponent $2$.
 
 \begin{table}[htb]
   \centering
@@ -208,8 +267,8 @@ and then pruning all dominated plans.
 
 We can see that DP produces only skyline plans and that there are many
 DPU plans that are part of the skyline (56\% on average). However, the
-RD and RD baselines generate almost no skyline plans (3\% and 1\% on
-average). 
+RD and RD baselines generate almost no skyline plans (1.9\% and 1\% on
+average). DPS does not find any skyline plans.
 
 Fig.~\ref{fig:queries}b shows the skyline fraction (i.e., the fraction
 of the DP skyline) found by RD and RK for different values of $m$. We
@@ -222,18 +281,32 @@ planning time and found skyline fraction for different query sizes
 (i.e., number of triple patterns). An increased number of triple
 patterns results in a larger search space for the query optimizer: for
 all systems planning time increases with the number of triple
-patterns. However, the DP algorithm is much more affected than DPU, RK
-and RD. Going from 3 to 5 triple patterns, the planning time of DP
-increases by a factor of 87.7 while the planning time for DPU only
-increases by a factor of 16, and RD and RK are largely unaffected. The
-high increase in planning time for 5 triple patterns is largely due to
-query Q16. Without Q16, the factors decrease to 54.9 and 10.5 for DP
-and DPU, respectively.
+patterns. However, the DP algorithm is much more affected than DPU,
+DPS, RK and RD. Going from 3 to 5 triple patterns, the planning time
+of DP increases by a factor of 101.4, DPS increases by a factor of 28,
+while the planning time for DPU only increases by a factor of 18, and
+RD and RK are largely unaffected. The high increase in planning time
+for 5 triple patterns is largely due to query Q16. Without Q16, the
+factors decrease to 60.7, 11.2 and 14 for DP, DPU and DPS,
+respectively.
+
+The better performance of DPU than DPS indicates that DPU is able to
+prune more plans, because operator sharing can produce better
+plans. This also supported by the fact that DPS on average creates
+more plans than either DP or DPU (see
+Fig.~\ref{fig:queries}a). Compared to DPU, DP is not able to prune as
+many intermediary plans because of the estimated bounds that allow
+pruning only when there is no possibility that a plan might be part of
+an optimal plan.
+
+% dp 71282
+% dpu 5128
+% dps 17024
 
 Fig.~\ref{fig:pareto_tp}b shows the fractions of the complete plan
 skyline (i.e., the plans computed by DP) that the systems are able to
 calculate for different query sizes. Whereas for 3 triple patterns the
-baselines RD and RK are able to find 17\% and 6\% of the skyline, no
+baselines RD and RK are able to find 11\% and 6\% of the skyline, no
 skyline plans are found for 4 and 5 triple patterns. DPU also performs
 better for 3 triple patterns, where 70\% of the skyline is found (54\%
 for 4 and 5 triple patterns). For more triple patterns the space of
@@ -251,24 +324,29 @@ perform much worse.
 
 \textbf{Effect of Sharing Benefit.} Figs.~\ref{fig:pareto_sharing}a+b
 show the planning time and skyline fractions for different values of
-$b$. We see in Fig.~\ref{fig:pareto_sharing}a that the planning time
-for DP increases with higher sharing benefits: from 37.63s for $b=0.1$
-to 50.1s for $b=0.8$. However, the planning time for the other
-approaches, DPU, RD, and RK, remain the same for all values of
-$b$. The planning time for DP increases with higher sharing benefits
-because the bounds of plan costs are less tight and less plans can be
-pruned during the query optimization process. The other approaches are
-not affected because DP is the only one that actually considers the
-sharing benefit during optimization.
+the sharing benefit $b$. We see in Fig.~\ref{fig:pareto_sharing}a that
+the planning times for DPS, RD and RK are not affected by different
+values for $b$, which is expected as these planners do not take the
+sharing benefit into account.
+
+However, for DP the planning time increases with higher sharing
+benefits: from 36.7s for $b=0.1$ to 47.7s for $b=0.8$.  The planning
+time for DP increases with higher sharing benefits because the bounds
+of plan costs are less tight and less plans can be pruned during the
+query optimization process. DPU on the other shows the opposite
+behavior, planning time decreases from 13.2s ($b=0.1$) to 3.8s
+($b=0.8$). Again, DPU is able to prune more plans when the expected
+sharing benefits are higher as this creates a steeper cost gradient
+between plans.
 
 Fig.~\ref{fig:pareto_sharing}b shows the skyline fractions for all
 approaches for different values of $b$. We can see that DPU computes a
 larger part of the skyline when the sharing benefit is lower. This is
 due to the fact that DPU does not take the effect of operating sharing
-into account, leading to worse results the more pronounved the
-influence of the sharing benefit is. The other approaches, RD and RK,
-are not affected by the sharing benefit as the benefit is not taken
-into account during planning.
+into account, leading to worse results the more pronounced the
+influence of the sharing benefit is. The other approaches, DPS, RD and
+RK, are not affected by the sharing benefit as the benefit is not
+taken into account during planning.
 
 \begin{figure}[htb]
   \centering
@@ -279,17 +357,17 @@ into account during planning.
   \label{fig:pareto_sharing}
 \end{figure}
 
-\textbf{Plan Skyline.} Figs.~\ref{fig:pareto_q2_skyline}a+b show a scatter
-plot of cost and cardinality of plans generated by all systems for
-query Q2. In these plots a plan dominates all plans that are to its
-lower right, i.e. that have higher cost (x-axis) and lower cardinality
-(y-axis). Fig.~\ref{fig:pareto_q2_skyline}a shows all plans that were
-generated by the different systems. We can immediately see that many
-of the plans generated by the RD and RK baselines are dominated by
-other plans. Fig.~\ref{fig:pareto_q2_skyline}b shows only the plans
-for all systems that are on the skyline. Here, the dominated plans in
-the center of the plot no longer appear and only few RD and RK plans
-remain.
+\textbf{Plan Skyline.} Figs.~\ref{fig:pareto_q2_skyline}a+b show a
+scatter plot of cost and cardinality of plans generated by all systems
+for query Q2. In these plots a plan dominates all plans that are to
+its lower right, i.e. that have higher cost (x-axis) and lower
+cardinality (y-axis). Fig.~\ref{fig:pareto_q2_skyline}a shows all
+plans that were generated by the different systems. We can immediately
+see that many of the plans generated by the RD and RK baselines are
+dominated by other plans and that all DPS plans are also
+dominated. Fig.~\ref{fig:pareto_q2_skyline}b shows only the plans for
+all systems that are on the skyline. Here, the dominated DPS plans no
+longer appear and only few RD and RK plans remain.
 
 \begin{figure}[htb]
   \centering
@@ -300,18 +378,38 @@ remain.
   \label{fig:pareto_q2_skyline}
 \end{figure}
 
-\textbf{Execution Time.}  Fig.~\ref{fig:exec_q7} shows the execution
-times and number of results for 10\% of plans (randomly chosen) for
-query Q7 generated by DP. We see that plans that produce less results
-in general have shorter execution times. In order to find all 106
-query results, the fastest plan takes 17.9 seconds; producing a subset
-of 46 results requires only 4.3 seconds.
+\textbf{Execution Time.} We selected three queries with different
+result set sizes (Q2: 24, Q7: 106, Q9: 836) and randomly chose 20\% of
+the plans generated by each system in order to execute them an record
+the over all query time (planning and execution). Fig.~\ref{fig:exec}
+shows the averaged results for all three queries. Each point in a
+graph is the average execution time of all plans that produce a
+particular number of results. For example, all DPU plans for query Q7
+that produce 46 results on average had an total query time of 7.3s.
+
+First, we see that the RD baseline does not always find plans that
+produce all results (Q2, Q19), whereas RK is able to produce all
+results as RK prefers sources that contain many triples matching query
+triple patterns. DPS overall has the worst execution time, showing the
+large benefit of operator sharing. For queries Q2 and Q10 plans of DP
+and DPU generall perform better than the baselines, especially when
+only partial results are reported. For Q7, only DPU performs better
+whereas here the higher overhead leads to worse performance for DPU.
+
+% Fig.~\ref{fig:exec_q7} shows the execution
+% times and number of results for 20\% of plans (randomly chosen) for
+% queries Q2, Q7 and Q19 for all approaches. 
+
+% We see that plans that produce less results
+% in general have shorter execution times. In order to find all 106
+% query results, the fastest plan takes 17.9 seconds; producing a subset
+% of 46 results requires only 4.3 seconds.
 
 However, we can also see that some of the plans produce no results at
 all. This is due to the fact that the employed cardinality estimation
 procedure does not take dependencies between sources into
 account. Here, a more sophisticated method for cardinality estimation
-would help avoid generting empty plans.
+would help avoid generating empty plans.
 
 \begin{figure}[htb]
   \centering
@@ -319,7 +417,7 @@ would help avoid generting empty plans.
   \includegraphics[width=0.8\linewidth]{figs/pareto_exec_0_q7.pdf}
   \includegraphics[width=0.8\linewidth]{figs/pareto_exec_0_q19.pdf}
   \caption{Execution times of query plans for queries Q2, Q7 and Q19.}
-  \label{fig:exec_q7}
+  \label{fig:exec}
 \end{figure}
 %%% Local Variables: 
 %%% mode: latex

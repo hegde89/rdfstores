@@ -129,17 +129,17 @@ also used in our implementation.
 \vspace{-0.5cm}
 \end{figure}
 \begin{example}
-  Fig.~\ref{fig:plan} shows an example query plan for the 
-  query from Fig.~\ref{fig:query}. There are three source scan
-  operators, one for each of the sources \emph{(1) ex:beatles},
-  \emph{(3) ex:sgt\_pepper}, and \emph{(6) ex:lucy}. Together with 
-  selection and union operators, the source scans form 3 access
-  plans for the 3 triple patterns $t_1, t_2$, and $t_3$.  The
-  outputs of the access plans are then combined using 2 join operators.
+  Fig.~\ref{fig:plan} shows an example query plan for the query from
+  Fig.~\ref{fig:query}. There are three source scan operators, one for
+  each of the sources \emph{(1) ex:beatles}, \emph{(3)
+    ex:sgt\_pepper}, and \emph{(6) ex:lucy}. Together with selection
+  and union operators, the source scans form 3 access plans for the 3
+  triple patterns $t_1, t_2$, and $t_3$.  The outputs of the access
+  plans are then combined using 2 join operators.
 
   As the sources \emph{ex:beatles} and \emph{ex:sgt\_pepper} contain
-  relevant data for more than one triple pattern ($q_1,q_3$ and
-  $q_2,q_3$, respectively), their source scans are shared, i.e. the
+  relevant data for more than one triple pattern ($t_1,t_3$ and
+  $t_2,t_3$, respectively), their source scans are shared, i.e. the
   outputs of the these operators feed into 2 access plans.
 \end{example}
 

@@ -10,24 +10,19 @@ Existing ad-hoc strategies for selecting Linked Data sources have shown to impro
 %Triples in the same source however, can be used to answer different patterns. Selecting triples from sources is captured by the \emph{selection} operator. Triples for a pattern retrieved from all sources are then combined via the \emph{union} operator, and finally, combined with triples retrieved for other patterns via \emph{join}: 
 % when these patterns share a common variable, via union otherwise. 
 The standard query operators table scan, selection, union and join are adopted to model the Linked Data querying process. The main difference to traditional query processing is that the availability of data indexes cannot be assumed in the general case. Only some basic statistics about sources can be assumed to be available such that given a triple pattern, relevant sources can be determined~\cite{harth_data_2010,ladwig_linked_2010}. However, entire sources have to be retrieved. This is conceptually similar to a table scan. The difference is that often, sources have to be retrieved from remote sites via HTTP URI lookup. Moreover, several sources may contain answers for one single query predicate (triple pattern), and vice versa, one single source source may be used for several predicates.  
-
 \begin{definition}[Source Scan] The input of a source scan operator $scan_d$ is the source URI $d$.
 % consists of the data contained in
 %such a source. 
 Executing this operator outputs all triples in $d$, i.e. $scan_d = T^d$.
 \end{definition}
-
 \begin{definition}[Selection]  A selection $\sigma_{T^d}(t)$ is performed on the input $T^d$ to output
 triples in $T^d$ that match triple pattern $t$, i.e. $\sigma_{T^d}(t) = \mu_{T^d}(t)$. 
 \end{definition}
-
 Two triple patterns $t_i$ and $t_j$ (their outputs to be more precise) that share a common variable are combined through a standard join operator $t_i\Join t_j$. In general, $T_i\Join T_j$ joins any subexpression $T_i \subset Q$ with one other $T_j \subset Q$. 
-
 \begin{definition}[Union] As usual, $\bigcup(I_1,\ldots,I_n)$
 outputs the union of its inputs $I_i$, $1\leq i \leq n$, where every input $I_i$ may stand for results for one triple pattern, $I_i = \mu(t)$, or subexpression, e.g. $I_i = \mu(T)$. Because a triple pattern can match several sources, $I_i$ may also capture partial results for a pattern $t$ such that the union
 $\bigcup(\sigma_{T^{d_1}}(t),\ldots,\sigma_{T^{d_n}}(t))$ combines results from several selection operators.   
 \end{definition}
-
 For clarity of presentation, we assume query triple patterns form a connected graph such that join is the only operator used to combine triples from different patterns. 
 
 
@@ -38,7 +33,6 @@ for individual relations whose outputs are then processed by join and
 other operators. We take a similar approach and create an
 access plan for each triple pattern, which consists of source scan, selection and union
 operators:
-
 \begin{definition}[Access Plan]
   Given a query $Q$, let $t \in Q$ be a triple pattern in $Q$ and $D =
   source(t)$ be the set of sources for $t$. An \emph{access plan}
@@ -63,7 +57,6 @@ operators:
   %   that combines the outputs of all selection operators for $t$.
   % \end{itemize}
 \end{definition}
-
 At the next levels, the outputs of access plans' root operators are
 successively joined to process all triple patterns of the query,
 resulting in a \emph{tree of operators}. However, in Linked Data query

@@ -69,14 +69,13 @@ truly represent the trade-off between the optimization objectives.
 efficiently reporting only the most important (top-k) answers to a
 given query and connects to many fields of database research, such as
 join algorithms, query optimization and indexing methods
-\cite{ilyas_survey_2008}. Our approach for multi-objective
-optimization differs from top-k processing in two important ways: 1)
-while our approach also focuses on reporting only a subset of all
-results, there is no fixed number of result, but our approach provides
-a whole set of query plans, representing the trade-off between cost
-and cardinality; 2) top-k processing focuses on optimizing a single
-objective, whereas our approach supports optimization of several,
-conflicting objectives.
+\cite{ilyas_survey_2008}. Our approach is different from top-k
+processing in two important ways: 1) while we also focus on reporting
+only a subset of all results, our approach provides a whole set of
+query plans that represent the trade-off between cost and cardinality,
+instead of reporting only a fixed number of results; 2) top-k
+processing optimizes a single objective, whereas our approach supports
+optimization of several, conflicting objectives.
 
 \textbf{Skyline Queries.} The skyline operation retrieves the Pareto
 set from a potentially large set of points and is used in conjunction
@@ -102,15 +101,14 @@ subquery. The goal of the proposed multi-objective optimzer
 optimal set of plans with respect to cost and delay. While the authors
 do employ dynamic programming to show that the Pareto set can be
 approximated in polynomial time, it is not based on the classic DP
-algorithm for query optimization \cite{selinger_access_1979}. The
-problem is also different as there is only a single query operation
-tree and for each operation node the optimizer is provided a list of
-alternatives for implementing the operation. In contrast, the classic
-DP algorithm \cite{selinger_access_1979} does not consider only a
-single query tree (i.e. a single order of operations), but builds and
-optimizes query plans from the bottom up and considers all valid query
-trees. In this work we extend the classic algorithm to support
-multi-objective query optimization.
+algorithm \cite{selinger_access_1979}. The problem is also different
+as there is only a single query operation tree and for each operation
+node the optimizer is provided a list of alternatives for implementing
+the operation. In contrast, the classic DP algorithm does not consider
+only a single query tree (i.e. a single order of operations), but
+builds and optimizes query plans from the bottom up and considers all
+valid query trees. In this work we extend the classic algorithm to
+support multi-objective query optimization.
 
 
 

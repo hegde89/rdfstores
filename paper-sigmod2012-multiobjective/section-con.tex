@@ -1,25 +1,19 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We propose a first solution towards a systematic optimization of
-Linked Data queries with an optimization framework for Linked Data
-query processing, which incorporates both, standard query operators
-and source selection. In order to support joint optimization of
-multiple, conflicting objectives, such as cost and output cardinality,
-we extend the classic dynamic programming solution for query
-optimization to the multi-objective setting. The result is the Pareto
-set of optimal query plans, representing the trade-off between the
-optimization objectives. Further, we support sharing of source scan
-operators and provide bounds on plan costs to ensure the optimality of
-the dynamic programming algorithm. In experiments we compare our
-solution to baselines and show that our approach improves on the
-baselines by generating the complete Pareto set of optimal plans and
-producing plans improve performance for the same number of results.
+We propose the first solution towards a systematic optimization of
+Linked Data query processing, which consider both standard query operators
+and the specific characteristics of Linked Data source selection. In order to support joint optimization of multiple objectives, such as cost and output cardinality,
+we extend the classic dynamic programming solution to the multi-objective setting. The result of optimization is the Pareto set of optimal query plans, representing the trade-off between the
+optimization objectives. 
+%Further, we support sharing of source scan
+%operators and provide bounds on plan costs to ensure the optimality of
+%the dynamic programming algorithm. 
+In experiments we compare our
+solution to baselines that independently optimize Linked Data source selection and the processing of queries. Most of the plans computed by these baselines are sub-optimal such that the trade-off between different objectives is not adequately reflected. For the specific case of cardinality and cost, we show that as opposed to our solution, these systems cannot reduce cost when fewer results are needed. 
 
-As future work, we consider the improvement of the cardinality and
-cost estimation by taking dependencies between sources into account
-and approximating the optimization algorithm to alleviate its high
-complexity.
+As future work, we will study how taking dependencies between sources into account can improve cardinality and
+cost estimation. Further, we note from the experiment that a simple approximation of the proposed bounds can provide better planning performance, without compromising too much on the optimality of plans. We will study more advanced techniques for approximating these bounds. 
 
 %%% Local Variables: 
 %%% mode: latex

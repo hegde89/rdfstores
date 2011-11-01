@@ -1,9 +1,7 @@
 \section{Evaluation}
 \label{sec:eva}
-Existing work on Linked Data query processing performs source ranking
-without further optimization. We implement this source ranking
-strategy to select sources first, and then use the dynamic programming
-solution as proposed for Linked Data query optimization to optimize
+Existing works in data integration~\cite{levy_querying_1996 and Linked Data query processing~\cite{harth_data_2010,ladwig_linked_2010} perform source ranking
+without further optimization. We implement source ranking to select sources first, and then use the dynamic DP as proposed for Linked Data query optimization to optimize
 the subsequent process. That is, the proposed query plan as well as
 the operator sharing mechanism are employed to optimize cost. This is
 to obtain a best-effort baseline, based on which we aim the study of
@@ -57,28 +55,36 @@ the effect of this is not taken into account during pruning.  That is,
 it uses directly the cost instead of the lower and upper bounds that
 have been established to guarantee monotonicity of cost. Thus, at the
 cost of compromising Pareto-optimality, DPU can prune more
-aggressively and thus, is expected to exhibit better performance. With
-this baseline, we aim to study the positive effect of using the
-proposed bounds on Pareto-optimality, and to find out whether the
-proposed technique for estimating the bounds is effective in reducing
-the overhead resulting from that. The third version (DPS) does not use
+aggressively and thus, is expected to exhibit better performance. This baseline can be seen as an approximate version of our approach that simply uses actual cost as an approximate estimate for bounds. 
+%With
+%this baseline, we aim to study the positive effect of using the
+%proposed bounds on Pareto-optimality, and to find out whether the
+%proposed technique for estimating the bounds is effective in reducing
+%the overhead resulting from that. 
+The third version (DPS) does not use
 operator sharing at all, i.e., if a source is used for more than one
-triple pattern it is retrieved multiple times. We use DPS to show that
-operator sharing in general is beneficial.
-
+triple pattern it is retrieved multiple times. 
+%We use DPS to study the effect the benefits operator sharing.
+We use different settings for $b$ to study the effect of operator sharing. For example, with $b=0.8$ the optimizer assumes that 80\% of
+the source scan cost is saved, i.e., subsequent reads cost only 20\% of the first read.
 
 \textbf{Baselines.} Existing Linked Data approaches implement ad-hoc
 source ranking to select few best
 sources~\cite{harth_data_2010,ladwig_linked_2010}, and then process
 these sources without further optimization. This processing represents
 one single plan, whose optimality is unknown. We implement this source
-ranking (RK) and a random source selection strategy (RD). Given the
-selected sources, the standard DP solution is applied on top to
-optimize the cost these baselines need to produce results from these
-sources. In the same way proposed for our approach, this DP solution
-applies operator sharing so that sources can be reused. Instead of one
+ranking (RK) and a random source selection strategy (RD), and 
+%Given the
+%selected sources, 
+apply our DP solution on top but only to
+optimize the cost. 
+% these baselines need to produce results from these
+%sources. 
+%In the same way proposed for our approach, this DP solution
+%applies operator sharing so that sources can be reused. 
+Instead of one
 single cost-optimized plan, our approach however yields a Pareto-set
-of query plans that represents the trade-off between cost and
+of query plans that represents different trade-offs between cost and
 cardinality. Thus, we further extend these baselines to use different
 combinations of sources that yield different plans.
 
@@ -98,11 +104,9 @@ subsets are selected:
   adding sources in the order of their rank to obtain $|D|$ subsets in
   total.
 \end{itemize}
-Each element in $\mathcal{D}$ is a subset of all relevant source and
-represents a combination of sources. For each of the source
-combinations, we create a single cost-optimized query plan. As a
+Each element in $\mathcal{D}$ represents a combination of sources, for each of which a query plan is created. As a
 result, we have a set of plans, which vary in the number of results as
-well as because different combination of sources are used.
+well as cost because different combinations of sources are used.
 % using a standard dynamic
 %programming optimizer (i.e., no multi-objective optimization). Sharing
 %of source scan operators is also employed where possible.
@@ -121,76 +125,76 @@ the unions at the root of their access plans.
 %If the source scan operator that is input for a removed selection operator is
 %not shared it is also remove from the plan.
 %Any invalid plans that are constructed in this way (e.g., all inputs of an union might have been) are discarded. 
-In the end, each baseline has at most of $m \cdot |D|$ plans that vary
-in terms of results (where only $|D|$ plans actually vary in terms of
-cost).
+In the end, each baseline has at most $m \cdot |D|$ plans that vary
+in terms of results (of which only $|D|$ plans actually vary in cost).
 
-These baselines optimize source selection independent from the
-subsequent computation of results. While the goal of source selection
-is to choose those that contribute many results, the subsequent
-optimization focuses on cost. Compared to them, our approach not only
-jointly optimize sources section and result computation but also,
-considers cardinality and cost at the same time. Our goal is to study
-the effect of this joint optimization on the Pareto-optimality of
-plans. Further, we will investigate the effect of using non-optimal
-plans on the result....
+%These baselines optimize source selection independent from the
+%subsequent computation of results. While the goal of source selection
+%is to choose those that contribute many results, the subsequent
+%optimization focuses on cost. Compared to them, our approach not only
+%jointly optimize sources section and result computation but also,
+%considers cardinality and cost at the same time. Our goal is to study
+%the effect of this joint optimization on the Pareto-optimality of
+%plans. Further, we will investigate the effect of using non-optimal
+%plans on the result....
 %While this effect is expected to be positive, the increased complexity of the planning problem also leads to additional cost. Thus, we will also investigate whether this overhead can be justified by looking at the total processing time needed for producing several fixed fraction of results.  
 
+%
+%\textbf{Parameters.} Parameter $b$ specifies the benefit that is
+%assumed during query planning for sharing of source scan
+%operators. For example, with $b=0.8$ the planners assume that 80\% of
+%the source scan cost is saved, i.e., second and subsequent reads of a
+%source scan operator cost only 20\% of the first read.
+%
+%For RD and RK, parameter $m$ describes the number of additional plans
+%that were generated by randomly remove selection and source scan
+%operators.
 
-\textbf{Parameters.} Parameter $b$ specifies the benefit that is
-assumed during query planning for sharing of source scan
-operators. For example, with $b=0.8$ the planners assume that 80\% of
-the source scan cost is saved, i.e., second and subsequent reads of a
-source scan operator cost only 20\% of the first read.
+\subsection{Setting} As data, we use real-world Linked Data currently available on the Web. We generate queries and process them against Linked Data sources on the Web to obtain a total of 1,909,109 triples from various popular datasets such as DBpedia, Freebase, New York Times, GeoNames and LinkedMDB. The number of Linked Data sources from which all data were retrieved is 516,293. During this process, we observed that network latency greatly varies. In order to systematically study the effects of query processing, we thus decided to download these data, and to simulate Linked Data query processing on one single machine. To reflect network cost, we tried different settings, including the average of 1.5s that we could observed on real-world sources. Performance differences between systems were however not sensitive to these settings. 
 
-For RD and RK, parameter $m$ describes the number of additional plans
-that were generated by randomly remove selection and source scan
-operators.
+As queries, we focus on 14 BGP queries that have non-empty results. The result size is in the range from 1 to 836. We created three categories that differ in terms of result size, and used one query from each to discuss the effect of Pareto-optimality on the cost-cardinality trade-off in detail. Besides, these queries can also be classified into three different classes of complexity, which is reflected in the number of triple patterns. For the classes of 3, 4 and 5 patterns, we have 4, 5, and 4 queries, respectively. 
 
-\subsection{Datasets and Queries}
 
-We created 14 BGP queries of different sizes w.r.t. to the number of
-triple patterns. We executed all queries using a link traversal
-approach and recorded all retrieved sources. This dataset was then
-indexed in a source index and used for the evaluation. The dataset
-consists of 1,909,109 triples and contains data from various popular
-open datasets, such as DBpedia, Freebase, New York Times, GeoNames,
-LinkedMDB and others. Table~\ref{tab:queries} shows various
-statistics for all evaluation queries.
+%Table~\ref{tab:queries} shows various
+%statistics for all evaluation queries.
 
-As the source index contained too many sources for the multi-objective
-optimization approach to deal with, we randomly aggregated sources
-during the creation of access plans into a set of $k=5$ virtual
-sources. The size of the virtual sources follows a Zipf distribution
-with exponent $2$.
+%This dataset was then
+%indexed in a source index and used for the evaluation. 
+%As the source index contained too many sources for the multi-objective
+%optimization approach to deal with, we randomly aggregated sources
+%during the creation of access plans into a set of $k=5$ virtual
+%sources. The size of the virtual sources follows a Zipf distribution
+%with exponent $2$.
 
-\begin{table}[htb]
-  \centering
-  \begin{tabular}{l|c|c|r}
-    Query & \#Pat. & Shared [kT] & \#Res. \\%& Join-Sel. SD \\ 
-    \hline
 
-    Q2  & 3 & 1,393 & 24  \\%& 3.26\textsc{e}-5 \\
-    Q5  & 3 & 1,425 & 13  \\%& 4.95\textsc{e}-5 \\
-    Q15 & 3 & 1,401 & 11  \\%& 2.59\textsc{e}-5 \\
-    Q19 & 3 & 1,434 & 836 \\%& 4.36\textsc{e}-5 \\
-    \hline
-    Q1  & 4 & 1,426 & 2   \\%& 1.30\textsc{e}-3 \\
-    Q3  & 4 & 1,892 & 3   \\%& 1.89\textsc{e}-5 \\
-    Q4  & 4 & 1,415 & 60  \\%& 9.58\textsc{e}-3 \\
-    Q6  & 4 & 2,081 & 6   \\%& 2.62\textsc{e}-3 \\
-    Q7  & 4 & 1,369 & 106 \\%& 2.75\textsc{e}-3 \\
-    \hline
-    Q9  & 5 & 1,405 & 17  \\%& 5.26\textsc{e}-3 \\
-    Q14 & 5 & 1,830 & 20  \\%& 3.71\textsc{e}-3 \\
-    Q16 & 5 & 2,396 & 1   \\%& 2.10\textsc{e}-3 \\
-    Q17 & 5 & 1,409 & 1   \\%& 8.92\textsc{e}-3 \\
-    Q18 & 5 & 1,007 & 2   \\%& 1.21\textsc{e}-4 \\
-  \end{tabular}
-  \caption{Query statistics: query name, number of patterns, number of
-    triples (in thousands) contained in shared sources, number of results.}
-  \label{tab:queries}
-\end{table}
+%
+%\begin{table}[htb]
+%  \centering
+%  \begin{tabular}{l|c|c|r}
+%    Query & \#Pat. & Shared [kT] & \#Res. \\%& Join-Sel. SD \\ 
+%    \hline
+%
+%    Q2  & 3 & 1,393 & 24  \\%& 3.26\textsc{e}-5 \\
+%    Q5  & 3 & 1,425 & 13  \\%& 4.95\textsc{e}-5 \\
+%    Q15 & 3 & 1,401 & 11  \\%& 2.59\textsc{e}-5 \\
+%    Q19 & 3 & 1,434 & 836 \\%& 4.36\textsc{e}-5 \\
+%    \hline
+%    Q1  & 4 & 1,426 & 2   \\%& 1.30\textsc{e}-3 \\
+%    Q3  & 4 & 1,892 & 3   \\%& 1.89\textsc{e}-5 \\
+%    Q4  & 4 & 1,415 & 60  \\%& 9.58\textsc{e}-3 \\
+%    Q6  & 4 & 2,081 & 6   \\%& 2.62\textsc{e}-3 \\
+%    Q7  & 4 & 1,369 & 106 \\%& 2.75\textsc{e}-3 \\
+%    \hline
+%    Q9  & 5 & 1,405 & 17  \\%& 5.26\textsc{e}-3 \\
+%    Q14 & 5 & 1,830 & 20  \\%& 3.71\textsc{e}-3 \\
+%    Q16 & 5 & 2,396 & 1   \\%& 2.10\textsc{e}-3 \\
+%    Q17 & 5 & 1,409 & 1   \\%& 8.92\textsc{e}-3 \\
+%    Q18 & 5 & 1,007 & 2   \\%& 1.21\textsc{e}-4 \\
+%  \end{tabular}
+%  \caption{Query statistics: query name, number of patterns, number of
+%    triples (in thousands) contained in shared sources, number of results.}
+%  \label{tab:queries}
+%\end{table}
 
 % \begin{table*}[htb]
 %   \centering
@@ -248,7 +252,7 @@ with exponent $2$.
 %   \label{tab:res}
 % \end{table*}
 
-\subsection{Setting}
+%\subsection{Setting}
 All systems were implemented in Java. The query planner is
 single-threaded, whereas the execution engine uses multiple
 threads. All experiments were executed on a 2009 Macbook Pro with a
@@ -260,20 +264,16 @@ to the Java VM) and a Crucial m4 128GB solid-state disk.
 
 \textbf{Overall.} Fig.~\ref{fig:queries}a shows an overview over all
 evaluation queries and displays the number of plans that were
-generated by each system, split into skyline and non-skyline (i.e.,
+generated by each system, split into skyline and non-skyline (i.e.
 dominated) plans. The number of skyline plans was determined by
-collecting all plans of a particular query for all systems in one set
-and then pruning all dominated plans. 
+collecting all plans of a particular query for all systems and then pruning all dominated plans. 
 
 We can see that DP produces only skyline plans and that there are many
 DPU plans that are part of the skyline (56\% on average). However, the
-RD and RD baselines generate almost no skyline plans (1.9\% and 1\% on
-average). DPS does not find any skyline plans.
+RD and RD baselines generate only small fractions of skyline plans (1.9\% and 1\% on
+average). DPS finds only few skyline plans (less the 1\%).
 
-Fig.~\ref{fig:queries}b shows the skyline fraction (i.e., the fraction
-of the DP skyline) found by RD and RK for different values of $m$. We
-see that for larger values of $m$ the skyline fraction is higher,
-i.e., the larger plan space created by randomly removing union inputs
+Fig.~\ref{fig:queries}b shows the skyline fraction found by RD and RK for different values of $m$. We see that for larger values of $m$ the skyline fraction is higher. This means the larger plan space created by randomly removing union inputs
 is necessary to find skyline plans.
 
 \textbf{Effect of Query Size.} Figs.~\ref{fig:pareto_tp}a+b show the

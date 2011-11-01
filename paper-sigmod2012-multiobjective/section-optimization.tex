@@ -309,8 +309,15 @@ $p$. This is of course very cost intensive and defeats the purpose of pruning. O
   
   
 \begin{definition}[Maximal Benefit]
-  Given a query $Q$ and two query plans $p_1,p_2 \in P(T), T \subset Q$, let $D_{p_1},D_{p_2}$ be the sets of sources (i.e. the source scan operators) used by $p_1$ and $p_2$, respectively, $D'_{p_2}$ be the set of sources used by $p_2$ not covered by $p_1$, i.e. $D'_{p_2} = D_{p_2} \setminus D_{p_1}$ and $Q'$ be the set of triple patterns not covered by $p_1$ and $p_2$, i.e. $Q' = Q \setminus T$, the \emph{maximal benefit} of $p_2$ given $p_1$ is $mb(p_2|p_1) = \sum_{t \in Q'}
-  \sum_{d \in source(t), d \in D'_{p_2} } b \cdot cost_1(scan_d)$.
+  Given a query $Q$ and two query plans $p_1,p_2 \in P(T), T \subset
+  Q$, let $D_{p_1},D_{p_2}$ be the sets of sources (i.e. the source
+  scan operators) used by $p_1$ and $p_2$, respectively, $D'_{p_2}$ be
+  the set of sources used by $p_2$ not covered by $p_1$,
+  i.e. $D'_{p_2} = D_{p_2} \setminus D_{p_1}$ and $Q'$ be the set of
+  triple patterns not covered by $p_1$ and $p_2$, i.e. $Q' = Q
+  \setminus T$, the \emph{maximal benefit} of $p_2$ given $p_1$ is
+  $mb(p_2|p_1) = \sum_{t \in Q'} \sum_{d \in source(t), d \in D'_{p_2}
+  } b \cdot cost_1(scan_d)$.
 %  , where $b$ is the sharing benefit and
 %  $cost_1(scan_d)$ is the cost for the first scan
 %  of $d$.
@@ -318,8 +325,19 @@ $p$. This is of course very cost intensive and defeats the purpose of pruning. O
 
 \begin{lemma}
   \label{def:estimated_bound}
-  Given a query $Q$, a subexpression $T \subset Q$ and two plans $p_1,p_2$, if $cost(p_1) \leq cost(p_2) - mb(p_2|p_1)$ then $cost_U^Q(p_1) \leq cost_L^Q(p_2)$.
+  Given a query $Q$, a subexpression $T \subset Q$ and two plans
+  $p_1,p_2$, if $cost(p_1) \leq cost(p_2) - mb(p_2|p_1)$ then
+  $cost_U^Q(p_1) \leq cost_L^Q(p_2)$.
 \end{lemma}
+\begin{proof}
+  As plans $p_1,p_2$ are both in $P(T)$ they both can be combined with
+  the same set of plans for $P(Q \setminus T)$, meaning that the only
+  difference in final plans built for $p_1$ and $p_2$ are in the
+  shared source scan operators. If we now know that $p_1$ has lower
+  cost than $p_2$ even with the maximal benefit for $p_2$ that is
+  obtainable from operator sharing, then the upper bound cost
+  $cost_U^Q(p_1)$ is also lower than $cost_L^Q(p_2)$.
+\end{proof}
 
 %  $p_1,p_2 \in P(T)$, then $p_1 \mbox{\textnormal{ strictly dominates
 %    }} p_2$ ($p_1 >_b p_2$) if $card(p_1) \geq card(p_1) \wedge

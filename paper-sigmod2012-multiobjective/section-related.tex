@@ -94,12 +94,12 @@ knowledge, \cite{papadimitriou_multiobjective_2001} is the only work
 addressing multi-objective query optimization, where it is discussed
 in the context of Mariposa \cite{stonebraker_mariposa:_1996}, a
 wide-area database system. The Mariposa optimizer splits the query
-tree into subqueries and then obtains bids from participating database
-sites that specify a delay and cost for delivering the result of a
+tree into subqueries and then obtains bids from participating sites
+that specify a delay and cost for delivering the result of a
 subquery. The goal of the proposed multi-objective optimzer
 \cite{papadimitriou_multiobjective_2001} is to obtain the Pareto
-optimal set of plans with respect to cost and delay. While the authors
-do employ dynamic programming to show that the Pareto set can be
+optimal set of plans with respect to cost and delay. While dynamic
+programming is employed to show that the Pareto set can be
 approximated in polynomial time, it is not based on the classic DP
 algorithm \cite{selinger_access_1979}. The problem is also different
 as there is only a single query operation tree and for each operation

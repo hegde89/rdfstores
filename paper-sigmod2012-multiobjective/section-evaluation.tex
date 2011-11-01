@@ -375,6 +375,14 @@ The negative effect of not taking precise bounds into account is evident in Fig.
 %RK, are not affected by the sharing benefit as the benefit is not
 %taken into account during planning.
 
+\begin{figure*}[htb]
+  \centering
+  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q2.pdf}
+  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q7.pdf}
+  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q19.pdf}
+  \caption{Execution times of query plans for queries Q2, Q7 and Q19.}
+  \label{fig:exec}
+\end{figure*}
 
 
 \textbf{Execution Time.} We selected three queries with different
@@ -486,14 +494,6 @@ procedure does not take dependencies between sources into
 account. Here, a more sophisticated method for cardinality estimation
 would help avoid generating empty plans.
 
-\begin{figure*}[htb]
-  \centering
-  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q2.pdf}
-  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q7.pdf}
-  \includegraphics[width=0.32\linewidth]{figs/pareto_exec_0_q19.pdf}
-  \caption{Execution times of query plans for queries Q2, Q7 and Q19.}
-  \label{fig:exec}
-\end{figure*}
 %%% Local Variables: 
 %%% mode: latex
 %%% TeX-master: "paper"

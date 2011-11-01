@@ -190,7 +190,7 @@ another plan that shares that operator.
 %the optimizer to miss the overall optimal plan.
 Suppose we have two plans $p,p'$ for the subexpression $T \subset Q$, $cost(p) > cost(p')$,
 and a plan $p_t$ for a triple pattern $t$ such that $Q = T \cup
-\{t\}$. The optimizer would consider $p'$ to
+t$. The optimizer would consider $p'$ to
 be the optimal plan for $T$ and discard $p$ to form
 $P^+(T)=\{p'\}$. Now, because of operator sharing it is possible that
 the cost of the combination of two plans is less than the sum of the
@@ -398,39 +398,34 @@ solution for $Q$:
   Given a query $Q$ and two subexpressions $T_1,T_2 \subseteq Q$ with
   $T_1 \cap T_2 = \emptyset$, the set of optimal plans for $T_1 \cup
   T_2$ can be constructed from optimal plans for $T_1,T_2$, i.e.,
-  $P^*(T_1 \cup T_2) \subseteq C =
+  $P^*(T_1 \cup T_2) =
   \{\mathtt{cmb}(p_1,p_2) | p_1 \in P^*(T_1), p_2 \in P^*(T_2)\}$.
 \end{theorem}
 \begin{proof}
-  Let $p^* \in P^*(T_1 \cup T_2)$ be a plan that is a combination of a
+  We prove this by contradiction: Let $p^* \in P^*(T_1 \cup T_2)$ be a plan that is a combination of a
   dominated plan for $T_1$ and a non-dominated plan for $T_2$, i.e.,
   $p^* = \mathtt{cmb}(p^-_1,p^*_2),p^-_1 \in P^-(T_1),p^*_2 \in
-  P^*(T_2)$. This means that there is a non-dominated plan $p^*_1 \in
+  P^*(T_2)$. This means, there must be a non-dominated plan $p^*_1 \in
   P^*(T_1)$ that dominates $p^-_1$, but the combination of $p^*_1$
   with $p^*_2$ is dominated by the combination of $p^-_1$ and $p^*_2$:
   \[ \exists p^*_1 \in P^*(T_1) : \mathtt{cmb}(p^-_1,p^*_2) \text{
-    dominates } \mathtt{cmb}(p^*_1,p^*_2)\] As $p^*_1$ dominates
+    dominates } \mathtt{cmb}(p^*_1,p^*_2)\] Given $p^*_1$ dominates
   $p^-_1$ and $\mathtt{cmb}(p^-_1,p^*_2)$ dominates
-  $\mathtt{cmb}(p^*_1,p^*_2)$, according to
-  Def.~\ref{def:dominates_bound}, this implies (without loss of
-  generality we assume that both objectives are strictly
-  lesser/greater):
+  $\mathtt{cmb}(p^*_1,p^*_2)$, it follows from the established dominance relation that
+  (without loss of generality, we use strictly lesser/greater relations):
   \begin{eqnarray*}
     card(p^-_1) < card(p^*_1) &\wedge& card (\mathtt{cmb}(p^-_1,p^*_2)) > card(\mathtt{cmb}(p^*_1,p^*_2)) \\
-    cost^Q_L(p^-_1) < cost^Q_U(p^*_1) &\wedge& cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) > cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))\\
+    cost^Q_L(p^-_1) > cost^Q_U(p^*_1) &\wedge& cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) < cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))\\
   \end{eqnarray*}
-  However, with the montonicity of both, the cost and the cardinality,
-  we have a contradiction, because $cost^Q_L(p^-_1) <
-  cost^Q_U(p^+_1)$, but $cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) >
-  cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))$ (the same holds for the
-  cardinality). With regard to our original proposition, this means
+  However, this contradicts with the monotonicity property established for cost, because $cost^Q_L(p^-_1) >
+  cost^Q_U(p^+_1)$, but $cost^Q_U(\mathtt{cmb}(p^-_1,p^*_2)) <
+  cost^Q_L(\mathtt{cmb}(p^*_1,p^*_2))$. Analogously, a contradiction also follows from the monotonicity of cardinality. With regard to our original proposition, this means
   that there is no plan $p^* \in P^*(T_1 \cup T_2)$, such that $p^*$
-  is a combination of dominated plan $p^-_1$ and a non-dominated plan
-  $p^*_2$. The same holds when $p^*$ is a combination of two dominated
-  plans (we omit the proof for brevity). From this follows that all
-  $p^* \in P^*(T_1 \cup T_2)$ are combinations of the non-dominated
-  plans in $P^*(T_1)$ and $P^*(T_2)$ and therefore $P^*(T_1 \cup T_2)
-  \subseteq C$.
+  is a combination of a dominated plan $p^-_1$ and a non-dominated plan
+  $p^*_2$. This obviously also holds true when $p^*$ is a combination of two dominated
+  plans. Thus, all
+  $p^* \in P^*(T_1 \cup T_2)$ must be combinations of non-dominated
+  plans in $P^*(T_1)$ and $P^*(T_2)$ and therefore $P^*(T_1 \cup T_2)$.
 \end{proof}
 
 % Proof by contradiction: Suppose there is a non-dominated plan $p^* \in
@@ -483,17 +478,14 @@ solution for $Q$:
 % combinations of the non-dominated plans in $P^*_{t1}$ and $P^*_{t_2}$.
 
 
-Although the relaxed comparability constraint allows the optimizer to
-prune more aggressively than otherwise possible, we observe that the
-goal of generating Pareto-optimal query plans again leads to a larger
-search space.
+%Although the relaxed comparability constraint allows the optimizer to
+%prune more aggressively than otherwise possible, we observe that the
+%goal of generating Pareto-optimal query plans again leads to a larger
+%search space.
 
 \subsection{Optimizer Algorithm}
 
-In this section we present the algorithm that performs multi-objective
-query optimization using a dynamic programming approach. It is a
-straightforward extension of the classic DP algorithm, the main
-difference is that at each step Pareto-optimality is used to prune
+In this section we present a DP algorithm that exploits the previously established theoretical results to perform Linked Data multi-objective query optimization. It builds upon the classic DP algorithm. It takes the proposed structure of Linked Data query plans into account, and at each step, uses Pareto-optimality to prune
 plans according to the optimization objectives.
 
 % \subsubsection{Pareto-optimal Access Plans for Triple Patterns}
@@ -522,59 +514,58 @@ plans according to the optimization objectives.
   \label{alg:plan}
   \DontPrintSemicolon
 
-  \caption{\textsc{PlanGen}$(Q,I)$}
-  \KwIn{Query $Q = \{q_1,\ldots,q_n\}$, source index $I$}
-  \KwOut{Pareto-optimal query plans $P^+(Q)$}
+  \caption{\textsc{PlanGen}$(Q)$}
+  \KwIn{Query $Q = \{t_1,\ldots,t_n\}$}
+  \KwOut{Pareto-optimal query plans $P^*(Q)$}
 
-  \ForEach{$q \in Q$}{
+  \ForEach{$t \in Q$}{
     $S \leftarrow \{ \cup(\{ \sigma_{T^d}(t) | d \in D \}) | D \in
-    \mathcal{P}(I(q))\}$ \;
-    $P^+(\{q\}) \leftarrow \{p \in S| \nexists p' \in S : p' >_b p \}$
+    \mathcal{P}(source(t))\}$ \;
+    $P^*(t) \leftarrow \{p \in S| \nexists p' \in S : p' > p \}$
     \; 
   }
 
   \For{$i \leftarrow 2$ \KwTo $|Q|$}{
     \ForEach{$T \subseteq Q$ such that $|T| = i$}{
-      \ForEach{$q \in T$}{
+      \ForEach{$t \in T$}{
         $S \leftarrow S \cup \{\mathtt{cmb}(p_1,p_2) | p_1 \in
-        P^+(\{q\}), p_2 \in P^+(T \setminus \{q\})\}$ \;
+        P^*(t), p_2 \in P^*(T \setminus t)\}$ \;
       }
-      $P^+(T) \leftarrow \{p \in S | \nexists p' \in S : p'
-      >_b p \}$\;
+      $P^*(T) \leftarrow \{p \in S | \nexists p' \in S : p'
+      > p \}$\;
     }
   }
-  \Return $P^+(Q)$
+  \Return $P^*(Q)$
 \end{algorithm}
 
 Algorithm~\ref{alg:plan} shows the method \textsc{PlanGen} that takes
-a query $Q=\{q_1,\ldots,q_n\}$ and a source index $I$ as input and
-returns the Pareto-optimal plans for $Q$. During optimization, $P^+$
-stores the optimal plans for all subsets of $Q$.
+a query $Q=\{t_1,\ldots,t_n\}$ as input and
+returns the Pareto-optimal plans for $Q$. During optimization, $P^*$
+stores the optimal plans for subexpressions of $Q$.
 
 In the first step, access plans for single triple patterns are created
-(lines 1-3). For each triple pattern $q$ in $Q$, first the relevant
-sources are selected with help of the source index $I$. As we need to
+(lines 1-3). For each triple pattern $t$ in $Q$, relevant
+sources are determined using the source index. As we need to
 consider all possible combinations of sources, we create the power set
-$\mathcal{P}(I(q))$ of all sources (line 2). For each member $D$ of
-the power set, we create an access plan, consisting of a selection and
-scan operator $\sigma_{T^d}(t)$ for each source $d \in D$ and a
+$\mathcal{P}(source(t))$ of all sources (line 2). For each member $D$ of
+the power set, we create an access plan, consisting of a scan and a selection operator $\sigma_{T^d}(t)$ for each source $d \in D$ and a
 single union operator $\cup$ that has the selection operators as
 input. $S$ then contains a set of access plans, one for each
 combination of relevant sources. From this set, we then select only
 the non-dominated, i.e., Pareto-optimal, access plans and store them
-in $P^+(\{q\})$ (line 3).
+in $P^*(t)$ (line 3).
 
-During the next iterations (line 4-8), joins between previously
-created plans are calculated until all query triple patterns are
-covered. For iteration $i$, we select all subsets $T \subset q$ with
-$|T|=i$. For each $q \in T$ the algorithm creates all possible joins
-between the best, i.e., Pareto-optimal, plans for $q$ and $T\setminus
-\{q\}$ (line 7). By selecting only a single triple pattern from $T$ we
-create only left-deep plans, but bushy plans would also be possible.
+During the next iterations (line 4-8), previously
+created plans are combined until all query triple patterns are
+covered. For iteration $i$, we select all subsets $T \subseteq Q$ with
+$|T|=i$. For each $t \in T$ the algorithm creates all possible combinations
+between the best, i.e., Pareto-optimal, plans for $t$ and $T\setminus
+t$ (line 7). By selecting only a single triple pattern from $T$ we
+create only left-deep plans. Instead, bushy plans may be used.
 All these plans are stored in $S$ and are comparable since they cover
 the same triple patterns $T$. Finally, only the non-dominated plans
-from $S$ are selected and stored in $P^+(T)$ (line 8). After the last
-iteration, $P^+(Q)$ contains the Pareto-optimal left-deep plans for
+from $S$ are selected and stored in $P^*(T)$ (line 8). After the last
+iteration, $P^*(Q)$ contains all the Pareto-optimal plans for
 $Q$ (line 9).
 
 \textbf{Complexity.} The join order optimization problem has been
@@ -584,12 +575,12 @@ complexity of $O(3^n)$ \cite{kossmann_iterative_2000}, where $n$ is
 the number of relations (triple patterns in the case of Linked Data
 queries) to be joined. Our approach for multi-objective query
 optimization adds the dimension of source selection to the query
-optimization problem. Given a set of $m$ source, we can think of the
-problem as, in the worst case, creating a query plan for each unique
+optimization problem. Given a set of $m$ sources, we can think of the
+problem as, in worst case, creating a query plan for each unique
 combination of sources, of which there are $2^m$, leading to a
-complexity of $O(2^m \cdot 3^n)$.
+complexity of $O(2^m \cdot 3^n)$. This theoretical worst case complexity does not change in the multi-objective case. However in practice, the number of plans (and combination of sources) that can be pruned at every iteration can be expected to be much larger in the single-objective case, compared to the multi-objective case. Particularly the use of operator sharing leads to a larger amount non-dominated plans. One strategy to deal with that is to approximate the bounds that we have established. In the experiment, we study one basic approximation, which instead of the cost bounds, use actual cost for pruning. That is, it ignores the bounds and accepts the discussed cases where subplans, which become non-optimal through operator sharing, may be part of the final result. 
 
-\subsection{Discussion: Multi-Objective and Top-K}
+%\subsection{Discussion: Multi-Objective and Top-K}
 % \subsection{Adaptivity}
 % The goal of adaptive query processing is to perform query optimization
 % in the case were no complete knowledge is available and adapt the

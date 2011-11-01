@@ -84,6 +84,17 @@ trade-off between the optimization objectives.
 
 %\textbf{Query Optimization.} 
 
+\textbf{Skyline Queries.} The skyline operation retrieves the Pareto
+set from a potentially large set of points and is used in conjunction
+with standard relational algebra \cite{boerzsoenyi_skyline_2001}. The
+main focus of research has been the efficient execution of such
+queries by means of specialized algorithms and indexes. Our approach
+is different as we do not perform skylining on the data, but rather on
+the query plans. However, techniques developed for skylining can be
+adopted to improve the efficiency of the multi-objective DP planner,
+e.g. for efficiently selecting the Pareto-optimal (skyline) set of
+plans when pruning.
+
 
 \textbf{Multiobjective Query Optimization.} To the best of our
 knowledge, \cite{papadimitriou_multiobjective_2001} is the only work

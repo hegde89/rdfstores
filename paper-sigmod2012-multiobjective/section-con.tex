@@ -2,20 +2,19 @@
 \label{sec:conclusion}
 
 We propose a first solution towards a systematic optimization of
-Linked Data queries. In particular, we propose an optimization
-framework for Linked Data query processing, which incorporates both,
-standard query operators and source selection. Our framework supports
-the joint optimization of several objectives, such as cost and output
-cardinality. To support optimization of multiple objectives, we extend
-the classic dynamic programming solution to a multi-objective query
-optimization solution that generates the Pareto-set of optimal query
-plans, representing the trade-off between optimization
-objectives. Further, we support sharing of source scan operators and
-provide bounds on plan cost to ensure the optimality of the dynamic
-programming algorithm in this case. In several experiments we compare
-our solution to baselines and show that our approach improves on the
-baselines by generating the complete Pareto-set of optimal plans and
-producing plans that have lower costs for the same number of results.
+Linked Data queries with an optimization framework for Linked Data
+query processing, which incorporates both, standard query operators
+and source selection. In order to support joint optimization of
+multiple, conflicting objectives, such as cost and output cardinality,
+we extend the classic dynamic programming solution for query
+optimization to the multi-objective setting. The result is the Pareto
+set of optimal query plans, representing the trade-off between the
+optimization objectives. Further, we support sharing of source scan
+operators and provide bounds on plan costs to ensure the optimality of
+the dynamic programming algorithm. In experiments we compare our
+solution to baselines and show that our approach improves on the
+baselines by generating the complete Pareto set of optimal plans and
+producing plans improve performance for the same number of results.
 
 Future work lies in two main areas. The cardinality and cost
 estimation of combinations of sources should be improved to take

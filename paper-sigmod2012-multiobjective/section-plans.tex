@@ -135,10 +135,10 @@ implementation.
 Optimality is not clearly defined in the Linked Data context. Traditionally, completeness is assumed such that all results have to be computed. Optimality in this case is defined with respect to processing cost, and optimization techniques aim to find plans that are cost-optimal, i.e. produce all results at lowest cost. As discussed, completeness is not practical in Linked Data query processing and existing approaches (select and) process only a few sources~\cite{harth_data_2010,ladwig_linked_2010}. Not only cost but also the number of results have to be considered here. Further, other criteria such as the trustworthy of sources and the quality of data may play an important role. This results in a \emph{multi-objective} optimization problem. 
 
 For a query $Q$, % = \{t_1, \ldots, t_n\}
-the goal is to compute the skyline (Pareto set) of query plans that represent different trade-offs between multiple objectives. For clarity of presentation, we will focus on the two main objectives of maximizing \emph{output cardinality}, $card(\cdot)$, and \emph{processing cost}, $cost(\cdot)$. 
+the goal is to compute the skyline (Pareto set) of query plans that represents different trade-offs between multiple objectives. For clarity of presentation, we will focus on the two main objectives of maximizing \emph{output cardinality}, $card(\cdot)$, and \emph{processing cost}, $cost(\cdot)$. 
 %Further, we define cost as $score(\cdot) = \frac{1}{cost(\cdot)}$ such that the objective is to maximize the score and output cardinality.  \todo{use cost instead of score everywhere}
 The skyline of a set of solutions is defined using a \emph{dominance}
-relation that relates the multiple objectives. A query plan is considered to dominate one other plan, if it is at least as good in all objectives and better in at least one objective:
+relation that relates the multiple objectives. A query plan is considered to dominate another plan, if it is at least as good in all objectives and better in at least one objective:
 
 \begin{definition}[Dominance]
   Given two query plans $p_1$ and $p_2$, $p_1 \mbox{ \textnormal{dominates}

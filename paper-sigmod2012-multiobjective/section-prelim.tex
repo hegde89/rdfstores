@@ -14,11 +14,6 @@ graph-structured data encoded as $\langle subject, predicate, object
 \rangle$ triples. These triples are composed of unique identifiers
 (URI references) and literals (e.g., strings or other data values) as
 follows:
-
-% As usual~\cite{hartig_executing_2009,ladwig_linked_2010}, we
-% conceive Linked Data sources as interlinked sets of RDF triples
-% \cite{klyne_resource_2004}.
-
 \begin{definition}[RDF Triple, RDF Term, RDF Graph]
   Given a set of URI references $\mathcal{U}$ and a set of literals
   $\mathcal{L}$, elements in $\mathcal{U} \cup \mathcal{L}$ are called
@@ -27,7 +22,6 @@ follows:
     triple}, and every set of RDF triples is also called a \emph{RDF
     graph}.
 \end{definition}
-
 Sets of triples are graphs because they can be seen as edges
 connecting nodes that stand for RDF terms. URI references in RDF are
 used to uniquely identify resources captured by the data.
@@ -49,7 +43,6 @@ references. Following these URIs lead to other sources. When it is
 clear from the context, we will make no distinction between the
 resource identified by an URI and the Linked Data source that can be
 retrieved by dereferencing that URI.
-
 \begin{definition}[Linked Data Source]
   A \emph{Linked Data source}, identified by an HTTP URI $d$, is a set
   of RDF triples $\langle s,p,o \rangle$ . Dereferencing an HTTP URI
@@ -83,21 +76,17 @@ The standard for querying RDF data is SPARQL
 are an important part. Work on Linked Data query processing so far
 focused on the task of answering BGP queries. For ease of notation, we
 use $t$ to denote both, triples and triple patterns:
-
-
 \begin{definition}[Triple Pattern, Basic Graph Pattern]
   A \emph{triple pattern} $t=\langle s,p,o \rangle$, where each $s$,
   $p$ and $o$ is either a RDF term (called \emph{constant}) or a
   variable. A \emph{basic graph pattern} is a set of triple patterns
   $Q=\{t_i,\ldots,t_n\}$.
 \end{definition}
-
 Typically, every triple pattern in $Q$ shares one common variable with
 at least one other pattern in $Q$ such that $Q$ forms a connected
 graph. Computing answers to a BGP query over the Linked Data graph
 amounts to the task of \emph{graph pattern matching}. A result to a
 BGP query can be defined as follows:
-
 \begin{definition}[Result]
   Let $T^D$ be the Linked Data graph, $TERM$ be the set of RDF terms
   in $T^D$, $Q$ be a BGP query, and $V$ be the set of all variables in
@@ -114,7 +103,6 @@ BGP query can be defined as follows:
 satisfies $\langle \mu'_{T^D}(s),\mu'_{T^D}(p), \mu'_{T^D}(o) \rangle
 \in T^D$ for any $\langle s,p,o \rangle \in Q$.
 \end{definition}
-
 We will use $\mu_{T^D}$ not only to refer to
 the result nodes in ${T^D}$ that match the query variables but also the
 triples (subgraphs) that match a triple pattern (a BGP).
@@ -186,8 +174,6 @@ encoding and processing of these statistics. Instead of ranking
 sources at compile time, adaptive re-ranking of sources at runtime has
 also been proposed~\cite{ladwig_linked_2010}. Common statistics used
 for processing Linked Data sources include a \emph{source index}:
-
-
 \begin{definition}[Source Index]
   \label{def:index}
   Given the Linked Data sources $D$, the \emph{source index} can be
@@ -196,12 +182,12 @@ for processing Linked Data sources include a \emph{source index}:
   contain results for $t$, i.e. $source(t) = \{d| d \in D \wedge,
   \mu_{T^d}(t) \neq \emptyset \}$.
 \end{definition}
-%
-%\begin{definition}
-%  source description, statistics
-%\end{definition}
-
-In practice, the source index used by existing work not only returns the URIs but also basic source descriptions that provide selectivity information for triple and join patterns. For instance, these statistics are stored for previously discovered sources, or collected from catalogs of Linked Data sources such as CKAN\footnote{\url{http://ckan.net}}.
+In practice, the source index used by existing work not only returns
+the URIs but also basic source descriptions that provide selectivity
+information for triple and join patterns. For instance, these
+statistics are stored for previously discovered sources, or collected
+from catalogs such as
+CKAN\footnote{\url{http://ckan.net}}.
 %As mentioned before, there are sourcces previous work, additional knowledge about sources captured by the VoiD vocabulary (common standard\footnote{\url{http://semanticweb.org/wiki/VoiD }} used to describe interlinked datasets) and   
 %Given a query, we use the source index to
 %discover all relevant known sources, i.e., all sources that contain

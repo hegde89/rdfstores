@@ -1,6 +1,6 @@
 \section{Evaluation}
 \label{sec:eva}
-Existing works in data integration~\cite{levy_querying_1996 and Linked Data query processing~\cite{harth_data_2010,ladwig_linked_2010} perform source ranking
+Existing works in data integration~\cite{levy_querying_1996} and Linked Data query processing~\cite{harth_data_2010,ladwig_linked_2010} perform source ranking
 without further optimization. We implement source ranking to select sources first, and then use the dynamic DP as proposed for Linked Data query optimization to optimize
 the subsequent process. That is, the proposed query plan as well as
 the operator sharing mechanism are employed to optimize cost. This is
@@ -37,8 +37,8 @@ the same number of results.
 
 \begin{figure*}[htb]
   \centering
-  \includegraphics[width=0.7\linewidth]{figs/all_queries.pdf}
-  \includegraphics[width=0.29\linewidth]{figs/plans_skyline_by_m.pdf}
+  \includegraphics[width=0.75\linewidth]{figs/all_queries.pdf}
+  \includegraphics[width=0.24\linewidth]{figs/plans_skyline_by_m.pdf}
   \caption{a) Number of skyline and non-skyline plans for all queries
     and systems ($b=0.8, m=2000$), b) Skyline fraction for RD, RK for
     different value of $m$ ($b=0.8$).}
@@ -62,11 +62,11 @@ aggressively and thus, is expected to exhibit better performance. This baseline 
 %proposed technique for estimating the bounds is effective in reducing
 %the overhead resulting from that. 
 The third version (DPS) does not use
-operator sharing at all, i.e., if a source is used for more than one
+operator sharing at all, i.e. if a source is used for more than one
 triple pattern it is retrieved multiple times. 
 %We use DPS to study the effect the benefits operator sharing.
 We use different settings for $b$ to study the effect of operator sharing. For example, with $b=0.8$ the optimizer assumes that 80\% of
-the source scan cost is saved, i.e., subsequent reads cost only 20\% of the first read.
+the source scan cost is saved, i.e. subsequent reads cost only 20\% of the first read.
 
 \textbf{Baselines.} Existing Linked Data approaches implement ad-hoc
 source ranking to select few best
@@ -89,7 +89,7 @@ cardinality. Thus, we further extend these baselines to use different
 combinations of sources that yield different plans.
 
 Both baselines first retrieve all relevant sources $D$ for a query $Q$
-from the source index, i.e., $D = \bigcup_{t \in Q} source(t)$. Then,
+from the source index, i.e. $D = \bigcup_{t \in Q} source(t)$. Then,
 a set $\mathcal{D}$ containing $|D|$ different subsets of $D$, each
 with size in the range $[1,|D|]$ is created.
 %The number of  captured by and $|\mathcal{D}| = |D|$. 
@@ -116,7 +116,8 @@ operators) but also for which triple patterns these sources are used
 (selection operators), while the sources selected for the baselines
 are used for all triple patterns. In order to obtain even more plans
 that further vary in the number of results they produce, we create an
-additional set of $m$ plans for each previously created plan by
+additional set of $m$ plans for each previously created plan of the
+baselines RK and RD by
 randomly removing a subset of the inputs (selection operators) from
 the unions at the root of their access plans.
 %In particular, to create a new plan from an
@@ -152,7 +153,7 @@ in terms of results (of which only $|D|$ plans actually vary in cost).
 
 \subsection{Setting} As data, we use real-world Linked Data currently available on the Web. We generate queries and process them against Linked Data sources on the Web to obtain a total of 1,909,109 triples from various popular datasets such as DBpedia, Freebase, New York Times, GeoNames and LinkedMDB. The number of Linked Data sources from which all data were retrieved is 516,293. During this process, we observed that network latency greatly varies. In order to systematically study the effects of query processing, we thus decided to download these data, and to simulate Linked Data query processing on one single machine. To reflect network cost, we tried different settings, including the average of 1.5s that we could observed on real-world sources. Performance differences between systems were however not sensitive to these settings. 
 
-As queries, we focus on 14 BGP queries that have non-empty results. The result size is in the range from 1 to 836. We created three categories that differ in terms of result size, and used one query from each to discuss the effect of Pareto-optimality on the cost-cardinality trade-off in detail. Besides, these queries can also be classified into three different classes of complexity, which is reflected in the number of triple patterns. For the classes of 3, 4 and 5 patterns, we have 4, 5, and 4 queries, respectively. 
+As queries, we focus on 14 BGP queries that have non-empty results. The result size is in the range from 1 to 836. We created three categories that differ in terms of result size, and used one query from each to discuss the effect of Pareto-optimality on the cost-cardinality trade-off in detail. Besides, these queries can also be classified into three different classes of complexity, which is reflected in the number of triple patterns. For the classes of 3, 4 and 5 patterns, we have 4, 5, and 5 queries, respectively. 
 
 
 %Table~\ref{tab:queries} shows various

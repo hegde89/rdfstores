@@ -2,15 +2,12 @@
 \label{sec:related}
 
 \textbf{Linked Data Query Processing.} The concept of executing SPARQL
-queries directly over Linked Data instead of a locally stored and
-indexed copy was first introduced in \cite{hartig_executing_2009},
-where link traversal is used to discover sources at runtime. In
-\cite{harth_data_2010} a local source index  is used for discovery of
-relevant sources, which is the approach we use in this work. Other previous work
-\cite{ladwig_linked_2010,sihjoin_2011} proposes methods for ranking
-sources at runtime according to their relevancy and a mixed execution
-strategy that combines both, link traversal and source indexes, to
-report results early. % In this work we adopt the approach from
+queries directly over Linked Data was first introduced in \cite{hartig_executing_2009},
+where link traversal is used to discover sources at runtime. Then, an optimized index was proposed to capture statistics for ranking sources~
+\cite{harth_data_2010}. Other previous work
+\cite{ladwig_linked_2010,sihjoin_2011} proposes methods for adaptive ranking
+of sources at runtime, and a mixed execution
+strategy that combines local and remote Linked Data. % In this work we adopt the approach from
 % \cite{harth_data_2010} and employ a source index without any runtime
 % source discovery.
 % along with the push-based Symmetric Hash Join
@@ -30,84 +27,81 @@ report results early. % In this work we adopt the approach from
 database research on query optimization. The dynamic programming
 solution was first proposed in \cite{selinger_access_1979} and remains a
 popular approach for query optimization
-\cite{moerkotte_dynamic_2008}. There has also
-been work on approximating the DP approach to increase run-time
+\cite{moerkotte_dynamic_2008}. There is also work on approximating the DP approach to increase run-time
 performance in the context of distributed query processing
 \cite{kossmann_iterative_2000}.
 
 Efficiently generating optimal DAG-shaped query plans when performing
 operator sharing has been addressed in
-\cite{neumann_generating_2009}. In our work we also apply operator
-sharing, although in a more limited fashion as we only consider the
-sharing of source scan operators. We also adopt the technique for cost
-calculation from \cite{neumann_generating_2009}. The efficient
+\cite{neumann_generating_2009}. In our work we also uses operator
+sharing for dealing with Linked Data sources. However, the effect of this is different in our multi-objective optimization problem, where we introduce special bounds needed for pruning. 
+%. We also adopt the technique for cost
+%calculation from \cite{neumann_generating_2009}. 
+The efficient
 execution of DAG-shaped plans was discussed in \cite{Neumann_2005},
-where several approaches were proposed, among them push-based
-execution, which use in our approach (also used in previous work on
-Linked Data query processing \cite{ladwig_linked_2010,sihjoin_2011}).
+where several approaches were proposed, including the push-based
+execution that is used in our implementation. 
+%(also used in previous work on
+%Linked Data query processing \cite{ladwig_linked_2010,sihjoin_2011}).
 
 \textbf{Source Selection.} The problem of selecting relevant sources
-has also been a topic in database and data integration research. In
-this setting, sources are described not only by their content, but
-also their capabilities. Algorithms have been proposed to efficiently
-perform source selection by using the source characteristics to prune
-the search space \cite{levy_querying_1996}. However, in these
-approaches, source selection is a separate step, decoupled from query
-optimization.
-
-In \cite{nie_joint_2001} the authors recognize that the decoupling of
+has been a topic in data integration research~\cite{levy_querying_1996}. 
+%In
+%this setting, sources are described not only by their content, but
+%also their capabilities. Algorithms have been proposed to efficiently
+%perform source selection by using the source characteristics to prune
+%the search space . 
+However, 
+%in these
+%approaches, 
+source selection here is a separate step that is decoupled from query
+optimization. In \cite{nie_joint_2001} the authors recognize that the decoupling of
 source selection and query optimization leads to overall sub-optimal
-plans and propose a solution that optimizes not only for cost, but
-also for coverage (output cardinality), by combining cost and coverage
-into a single measure by means of a (weighted) utility function. Then,
-classic query optimization algorithms, such as DP, can be applied. In
-our work, we do not use a utility function to combine multiple
-objectives, but instead produce a set of Pareto-optimal plans that
-truly represent the trade-off between the optimization objectives.
+plans and propose a solution that optimizes not only for cost but
+also coverage. A (weighted) utility function is proposed to combine them 
+into a single measure. 
+%Then,
+%classic query optimization algorithms, such as DP, can be applied. 
+Finding the right utility function is generally known to be difficult, especially when many objectives have to be considered. Instead, we follow a different direction, employing multi-objective optimization to produce Pareto-optimal plans that represent different trade-offs between the objectives.
 
-\textbf{Top-k Processing.} Top-k query processing is concerned with
-efficiently reporting only the most important (top-k) answers to a
-given query and connects to many fields of database research, such as
-join algorithms, query optimization and indexing methods
-\cite{ilyas_survey_2008}. Our approach is different from top-k
-processing in two important ways: 1) while we also focus on reporting
-only a subset of all results, our approach provides a whole set of
-query plans that represent the trade-off between cost and cardinality,
-instead of reporting only a fixed number of results; 2) top-k
-processing optimizes a single objective, whereas our approach supports
-optimization of several, conflicting objectives.
+\textbf{Top-k Processing.} Top-k query processing focuses on the most important (top-k) answers to a
+given query~\cite{ilyas_survey_2008}. 
+%It has been studied from different angles, resulting in different concepts as
+%join algorithms, query optimization and indexing methods
+%\cite{ilyas_survey_2008}. 
+Clearly, multi-objective optimization is different from top-k
+processing in that instead of a fixed number of results, a range of plans representing different trade-offs is computed. One of this plan may yield the same effect as top-k processing. However, the overall problem here is finding optimal plans, instead of computing results.
 
-\textbf{Skyline Queries.} The skyline operation retrieves the Pareto
+\textbf{Skyline Queries.} The skyline operation finds the Pareto
 set from a potentially large set of points and is used in conjunction
 with standard relational algebra \cite{boerzsoenyi_skyline_2001}. The
 main research focus has been the efficient execution of such queries
 by means of specialized algorithms and indexes. Our approach is
-different as we do not perform skylining on the data, but rather on
-the query plans. However, techniques developed for skylining can be
-adopted to improve the efficiency of the multi-objective DP planner,
-e.g. for efficient pruning to obtain the Pareto-optimal (skyline) set
-of plans.
-
+different in that instead of computing Pareto-optimal results, it computes query plans.
+%However, techniques developed for skylining be
+%adopted to improve the efficiency of the multi-objective DP planner,
+%e.g. for pruning to obtain the Pareto-optimal (skyline) set
+%of plans.
 
 \textbf{Multiobjective Query Optimization.} To the best of our
 knowledge, \cite{papadimitriou_multiobjective_2001} is the only work
-addressing multi-objective query optimization, where it is discussed
+addressing multi-objective query optimization, where it is studied
 in the context of Mariposa \cite{stonebraker_mariposa:_1996}, a
 wide-area database system. The Mariposa optimizer splits the query
 tree into subqueries and then obtains bids from participating sites
 that specify a delay and cost for delivering the result of a
-subquery. The goal of the proposed multi-objective optimzer
+subquery. The goal of the proposed multi-objective optimizer
 \cite{papadimitriou_multiobjective_2001} is to obtain the Pareto
 optimal set of plans with respect to cost and delay. While dynamic
 programming is employed to show that the Pareto set can be
-approximated in polynomial time, it is not based on the classic DP
-algorithm \cite{selinger_access_1979}. The problem is also different
-as there is only a single query operation tree and for each operation
-node the optimizer is provided a list of alternatives for implementing
+computed in polynomial time, it is not based on the classic DP
+algorithm \cite{selinger_access_1979}. The problem studied there is different
+because there is only one single query operation tree and for each operation
+node, the optimizer has a list of alternatives for implementing
 the operation. In contrast, the classic DP algorithm does not consider
 only a single query tree (i.e. a single order of operations), but
-builds and optimizes query plans from the bottom up and considers all
-valid query trees. In this work we extend the classic algorithm to
+builds and optimizes query plans in a bottom up fashion and considers all
+possible query trees. In this work, we extend the classic DP algorithm to
 support multi-objective query optimization.
 
 
